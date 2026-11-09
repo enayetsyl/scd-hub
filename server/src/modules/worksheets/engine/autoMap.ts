@@ -52,6 +52,8 @@ function kgRule(l: string, axis: WorksheetAxis | null): RowMapping | null {
   if (/অঙ্কে লেখ|write in numbers/i.test(l)) return m("WRITE_SEQUENCE");
   // Bangla / English
   if (/হারিয়ে যাওয়া/.test(l)) return m("FILL_MISSING");
+  // KG "শূন্যস্থান পূরণ কর (বর্ণ)": a letter missing from a WORD (owner 2026-11-09), not the alphabet.
+  if (/শূন্যস্থান/.test(l) && /বর্ণ/.test(l) && axis?.startsWith("BAN")) return m("WORD_GAP", null);
   if (/কার চিহ্ন/.test(l)) return m("KAR_WORDS", null);
   if (/যুক্তবর্ণ ভে/.test(l)) return m("CONJUNCT_BREAK", null);
   if (/বর্ণ দিয়ে.*শব্দ|words with the given letter/i.test(l)) return m("LETTER_WORDS");

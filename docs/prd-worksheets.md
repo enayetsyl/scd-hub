@@ -116,6 +116,7 @@ KG Math (B)/(E)), in the 2025 KG final's layouts:
 | ৫টি করে নাম লেখ — ক (ফুল / ফল) ও খ (…) · Name five — set A (…) | NAME_FIVE | one category from each bracket, five boxes |
 | দিক / দিন / মাসের নাম · days, months | WRITE_LIST | the whole list, in the book's order (its week starts on Saturday) |
 | আমার পরিচয় · Myself | FRAMED_SENTENCES | the book's sentences with the personal part as a gap |
+| শূন্যস্থান পূরণ কর (বর্ণ) | WORD_GAP | a KG-book word with one bare letter left out ("যা ____ ত"), middle letter preferred (D-#1188) |
 
 - **Counts from the wording.** "— ০.৫ × ২০ = ১০" means twenty half-mark items (`labelItems`), used
   only when it agrees with the row's published total.

@@ -144,16 +144,22 @@ function DayBody({
     for (const cf of m.conflicts) set.add(`${cf.teacherId}|${cf.periodNumber}`);
     return set;
   }, [m]);
-  // Row heights only grow (so the measure → minHeight loop settles); a refetch brings
-  // a new `m` and starts the measuring over.
+  // Row alignment: measure only each cell's CONTENT (text block), never the cells
+  // themselves, and give both halves of the row the same exact `height` = tallest
+  // content + padding + border. Content size does not depend on the applied height, so
+  // there is no measure → resize → measure loop. (The old minHeight-on-the-measured-row
+  // loop drifted on Android: pixel snapping + ceil grew one side, and the section column
+  // fell out of line with the period cells.) A refetch brings a new `m` and starts over.
   const [heights, setHeights] = useState<{ m: RoutineMasterT; h: Record<string, number> }>({ m, h: {} });
-  const rowH = heights.m === m ? heights.h : {};
-  const noteHeight = (key: string, v: number): void =>
+  const contentH = heights.m === m ? heights.h : {};
+  const noteContent = (key: string, v: number): void =>
     setHeights((prev) => {
       const cur = prev.m === m ? prev.h : {};
       const next = Math.ceil(v);
       return (cur[key] ?? 0) >= next ? prev : { m, h: { ...cur, [key]: next } };
     });
+  const rowHeight = (key: string): number | undefined =>
+    contentH[key] === undefined ? undefined : contentH[key] + 2 * space(1) + 2;
 
   const base = cellBase(c);
   const rowKey = (row: RoutineMasterRowT): string => `${row.groupType}:${row.groupId}`;
@@ -162,13 +168,11 @@ function DayBody({
     <View style={{ flexDirection: "row" }}>
       <View style={{ width: GROUP_W }}>
         {m.rows.map((row) => (
-          <View
-            key={rowKey(row)}
-            onLayout={(e) => noteHeight(rowKey(row), e.nativeEvent.layout.height)}
-            style={[base, { width: GROUP_W, minHeight: rowH[rowKey(row)], backgroundColor: c.surface }]}
-          >
-            <Body style={{ fontSize: 12, fontWeight: "600" }}>{row.label}</Body>
-            {row.sublabel ? <Muted style={{ fontSize: 10 }}>{row.sublabel}</Muted> : null}
+          <View key={rowKey(row)} style={[base, { width: GROUP_W, height: rowHeight(rowKey(row)), backgroundColor: c.surface }]}>
+            <View onLayout={(e) => noteContent(rowKey(row), e.nativeEvent.layout.height)}>
+              <Body style={{ fontSize: 12, fontWeight: "600" }}>{row.label}</Body>
+              {row.sublabel ? <Muted style={{ fontSize: 10 }}>{row.sublabel}</Muted> : null}
+            </View>
           </View>
         ))}
       </View>
@@ -181,11 +185,7 @@ function DayBody({
       >
         <View>
           {m.rows.map((row) => (
-            <View
-              key={rowKey(row)}
-              onLayout={(e) => noteHeight(rowKey(row), e.nativeEvent.layout.height)}
-              style={{ flexDirection: "row", minHeight: rowH[rowKey(row)] }}
-            >
+            <View key={rowKey(row)} style={{ flexDirection: "row", height: rowHeight(rowKey(row)) }}>
               {m.columns.map((col) => {
                 const slot = cellBy.get(`${row.groupId}|${col.periodNumber}`);
                 const conflict = !!slot?.teacherId && conflictTP.has(`${slot.teacherId}|${col.periodNumber}`);
@@ -200,18 +200,20 @@ function DayBody({
                     style={({ pressed }) => (pressed && !col.isBreak && onPick ? { opacity: 0.6 } : undefined)}
                   >
                     <View style={[base, { width: PERIOD_W, flexGrow: 1, backgroundColor: bg }]}>
-                      {slot ? (
-                        <>
-                          <Body style={{ fontSize: 11, fontWeight: "600", color: conflict ? c.onErrorContainer : c.textPrimary }}>
-                            {routineSubjectLabel(slot.subject)}
-                          </Body>
-                          <Muted style={{ fontSize: 10, color: conflict ? c.onErrorContainer : c.textSecondary }}>
-                            {slot.teacherName ?? "—"}
-                          </Muted>
-                        </>
-                      ) : (
-                        <Muted style={{ fontSize: 10 }}>{col.isBreak ? "·" : STR.rtEmptyCell}</Muted>
-                      )}
+                      <View onLayout={(e) => noteContent(rowKey(row), e.nativeEvent.layout.height)}>
+                        {slot ? (
+                          <>
+                            <Body style={{ fontSize: 11, fontWeight: "600", color: conflict ? c.onErrorContainer : c.textPrimary }}>
+                              {routineSubjectLabel(slot.subject)}
+                            </Body>
+                            <Muted style={{ fontSize: 10, color: conflict ? c.onErrorContainer : c.textSecondary }}>
+                              {slot.teacherName ?? "—"}
+                            </Muted>
+                          </>
+                        ) : (
+                          <Muted style={{ fontSize: 10 }}>{col.isBreak ? "·" : STR.rtEmptyCell}</Muted>
+                        )}
+                      </View>
                     </View>
                   </Pressable>
                 );

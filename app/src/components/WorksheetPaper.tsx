@@ -485,7 +485,7 @@ function Body({
             <View key={col} style={{ flexBasis: 260, flexGrow: 1, flexShrink: 1, gap: 6 }}>
               {left.map((l, i) => (i % 2 !== col ? null : (
             <View key={i} style={{ flexDirection: "row", alignItems: "center" }}>
-              <View style={[box(110, 54), { padding: 3 }]}>
+              <View style={[box(110, 54), { height: undefined, minHeight: 54, padding: 3 }]}>
                 {l.pictureId && l.repeat > 1 ? (
                   <Repeated uri={pics[l.pictureId]} n={l.repeat} icon={12} />
                 ) : l.pictureId ? (

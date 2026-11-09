@@ -512,7 +512,12 @@ function drawBody(
       const counting = items.some((p) => p.repeat > 1);
       if (counting) {
         const colW = (W - 12) / 2;
-        const h = 66;
+        const icon = 24;
+        const perRow = Math.max(1, Math.floor((colW - 60) / (icon + 3)));
+        // Every picture is drawn: the box grows to fit the largest count in the question
+        // (owner 2026-11-09 — a fixed 66 pt box held only 2 rows, so 15–20 printed as 14).
+        const maxRows = Math.max(2, ...items.map((p) => Math.ceil(p.repeat / perRow)));
+        const h = Math.max(66, 12 + maxRows * (icon + 3) - 3);
         items.forEach((p, i) => {
           const col = i % 2;
           if (col === 0 && i > 0) y += h + 8;
@@ -520,12 +525,10 @@ function drawBody(
           const x = MARGIN + col * (colW + 12);
           box(doc, x, y, colW, h);
           const img = pictures.get(p.pictureId);
-          const icon = 24;
-          const perRow = Math.floor((colW - 60) / (icon + 3));
           for (let k = 0; k < p.repeat; k++) {
             const ix = x + 6 + (k % perRow) * (icon + 3);
             const iy = y + 6 + Math.floor(k / perRow) * (icon + 3);
-            if (img && iy + icon <= y + h) doc.image(img, ix, iy, { fit: [icon, icon], align: "center", valign: "center" });
+            if (img) doc.image(img, ix, iy, { fit: [icon, icon], align: "center", valign: "center" });
           }
           const bh = ruled ? ruledHeight(ruling) : 34;
           writeBox(doc, x + colW - 46, y + (h - bh) / 2, 38, bh, ruled, ruling);
@@ -679,7 +682,13 @@ function drawBody(
       const left = s.left ?? [];
       const right = s.right ?? [];
       const colW = (W - 20) / 2;
-      const h = 44;
+      const picW = colW * 0.42;
+      const icon = 14;
+      const perRow = Math.max(1, Math.floor((picW - 6) / (icon + 2)));
+      // A counting match draws every picture: the rows grow to fit the largest count
+      // (owner 2026-11-09 — a fixed 44 pt box held 2 rows, so 16 printed as 12).
+      const maxRows = Math.max(0, ...left.map((l) => (l.pictureId && l.repeat > 1 ? Math.ceil(l.repeat / perRow) : 0)));
+      const h = Math.max(44, 6 + maxRows * (icon + 2) - 2);
       // Arabic words need more room than a Bangla word's 54 pt box.
       const ansW = rtl && right.some((t) => [...t].length > 3) ? 96 : 54;
       left.forEach((l, i) => {
@@ -687,16 +696,13 @@ function drawBody(
         if (col === 0 && i > 0) y += h + 4;
         if (col === 0) breakIfNeeded(h);
         const x = MARGIN + col * (colW + 20);
-        const picW = colW * 0.42;
         box(doc, x, y, picW, h);
         const img = l.pictureId ? pictures.get(l.pictureId) : undefined;
         if (img && l.repeat > 1) {
-          const icon = 14;
-          const perRow = Math.max(1, Math.floor((picW - 6) / (icon + 2)));
           for (let k = 0; k < l.repeat; k++) {
             const ix = x + 3 + (k % perRow) * (icon + 2);
             const iy = y + 3 + Math.floor(k / perRow) * (icon + 2);
-            if (iy + icon <= y + h) doc.image(img, ix, iy, { fit: [icon, icon] });
+            doc.image(img, ix, iy, { fit: [icon, icon] });
           }
         } else if (img) {
           doc.image(img, x + 3, y + 3, { fit: [picW - 6, h - 6], align: "center", valign: "center" });
