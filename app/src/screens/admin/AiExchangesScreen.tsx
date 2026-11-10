@@ -41,7 +41,7 @@ const shiftMonth = (m: string, delta: number) => {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 };
 
-export const featureLabel = (f: string) => (f === "comment_check" ? STR.axlCheck : f === "assistant" ? STR.axlAssistant : f);
+export const featureLabel = (f: string) => (f === "comment_check" ? STR.axlCheck : f === "assistant" ? STR.axlAssistant : f === "workspace_chat" ? STR.awNav : f);
 
 function csvCell(value: string | number | boolean | null | undefined): string {
   const raw = value == null ? "" : String(value);
@@ -128,6 +128,7 @@ export default function AiExchangesScreen({ navigation }: Props): React.ReactEle
         <Chip label={STR.axlAll} selected={feature === null} onPress={() => setFeature(null)} />
         <Chip label={STR.axlCheck} selected={feature === "comment_check"} onPress={() => setFeature("comment_check")} />
         <Chip label={STR.axlAssistant} selected={feature === "assistant"} onPress={() => setFeature("assistant")} />
+        <Chip label={STR.awNav} selected={feature === "workspace_chat"} onPress={() => setFeature("workspace_chat")} />
       </ChipRow>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center", marginVertical: space(1) }}>
         <Button title="‹" variant="secondary" onPress={() => setMonth(shiftMonth(month ?? dhakaMonth(), -1))} />

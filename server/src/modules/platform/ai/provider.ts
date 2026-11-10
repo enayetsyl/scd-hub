@@ -43,6 +43,14 @@ export interface AiSendInput {
    * refused before anything is sent. Never logged (the exchange log keeps the text only).
    */
   files?: AiInlineFile[];
+  /**
+   * Streaming (AI Workspace W-2): when set, a provider that can stream calls it with the
+   * answer text so far as it arrives; the result is still the whole answer, and the ledger is
+   * still written once by the router. A provider that cannot stream simply answers whole.
+   */
+  onDelta?: (textSoFar: string) => void;
+  /** Stop button (W-2): aborting it ends the call with kind "stopped" (no fallback). */
+  abortSignal?: AbortSignal;
 }
 
 export interface AiInlineFile {
@@ -82,7 +90,8 @@ export type AiErrorKind =
   | "timeout"
   | "network"
   | "truncated" // finish reason other than a normal stop
-  | "bad_response"; // no text, or JSON asked for and not returned
+  | "bad_response" // no text, or JSON asked for and not returned
+  | "stopped"; // the person pressed Stop (W-2) — never retried on the fallback
 
 export class AiProviderError extends Error {
   constructor(
@@ -106,6 +115,8 @@ export type FetchLike = (url: string, init: { method: string; headers: Record<st
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
+  /** The streamed body (W-2); only read when the call asked to stream. */
+  body?: ReadableStream<Uint8Array> | null;
 }>;
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -127,16 +138,21 @@ export function parseJsonReply(text: string, provider: AiProviderName): unknown 
 }
 
 /** Runs `fn` with an abort signal that fires after `ms`; a fired signal becomes `timeout`. */
-export async function withDeadline<T>(ms: number, provider: AiProviderName, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
+export async function withDeadline<T>(ms: number, provider: AiProviderName, fn: (signal: AbortSignal) => Promise<T>, stop?: AbortSignal): Promise<T> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), ms);
+  const onStop = () => ctl.abort();
+  if (stop?.aborted) ctl.abort();
+  stop?.addEventListener("abort", onStop);
   try {
     return await fn(ctl.signal);
   } catch (e) {
+    if (stop?.aborted) throw new AiProviderError("stopped", "stopped by the person", provider);
     if (e instanceof AiProviderError) throw e;
     if (ctl.signal.aborted) throw new AiProviderError("timeout", `no reply within ${Math.round(ms / 1000)} s`, provider);
     throw new AiProviderError("network", "could not reach the AI service", provider);
   } finally {
     clearTimeout(timer);
+    stop?.removeEventListener("abort", onStop);
   }
 }

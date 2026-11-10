@@ -54,8 +54,63 @@ export function deepseekBody(input: AiSendInput, model: string): Record<string, 
     max_tokens: input.maxOutputTokens,
     reasoning_effort: EFFORT[input.reasoning],
     ...(input.json ? { response_format: { type: "json_object" } } : {}),
-    stream: false,
+    // W-2: stream when the caller watches the answer arrive; the last chunk carries the usage.
+    ...(input.onDelta ? { stream: true, stream_options: { include_usage: true } } : { stream: false }),
   };
+}
+
+interface DeepseekChunk {
+  model?: string;
+  choices?: Array<{ finish_reason?: string | null; delta?: { content?: string | null; reasoning_content?: string | null } }>;
+  usage?: DeepseekReply["usage"];
+}
+
+/**
+ * Reads DeepSeek's server-sent events (`data: {...}` lines, then `data: [DONE]`) into one
+ * reply, calling `onDelta` with the answer so far. Thinking text (`reasoning_content`) is
+ * not part of the answer and is not shown. Exported for the parser test.
+ */
+export async function readDeepseekStream(body: ReadableStream<Uint8Array>, onDelta: (textSoFar: string) => void): Promise<DeepseekReply> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let text = "";
+  let finish: string | undefined;
+  let model: string | undefined;
+  let usage: DeepseekReply["usage"];
+  const handle = (line: string) => {
+    const t = line.trim();
+    if (!t.startsWith("data:")) return;
+    const data = t.slice(5).trim();
+    if (!data || data === "[DONE]") return;
+    let chunk: DeepseekChunk;
+    try {
+      chunk = JSON.parse(data) as DeepseekChunk;
+    } catch {
+      return;
+    }
+    model = chunk.model ?? model;
+    if (chunk.usage) usage = chunk.usage;
+    const c = chunk.choices?.[0];
+    if (c?.finish_reason) finish = c.finish_reason;
+    const piece = c?.delta?.content;
+    if (piece) {
+      text += piece;
+      onDelta(text);
+    }
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buffer.indexOf("\n")) >= 0) {
+      handle(buffer.slice(0, nl));
+      buffer = buffer.slice(nl + 1);
+    }
+  }
+  if (buffer) handle(buffer);
+  return { model, choices: [{ finish_reason: finish, message: { content: text } }], usage };
 }
 
 export class DeepseekProvider implements AiProvider {
@@ -79,8 +134,9 @@ export class DeepseekProvider implements AiProvider {
         signal,
       });
       if (!res.ok) throw new AiProviderError(classifyStatus(res.status), `DeepSeek returned ${res.status}`, this.name, res.status);
+      if (input.onDelta && res.body) return readDeepseekStream(res.body, input.onDelta);
       return (await res.json()) as DeepseekReply;
-    });
+    }, input.abortSignal);
 
     const choice = body.choices?.[0];
     const finish = choice?.finish_reason;

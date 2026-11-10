@@ -80,6 +80,34 @@ export function isPeak(provider: AiProviderName, at: Date): boolean {
   return p.peakUtcHours.some(([from, to]) => h >= from && h < to);
 }
 
+export interface PriceClock {
+  peak: boolean;
+  /** When the price next changes (the start of the next off-peak or peak hour block). */
+  changesAt: Date;
+  /** 1 at peak, the off-peak factor otherwise. */
+  factor: number;
+}
+
+/**
+ * The chat's price clock (W-2, D-#1205): peak or off-peak now, and when that changes. Read
+ * from the same `peakUtcHours` the ledger prices by — no second copy of the windows.
+ */
+export function priceClock(provider: AiProviderName, now: Date): PriceClock {
+  const peak = isPeak(provider, now);
+  const t = new Date(now);
+  t.setUTCMinutes(0, 0, 0);
+  for (let i = 0; i < 24 * 8; i++) {
+    t.setUTCHours(t.getUTCHours() + 1);
+    if (isPeak(provider, t) !== peak) return { peak, changesAt: new Date(t), factor: peak ? 1 : AI_PRICES[provider].offPeakFactor };
+  }
+  return { peak, changesAt: new Date(t), factor: peak ? 1 : AI_PRICES[provider].offPeakFactor };
+}
+
+/** The next moment that is off-peak: `now` itself when it already is. */
+export function nextOffPeak(provider: AiProviderName, now: Date): Date {
+  return isPeak(provider, now) ? priceClock(provider, now).changesAt : now;
+}
+
 /** The price row for a model id; a dated or unknown id uses the closest listed one. */
 export function priceOf(provider: AiProviderName, model: string): ModelPrice {
   const p = AI_PRICES[provider];
