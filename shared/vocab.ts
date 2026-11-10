@@ -1564,6 +1564,9 @@ export const NOTIFICATION_KINDS = [
   // system_health:ai_key when a monthly AI cap first reaches the alert percent (default 70 %)
   // and again at 100 %, once per cap per month. Opens Admin → এআই কী ও মডেল.
   "AI_BUDGET_ALERT",
+  // AI Workspace batch job finished (W-4, D-#1213; app-native, NO wire twin): to the person who
+  // started the job, once, when every item is done / failed / cancelled. Opens the AI workspace.
+  "AI_JOB_FINISHED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1650,6 +1653,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   DAILY_REPORT: "দৈনিক প্রতিবেদন",
   SCHOOL_NOTICE: "স্কুলের বার্তা",
   AI_BUDGET_ALERT: "এআই খরচের সতর্কবার্তা",
+  AI_JOB_FINISHED: "এআই ব্যাচ কাজ শেষ",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1734,6 +1738,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   DAILY_REPORT: "Daily school report",
   SCHOOL_NOTICE: "School notice",
   AI_BUDGET_ALERT: "AI spending alert",
+  AI_JOB_FINISHED: "AI batch job finished",
 };
 
 /**

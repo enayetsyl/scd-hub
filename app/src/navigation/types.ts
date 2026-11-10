@@ -355,6 +355,9 @@ export type AiWorkspaceStackParamList = {
   /** W-3 drafts. AiDraftNew with a messageId = "save as draft" from a chat answer. */
   AiDraft: { draftId: string };
   AiDraftNew: { projectId: string; messageId?: string };
+  /** W-4 batch jobs. */
+  AiJob: { jobId: string };
+  AiJobNew: { projectId: string };
 };
 
 export type VivaStackParamList = {

@@ -316,6 +316,8 @@ export const AI_FEATURES = [
   { key: "workspace_chat", bn: "কর্মক্ষেত্র: প্রকল্পে আলাপ", en: "Workspace: project chat", dailyPerUser: 300, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
   // W-3: "revise with notes" on a draft (up to 32k tokens out).
   { key: "workspace_draft", bn: "কর্মক্ষেত্র: খসড়া সংশোধন", en: "Workspace: revise a draft", dailyPerUser: 100, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
+  // W-4: batch jobs (run by the worker process; one call per item, plus validator fixes).
+  { key: "workspace_job", bn: "কর্মক্ষেত্র: ব্যাচ কাজ", en: "Workspace: batch jobs", dailyPerUser: 1000, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 

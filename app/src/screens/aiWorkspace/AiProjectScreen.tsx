@@ -15,12 +15,13 @@ import { fill, kTokens, modelLabel, roleLabel, thinkingLabel, usd } from "./aiWo
 import { ProjectFilesTab } from "./ProjectFilesTab";
 import { ProjectChatsTab } from "./ProjectChatsTab";
 import { ProjectDraftsTab } from "./ProjectDraftsTab";
+import { ProjectJobsTab } from "./ProjectJobsTab";
 import { ProjectInstructionsTab } from "./ProjectInstructionsTab";
 import { ProjectMembersTab } from "./ProjectMembersTab";
 import { ProjectSettingsTab } from "./ProjectSettingsTab";
 
 type Props = NativeStackScreenProps<AiWorkspaceStackParamList, "AiProject">;
-type Tab = "chats" | "drafts" | "files" | "instructions" | "members" | "settings";
+type Tab = "chats" | "drafts" | "jobs" | "files" | "instructions" | "members" | "settings";
 
 function BudgetCard({ b }: { b: AiProjectBudgetT }): React.ReactElement {
   return (
@@ -64,6 +65,7 @@ export default function AiProjectScreen({ route, navigation }: Props): React.Rea
       <ChipRow>
         <Chip label={STR.awTabChats} selected={tab === "chats"} onPress={() => setTab("chats")} />
         <Chip label={STR.awTabDrafts} selected={tab === "drafts"} onPress={() => setTab("drafts")} />
+        <Chip label={STR.awTabJobs} selected={tab === "jobs"} onPress={() => setTab("jobs")} />
         <Chip label={STR.awTabFiles} selected={tab === "files"} onPress={() => setTab("files")} />
         <Chip label={STR.awTabInstructions} selected={tab === "instructions"} onPress={() => setTab("instructions")} />
         <Chip label={STR.awTabMembers} selected={tab === "members"} onPress={() => setTab("members")} />
@@ -74,6 +76,9 @@ export default function AiProjectScreen({ route, navigation }: Props): React.Rea
       ) : null}
       {tab === "drafts" ? (
         <ProjectDraftsTab project={p} onOpen={(draftId) => navigation.navigate("AiDraft", { draftId })} onNew={() => navigation.navigate("AiDraftNew", { projectId: p.id })} />
+      ) : null}
+      {tab === "jobs" ? (
+        <ProjectJobsTab project={p} onOpen={(jobId) => navigation.navigate("AiJob", { jobId })} onNew={() => navigation.navigate("AiJobNew", { projectId: p.id })} />
       ) : null}
       {tab === "files" ? <ProjectFilesTab project={p} onChanged={refresh} onViewText={(fileId) => navigation.navigate("AiProjectFileText", { fileId })} /> : null}
       {tab === "instructions" ? <ProjectInstructionsTab project={p} onChanged={refresh} /> : null}

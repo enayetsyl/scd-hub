@@ -1,5 +1,10 @@
 # STATUS
 
+- 2026-11-10: **BUILT — AI Workspace W-4: batch jobs + worker (D-#1250/#1251)** (branch `feat/ws4-jobs`, stacked on `feat/ws3-drafts`; docs/prd-ai-workspace.md §6). A project's ব্যাচ কাজ tab: an instruction with {{item}} + items, the estimate shown for now AND off-peak, and when to run picked (no default). The separate worker runs two items at a time, makes a draft from each, sends lesson plans back to the AI when the validator refuses them (twice), retries failures, and notifies when the job is done.
+  - **VM setup (after this is deployed):** copy `ops/systemd/scdhub-ai-worker-{dev,prod}.service` to `/etc/systemd/system/`, then `sudo systemctl daemon-reload && sudo systemctl enable --now scdhub-ai-worker-dev` (and `-prod` after promotion). Without it, jobs stay "waiting". `scripts/deploy.sh` restarts it after the API when its unit is installed (non-fatal).
+  - **Owner, to switch on:** "কর্মক্ষেত্র: ব্যাচ কাজ" in Admin → এআই কী ও মডেল → features.
+  - **Help guide:** `ai-workspace-jobs` is `draft: true`.
+  - **Now / next:** PR → dev after #1442 (W-3); then W-5 (MCP bridge for Claude).
 - 2026-11-10: **BUILT — AI Workspace W-3: drafts, approval, export, send to the app (D-#1247–#1249)** (branch `feat/ws3-drafts`, stacked on `feat/ws2-chat`; docs/prd-ai-workspace.md §5). A project's খসড়া tab: save an AI answer as a draft, edit (each edit is a new version), the owner approves, "revise with AI" (now or off-peak), Word / PDF download (no AI). Approved lesson plans / question banks / book chapters are sent to the app through the same import and validator as the import screen, after a check that shows what will be replaced.
   - **VM setup:** `sudo apt install fonts-noto-core` so Word / PDF exports use the Bangla font (LibreOffice is already there).
   - **Owner, to switch on:** "কর্মক্ষেত্র: খসড়া সংশোধন" in Admin → এআই কী ও মডেল → features. Sending a lesson plan needs `lesson_plans:import` (the Principal has it).

@@ -118,6 +118,7 @@ import "./modules/platform/resolvers/aiExchanges";
 import "./modules/ai-workspace/resolvers/aiWorkspace";
 import "./modules/ai-workspace/resolvers/aiWorkspaceChat";
 import "./modules/ai-workspace/resolvers/aiWorkspaceDrafts";
+import "./modules/ai-workspace/resolvers/aiWorkspaceJobs";
 import "./modules/platform/resolvers/navPreference";
 import "./modules/help/resolvers/help";
 import "./modules/engagement/resolvers/guardianView";
