@@ -52,7 +52,7 @@ export default function ActivityCornerScreen(): React.ReactElement {
   const toggle = (key: string): void => setPicked((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
 
   return (
-    <Screen>
+    <Screen scroll>
       {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
       {data?.busyMode ? <Notice tone="info" message={STR.actBusyOn} /> : null}
       {manage ? (
