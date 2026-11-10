@@ -22,6 +22,8 @@ import {
   subscribeRealtime,
   type RealtimeTopic,
 } from "../modules/realtime/bus";
+import { AiAssistMessage } from "../modules/ai-assist/models/AiAssistMessage";
+import { assertCanWatchMessage } from "../modules/ai-workspace/services/ProjectChatService";
 
 export const HEARTBEAT_MS = 25_000;
 
@@ -71,4 +73,68 @@ eventsRouter.get("/stream", (req: Request, res: Response) => {
     clearInterval(heartbeat);
     for (const off of unsubscribes) off();
   });
+});
+
+/**
+ * GET /events/ai-chat/:messageId — one AI Workspace answer as it streams (W-2, D-#1205).
+ *
+ * The answer is written into its message row every ~400 ms by ProjectChatService; this route
+ * TAILS that row (the BookBuild log pattern), so it works whichever process answers, and a
+ * reconnect gets the whole text so far. Events: `delta` {text, status} whenever the text or
+ * status changes; the stream ends once the answer is done / failed / stopped. Members of the
+ * message's project only. Web only — React Native fetch cannot stream (the phone polls).
+ */
+export const AI_CHAT_TAIL_MS = 500;
+
+eventsRouter.get("/ai-chat/:messageId", async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+  const messageId = String(req.params.messageId);
+  try {
+    await assertCanWatchMessage(ctx.auth, messageId);
+  } catch {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  let lastText = "";
+  let lastStatus = "";
+  let closed = false;
+  const tick = async () => {
+    if (closed) return;
+    const m = await AiAssistMessage.findById(messageId).select("text status error").lean().catch(() => null);
+    if (!m) return finish();
+    const status = m.status ?? "done";
+    if (m.text !== lastText || status !== lastStatus) {
+      lastText = m.text ?? "";
+      lastStatus = status;
+      res.write(`event: delta\ndata: ${JSON.stringify({ text: lastText, status, error: m.error ?? null })}\n\n`);
+    }
+    if (status !== "running" && status !== "queued") finish();
+  };
+  const timer = setInterval(() => void tick(), AI_CHAT_TAIL_MS);
+  const heartbeat = setInterval(() => res.write(`: hb ${Date.now()}\n\n`), 15_000);
+  function finish(): void {
+    if (closed) return;
+    closed = true;
+    clearInterval(timer);
+    clearInterval(heartbeat);
+    res.write(`event: end\ndata: {}\n\n`);
+    res.end();
+  }
+  req.on("close", () => {
+    closed = true;
+    clearInterval(timer);
+    clearInterval(heartbeat);
+  });
+  void tick();
 });

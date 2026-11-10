@@ -23,7 +23,7 @@ const opt = (n, d) => {
 const DIR = path.resolve(opt("dir", "C:/w/hc-web"));
 const PORT = Number(opt("port", "8301"));
 const API = Number(opt("api", "4301"));
-const PROXY = /^\/(graphql|files|pdf|export|events|book-builds|triggers|healthz|readyz)(\/|\?|$)/;
+const PROXY = /^\/(graphql|files|pdf|export|events|book-builds|triggers|healthz|readyz|oauth|mcp|\.well-known)(\/|\?|$)/;
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".woff2": "font/woff2", ".ico": "image/x-icon", ".map": "application/json" };
 

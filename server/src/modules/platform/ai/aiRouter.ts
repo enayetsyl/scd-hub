@@ -18,7 +18,7 @@ import { aiRouteFor } from "../services/AiSettingService";
 import { alertIfBudget, assertWithinCaps, recordAiUsage, type AiUsageRowInput, type CapContext } from "../services/AiUsageService";
 import { recordAiExchange, type AiExchangeInput } from "../services/AiExchangeService";
 import { costUsd } from "./aiPrices";
-import { DeepseekProvider } from "./deepseekProvider";
+import { DeepseekProvider, DEEPSEEK_MODELS } from "./deepseekProvider";
 import { GeminiProvider } from "./geminiProvider";
 import {
   AiProviderError,
@@ -66,6 +66,27 @@ export interface AiCallContext {
   sessionId?: string | null;
   /** The AiPolicy version the prompt was built from (AI-3). */
   policyHash?: string | null;
+  /** AI Workspace (W-1): the project, stamped on every ledger row, and its own monthly cap. */
+  projectId?: string | null;
+  projectMonthlyUsd?: number | null;
+  /**
+   * The chat's Model picker (W-2, D-#1205): answers this call with that DeepSeek model instead
+   * of the feature's saved one. Only `DEEPSEEK_MODELS`, and only on a DeepSeek route.
+   */
+  modelOverride?: string | null;
+  /**
+   * Request-log reference mode (D-#1228): the log row points at the history instead of copying
+   * it (`historyRef`) and names the prefix instead of storing it (`prefixRef`, e.g. the policy
+   * hash + file ids). `deidentified: false` marks a row from a project with name protection OFF.
+   */
+  exchange?: { historyRef?: string | null; prefixRef?: string | null; deidentified?: boolean } | null;
+}
+
+export class AiModelOverrideError extends Error {
+  constructor() {
+    super("এই মডেলটি এখানে চলে না");
+    this.name = "AiModelOverrideError";
+  }
 }
 
 export type ProviderFactory = (provider: AiProviderName, key: string) => AiProvider;
@@ -95,8 +116,13 @@ export async function aiSend(
   ctx: AiCallContext,
   deps: { makeProvider?: ProviderFactory; route?: typeof aiRouteFor; ledger?: AiLedger; now?: () => Date } = {},
 ): Promise<AiSendOutcome> {
-  const route = await (deps.route ?? aiRouteFor)(feature);
-  if (!route.enabled) throw new AiFeatureOffError(feature);
+  const routed = await (deps.route ?? aiRouteFor)(feature);
+  if (!routed.enabled) throw new AiFeatureOffError(feature);
+  let route = routed;
+  if (ctx.modelOverride) {
+    if (routed.primary.provider !== "deepseek" || !(DEEPSEEK_MODELS as readonly string[]).includes(ctx.modelOverride)) throw new AiModelOverrideError();
+    route = { ...routed, primary: { ...routed.primary, model: ctx.modelOverride } };
+  }
   const make = deps.makeProvider ?? defaultProviderFactory;
   const ledger = deps.ledger ?? defaultLedger;
   const now = deps.now ?? (() => new Date());
@@ -113,6 +139,8 @@ export async function aiSend(
     model: route.primary.model,
     refType: ctx.refType,
     refId,
+    projectId: ctx.projectId,
+    projectMonthlyUsd: ctx.projectMonthlyUsd,
     at: now(),
   });
 
@@ -132,6 +160,7 @@ export async function aiSend(
     attempt: attempts.length,
     refType: ctx.refType,
     refId,
+    projectId: ctx.projectId,
     policyHash: ctx.policyHash,
     provider: step.provider,
     model: step.model,
@@ -169,6 +198,8 @@ export async function aiSend(
     // A not_configured step sent nothing, so it costs nothing and is not a provider call.
     if (attempt.errorKind !== "not_configured") rows.push(row(step, attempt, started));
     if (answer) break;
+    // Stop means stop — never ask the other provider instead (W-2).
+    if (attempt.errorKind === "stopped") break;
   }
 
   await ledger.record(rows);
@@ -185,7 +216,10 @@ export async function aiSend(
       policyHash: ctx.policyHash,
       stablePrefix: input.stablePrefix,
       context: input.context ?? null,
-      history: (input.history ?? []).map((h) => ({ role: h.role, text: h.text })),
+      history: ctx.exchange?.historyRef ? [] : (input.history ?? []).map((h) => ({ role: h.role, text: h.text })),
+      historyRef: ctx.exchange?.historyRef ?? null,
+      prefixRef: ctx.exchange?.prefixRef ?? null,
+      deidentified: ctx.exchange?.deidentified ?? true,
       request: input.variablePart,
       reply: answer?.text ?? "",
       attempts: rows.map((r) => ({

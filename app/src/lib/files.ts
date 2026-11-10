@@ -1428,3 +1428,73 @@ export async function pickAndUploadReferencePaper(input: {
   const body = (await res.json()) as { paperId: string };
   return { paperId: body.paperId };
 }
+
+// ---------------------------------------------------------------------------
+// AI Workspace knowledge files (W-1, server: POST /files/ai-workspace). Any of md / txt / json /
+// csv, docx / doc / odt / rtf, xlsx, pdf or a picture, ≤ 40 MB. The server answers with the
+// PROCESSING row and reads the text in the background (OCR of a scan takes minutes).
+// ---------------------------------------------------------------------------
+
+export async function pickAndUploadAiWorkspaceFile(projectId: string, sessionId?: string): Promise<{ fileId: string } | null> {
+  const picked = await DocumentPicker.getDocumentAsync({ type: "*/*", multiple: false, copyToCacheDirectory: true });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const type = asset.mimeType ?? "application/octet-stream";
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", { uri: asset.uri, name: rnUploadName(asset.name), type } as unknown as Blob);
+  }
+  form.append("projectId", projectId);
+  // W-2: a file for ONE chat only (it follows the pinned files in that chat).
+  if (sessionId) form.append("sessionId", sessionId);
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/ai-workspace`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { error?: string; fileId?: string };
+  if (!res.ok || !body.fileId) throw new FileUploadError(body.error ?? `upload failed (${res.status})`);
+  return { fileId: body.fileId };
+}
+
+// ---------------------------------------------------------------------------
+// AI Workspace draft export (W-3, server: GET /files/ai-draft/:id/export?format=docx|pdf).
+// Rendered on the server with no AI call. Web saves the file; Android downloads it and
+// hands it to the phone's viewer.
+// ---------------------------------------------------------------------------
+
+export async function downloadAiDraft(draftId: string, format: "docx" | "pdf", version?: number): Promise<void> {
+  const token = getToken();
+  const url = `${REST_BASE}/files/ai-draft/${encodeURIComponent(draftId)}/export?format=${format}${version ? `&version=${version}` : ""}`;
+  const mime = format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (Platform.OS === "android") {
+    const target = `${FileSystem.cacheDirectory}scdhub-draft-${draftId}-${++tmpSeq}.${format}`;
+    const res = await FileSystem.downloadAsync(url, target, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (res.status !== 200) {
+      let message = `export failed (${res.status})`;
+      try {
+        const body = JSON.parse(await FileSystem.readAsStringAsync(res.uri)) as { error?: string };
+        if (body.error) message = body.error;
+      } catch {
+        // keep the generic message
+      }
+      throw new FileUploadError(message);
+    }
+    const contentUri = await FileSystem.getContentUriAsync(res.uri);
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", { data: contentUri, flags: 1, type: mime });
+    return;
+  }
+  if (Platform.OS !== "web") throw new FileUploadError("File download is not available here");
+  const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new FileUploadError(body.error ?? `export failed (${res.status})`);
+  }
+  const blobUrl = URL.createObjectURL(await res.blob());
+  saveBlobUrl(blobUrl, downloadName(res.headers.get("content-disposition"), draftId, mime));
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+}

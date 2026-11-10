@@ -55,6 +55,15 @@ build() {
     ( cd app && npx expo export --platform web --clear )
   fi
 }
+# AI Workspace job worker (W-4, D-#1251): restart it with the API so it never runs old code.
+# Only when its unit is installed on this host (ops/systemd/scdhub-ai-worker-<env>.service);
+# NON-FATAL — a worker problem must never fail or roll back a deploy of the API.
+restart_worker() {
+  local w="scdhub-ai-worker-$ENV"
+  if systemctl list-unit-files "$w.service" --no-legend 2>/dev/null | grep -q "^$w.service"; then
+    sudo systemctl restart "$w" && say "restarted $w" || say "$w restart failed (non-fatal)"
+  fi
+}
 healthy() {
   for _ in $(seq 1 15); do
     curl -fsS -m 5 "http://localhost:$PORT/readyz" >/dev/null 2>&1 && return 0
@@ -74,11 +83,13 @@ sudo systemctl restart "$SVC"
 say "restarted; waiting for /readyz ..."
 if healthy; then
   say "HEALTHY at $(git rev-parse --short HEAD)"
+  restart_worker
 else
   say "UNHEALTHY — auto-rolling back to $PREV"
   git reset --hard "$PREV" -q
   build
   sudo systemctl restart "$SVC"
   healthy && say "rolled back, healthy at $PREV" || say "STILL UNHEALTHY after rollback — investigate"
+  restart_worker
   exit 1
 fi

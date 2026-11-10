@@ -56,6 +56,20 @@ export const AI_PRICES: Record<AiProviderName, ProviderPrices> = {
   },
 };
 
+/**
+ * Model context windows in tokens; input and output share the window (AI Workspace W-1).
+ * DeepSeek's Models & Pricing page lists 1M context for both models (checked 2026-11-10).
+ * Config, like the prices: a change is a one-line edit here.
+ */
+export const CONTEXT_WINDOW_TOKENS: Record<string, number> = {
+  "deepseek-flash": 1_000_000,
+  "deepseek-v4-pro": 1_000_000,
+};
+
+/** AI Workspace context budget (PRD §3): warn above, refuse above (instructions + pinned files). */
+export const WORKSPACE_PREFIX_WARN_TOKENS = 150_000;
+export const WORKSPACE_PREFIX_MAX_TOKENS = 400_000;
+
 /** True when `at` falls in the provider's peak window (weekdays, UTC). */
 export function isPeak(provider: AiProviderName, at: Date): boolean {
   const p = AI_PRICES[provider];
@@ -64,6 +78,34 @@ export function isPeak(provider: AiProviderName, at: Date): boolean {
   if (day === 0 || day === 6) return false;
   const h = at.getUTCHours();
   return p.peakUtcHours.some(([from, to]) => h >= from && h < to);
+}
+
+export interface PriceClock {
+  peak: boolean;
+  /** When the price next changes (the start of the next off-peak or peak hour block). */
+  changesAt: Date;
+  /** 1 at peak, the off-peak factor otherwise. */
+  factor: number;
+}
+
+/**
+ * The chat's price clock (W-2, D-#1205): peak or off-peak now, and when that changes. Read
+ * from the same `peakUtcHours` the ledger prices by — no second copy of the windows.
+ */
+export function priceClock(provider: AiProviderName, now: Date): PriceClock {
+  const peak = isPeak(provider, now);
+  const t = new Date(now);
+  t.setUTCMinutes(0, 0, 0);
+  for (let i = 0; i < 24 * 8; i++) {
+    t.setUTCHours(t.getUTCHours() + 1);
+    if (isPeak(provider, t) !== peak) return { peak, changesAt: new Date(t), factor: peak ? 1 : AI_PRICES[provider].offPeakFactor };
+  }
+  return { peak, changesAt: new Date(t), factor: peak ? 1 : AI_PRICES[provider].offPeakFactor };
+}
+
+/** The next moment that is off-peak: `now` itself when it already is. */
+export function nextOffPeak(provider: AiProviderName, now: Date): Date {
+  return isPeak(provider, now) ? priceClock(provider, now).changesAt : now;
 }
 
 /** The price row for a model id; a dated or unknown id uses the closest listed one. */

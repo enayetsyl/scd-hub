@@ -21,6 +21,8 @@ import { StudentComment } from "../../comments/models/StudentComment";
 import { ClassTestResult } from "../../trackers/models/ClassTestResult";
 import { aiBudgetConfig, aiFeatureConfig, AI_FEATURES, CAPPED_AI_FEATURES } from "./AiSettingService";
 import { dhakaMonthStart } from "./AiUsageService";
+import { WORKSPACE_AI_FEATURES } from "./AiSettingService";
+import { workspaceProjectRows, type ProjectUsageRow } from "../../ai-workspace/services/WorkspaceAnalytics";
 
 const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -86,6 +88,8 @@ export interface AiUsageReport {
   byModel: UsageBucket[];
   budget: BudgetLine[];
   quality: QualityRow[];
+  /** AI Workspace (W-7): one row per project active in the range. */
+  byProject: ProjectUsageRow[];
 }
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -163,6 +167,8 @@ export async function aiUsageReport(authIn: AuthPayload | null, fromKey: string,
     const cfg = await aiFeatureConfig(f.key);
     budget.push(await line(f.key, f.bn, mtd.find((m) => m._id === f.key)?.usd ?? 0, cfg.monthlyUsd));
   }
+  // AI Workspace (D-#1225): the workspace cap across all its features, inside the total.
+  budget.push(await line("workspace", "এআই কর্মক্ষেত্র (মোট)", mtd.filter((m) => WORKSPACE_AI_FEATURES.includes(m._id)).reduce((s, m) => s + m.usd, 0), budgetCfg.workspaceMonthlyUsd));
   budget.push(await line("global", "মোট", mtd.reduce((s, m) => s + m.usd, 0), budgetCfg.monthlyUsd));
 
   // Comment quality from the stamps (writer = comment author / result enterer).
@@ -231,5 +237,6 @@ export async function aiUsageReport(authIn: AuthPayload | null, fromKey: string,
     }),
     budget,
     quality,
+    byProject: await workspaceProjectRows(from, to),
   };
 }

@@ -22,7 +22,7 @@ import type { AuthPayload } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { User } from "../../foundation/models/User";
-import { AiPolicy, AI_POLICY_KEYS, type AiPolicyKey, type IAiPolicy } from "../models/AiPolicy";
+import { AiPolicy, AI_POLICY_KEYS, isProjectPolicyKey, type AiPolicyKey, type IAiPolicy } from "../models/AiPolicy";
 import { writeAudit } from "./AuditService";
 
 export const AI_POLICY_LABELS: Record<AiPolicyKey, { bn: string; en: string }> = {
@@ -47,7 +47,8 @@ export interface ActiveAiPolicy {
 
 export interface AiPolicyVersionView {
   id: string;
-  key: AiPolicyKey;
+  /** A rules-document key, or a project / template key (W-1). */
+  key: string;
   version: number;
   body: string;
   hash: string;
@@ -115,7 +116,7 @@ export async function activeAiPolicy(keyIn: string): Promise<ActiveAiPolicy | nu
 
 export async function aiPolicySummaries(authIn: AuthPayload | null): Promise<AiPolicySummary[]> {
   assertRead(authIn);
-  const agg = await AiPolicy.aggregate<{ _id: AiPolicyKey; latest: number; versions: number; active: number | null }>([
+  const agg = await AiPolicy.aggregate<{ _id: string; latest: number; versions: number; active: number | null }>([
     { $group: { _id: "$key", latest: { $max: "$version" }, versions: { $sum: 1 }, active: { $max: { $cond: ["$active", "$version", null] } } } },
   ]);
   return AI_POLICY_KEYS.map((key) => {
@@ -203,6 +204,79 @@ export async function activateAiPolicyVersion(authIn: AuthPayload | null, id: st
     meta: { key: d.key, version: d.version, hash: policyHashOf(d.key, d.version, d.bodyHash) },
   });
   return aiPolicyVersion(auth, id);
+}
+
+// ---------------------------------------------------------------------------
+// Project instructions + job templates (AI Workspace W-1, D-#1202)
+// ---------------------------------------------------------------------------
+// Internal: the caller (AiProjectService) checks project membership. The newest saved
+// version is the active one; saving the same text again is refused, as for the rules.
+
+const MAX_PROJECT_BODY = 400_000;
+
+function parseProjectKey(k: string): string {
+  if (!isProjectPolicyKey(k)) throw new Error("প্রকল্পের নির্দেশনার চাবি সঠিক নয়");
+  return k;
+}
+
+export interface ProjectPolicyVersion {
+  id: string;
+  version: number;
+  body: string;
+  hash: string;
+  note: string | null;
+  createdAt: Date;
+}
+
+/** The active (= newest saved) version of a project key, or null when none is saved yet. */
+export async function activeProjectPolicy(keyIn: string): Promise<ProjectPolicyVersion | null> {
+  const key = parseProjectKey(keyIn);
+  const d = (await AiPolicy.findOne({ key, active: true }).sort({ version: -1 }).lean()) as PolicyDoc | null;
+  return d ? { id: d._id.toString(), version: d.version, body: d.body, hash: policyHashOf(key, d.version, d.bodyHash), note: d.note ?? null, createdAt: d.createdAt } : null;
+}
+
+/** Saves the next version of a project key and makes it the active one. Audited without the text. */
+export async function saveProjectPolicyVersion(input: {
+  key: string;
+  body: string;
+  note?: string | null;
+  actorId: string;
+  actorRole?: string | null;
+}): Promise<ProjectPolicyVersion> {
+  const key = parseProjectKey(input.key);
+  const body = (input.body ?? "").replace(/\r\n/g, "\n").trim();
+  if (!body) throw new Error("নির্দেশনা খালি রাখা যাবে না");
+  if (body.length > MAX_PROJECT_BODY) throw new Error("নির্দেশনা খুব বড় (৪,০০,০০০ অক্ষরের বেশি)");
+  const note = input.note?.trim() || undefined;
+  const bodyHash = bodyHashOf(body);
+  for (let tries = 0; tries < 3; tries++) {
+    const latest = (await AiPolicy.findOne({ key }).sort({ version: -1 }).select("version bodyHash").lean()) as { version: number; bodyHash: string } | null;
+    if (latest?.bodyHash === bodyHash) throw new Error("আগের সংস্করণের সঙ্গে কোনো পার্থক্য নেই");
+    const version = (latest?.version ?? 0) + 1;
+    try {
+      const doc = await AiPolicy.create({ key, version, body, bodyHash, note, active: true, activatedAt: new Date(), createdBy: new Types.ObjectId(input.actorId), activatedBy: new Types.ObjectId(input.actorId) });
+      await AiPolicy.updateMany({ key, _id: { $ne: doc._id }, active: true }, { $set: { active: false } });
+      const hash = policyHashOf(key, version, bodyHash);
+      await writeAudit({
+        eventKind: "AI_POLICY_SAVED",
+        actorId: input.actorId,
+        actorRole: input.actorRole ?? undefined,
+        targetKind: "AiPolicy",
+        targetId: doc._id.toString(),
+        meta: { key, version, hash, chars: body.length },
+      });
+      return { id: doc._id.toString(), version, body, hash, note: note ?? null, createdAt: doc.createdAt };
+    } catch (err) {
+      if ((err as { code?: number }).code !== 11000) throw err;
+    }
+  }
+  throw new Error("সংরক্ষণ করা যায়নি — আবার চেষ্টা করুন");
+}
+
+/** Every version of a project key, newest first (D-#761 paging). */
+export async function projectPolicyVersionsPage(keyIn: string, args: PageArgs): Promise<Page<AiPolicyVersionView>> {
+  const key = parseProjectKey(keyIn);
+  return queryPage(AiPolicy, { key }, { version: -1 }, args, (docs) => views(docs as unknown as PolicyDoc[]), 20);
 }
 
 /** Switches a key off: no version active, so the feature that reads it stops. */

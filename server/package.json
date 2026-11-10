@@ -11,9 +11,12 @@
     "test": "jest --runInBand --forceExit",
     "test:watch": "jest --watch",
     "worker:book": "tsx src/workers/bookBuildWorker.ts",
-    "worker:book:prod": "node dist/workers/bookBuildWorker.js"
+    "worker:book:prod": "node dist/workers/bookBuildWorker.js",
+    "worker:ai": "tsx src/workers/aiJobWorker.ts",
+    "worker:ai:prod": "node dist/workers/aiJobWorker.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@pothos/core": "^4.0.0",
     "@pothos/plugin-scope-auth": "^4.0.0",
     "@pothos/plugin-simple-objects": "^4.0.0",
@@ -33,7 +36,8 @@
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.19.0",
     "qrcode": "^1.5.4",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

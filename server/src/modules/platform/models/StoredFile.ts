@@ -77,7 +77,10 @@ export type StoredFileKind =
   /** Another branch's past paper (D-#1030, docs/prd-exam-paper-bank.md §4): a rendered page and the
    *  original upload (docx/pdf). Staff read via exam_papers:view_reference / manage_reference. */
   | "reference_paper_page"
-  | "reference_paper_source";
+  | "reference_paper_source"
+  /** An AI Workspace knowledge file (W-1, docs/prd-ai-workspace.md): the original its text was
+   *  read from. Read-gated by project membership (or ai_workspace:admin). */
+  | "ai_workspace_file";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -109,6 +112,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "activity_page",
   "reference_paper_page",
   "reference_paper_source",
+  "ai_workspace_file",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

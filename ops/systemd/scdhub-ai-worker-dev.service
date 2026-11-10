@@ -1,0 +1,22 @@
+[Unit]
+Description=SCD Hub DEV AI Workspace job worker (W-4)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/scdhub/dev
+ExecStart=/usr/bin/node server/dist/workers/aiJobWorker.js
+Restart=always
+RestartSec=5
+# Light (no Chromium): expect < 200 MB; the cap keeps a runaway job from crowding the API.
+MemoryMax=400M
+Environment=NODE_ENV=production
+Environment=TZ=Asia/Dhaka
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=scdhub-ai-worker-dev
+
+[Install]
+WantedBy=multi-user.target

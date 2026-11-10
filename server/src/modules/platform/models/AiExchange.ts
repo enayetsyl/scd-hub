@@ -59,6 +59,12 @@ export interface IAiExchange extends Document {
   prefixHash: string;
   contextHash?: string;
   history: Array<{ role: string; text: string }>;
+  /** AI Workspace (D-#1228): where the history lives instead of a copy ("AiAssistSession:<id>@<n>"). */
+  historyRef?: string;
+  /** AI Workspace (D-#1228): what the prefix was built from (policy hash + file ids), not its text. */
+  prefixRef?: string;
+  /** False for a project with name protection OFF — its text was sent as written. */
+  deidentified: boolean;
   /** This call's own part (the comment as JSON / the question), de-identified. */
   request: string;
   /** The model's raw answer text, de-identified. Empty when the call failed. */
@@ -102,6 +108,9 @@ const AiExchangeSchema = new Schema<IAiExchange>(
     prefixHash: { type: String, required: true },
     contextHash: { type: String },
     history: { type: [new Schema({ role: { type: String, required: true }, text: { type: String, required: true } }, { _id: false })], default: [] },
+    historyRef: { type: String },
+    prefixRef: { type: String },
+    deidentified: { type: Boolean, default: true },
     request: { type: String, required: true },
     reply: { type: String, default: "" },
     outcome: {

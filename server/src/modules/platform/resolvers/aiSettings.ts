@@ -16,7 +16,7 @@ import {
   setAiBudget,
   setAiFeatureSetting,
   setAiSettings,
-  type AiBudgetView,
+  type AiBudgetScreenView,
   type AiFeatureView,
   type AiSettingsView,
 } from "../services/AiSettingService";
@@ -52,10 +52,15 @@ const AiFeatureRef = builder.objectRef<AiFeatureView>("AiFeatureSetting").implem
   }),
 });
 
-const AiBudgetRef = builder.objectRef<AiBudgetView>("AiBudget").implement({
+const AiBudgetRef = builder.objectRef<AiBudgetScreenView>("AiBudget").implement({
   fields: (t) => ({
     monthlyUsd: t.float({ description: "USD per Dhaka month across the capped AI features.", resolve: (v) => v.monthlyUsd }),
     alertPct: t.int({ description: "Alert the Principal when a monthly cap reaches this percent.", resolve: (v) => v.alertPct }),
+    workspaceMonthlyUsd: t.float({ description: "AI Workspace: USD per Dhaka month across every workspace feature, inside the school budget (D-#1225).", resolve: (v) => v.workspaceMonthlyUsd }),
+    workspaceDefaultModel: t.string({ description: "AI Workspace: the model a new project starts with (D-#1206).", resolve: (v) => v.workspaceDefaultModel }),
+    workspaceDefaultThinking: t.string({ description: "AI Workspace: off | low | high — a new project's thinking default (D-#1206).", resolve: (v) => v.workspaceDefaultThinking }),
+    capsTotalUsd: t.float({ description: "The monthly caps the school budget must cover (non-workspace features + the workspace cap).", resolve: (v) => v.capsTotalUsd }),
+    capsOverBudget: t.boolean({ description: "True when those caps add up to more than the school budget.", resolve: (v) => v.capsOverBudget }),
     updatedAt: t.string({ nullable: true, resolve: (v) => (v.updatedAt ? new Date(v.updatedAt).toISOString() : null) }),
   }),
 });
@@ -74,8 +79,21 @@ builder.mutationField("setAiBudget", (t) =>
     type: AiBudgetRef,
     description: "Change the school-wide AI budget and/or the alert percent. Audited.",
     authScopes: { hasPermission: "system_health:ai_key" },
-    args: { monthlyUsd: t.arg.float({ required: false }), alertPct: t.arg.int({ required: false }) },
-    resolve: (_root, args, ctx) => setAiBudget(ctx.auth, { monthlyUsd: args.monthlyUsd, alertPct: args.alertPct }),
+    args: {
+      monthlyUsd: t.arg.float({ required: false }),
+      alertPct: t.arg.int({ required: false }),
+      workspaceMonthlyUsd: t.arg.float({ required: false }),
+      workspaceDefaultModel: t.arg.string({ required: false }),
+      workspaceDefaultThinking: t.arg.string({ required: false }),
+    },
+    resolve: (_root, args, ctx) =>
+      setAiBudget(ctx.auth, {
+        monthlyUsd: args.monthlyUsd,
+        alertPct: args.alertPct,
+        workspaceMonthlyUsd: args.workspaceMonthlyUsd,
+        workspaceDefaultModel: args.workspaceDefaultModel,
+        workspaceDefaultThinking: args.workspaceDefaultThinking,
+      }),
   }),
 );
 

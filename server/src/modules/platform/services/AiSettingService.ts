@@ -27,7 +27,7 @@ import { AiFeatureSetting } from "../models/AiFeatureSetting";
 import { AiBudgetSetting } from "../models/AiBudgetSetting";
 import { writeAudit } from "./AuditService";
 import { AI_PROVIDERS, type AiProviderName } from "../ai/provider";
-import { DEEPSEEK_BASE_URL, DEEPSEEK_DEFAULT_MODEL } from "../ai/deepseekProvider";
+import { DEEPSEEK_BASE_URL, DEEPSEEK_DEFAULT_MODEL, DEEPSEEK_MODELS } from "../ai/deepseekProvider";
 
 /** The alias Google keeps pointed at the current Flash — never retired. */
 export const GEMINI_DEFAULT_MODEL = "gemini-flash-latest";
@@ -306,15 +306,34 @@ export async function clearAiKey(authIn: AuthPayload | null, providerIn?: string
  */
 export const AI_FEATURES = [
   // Default caps = the owner's rulings of 2026-11-08 (D-#1103); each is changeable in the app.
-  { key: "comment_check", bn: "মন্তব্য যাচাই", en: "Comment checker", dailyPerUser: 80, monthlyUsd: 3, perSessionTurns: null },
-  { key: "assistant", bn: "শিক্ষকের সহকারী", en: "Teacher assistant", dailyPerUser: 30, monthlyUsd: 5, perSessionTurns: 40 },
+  { key: "comment_check", bn: "মন্তব্য যাচাই", en: "Comment checker", dailyPerUser: 80, monthlyUsd: 3, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: true },
+  { key: "assistant", bn: "শিক্ষকের সহকারী", en: "Teacher assistant", dailyPerUser: 30, monthlyUsd: 5, perSessionTurns: 40, defaultProvider: "deepseek", defaultFallback: true },
+  // AI Workspace (docs/prd-ai-workspace.md). Fallback OFF by default (D-#1226). W-1: reading a
+  // scanned PDF or a picture with Gemini vision, one file per call (D-#1227).
+  { key: "workspace_ocr", bn: "কর্মক্ষেত্র: Gemini দিয়ে ফাইল পড়া", en: "Workspace: read a file with Gemini", dailyPerUser: 100, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "gemini", defaultFallback: false },
+  // W-2: project chat — no per-session turn cap (full history, D-#1204); the model per message
+  // comes from the chat's picker (D-#1205).
+  { key: "workspace_chat", bn: "কর্মক্ষেত্র: প্রকল্পে আলাপ", en: "Workspace: project chat", dailyPerUser: 300, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
+  // W-3: "revise with notes" on a draft (up to 32k tokens out).
+  { key: "workspace_draft", bn: "কর্মক্ষেত্র: খসড়া সংশোধন", en: "Workspace: revise a draft", dailyPerUser: 100, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
+  // W-4: batch jobs (run by the worker process; one call per item, plus validator fixes).
+  { key: "workspace_job", bn: "কর্মক্ষেত্র: ব্যাচ কাজ", en: "Workspace: batch jobs", dailyPerUser: 1000, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 
 /** The features the caps and the global budget cover. Older Gemini features are metered, not capped (D-#1124). */
 export const CAPPED_AI_FEATURES: readonly string[] = AI_FEATURES.map((f) => f.key);
 
-export const AI_BUDGET_DEFAULTS = { monthlyUsd: 8, alertPct: 70 } as const;
+/** Every AI Workspace feature key (some join AI_FEATURES in later slices); they share the
+ *  workspace monthly cap, which sits inside the school budget (D-#1225). */
+export const WORKSPACE_AI_FEATURES: readonly string[] = ["workspace_ocr", "workspace_chat", "workspace_draft", "workspace_job"];
+
+export const AI_BUDGET_DEFAULTS = { monthlyUsd: 8, alertPct: 70, workspaceMonthlyUsd: 10 } as const;
+
+/** The workspace-wide defaults a new project starts from (D-#1206: thinking starts HIGH). */
+export const WORKSPACE_THINKING = ["off", "low", "high"] as const;
+export type WorkspaceThinking = (typeof WORKSPACE_THINKING)[number];
+export const WORKSPACE_DEFAULTS = { model: DEEPSEEK_DEFAULT_MODEL, thinking: "high" as WorkspaceThinking };
 
 export interface AiFeatureView {
   feature: AiFeatureKey;
@@ -351,7 +370,7 @@ interface FeatureRow {
 }
 
 function featureView(f: (typeof AI_FEATURES)[number], row: FeatureRow | null): AiFeatureView {
-  const provider = row?.provider ?? "deepseek";
+  const provider = row?.provider ?? f.defaultProvider;
   return {
     feature: f.key,
     labelBn: f.bn,
@@ -360,7 +379,7 @@ function featureView(f: (typeof AI_FEATURES)[number], row: FeatureRow | null): A
     provider,
     modelSaved: row?.modelName || null,
     model: row?.modelName || providerModel(provider),
-    fallback: row?.fallback ?? true,
+    fallback: row?.fallback ?? f.defaultFallback,
     providerReady: !!providerKey(provider),
     dailyPerUser: row?.dailyPerUser ?? f.dailyPerUser,
     monthlyUsd: row?.monthlyUsd ?? f.monthlyUsd,
@@ -424,13 +443,13 @@ export async function setAiFeatureSetting(
   const before = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
 
   const enabled = input.enabled ?? before?.enabled ?? false;
-  const provider = input.provider ? parseProvider(input.provider) : before?.provider ?? "deepseek";
+  const provider = input.provider ? parseProvider(input.provider) : before?.provider ?? f.defaultProvider;
   const modelChanged = input.model !== undefined && input.model !== null;
   const modelName = modelChanged ? input.model!.trim() || null : before?.modelName || null;
   if (modelName && !/^[a-z0-9.\-]{3,80}$/.test(modelName)) throw new Error("মডেলের নাম সঠিক নয়");
-  const fallback = input.fallback ?? before?.fallback ?? true;
+  const fallback = input.fallback ?? before?.fallback ?? f.defaultFallback;
 
-  const needsTest = enabled && (!before?.enabled || provider !== (before?.provider ?? "deepseek") || modelChanged);
+  const needsTest = enabled && (!before?.enabled || provider !== (before?.provider ?? f.defaultProvider) || modelChanged);
   if (needsTest) {
     const key = providerKey(provider);
     if (!key) throw new Error(`আগে ${LABEL[provider]}-এর কী দিন`);
@@ -491,33 +510,90 @@ export interface AiBudgetView {
   monthlyUsd: number;
   /** The Principal is alerted when any monthly cap reaches this percent. */
   alertPct: number;
+  /** AI Workspace (D-#1225): USD per Dhaka month across every workspace feature, inside `monthlyUsd`. */
+  workspaceMonthlyUsd: number;
+  /** AI Workspace (D-#1206): the defaults a new project starts from. */
+  workspaceDefaultModel: string;
+  workspaceDefaultThinking: WorkspaceThinking;
   updatedAt: Date | null;
+}
+
+export interface AiBudgetScreenView extends AiBudgetView {
+  /** Sum of the monthly caps the school budget must cover: each non-workspace feature + the workspace cap. */
+  capsTotalUsd: number;
+  /** True when those caps add up to more than the school budget — a cap could never be reached (D-#1225). */
+  capsOverBudget: boolean;
+}
+
+interface BudgetRow {
+  monthlyUsd?: number;
+  alertPct?: number;
+  workspaceMonthlyUsd?: number;
+  workspaceDefaultModel?: string;
+  workspaceDefaultThinking?: WorkspaceThinking;
+  updatedAt?: Date;
 }
 
 /** Internal (no caller check): the budget with defaults filled in. */
 export async function aiBudgetConfig(): Promise<AiBudgetView> {
-  const row = (await AiBudgetSetting.findOne({ name: "global" }).lean()) as { monthlyUsd?: number; alertPct?: number; updatedAt?: Date } | null;
+  const row = (await AiBudgetSetting.findOne({ name: "global" }).lean()) as BudgetRow | null;
   return {
     monthlyUsd: row?.monthlyUsd ?? AI_BUDGET_DEFAULTS.monthlyUsd,
     alertPct: row?.alertPct ?? AI_BUDGET_DEFAULTS.alertPct,
+    workspaceMonthlyUsd: row?.workspaceMonthlyUsd ?? AI_BUDGET_DEFAULTS.workspaceMonthlyUsd,
+    workspaceDefaultModel: row?.workspaceDefaultModel ?? WORKSPACE_DEFAULTS.model,
+    workspaceDefaultThinking: row?.workspaceDefaultThinking ?? WORKSPACE_DEFAULTS.thinking,
     updatedAt: row?.updatedAt ?? null,
   };
 }
 
-export async function aiBudgetView(authIn: AuthPayload | null): Promise<AiBudgetView> {
-  assertCanEdit(authIn);
-  return aiBudgetConfig();
+/** The caps the school budget has to cover (each non-workspace feature + the workspace cap). */
+export async function aiCapsTotalUsd(budget: AiBudgetView): Promise<number> {
+  const rows = (await AiFeatureSetting.find({ feature: { $in: AI_FEATURES.map((f) => f.key) } }).lean()) as FeatureRow[];
+  const others = AI_FEATURES.filter((f) => !WORKSPACE_AI_FEATURES.includes(f.key))
+    .map((f) => featureView(f, rows.find((r) => r.feature === f.key) ?? null).monthlyUsd)
+    .reduce((a, b) => a + b, 0);
+  return Math.round((others + budget.workspaceMonthlyUsd) * 100) / 100;
 }
 
-export async function setAiBudget(authIn: AuthPayload | null, input: { monthlyUsd?: number | null; alertPct?: number | null }): Promise<AiBudgetView> {
+export async function aiBudgetView(authIn: AuthPayload | null): Promise<AiBudgetScreenView> {
+  assertCanEdit(authIn);
+  const b = await aiBudgetConfig();
+  const capsTotalUsd = await aiCapsTotalUsd(b);
+  return { ...b, capsTotalUsd, capsOverBudget: capsTotalUsd > b.monthlyUsd };
+}
+
+export async function setAiBudget(
+  authIn: AuthPayload | null,
+  input: {
+    monthlyUsd?: number | null;
+    alertPct?: number | null;
+    workspaceMonthlyUsd?: number | null;
+    workspaceDefaultModel?: string | null;
+    workspaceDefaultThinking?: string | null;
+  },
+): Promise<AiBudgetScreenView> {
   const auth = assertCanEdit(authIn);
   checkCap(input.monthlyUsd, "মাসিক মোট খরচের সীমা (ডলার)", 1_000);
+  checkCap(input.workspaceMonthlyUsd, "এআই কর্মক্ষেত্রের মাসিক সীমা (ডলার)", 1_000);
   if (input.alertPct !== null && input.alertPct !== undefined && (!Number.isInteger(input.alertPct) || input.alertPct < 1 || input.alertPct > 100)) {
     throw new Error("সতর্কবার্তার শতাংশ ১ থেকে ১০০-এর মধ্যে পূর্ণ সংখ্যা দিন");
   }
+  if (input.workspaceDefaultModel && !(DEEPSEEK_MODELS as readonly string[]).includes(input.workspaceDefaultModel)) {
+    throw new Error("এই মডেলটি কর্মক্ষেত্রে চলে না");
+  }
+  if (input.workspaceDefaultThinking && !(WORKSPACE_THINKING as readonly string[]).includes(input.workspaceDefaultThinking)) {
+    throw new Error("চিন্তার মাত্রা সঠিক নয়");
+  }
   const now = await aiBudgetConfig();
-  const next = { monthlyUsd: input.monthlyUsd ?? now.monthlyUsd, alertPct: input.alertPct ?? now.alertPct };
+  const next = {
+    monthlyUsd: input.monthlyUsd ?? now.monthlyUsd,
+    alertPct: input.alertPct ?? now.alertPct,
+    workspaceMonthlyUsd: input.workspaceMonthlyUsd ?? now.workspaceMonthlyUsd,
+    workspaceDefaultModel: input.workspaceDefaultModel || now.workspaceDefaultModel,
+    workspaceDefaultThinking: (input.workspaceDefaultThinking as WorkspaceThinking | null | undefined) || now.workspaceDefaultThinking,
+  };
   await AiBudgetSetting.updateOne({ name: "global" }, { $set: { ...next, updatedBy: new Types.ObjectId(auth.userId) } }, { upsert: true });
   await writeAudit({ eventKind: "AI_SETTINGS_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiBudgetSetting", meta: next });
-  return aiBudgetConfig();
+  return aiBudgetView(auth);
 }

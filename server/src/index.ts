@@ -15,6 +15,9 @@ import { graphqlDevToolsOptions } from "./graphqlDevTools";
 import { connectDb } from "./db";
 import { refreshAiConfig } from "./modules/platform/services/AiSettingService";
 import { seedAiPolicies } from "./modules/platform/services/AiPolicyService";
+import { startWorkspaceQueue } from "./modules/ai-workspace/services/workspaceQueue";
+import { oauthRouter } from "./modules/ai-workspace/mcp/oauth";
+import { mcpRouter } from "./modules/ai-workspace/mcp/mcpRoute";
 import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -212,6 +215,10 @@ app.use("/triggers", triggersRouter);
 // Realtime push (D-#295): the authenticated SSE stream the app subscribes to —
 // "something changed, refetch" nudges from the in-process bus (single-node, D-#73).
 app.use("/events", eventsRouter);
+// AI Workspace W-5 (D-#1214): the MCP bridge for Claude + its OAuth 2.1 (Hub login, Principal only).
+// Caddy must pass /mcp*, /oauth* and /.well-known/oauth-* to the API.
+app.use(oauthRouter);
+app.use("/mcp", mcpRouter);
 
 // MON-2: capture faults thrown by the thin REST surface (pdf/files/triggers) + the
 // debug route into GlitchTip. Registered AFTER all routes (Express error-middleware
@@ -257,6 +264,8 @@ async function start() {
   registerWebPushChannel();
   // N-2 (D-#73): the 60s in-process trigger ticker (single-instance).
   startNotificationTicker();
+  // AI Workspace W-2/W-3: answer off-peak chat turns and draft revisions once DeepSeek is off-peak (60s).
+  startWorkspaceQueue();
   app.listen(PORT, () => {
     console.log(`SCD Hub server listening on http://localhost:${PORT}/graphql`);
   });

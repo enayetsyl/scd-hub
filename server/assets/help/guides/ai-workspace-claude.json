@@ -1,0 +1,111 @@
+{
+  "id": "ai-workspace-claude",
+  "category": "admin_access",
+  "order": 60,
+  "title": "Claude-কে এআই কর্মক্ষেত্রে যুক্ত করা (MCP সংযোগ)",
+  "intro": "Claude (claude.ai বা Claude Code) একটি সংযোগের মাধ্যমে এআই কর্মক্ষেত্রের প্রকল্প পড়তে আর খসড়া ও ব্যাচ কাজ শুরু করতে পারে। অনুমতি শুধু প্রধান শিক্ষক দিতে পারেন; DeepSeek-এর কী Claude কখনো পায় না।",
+  "keywords": [
+    "Claude",
+    "MCP",
+    "সংযোগ",
+    "connector",
+    "এআই কর্মক্ষেত্র"
+  ],
+  "perms": [
+    "ai_workspace:admin"
+  ],
+  "screens": [
+    "AiWorkspaceTab/AiWorkspaceHome"
+  ],
+  "goTo": {
+    "route": "AiWorkspaceTab",
+    "screen": "AiWorkspaceHome"
+  },
+  "rows": [
+    {
+      "heading": "Claude-এ সংযোগ যোগ করা",
+      "shot": "ai-workspace-claude/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "এআই কর্মক্ষেত্রের নিচে Claude সংযোগ কার্ড থেকে <b>সংযোগের ঠিকানা</b> কপি করুন। claude.ai-তে Settings → Connectors → Add custom connector খুলে ঠিকানাটি দিন।",
+          "box": [
+            0.0704,
+            0.7523,
+            0.8592,
+            0.0651
+          ]
+        },
+        {
+          "text": "Claude Code-এ কার্ডে লেখা <b>claude mcp add</b> কমান্ডটি চালান।",
+          "box": [
+            0.0704,
+            0.8081,
+            0.8592,
+            0.0581
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "অনুমতি দেওয়া",
+      "shot": "ai-workspace-claude/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "যে সাইন-ইন পাতা খোলে সেখানে প্রধান শিক্ষকের ইমেইল/ফোন ও পাসওয়ার্ড দিয়ে <b>অনুমতি দিন</b> চাপুন। অন্য কেউ অনুমতি দিতে পারেন না।",
+          "box": [
+            0.1068,
+            0.4789,
+            0.7864,
+            0.0616
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "Claude যা বানায়",
+      "shot": "ai-workspace-claude/3.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "Claude যা শুরু করে — খসড়া, ব্যাচ কাজ — অ্যাপে <b>Claude থেকে</b> চিহ্নসহ দেখা যায়; খরচ একই সীমার ভেতরে গোনা হয়।",
+          "box": [
+            0.0898,
+            0.5826,
+            0.2156,
+            0.0326
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "নজর রাখা ও বন্ধ করা",
+      "shot": "ai-workspace-claude/4.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "Claude সংযোগ কার্ডে কোন সংযোগ কবে ব্যবহার হয়েছে দেখা যায়; <b>সংযোগ বন্ধ করুন</b> চাপলে সঙ্গে সঙ্গে সব অনুমতি বাতিল হয়।",
+          "box": [
+            0.3495,
+            0.9198,
+            0.3009,
+            0.0372
+          ]
+        }
+      ]
+    }
+  ]
+}

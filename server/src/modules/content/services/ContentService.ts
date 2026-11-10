@@ -185,6 +185,37 @@ function extractLines(output: string, pattern: RegExp): string[] {
  * verdict is passed in so callers can validate first (e.g. the atomic question-bank
  * path validates every item before persisting any). On FAIL only the audit row is written.
  */
+/**
+ * The query for the CURRENT artifact an envelope would supersede (J1.9). The version key is
+ * the content item's IDENTITY: a plan is one doc per address, but questions/stimuli are many
+ * per address (a whole unit shares one address), so their identity is the qid / stimulus_id
+ * — keying on address would make every item in a bank supersede the previous one, leaving
+ * only the last as `current`. Exported so the AI Workspace send preview (W-3) names exactly
+ * the plan an import would replace.
+ */
+export function currentVersionKey(envelope: Record<string, unknown>): Record<string, unknown> {
+  const addr = (envelope.address ?? {}) as Record<string, unknown>;
+  const payload = (envelope.payload ?? {}) as Record<string, unknown>;
+  if (envelope.doc_type === "question") return { docType: "question", "envelopeJson.payload.qid": payload.qid, current: true };
+  if (envelope.doc_type === "stimulus") return { docType: "stimulus", "envelopeJson.payload.stimulus_id": payload.stimulus_id, current: true };
+  const versionKey: Record<string, unknown> = {
+    docType: envelope.doc_type,
+    subject: envelope.subject,
+    classLevel: envelope.class_level,
+    "address.anchorWord": addr.anchor_word,
+    "address.number": addr.number,
+    current: true,
+  };
+  // A chapter taught over several periods has one SESSION plan per period, all at the
+  // same address — the period is part of the identity. Without it, importing session 2
+  // superseded session 1 and the chapter showed only its last session (owner report
+  // 2026-09-30). null matches an envelope with no period_index, as before.
+  if (envelope.doc_type === "session_plan") {
+    versionKey["envelopeJson.payload.session_plan.period_index"] = sessionPeriodIndexOf(payload);
+  }
+  return versionKey;
+}
+
 async function persistEnvelope(
   envelope: Record<string, unknown>,
   actorId: Types.ObjectId | string,
@@ -229,34 +260,8 @@ async function persistEnvelope(
   }
 
   // Flip existing current version (J1.9 — supersede-not-overwrite, R-C7).
-  // The version key is the content item's IDENTITY: a plan is one doc per address, but
-  // questions/stimuli are many per address (a whole unit shares one address), so their
-  // identity is the qid / stimulus_id — keying on address would make every item in a bank
-  // supersede the previous one, leaving only the last as `current`.
   const payload = (envelope.payload ?? {}) as Record<string, unknown>;
-  let versionKey: Record<string, unknown>;
-  if (envelope.doc_type === "question") {
-    versionKey = { docType: "question", "envelopeJson.payload.qid": payload.qid, current: true };
-  } else if (envelope.doc_type === "stimulus") {
-    versionKey = { docType: "stimulus", "envelopeJson.payload.stimulus_id": payload.stimulus_id, current: true };
-  } else {
-    versionKey = {
-      docType: envelope.doc_type,
-      subject: envelope.subject,
-      classLevel: envelope.class_level,
-      "address.anchorWord": addr.anchor_word,
-      "address.number": addr.number,
-      current: true,
-    };
-    // A chapter taught over several periods has one SESSION plan per period, all at the
-    // same address — the period is part of the identity. Without it, importing session 2
-    // superseded session 1 and the chapter showed only its last session (owner report
-    // 2026-09-30). null matches an envelope with no period_index, as before.
-    if (envelope.doc_type === "session_plan") {
-      versionKey["envelopeJson.payload.session_plan.period_index"] = sessionPeriodIndexOf(payload);
-    }
-  }
-  const prior = await ContentArtifact.findOne(versionKey).lean();
+  const prior = await ContentArtifact.findOne(currentVersionKey(envelope)).lean();
   if (prior) {
     await ContentArtifact.updateOne({ _id: prior._id }, { $set: { current: false } });
     // Re-import carries the review thread forward (R2.2): a revised version supersedes any
@@ -387,7 +392,7 @@ interface BuildEnvelopeResult {
 }
 
 /** Call build_envelope.py on a (plan.json, plan.md) pair; return the built envelope. */
-async function buildEnvelopeFromPair(
+export async function buildEnvelopeFromPair(
   stem: string,
   jsonContent: string,
   mdContent: string,

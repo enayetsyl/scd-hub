@@ -344,6 +344,22 @@ export type AiAssistStackParamList = {
   AiAssistChat: { sessionId: string };
 };
 
+/** AI Workspace (docs/prd-ai-workspace.md). AiWorkspaceHome stays first: the initial route takes no params. */
+export type AiWorkspaceStackParamList = {
+  AiWorkspaceHome: undefined;
+  AiProjectNew: undefined;
+  AiProject: { projectId: string };
+  AiProjectFileText: { fileId: string };
+  /** W-2: one project chat; canEdit = the caller may send (editor / owner). */
+  AiProjectChat: { sessionId: string; canEdit: boolean };
+  /** W-3 drafts. AiDraftNew with a messageId = "save as draft" from a chat answer. */
+  AiDraft: { draftId: string };
+  AiDraftNew: { projectId: string; messageId?: string };
+  /** W-4 batch jobs. */
+  AiJob: { jobId: string };
+  AiJobNew: { projectId: string };
+};
+
 export type VivaStackParamList = {
   VivaHome: undefined;
   VivaSheet: { paperId: string };
@@ -874,4 +890,5 @@ export type TabParamList = {
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
   VivaTab: NavigatorScreenParams<VivaStackParamList>;
   AiAssistTab: NavigatorScreenParams<AiAssistStackParamList>;
+  AiWorkspaceTab: NavigatorScreenParams<AiWorkspaceStackParamList>;
 };

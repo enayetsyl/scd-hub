@@ -102,6 +102,11 @@ import { LibraryError } from "../modules/library/errors";
 import { storyStickerCodes, storyStickerPdf } from "../modules/library/services/StoryDeskService";
 import { registerActivityFileRoutes } from "./activityFiles";
 import { assertActivityFileReadAccess } from "../modules/activity-sheets/services/ActivityBankService";
+import { assertAiWorkspaceFileReadAccess, startAiProjectFileUpload } from "../modules/ai-workspace/services/FileIngestService";
+import { AiWorkspaceError } from "../modules/ai-workspace/services/AiProjectService";
+import { AI_FILE_MAX_BYTES } from "../modules/ai-workspace/services/fileText";
+import { draftForExport } from "../modules/ai-workspace/services/DraftService";
+import { EXPORT_MIME, exportDraft } from "../modules/ai-workspace/services/draftExport";
 import { ARTIFACT_STAGES, type ArtifactStage } from "@scd/shared";
 import { Types as MongoTypes } from "mongoose";
 
@@ -1290,6 +1295,101 @@ filesRouter.post("/reference-paper", parseReferencePaperUpload, async (req: Requ
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/ai-workspace — an AI Workspace knowledge file (W-1, docs/prd-ai-workspace.md §3).
+// Multipart `file` + `projectId`; an editor of the project; ≤ 40 MB; md/txt/json/csv, docx,
+// doc/odt/rtf, xlsx, pdf or a picture. Answers once the row exists (PROCESSING); the text is
+// read in the background (OCR of a scan takes minutes) and the row turns READY / FAILED.
+// ---------------------------------------------------------------------------
+
+const uploadAiWorkspace = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: AI_FILE_MAX_BYTES + 1 },
+});
+
+const parseAiWorkspaceUpload: express.RequestHandler = (req, res, next) => {
+  uploadAiWorkspace.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: `ফাইলটি ${AI_FILE_MAX_BYTES / 1024 / 1024} MB-এর বেশি বড়।` });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/ai-workspace", parseAiWorkspaceUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || (!callerHasPermission(ctx.auth, "ai_workspace:use") && !callerHasPermission(ctx.auth, "ai_workspace:admin"))) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  try {
+    const { file: row, done } = await startAiProjectFileUpload(ctx.auth, {
+      projectId: String(req.body?.projectId ?? ""),
+      sessionId: req.body?.sessionId ? String(req.body.sessionId) : null,
+      name: decodeUploadName(file.originalname),
+      mime: file.mimetype,
+      data: file.buffer,
+    });
+    done.catch((e) => console.warn("ai workspace read crashed:", (e as Error)?.message));
+    res.json({ fileId: row.id, status: row.status });
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      res.status(403).json({ error: e.message || FILE_ERRORS_BN.forbidden });
+      return;
+    }
+    if (e instanceof AiWorkspaceError) {
+      res.status(422).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /files/ai-draft/:draftId/export?format=docx|pdf[&version=N] — an AI Workspace draft as a
+// Word or PDF file (W-3, D-#1210). No AI call; LibreOffice renders the Markdown with the
+// Bangla house font. Any member of the draft's project.
+// ---------------------------------------------------------------------------
+
+filesRouter.get("/ai-draft/:draftId/export", async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth) {
+    res.status(401).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const format = req.query.format === "pdf" ? "pdf" : req.query.format === "docx" ? "docx" : null;
+  if (!format) {
+    res.status(400).json({ error: "format must be docx or pdf" });
+    return;
+  }
+  const version = req.query.version ? Number(req.query.version) : null;
+  try {
+    const d = await draftForExport(ctx.auth, String(req.params.draftId), Number.isInteger(version) ? version : null);
+    const data = await exportDraft({ ...d, format });
+    res.setHeader("Content-Type", EXPORT_MIME[format]);
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(d.title)}.${format}"`);
+    res.setHeader("Content-Length", data.byteLength);
+    res.send(data);
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      res.status(403).json({ error: e.message || FILE_ERRORS_BN.forbidden });
+      return;
+    }
+    if (e instanceof AiWorkspaceError) {
+      res.status(404).json({ error: e.message });
+      return;
+    }
+    console.warn("ai draft export failed:", (e as Error)?.message);
+    res.status(503).json({ error: "ফাইল তৈরি করা যায়নি — সার্ভারে LibreOffice আছে কিনা দেখুন" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/storybook — a storybook PDF (SB-1, D-#986). library:edit, PDF ≤ 60 MB.
 // Fields: seriesId + optional seriesNo, titleBn, titleEn, previewPages ("3,4,16") → a new
 // DRAFT book; or titleId (+ previewPages) → replace that book's cover / previews. Only the
@@ -1467,6 +1567,9 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // Another branch's past paper (D-#1030): staff with exam_papers:view_reference /
       // manage_reference, and only for a file that belongs to a paper.
       await assertReferencePaperFileReadAccess(ctx, file._id.toString());
+    } else if (file.kind === "ai_workspace_file") {
+      // An AI Workspace knowledge file (W-1): members of its project (or ai_workspace:admin).
+      await assertAiWorkspaceFileReadAccess(ctx.auth, file._id.toString());
     } else if (file.kind === "storybook_page") {
       // A storybook cover / preview (SB-1, D-#986): staff by library:view, a guardian only
       // for a published book of their child's age band.

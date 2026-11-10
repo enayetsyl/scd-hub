@@ -83,10 +83,37 @@ export const SET_AI_FEATURE_SETTING = gql<
   }
 `;
 
-export const AI_BUDGET = gql<{ aiBudget: { monthlyUsd: number; alertPct: number; updatedAt: string | null } }, Record<string, never>>`
-  query AiBudget { aiBudget { monthlyUsd alertPct updatedAt } }
+/** The one place every AI budget figure is set (D-#1225), incl. the AI Workspace cap + defaults. */
+export interface AiBudgetT {
+  monthlyUsd: number;
+  alertPct: number;
+  workspaceMonthlyUsd: number;
+  workspaceDefaultModel: string;
+  workspaceDefaultThinking: string;
+  capsTotalUsd: number;
+  capsOverBudget: boolean;
+  updatedAt: string | null;
+}
+const BUDGET_FIELDS = "monthlyUsd alertPct workspaceMonthlyUsd workspaceDefaultModel workspaceDefaultThinking capsTotalUsd capsOverBudget updatedAt";
+
+export const AI_BUDGET = gql<{ aiBudget: AiBudgetT }, Record<string, never>>`
+  query AiBudget { aiBudget { ${BUDGET_FIELDS} } }
 `;
 
-export const SET_AI_BUDGET = gql<{ setAiBudget: { monthlyUsd: number; alertPct: number; updatedAt: string | null } }, { monthlyUsd?: number | null; alertPct?: number | null }>`
-  mutation SetAiBudget($monthlyUsd: Float, $alertPct: Int) { setAiBudget(monthlyUsd: $monthlyUsd, alertPct: $alertPct) { monthlyUsd alertPct updatedAt } }
+export const SET_AI_BUDGET = gql<
+  { setAiBudget: AiBudgetT },
+  {
+    monthlyUsd?: number | null;
+    alertPct?: number | null;
+    workspaceMonthlyUsd?: number | null;
+    workspaceDefaultModel?: string | null;
+    workspaceDefaultThinking?: string | null;
+  }
+>`
+  mutation SetAiBudget($monthlyUsd: Float, $alertPct: Int, $workspaceMonthlyUsd: Float, $workspaceDefaultModel: String, $workspaceDefaultThinking: String) {
+    setAiBudget(
+      monthlyUsd: $monthlyUsd, alertPct: $alertPct, workspaceMonthlyUsd: $workspaceMonthlyUsd,
+      workspaceDefaultModel: $workspaceDefaultModel, workspaceDefaultThinking: $workspaceDefaultThinking
+    ) { ${BUDGET_FIELDS} }
+  }
 `;

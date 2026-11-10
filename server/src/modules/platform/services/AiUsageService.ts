@@ -16,7 +16,7 @@
  */
 import { Types } from "mongoose";
 import { AiUsage, type AiUsageOutcome } from "../models/AiUsage";
-import { aiBudgetConfig, aiFeatureConfig, CAPPED_AI_FEATURES, AI_FEATURES } from "./AiSettingService";
+import { aiBudgetConfig, aiFeatureConfig, CAPPED_AI_FEATURES, AI_FEATURES, WORKSPACE_AI_FEATURES } from "./AiSettingService";
 import { holdersOf } from "../../access-control/services/holders";
 import { emit } from "../../notifications/services/NotificationService";
 
@@ -25,7 +25,7 @@ const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
 export class AiCapError extends Error {
   constructor(
     message: string,
-    readonly cap: "daily" | "session" | "monthly" | "budget",
+    readonly cap: "daily" | "session" | "monthly" | "budget" | "workspace" | "project",
   ) {
     super(message);
     this.name = "AiCapError";
@@ -63,6 +63,8 @@ export interface AiUsageRowInput {
   attempt: number;
   refType?: string | null;
   refId?: string | null;
+  /** AI Workspace project (W-1). */
+  projectId?: string | null;
   provider: "deepseek" | "gemini";
   model: string;
   resolvedModel?: string | null;
@@ -93,6 +95,7 @@ export async function recordAiUsage(rows: AiUsageRowInput[]): Promise<void> {
         attempt: r.attempt,
         refType: r.refType ?? undefined,
         refId: r.refId ?? undefined,
+        projectId: r.projectId && Types.ObjectId.isValid(r.projectId) ? new Types.ObjectId(r.projectId) : undefined,
         provider: r.provider,
         modelName: r.model,
         resolvedModel: r.resolvedModel ?? undefined,
@@ -137,7 +140,20 @@ export interface CapContext {
   model: string;
   refType?: string | null;
   refId?: string | null;
+  /** AI Workspace (W-1): the project, and its own monthly cap in USD (null = none). */
+  projectId?: string | null;
+  projectMonthlyUsd?: number | null;
   at?: Date;
+}
+
+/** USD spent by one AI Workspace project since `since`. */
+export async function projectSpentSince(projectId: string, since: Date): Promise<number> {
+  if (!Types.ObjectId.isValid(projectId)) return 0;
+  const agg = await AiUsage.aggregate<{ usd: number }>([
+    { $match: { projectId: new Types.ObjectId(projectId), at: { $gte: since } } },
+    { $group: { _id: null, usd: { $sum: "$costUsd" } } },
+  ]);
+  return agg[0]?.usd ?? 0;
 }
 
 const fmtUsd = (n: number) => `$${n.toFixed(2)}`;
@@ -168,8 +184,18 @@ export async function assertWithinCaps(ctx: CapContext): Promise<void> {
     const spent = await spentSince([ctx.feature], dhakaMonthStart(at));
     if (spent >= cfg.monthlyUsd) refusal = new AiCapError(`এ মাসে ${label}-এর খরচের সীমা (${fmtUsd(cfg.monthlyUsd)}) শেষ — প্রধান শিক্ষক সীমা বাড়ালে আবার চলবে।`, "monthly");
   }
-  if (!refusal) {
-    const budget = await aiBudgetConfig();
+  // AI Workspace (D-#1225): the project's own cap, then the workspace's cap across all its
+  // features; both sit inside the school budget checked last.
+  if (!refusal && ctx.projectId && ctx.projectMonthlyUsd !== null && ctx.projectMonthlyUsd !== undefined) {
+    const spent = await projectSpentSince(ctx.projectId, dhakaMonthStart(at));
+    if (spent >= ctx.projectMonthlyUsd) refusal = new AiCapError(`এ মাসে এই প্রকল্পের খরচের সীমা (${fmtUsd(ctx.projectMonthlyUsd)}) শেষ — প্রকল্পের সেটিং থেকে সীমা বাড়ানো যায়।`, "project");
+  }
+  const budget = refusal ? null : await aiBudgetConfig();
+  if (!refusal && budget && WORKSPACE_AI_FEATURES.includes(ctx.feature)) {
+    const spent = await spentSince(WORKSPACE_AI_FEATURES, dhakaMonthStart(at));
+    if (spent >= budget.workspaceMonthlyUsd) refusal = new AiCapError(`এ মাসে এআই কর্মক্ষেত্রের খরচের সীমা (${fmtUsd(budget.workspaceMonthlyUsd)}) শেষ — প্রধান শিক্ষক এআই সেটিং থেকে সীমা বাড়ালে আবার চলবে।`, "workspace");
+  }
+  if (!refusal && budget) {
     const spent = await spentSince(CAPPED_AI_FEATURES, dhakaMonthStart(at));
     if (spent >= budget.monthlyUsd) refusal = new AiCapError(`এ মাসে এআই-এর মোট খরচের সীমা (${fmtUsd(budget.monthlyUsd)}) শেষ — প্রধান শিক্ষক সীমা বাড়ালে আবার চলবে।`, "budget");
   }
@@ -185,6 +211,7 @@ export async function assertWithinCaps(ctx: CapContext): Promise<void> {
       attempt: 1,
       refType: ctx.refType,
       refId: ctx.refId ?? ctx.sessionId,
+      projectId: ctx.projectId,
       provider: ctx.provider,
       model: ctx.model,
       outcome: "capped",
@@ -208,6 +235,9 @@ export async function alertIfBudget(feature: string, at: Date = new Date()): Pro
     const checks: Array<{ scope: string; name: string; spent: number; cap: number }> = [
       { scope: feature, name: label, spent: await spentSince([feature], since), cap: cfg.monthlyUsd },
       { scope: "global", name: "এআই-এর মোট খরচ", spent: await spentSince(CAPPED_AI_FEATURES, since), cap: budget.monthlyUsd },
+      ...(WORKSPACE_AI_FEATURES.includes(feature)
+        ? [{ scope: "workspace", name: "এআই কর্মক্ষেত্র", spent: await spentSince(WORKSPACE_AI_FEATURES, since), cap: budget.workspaceMonthlyUsd }]
+        : []),
     ];
     const due: Array<{ scope: string; name: string; spent: number; cap: number; pct: number }> = [];
     for (const c of checks) {
