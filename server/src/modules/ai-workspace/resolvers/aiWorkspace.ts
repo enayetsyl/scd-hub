@@ -97,7 +97,7 @@ const InstructionVersionRef = builder.objectRef<AiPolicyVersionView>("AiProjectI
 });
 const InstructionVersionPageRef = pageRef("AiProjectInstructionVersionPage", InstructionVersionRef);
 
-const FileRef = builder.objectRef<AiProjectFileView>("AiProjectFile").implement({
+export const AiProjectFileRef = builder.objectRef<AiProjectFileView>("AiProjectFile").implement({
   fields: (t) => ({
     id: t.string({ resolve: (f) => f.id }),
     projectId: t.string({ resolve: (f) => f.projectId }),
@@ -117,6 +117,7 @@ const FileRef = builder.objectRef<AiProjectFileView>("AiProjectFile").implement(
     at: t.string({ resolve: (f) => iso(f.at)! }),
   }),
 });
+const FileRef = AiProjectFileRef;
 const FilePageRef = pageRef("AiProjectFilePage", FileRef);
 
 const FileTextRef = builder.objectRef<AiProjectFileText>("AiProjectFileText").implement({

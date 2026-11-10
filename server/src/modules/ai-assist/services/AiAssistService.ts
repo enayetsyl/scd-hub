@@ -91,8 +91,8 @@ async function sessionViews(docs: IAiAssistSession[]): Promise<AssistSessionView
     id: d._id.toString(),
     teacherId: d.teacherId.toString(),
     teacherName: names.get(d.teacherId.toString()) ?? null,
-    classLevel: d.classLevel,
-    subject: d.subject,
+    classLevel: d.classLevel ?? 0,
+    subject: d.subject ?? "",
     chapter: d.chapter ?? null,
     sessionIndex: d.sessionIndex ?? null,
     title: d.title,
@@ -156,7 +156,8 @@ export async function startAssistSession(
 async function loadSession(auth: AuthPayload, sessionId: string, forWrite: boolean): Promise<IAiAssistSession> {
   if (!Types.ObjectId.isValid(sessionId)) throw new AiAssistError("আলাপটি পাওয়া যায়নি");
   const s = await AiAssistSession.findById(sessionId);
-  if (!s) throw new AiAssistError("আলাপটি পাওয়া যায়নি");
+  // AI Workspace chats (W-2) share the collection but are never the assistant's.
+  if (!s || s.projectId) throw new AiAssistError("আলাপটি পাওয়া যায়নি");
   const own = s.teacherId.toString() === auth.userId;
   if (!own && (forWrite || !canReadAll(auth))) throw new ForbiddenError("এই আলাপ আপনার নয়");
   return s;
@@ -164,7 +165,7 @@ async function loadSession(auth: AuthPayload, sessionId: string, forWrite: boole
 
 /** The chapter's plans as one markdown block (session first if one was picked), capped. */
 export async function chapterContext(s: Pick<IAiAssistSession, "classLevel" | "subject" | "chapter" | "sessionIndex">): Promise<string> {
-  if (!s.chapter) return "";
+  if (!s.chapter || s.classLevel === undefined || !s.subject) return "";
   const plans = (await sessionPlansFor(s.classLevel, s.subject)).filter((p) => p.chapter === s.chapter);
   plans.sort((a, b) => (a.sessionIndex === s.sessionIndex ? -1 : b.sessionIndex === s.sessionIndex ? 1 : a.sessionIndex - b.sessionIndex));
   const ids = plans.map((p) => new Types.ObjectId(p.artifactId));
@@ -244,14 +245,14 @@ export async function askAssistant(authIn: AuthPayload | null, sessionId: string
 
 export async function myAssistSessionsPage(authIn: AuthPayload | null, args: PageArgs): Promise<Page<AssistSessionView>> {
   const auth = assertChat(authIn);
-  return queryPage(AiAssistSession, { teacherId: new Types.ObjectId(auth.userId) }, { lastAt: -1 }, args, (docs) => sessionViews(docs as unknown as IAiAssistSession[]), 20);
+  return queryPage(AiAssistSession, { teacherId: new Types.ObjectId(auth.userId), projectId: null }, { lastAt: -1 }, args, (docs) => sessionViews(docs as unknown as IAiAssistSession[]), 20);
 }
 
 /** Every teacher's conversations — the Principal only (D-#1104). */
 export async function allAssistSessionsPage(authIn: AuthPayload | null, args: PageArgs & { teacherId?: string | null }): Promise<Page<AssistSessionView>> {
   if (!authIn) throw new ForbiddenError("Unauthenticated");
   if (!canReadAll(authIn)) throw new ForbiddenError("সব শিক্ষকের আলাপ দেখার অনুমতি নেই");
-  const filter: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { projectId: null };
   if (args.teacherId && Types.ObjectId.isValid(args.teacherId)) filter.teacherId = new Types.ObjectId(args.teacherId);
   return queryPage(AiAssistSession, filter, { lastAt: -1 }, args, (docs) => sessionViews(docs as unknown as IAiAssistSession[]), 20);
 }

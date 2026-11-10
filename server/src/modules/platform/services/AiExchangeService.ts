@@ -25,7 +25,8 @@ const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
 const EXPORT_LIMIT = 5000;
 const MAX_TEXT = 60_000;
 
-export const LOGGED_AI_FEATURES = ["comment_check", "assistant"] as const;
+/** AI Workspace chat (W-2) is logged in reference mode: no history copy, no prefix text (D-#1228). */
+export const LOGGED_AI_FEATURES = ["comment_check", "assistant", "workspace_chat"] as const;
 
 export function textHash(text: string): string {
   return createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -49,6 +50,10 @@ export interface AiExchangeInput {
   stablePrefix: string;
   context?: string | null;
   history?: Array<{ role: string; text: string }>;
+  /** Reference mode (D-#1228). */
+  historyRef?: string | null;
+  prefixRef?: string | null;
+  deidentified?: boolean;
   request: string;
   reply: string;
   attempts: IAiExchangeAttempt[];
@@ -58,7 +63,11 @@ export interface AiExchangeInput {
 export async function recordAiExchange(x: AiExchangeInput): Promise<void> {
   try {
     if (!(LOGGED_AI_FEATURES as readonly string[]).includes(x.feature)) return;
-    const [prefixHash, contextHash] = await Promise.all([storePromptText(x.stablePrefix, x.at), x.context ? storePromptText(x.context, x.at) : Promise.resolve(undefined)]);
+    // Reference mode: the prefix is named (policy hash + file ids), never stored again (D-#1228).
+    const [prefixHash, contextHash] = await Promise.all([
+      x.prefixRef ? Promise.resolve(`ref:${textHash(x.prefixRef)}`) : storePromptText(x.stablePrefix, x.at),
+      x.context && !x.prefixRef ? storePromptText(x.context, x.at) : Promise.resolve(undefined),
+    ]);
     const answered = x.attempts.find((a) => a.outcome === "ok");
     const last = answered ?? x.attempts[x.attempts.length - 1];
     await AiExchange.create({
@@ -79,7 +88,10 @@ export async function recordAiExchange(x: AiExchangeInput): Promise<void> {
       attempts: x.attempts,
       prefixHash,
       contextHash,
-      history: (x.history ?? []).map((h) => ({ role: h.role, text: h.text.slice(0, MAX_TEXT) })),
+      history: x.historyRef ? [] : (x.history ?? []).map((h) => ({ role: h.role, text: h.text.slice(0, MAX_TEXT) })),
+      historyRef: x.historyRef ?? undefined,
+      prefixRef: x.prefixRef ?? undefined,
+      deidentified: x.deidentified ?? true,
       request: x.request.slice(0, MAX_TEXT) || "(empty)",
       reply: x.reply.slice(0, MAX_TEXT),
     });

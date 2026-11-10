@@ -48,6 +48,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // AI Workspace (W-1): a file could not be read (a tool not installed, an empty scan, Gemini
   // switched off). Written onto the file row as its reason; never a fault.
   "FileReadError",
+  // AI Workspace (W-2): a chat asked for a model the route does not allow (a Bangla sentence).
+  "AiModelOverrideError",
   // A login refused by the lockout (D-#765): too many wrong passwords on the account or
   // from the network. A Bangla sentence telling the person how long to wait — the lockout
   // working, not a fault.

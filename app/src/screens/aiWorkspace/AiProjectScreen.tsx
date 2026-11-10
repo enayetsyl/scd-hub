@@ -13,12 +13,13 @@ import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { fill, kTokens, modelLabel, roleLabel, thinkingLabel, usd } from "./aiWorkspaceUi";
 import { ProjectFilesTab } from "./ProjectFilesTab";
+import { ProjectChatsTab } from "./ProjectChatsTab";
 import { ProjectInstructionsTab } from "./ProjectInstructionsTab";
 import { ProjectMembersTab } from "./ProjectMembersTab";
 import { ProjectSettingsTab } from "./ProjectSettingsTab";
 
 type Props = NativeStackScreenProps<AiWorkspaceStackParamList, "AiProject">;
-type Tab = "files" | "instructions" | "members" | "settings";
+type Tab = "chats" | "files" | "instructions" | "members" | "settings";
 
 function BudgetCard({ b }: { b: AiProjectBudgetT }): React.ReactElement {
   return (
@@ -37,7 +38,7 @@ function BudgetCard({ b }: { b: AiProjectBudgetT }): React.ReactElement {
 
 export default function AiProjectScreen({ route, navigation }: Props): React.ReactElement {
   const { projectId } = route.params;
-  const [tab, setTab] = React.useState<Tab>("files");
+  const [tab, setTab] = React.useState<Tab>("chats");
   const [q, refetch] = useQuery({ query: AI_PROJECT, variables: { id: projectId }, requestPolicy: "cache-and-network" });
   const refresh = React.useCallback(() => refetch({ requestPolicy: "network-only" }), [refetch]);
   const p = q.data?.aiProject;
@@ -60,11 +61,15 @@ export default function AiProjectScreen({ route, navigation }: Props): React.Rea
       </Card>
       <BudgetCard b={b} />
       <ChipRow>
+        <Chip label={STR.awTabChats} selected={tab === "chats"} onPress={() => setTab("chats")} />
         <Chip label={STR.awTabFiles} selected={tab === "files"} onPress={() => setTab("files")} />
         <Chip label={STR.awTabInstructions} selected={tab === "instructions"} onPress={() => setTab("instructions")} />
         <Chip label={STR.awTabMembers} selected={tab === "members"} onPress={() => setTab("members")} />
         <Chip label={STR.awTabSettings} selected={tab === "settings"} onPress={() => setTab("settings")} />
       </ChipRow>
+      {tab === "chats" ? (
+        <ProjectChatsTab project={p} onOpen={(sessionId) => navigation.navigate("AiProjectChat", { sessionId, canEdit: p.myRole !== "viewer" && !p.archived })} />
+      ) : null}
       {tab === "files" ? <ProjectFilesTab project={p} onChanged={refresh} onViewText={(fileId) => navigation.navigate("AiProjectFileText", { fileId })} /> : null}
       {tab === "instructions" ? <ProjectInstructionsTab project={p} onChanged={refresh} /> : null}
       {tab === "members" ? <ProjectMembersTab project={p} onChanged={refresh} /> : null}

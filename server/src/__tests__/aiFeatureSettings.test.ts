@@ -128,11 +128,12 @@ describe("testDeepseek — the save-time check", () => {
 describe("per-feature settings", () => {
   test("every feature starts OFF, on DeepSeek, fallback on — except the workspace's Gemini reader (D-#1226/#1227)", async () => {
     const list = await aiFeatureSettings(principal);
-    expect(list.map((f) => f.feature)).toEqual(["comment_check", "assistant", "workspace_ocr"]);
-    for (const f of list.filter((x) => x.feature !== "workspace_ocr")) {
+    expect(list.map((f) => f.feature)).toEqual(["comment_check", "assistant", "workspace_ocr", "workspace_chat"]);
+    for (const f of list.filter((x) => !x.feature.startsWith("workspace_"))) {
       expect(f).toMatchObject({ enabled: false, provider: "deepseek", model: "deepseek-flash", fallback: true, providerReady: false });
     }
     expect(list.find((x) => x.feature === "workspace_ocr")).toMatchObject({ enabled: false, provider: "gemini", fallback: false });
+    expect(list.find((x) => x.feature === "workspace_chat")).toMatchObject({ enabled: false, provider: "deepseek", fallback: false, perSessionTurns: null });
   });
 
   test("switching on needs the provider's key, and tests that provider with the feature's model", async () => {
