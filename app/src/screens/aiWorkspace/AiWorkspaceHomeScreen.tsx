@@ -14,6 +14,8 @@ import { usePageState } from "../../lib/paging";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { fill, modelLabel, roleLabel } from "./aiWorkspaceUi";
+import { ClaudeConnectionCard } from "./ClaudeConnectionCard";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<AiWorkspaceStackParamList, "AiWorkspaceHome">;
 const PAGE_SIZE = 20;
@@ -30,6 +32,7 @@ function ProjectCard({ p, onPress }: { p: AiProjectT; onPress: () => void }): Re
 }
 
 export default function AiWorkspaceHomeScreen({ navigation }: Props): React.ReactElement {
+  const { can } = useAuth();
   const [archived, setArchived] = React.useState(false);
   const [page, setPage] = usePageState(archived);
   const [q] = useQuery({ query: AI_PROJECTS_PAGE, variables: { archived, page, pageSize: PAGE_SIZE }, requestPolicy: "cache-and-network" });
@@ -49,6 +52,7 @@ export default function AiWorkspaceHomeScreen({ navigation }: Props): React.Reac
         <ProjectCard key={p.id} p={p} onPress={() => navigation.navigate("AiProject", { projectId: p.id })} />
       ))}
       {data ? <Pager page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}
+      {can("ai_workspace:admin") ? <ClaudeConnectionCard /> : null}
     </Screen>
   );
 }
