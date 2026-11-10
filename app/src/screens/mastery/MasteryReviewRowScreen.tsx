@@ -10,6 +10,10 @@
  * D-#1160: the review judges TAGS only — Question/Rubric and question types are neither shown nor
  * edited here; they are set later on the catalogue (D-#1161). A sub lists all its siblings so the
  * reviewer sees the whole objective's split while reading one step.
+ *
+ * D-#1260: an objective with steps offers ভাগ ফিরিয়ে নিন — the server's existing "merge back" (a MERGE
+ * of one step into its own parent folds every step in and re-tags the parent), placed where a
+ * reviewer who split by mistake looks for it, not only inside a step's merge list.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -25,7 +29,7 @@ import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryReviewRow">;
-type Mode = null | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "REJECT";
+type Mode = null | "EDIT" | "SPLIT" | "UNSPLIT" | "MERGE" | "MOVE" | "REJECT";
 
 const isOut = (r: ReviewRow) => r.reviewState === "REJECTED" || !!r.mergedInto;
 const lines = (t: string) =>
@@ -136,6 +140,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   // objective is split instead, never given one lone child), or on a step, under its own objective.
   const addParent = r.level !== "SUB" ? (kids.length > 0 ? r : null) : parent && parent.status === "DRAFT" && !isOut(parent) ? parent : null;
   const canAddHere = q.canWrite && !!addParent && addParent.status === "DRAFT" && !isOut(addParent);
+  const canUnsplit = live && r.level !== "SUB" && kids.length > 0 && kids.every((k) => k.status === "DRAFT");
   const run = (input: ReviewDecisionInput) =>
     void act.run({ reviewId: q.id, input }, STR.msRvSaved).then((ok) => {
       if (!ok) return;
@@ -247,12 +252,21 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             {live && r.level !== "SUB" && r.tagged && kids.length === 0 ? (
               <Button title={STR.msRvSplit} variant={mode === "SPLIT" ? "primary" : "secondary"} onPress={() => setMode(mode === "SPLIT" ? null : "SPLIT")} />
             ) : null}
+            {canUnsplit ? (
+              <Button title={STR.msRvUndoSplit} variant={mode === "UNSPLIT" ? "primary" : "secondary"} onPress={() => setMode(mode === "UNSPLIT" ? null : "UNSPLIT")} />
+            ) : null}
             {live ? <Button title={STR.msRvMerge} variant={mode === "MERGE" ? "primary" : "secondary"} onPress={() => setMode(mode === "MERGE" ? null : "MERGE")} /> : null}
             {live ? <Button title={STR.msRvMove} variant={mode === "MOVE" ? "primary" : "secondary"} onPress={() => setMode(mode === "MOVE" ? null : "MOVE")} /> : null}
             {live ? <Button title={STR.msRvRejectFull} variant="ghost" onPress={() => setMode(mode === "REJECT" ? null : "REJECT")} /> : null}
           </View>
           {mode === "EDIT" ? <EditForm q={q} r={r} run={run} busy={act.busy} /> : null}
           {mode === "SPLIT" ? <SplitForm r={r} run={run} busy={act.busy} /> : null}
+          {mode === "UNSPLIT" && canUnsplit ? (
+            <View style={{ gap: space(2) }}>
+              <Muted>{fill(STR.msRvUndoSplitHintTpl, { n: bnNum(kids.length), sub: levels.sub, objective: levels.objective })}</Muted>
+              <Button title={STR.msRvUndoSplitConfirm} loading={act.busy} onPress={() => run({ action: "MERGE", code: kids[0].code, intoCode: r.code })} />
+            </View>
+          ) : null}
           {mode === "MERGE" ? (
             <View style={{ gap: space(2) }}>
               <Muted>{STR.msRvMergeHint}</Muted>
