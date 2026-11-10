@@ -15,7 +15,7 @@ import { graphqlDevToolsOptions } from "./graphqlDevTools";
 import { connectDb } from "./db";
 import { refreshAiConfig } from "./modules/platform/services/AiSettingService";
 import { seedAiPolicies } from "./modules/platform/services/AiPolicyService";
-import { startWorkspaceChatQueue } from "./modules/ai-workspace/services/ProjectChatService";
+import { startWorkspaceQueue } from "./modules/ai-workspace/services/workspaceQueue";
 import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -258,8 +258,8 @@ async function start() {
   registerWebPushChannel();
   // N-2 (D-#73): the 60s in-process trigger ticker (single-instance).
   startNotificationTicker();
-  // AI Workspace W-2: answer off-peak chat turns once DeepSeek is off-peak (60s, single-instance).
-  startWorkspaceChatQueue();
+  // AI Workspace W-2/W-3: answer off-peak chat turns and draft revisions once DeepSeek is off-peak (60s).
+  startWorkspaceQueue();
   app.listen(PORT, () => {
     console.log(`SCD Hub server listening on http://localhost:${PORT}/graphql`);
   });

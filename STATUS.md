@@ -1,5 +1,10 @@
 # STATUS
 
+- 2026-11-10: **BUILT — AI Workspace W-3: drafts, approval, export, send to the app (D-#1247–#1249)** (branch `feat/ws3-drafts`, stacked on `feat/ws2-chat`; docs/prd-ai-workspace.md §5). A project's খসড়া tab: save an AI answer as a draft, edit (each edit is a new version), the owner approves, "revise with AI" (now or off-peak), Word / PDF download (no AI). Approved lesson plans / question banks / book chapters are sent to the app through the same import and validator as the import screen, after a check that shows what will be replaced.
+  - **VM setup:** `sudo apt install fonts-noto-core` so Word / PDF exports use the Bangla font (LibreOffice is already there).
+  - **Owner, to switch on:** "কর্মক্ষেত্র: খসড়া সংশোধন" in Admin → এআই কী ও মডেল → features. Sending a lesson plan needs `lesson_plans:import` (the Principal has it).
+  - **Help guide:** `ai-workspace-drafts` is `draft: true`.
+  - **Now / next:** PR → dev after #1441 (W-2); then W-4 (batch jobs + worker).
 - 2026-11-10: **BUILT — AI Workspace W-2: project chat (D-#1244–#1246)** (branch `feat/ws2-chat`, stacked on `feat/ws1-projects`; docs/prd-ai-workspace.md §4). A project's আলাপ tab. Every send picks the model, the thinking level and when to run (now or off-peak, no default for a new chat). The whole conversation goes every turn after the project's instructions and pinned files. Web shows the answer as it is written; the phone shows it when finished. Stop, a price clock in Bangladesh time, a context meter that suggests a new chat at 80%, files for one chat only, and an off-peak queue that answers once DeepSeek is off-peak.
   - **Owner, to switch on:** save a DeepSeek key, check `aiPrices.ts`, raise the school AI budget to cover the caps, then switch "কর্মক্ষেত্র: প্রকল্পে আলাপ" on (Admin → এআই কী ও মডেল → features).
   - **Help guide:** `ai-workspace-chat` is `draft: true`.

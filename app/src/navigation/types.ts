@@ -352,6 +352,9 @@ export type AiWorkspaceStackParamList = {
   AiProjectFileText: { fileId: string };
   /** W-2: one project chat; canEdit = the caller may send (editor / owner). */
   AiProjectChat: { sessionId: string; canEdit: boolean };
+  /** W-3 drafts. AiDraftNew with a messageId = "save as draft" from a chat answer. */
+  AiDraft: { draftId: string };
+  AiDraftNew: { projectId: string; messageId?: string };
 };
 
 export type VivaStackParamList = {

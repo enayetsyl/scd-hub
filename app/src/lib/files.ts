@@ -1460,3 +1460,41 @@ export async function pickAndUploadAiWorkspaceFile(projectId: string, sessionId?
   if (!res.ok || !body.fileId) throw new FileUploadError(body.error ?? `upload failed (${res.status})`);
   return { fileId: body.fileId };
 }
+
+// ---------------------------------------------------------------------------
+// AI Workspace draft export (W-3, server: GET /files/ai-draft/:id/export?format=docx|pdf).
+// Rendered on the server with no AI call. Web saves the file; Android downloads it and
+// hands it to the phone's viewer.
+// ---------------------------------------------------------------------------
+
+export async function downloadAiDraft(draftId: string, format: "docx" | "pdf", version?: number): Promise<void> {
+  const token = getToken();
+  const url = `${REST_BASE}/files/ai-draft/${encodeURIComponent(draftId)}/export?format=${format}${version ? `&version=${version}` : ""}`;
+  const mime = format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (Platform.OS === "android") {
+    const target = `${FileSystem.cacheDirectory}scdhub-draft-${draftId}-${++tmpSeq}.${format}`;
+    const res = await FileSystem.downloadAsync(url, target, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (res.status !== 200) {
+      let message = `export failed (${res.status})`;
+      try {
+        const body = JSON.parse(await FileSystem.readAsStringAsync(res.uri)) as { error?: string };
+        if (body.error) message = body.error;
+      } catch {
+        // keep the generic message
+      }
+      throw new FileUploadError(message);
+    }
+    const contentUri = await FileSystem.getContentUriAsync(res.uri);
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", { data: contentUri, flags: 1, type: mime });
+    return;
+  }
+  if (Platform.OS !== "web") throw new FileUploadError("File download is not available here");
+  const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new FileUploadError(body.error ?? `export failed (${res.status})`);
+  }
+  const blobUrl = URL.createObjectURL(await res.blob());
+  saveBlobUrl(blobUrl, downloadName(res.headers.get("content-disposition"), draftId, mime));
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+}

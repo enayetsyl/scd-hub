@@ -293,21 +293,45 @@ export interface ChatDeps {
 /** Running answers in THIS process, for Stop. */
 const running = new Map<string, AbortController>();
 
+/**
+ * The project's cached prefix: fixed instructions + the project instructions + pinned READY
+ * files in order. Chat, draft revisions (W-3) and batch jobs (W-4) all start with exactly
+ * this text, so they share DeepSeek's prompt cache.
+ */
+export async function projectPrefix(project: IAiProject): Promise<{ stablePrefix: string; policy: ProjectPolicyVersion | null; fileIds: string[] }> {
+  const [policy, pinned] = await Promise.all([
+    activeProjectPolicy(projectPolicyKey(project._id.toString())),
+    AiProjectFile.find({ projectId: project._id, sessionId: null, pinned: true, status: "ready" }).sort({ order: 1, _id: 1 }).select("name text").lean(),
+  ]);
+  const parts = [CHAT_INSTRUCTIONS];
+  if (policy) parts.push(`# PROJECT INSTRUCTIONS\n\n${policy.body}`);
+  for (const f of pinned) parts.push(`# FILE: ${f.name}\n\n${f.text}`);
+  return { stablePrefix: parts.join("\n\n"), policy, fileIds: pinned.map((f) => f._id.toString()) };
+}
+
+/**
+ * Name protection (D-#1207) for any workspace call: de-identifies every part against the whole
+ * school, runs the fail-closed gate, and returns the token map to restore the answer.
+ */
+export async function protectParts(parts: string[], scopeFn: () => Promise<DeidScope> = scopeForSchool): Promise<{ texts: string[]; map: Record<string, string> }> {
+  const scope = await scopeFn();
+  const out = parts.map((t) => deidentify(t, scope));
+  for (const o of out) assertDeidentified(o.text, scope);
+  return { texts: out.map((o) => o.text), map: Object.assign({}, ...out.map((o) => o.map)) };
+}
+
 /** The prompt for one assistant turn (exported for the prefix-stability test). */
 export async function buildChatPrompt(
   project: IAiProject,
   sessionId: Types.ObjectId,
   beforeAt: Date,
 ): Promise<{ stablePrefix: string; context: string; history: Array<{ role: "user" | "assistant"; text: string }>; policy: ProjectPolicyVersion | null; fileIds: string[] }> {
-  const [policy, pinned, attached, earlier] = await Promise.all([
-    activeProjectPolicy(projectPolicyKey(project._id.toString())),
-    AiProjectFile.find({ projectId: project._id, sessionId: null, pinned: true, status: "ready" }).sort({ order: 1, _id: 1 }).select("name text").lean(),
+  const [prefix, attached, earlier] = await Promise.all([
+    projectPrefix(project),
     AiProjectFile.find({ projectId: project._id, sessionId, status: "ready" }).sort({ order: 1, _id: 1 }).select("name text").lean(),
     AiAssistMessage.find({ sessionId, at: { $lt: beforeAt } }).sort({ at: 1, _id: 1 }).select("role text status").lean(),
   ]);
-  const parts = [CHAT_INSTRUCTIONS];
-  if (policy) parts.push(`# PROJECT INSTRUCTIONS\n\n${policy.body}`);
-  for (const f of pinned) parts.push(`# FILE: ${f.name}\n\n${f.text}`);
+  const { policy } = prefix;
   const context = attached.map((f) => `# ATTACHED FILE: ${f.name}\n\n${f.text}`).join("\n\n");
   // Every earlier answered turn, in order. A user turn whose answer failed / was stopped is
   // left out with its answer, so the history stays a clean question → answer sequence.
@@ -321,7 +345,7 @@ export async function buildChatPrompt(
       i++;
     }
   }
-  return { stablePrefix: parts.join("\n\n"), context, history, policy, fileIds: [...pinned, ...attached].map((f) => f._id.toString()) };
+  return { stablePrefix: prefix.stablePrefix, context, history, policy, fileIds: [...prefix.fileIds, ...attached.map((f) => f._id.toString())] };
 }
 
 /** Answers one placeholder; never throws (the reason is written onto the message). */
@@ -487,17 +511,6 @@ export async function processQueuedChats(now: Date = new Date(), deps: ChatDeps 
 /** Answers left "running" by a restart become failed, so the chat is not stuck. */
 export async function failOrphanedAnswers(): Promise<void> {
   await AiAssistMessage.updateMany({ status: "running", projectId: { $ne: null } }, { $set: { status: "failed", error: "সার্ভার আবার চালু হওয়ায় উত্তরটি থেমে গেছে — আবার পাঠান" } });
-}
-
-let queueTimer: ReturnType<typeof setInterval> | null = null;
-/** Boot: once a minute, answer due off-peak turns (single-instance server, like the ticker). */
-export function startWorkspaceChatQueue(): void {
-  if (queueTimer) return;
-  void failOrphanedAnswers().catch(() => undefined);
-  queueTimer = setInterval(() => {
-    void processQueuedChats().catch((e) => console.warn("[ai-workspace] queue tick failed:", (e as Error)?.message));
-  }, 60_000);
-  queueTimer.unref?.();
 }
 
 /** For the SSE route: who may watch a message. */
