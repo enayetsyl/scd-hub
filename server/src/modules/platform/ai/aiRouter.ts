@@ -66,6 +66,9 @@ export interface AiCallContext {
   sessionId?: string | null;
   /** The AiPolicy version the prompt was built from (AI-3). */
   policyHash?: string | null;
+  /** AI Workspace (W-1): the project, stamped on every ledger row, and its own monthly cap. */
+  projectId?: string | null;
+  projectMonthlyUsd?: number | null;
 }
 
 export type ProviderFactory = (provider: AiProviderName, key: string) => AiProvider;
@@ -113,6 +116,8 @@ export async function aiSend(
     model: route.primary.model,
     refType: ctx.refType,
     refId,
+    projectId: ctx.projectId,
+    projectMonthlyUsd: ctx.projectMonthlyUsd,
     at: now(),
   });
 
@@ -132,6 +137,7 @@ export async function aiSend(
     attempt: attempts.length,
     refType: ctx.refType,
     refId,
+    projectId: ctx.projectId,
     policyHash: ctx.policyHash,
     provider: step.provider,
     model: step.model,

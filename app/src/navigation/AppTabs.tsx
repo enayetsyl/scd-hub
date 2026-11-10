@@ -60,6 +60,7 @@ import type {
   QuranExamStackParamList,
   VivaStackParamList,
   AiAssistStackParamList,
+  AiWorkspaceStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
@@ -164,6 +165,10 @@ import VivaHomeScreen from "../screens/viva/VivaHomeScreen";
 import AiAssistHomeScreen from "../screens/aiAssist/AiAssistHomeScreen";
 import AiAssistNewScreen from "../screens/aiAssist/AiAssistNewScreen";
 import AiAssistChatScreen from "../screens/aiAssist/AiAssistChatScreen";
+import AiWorkspaceHomeScreen from "../screens/aiWorkspace/AiWorkspaceHomeScreen";
+import AiProjectNewScreen from "../screens/aiWorkspace/AiProjectNewScreen";
+import AiProjectScreen from "../screens/aiWorkspace/AiProjectScreen";
+import AiProjectFileTextScreen from "../screens/aiWorkspace/AiProjectFileTextScreen";
 import VivaSheetScreen from "../screens/viva/VivaSheetScreen";
 import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
 import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
@@ -1832,6 +1837,20 @@ function AiAssistNavigator(): React.ReactElement {
   );
 }
 
+/** AI Workspace (docs/prd-ai-workspace.md) — projects, files, instructions; chat + drafts + jobs in later slices. */
+const AiWorkspaceStack = createNativeStackNavigator<AiWorkspaceStackParamList>();
+function AiWorkspaceNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <AiWorkspaceStack.Navigator screenOptions={stackOptions}>
+      <AiWorkspaceStack.Screen name="AiWorkspaceHome" component={AiWorkspaceHomeScreen} options={{ title: STR.awHomeTitle }} />
+      <AiWorkspaceStack.Screen name="AiProjectNew" component={AiProjectNewScreen} options={{ title: STR.awNewTitle }} />
+      <AiWorkspaceStack.Screen name="AiProject" component={AiProjectScreen} options={{ title: STR.awProjectTitle }} />
+      <AiWorkspaceStack.Screen name="AiProjectFileText" component={AiProjectFileTextScreen} options={{ title: STR.awFileTextTitle }} />
+    </AiWorkspaceStack.Navigator>
+  );
+}
+
 /** D-#1080 — Nursery & KG oral exam (viva). VivaHome is first (no params) — see the initial-route trap. */
 const VivaStack = createNativeStackNavigator<VivaStackParamList>();
 function VivaNavigator(): React.ReactElement {
@@ -2164,6 +2183,8 @@ export function AppTabs(): React.ReactElement {
   const canViva = any("viva:view", "viva:manage", "viva:examine");
   // AI-6 (D-#1096/#1104): teachers chat; the Principal also reads every conversation.
   const canAiAssist = any("ai_assist:chat", "ai_assist:read_all_chats");
+  // AI Workspace (D-#1208): the Principal at launch; ai_workspace:use is granted from the matrix.
+  const canAiWorkspace = any("ai_workspace:use", "ai_workspace:admin");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
@@ -2175,7 +2196,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canExamPapers;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canAiWorkspace || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2248,6 +2269,7 @@ export function AppTabs(): React.ReactElement {
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canViva ? <Drawer.Screen name="VivaTab" component={VivaNavigator} /> : null}
         {canAiAssist ? <Drawer.Screen name="AiAssistTab" component={AiAssistNavigator} /> : null}
+        {canAiWorkspace ? <Drawer.Screen name="AiWorkspaceTab" component={AiWorkspaceNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

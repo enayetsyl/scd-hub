@@ -56,6 +56,20 @@ export const AI_PRICES: Record<AiProviderName, ProviderPrices> = {
   },
 };
 
+/**
+ * Model context windows in tokens; input and output share the window (AI Workspace W-1).
+ * DeepSeek's Models & Pricing page lists 1M context for both models (checked 2026-11-10).
+ * Config, like the prices: a change is a one-line edit here.
+ */
+export const CONTEXT_WINDOW_TOKENS: Record<string, number> = {
+  "deepseek-flash": 1_000_000,
+  "deepseek-v4-pro": 1_000_000,
+};
+
+/** AI Workspace context budget (PRD §3): warn above, refuse above (instructions + pinned files). */
+export const WORKSPACE_PREFIX_WARN_TOKENS = 150_000;
+export const WORKSPACE_PREFIX_MAX_TOKENS = 400_000;
+
 /** True when `at` falls in the provider's peak window (weekdays, UTC). */
 export function isPeak(provider: AiProviderName, at: Date): boolean {
   const p = AI_PRICES[provider];

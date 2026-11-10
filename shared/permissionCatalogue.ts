@@ -1023,6 +1023,18 @@ export const FEATURE_CATALOGUE = {
       delete_ai_log: { en: "Delete AI log entries", bn: "এআই-এর লগ মুছে ফেলা", desc: "Delete one AI log entry, or every entry of a month / feature (audited)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
+  // AI Workspace (docs/prd-ai-workspace.md, W-1). The Principal only at launch (D-#1208): `use`
+  // is off for Teacher / Office and is granted later from the matrix without code; `admin`
+  // (every project, whoever its members) is LOCKED to the Principal.
+  ai_workspace: {
+    group: "content_and_books",
+    en: "AI workspace",
+    bn: "এআই কর্মক্ষেত্র",
+    actions: {
+      use: { en: "Use the AI workspace", bn: "এআই কর্মক্ষেত্র ব্যবহার", desc: "Create AI projects, add files and instructions, and work in the projects you are a member of", teacher: false, office: false, flags: [] },
+      admin: { en: "Manage every AI project", bn: "সব এআই প্রকল্প পরিচালনা", desc: "Open, change or archive any AI project and its members, whoever created it", teacher: false, office: false, flags: ["LOCKED"] },
+    },
+  },
   guardian_engagement: {
     group: "admin_and_access",
     en: "Guardian app usage",

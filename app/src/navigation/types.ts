@@ -344,6 +344,14 @@ export type AiAssistStackParamList = {
   AiAssistChat: { sessionId: string };
 };
 
+/** AI Workspace (docs/prd-ai-workspace.md). AiWorkspaceHome stays first: the initial route takes no params. */
+export type AiWorkspaceStackParamList = {
+  AiWorkspaceHome: undefined;
+  AiProjectNew: undefined;
+  AiProject: { projectId: string };
+  AiProjectFileText: { fileId: string };
+};
+
 export type VivaStackParamList = {
   VivaHome: undefined;
   VivaSheet: { paperId: string };
@@ -874,4 +882,5 @@ export type TabParamList = {
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
   VivaTab: NavigatorScreenParams<VivaStackParamList>;
   AiAssistTab: NavigatorScreenParams<AiAssistStackParamList>;
+  AiWorkspaceTab: NavigatorScreenParams<AiWorkspaceStackParamList>;
 };

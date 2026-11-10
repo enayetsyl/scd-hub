@@ -68,3 +68,6 @@ Thumbs.db
 
 # ---- Local-only operator notes (VM access etc. — IP/creds never commit, deployment §0) ----
 *.local.md
+
+# AI Workspace: DeepSeek offline tokenizer files (downloaded on the VM, D-#1230)
+server/ai/deepseek_tokenizer/

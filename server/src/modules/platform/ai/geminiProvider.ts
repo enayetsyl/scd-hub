@@ -37,7 +37,14 @@ export function geminiBody(input: AiSendInput): Record<string, unknown> {
     systemInstruction: { parts: [{ text: system }] },
     contents: [
       ...(input.history ?? []).map((t) => ({ role: t.role === "assistant" ? "model" : "user", parts: [{ text: t.text }] })),
-      { role: "user", parts: [{ text: input.variablePart }] },
+      {
+        role: "user",
+        parts: [
+          // Files first, then the instruction about them (Google's guidance for one-file prompts).
+          ...(input.files ?? []).map((f) => ({ inlineData: { mimeType: f.mime, data: f.data.toString("base64") } })),
+          { text: input.variablePart },
+        ],
+      },
     ],
     generationConfig: {
       maxOutputTokens: input.maxOutputTokens + THINKING_ALLOWANCE[input.reasoning],

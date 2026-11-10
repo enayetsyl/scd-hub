@@ -11,13 +11,25 @@ import { Schema, model, Document, Types } from "mongoose";
  *   comment_standard     daily StudentComment checker (AI-5)
  *   ct_comment_standard  class-test comment checker (AI-5)
  *   assistant_rules      the teacher assistant (AI-6)
+ *
+ * AI Workspace (W-1, D-#1202): a project keeps its instructions here too, under
+ * `project:<projectId>`, and a job template under `project:<projectId>:template:<slug>` (W-4).
+ * For those keys the newest saved version is the active one (the project owner is the author;
+ * there is no separate switch-on step). The Principal rule screens list only AI_POLICY_KEYS.
  */
 export const AI_POLICY_KEYS = ["comment_standard", "ct_comment_standard", "assistant_rules"] as const;
 export type AiPolicyKey = (typeof AI_POLICY_KEYS)[number];
 
+/** `project:<24-hex id>` or `project:<24-hex id>:template:<slug>` (W-1, D-#1202). */
+export const PROJECT_POLICY_KEY_RE = /^project:[0-9a-f]{24}(?::template:[a-z0-9][a-z0-9-]{0,39})?$/;
+export const isProjectPolicyKey = (k: string): boolean => PROJECT_POLICY_KEY_RE.test(k);
+/** Any key the store accepts: a fixed rules document or a project / template key. */
+export const isAiPolicyStoreKey = (k: string): boolean => (AI_POLICY_KEYS as readonly string[]).includes(k) || isProjectPolicyKey(k);
+
 export interface IAiPolicy extends Document {
   _id: Types.ObjectId;
-  key: AiPolicyKey;
+  /** An AI_POLICY_KEYS value, or a project / template key (W-1). */
+  key: string;
   version: number;
   /** Markdown; it is the stable prompt prefix, so it holds no dates, ids or names. */
   body: string;
@@ -36,7 +48,7 @@ export interface IAiPolicy extends Document {
 
 const AiPolicySchema = new Schema<IAiPolicy>(
   {
-    key: { type: String, required: true, enum: AI_POLICY_KEYS },
+    key: { type: String, required: true, validate: { validator: isAiPolicyStoreKey, message: "unknown AI policy key" } },
     version: { type: Number, required: true, min: 1 },
     body: { type: String, required: true },
     bodyHash: { type: String, required: true },

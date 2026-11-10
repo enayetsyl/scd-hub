@@ -884,10 +884,10 @@ check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
   new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
 check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
   V.PERMISSIONS.every((p) => V.PERMISSION_LABELS_BN[p]?.name && V.PERMISSION_LABELS_EN[p]?.name && V.PERMISSION_BUILD_STATUS[p] === "build"));
-check("LOCKED actions are exactly the sixteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138; +ai_assist:read_ai_log/delete_ai_log D-#1179)",
+check("LOCKED actions are exactly the seventeen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138; +ai_assist:read_ai_log/delete_ai_log D-#1179; +ai_workspace:admin D-#1208)",
   eq(flagged("LOCKED"), ["payroll:approve", "payroll:reopen", "salary_advance:issue", "salary_advance:settle", "offboarding:settle",
     "appraisal:sign_off", "conduct:sign_off", "chat:view_all", "message_templates:view", "message_templates:edit",
-    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats", "ai_assist:read_ai_log", "ai_assist:delete_ai_log"]));
+    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats", "ai_assist:read_ai_log", "ai_assist:delete_ai_log", "ai_workspace:admin"]));
 check("RESERVED_PERMISSIONS = the legacy five ∪ every LOCKED action",
   eq(V.RESERVED_PERMISSIONS, [...new Set([...V.LEGACY_RESERVED_PERMISSIONS, ...flagged("LOCKED")])]));
 check("no LOCKED / PRINCIPAL_DEFAULT / ESCALATION action is on by default for TEACHER or OFFICE",

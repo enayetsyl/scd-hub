@@ -1428,3 +1428,33 @@ export async function pickAndUploadReferencePaper(input: {
   const body = (await res.json()) as { paperId: string };
   return { paperId: body.paperId };
 }
+
+// ---------------------------------------------------------------------------
+// AI Workspace knowledge files (W-1, server: POST /files/ai-workspace). Any of md / txt / json /
+// csv, docx / doc / odt / rtf, xlsx, pdf or a picture, ≤ 40 MB. The server answers with the
+// PROCESSING row and reads the text in the background (OCR of a scan takes minutes).
+// ---------------------------------------------------------------------------
+
+export async function pickAndUploadAiWorkspaceFile(projectId: string): Promise<{ fileId: string } | null> {
+  const picked = await DocumentPicker.getDocumentAsync({ type: "*/*", multiple: false, copyToCacheDirectory: true });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const type = asset.mimeType ?? "application/octet-stream";
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", { uri: asset.uri, name: rnUploadName(asset.name), type } as unknown as Blob);
+  }
+  form.append("projectId", projectId);
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/ai-workspace`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { error?: string; fileId?: string };
+  if (!res.ok || !body.fileId) throw new FileUploadError(body.error ?? `upload failed (${res.status})`);
+  return { fileId: body.fileId };
+}
