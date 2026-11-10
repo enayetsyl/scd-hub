@@ -89,6 +89,8 @@ export interface DraftView {
   revise: { status: string; runAfter: Date | null; error: string | null; notes: string } | null;
   sends: Array<{ pipeline: string; version: number; ok: boolean; summary: string; at: Date }>;
   canSend: boolean;
+  /** W-6 pilot score (owner). */
+  review: { score: string; note: string | null; byName: string | null; at: Date; version: number } | null;
   updatedAt: Date;
 }
 
@@ -128,6 +130,7 @@ function draftView(d: IAiDraft, n: Map<string, string>): DraftView {
     revise: d.revise ? { status: d.revise.status, runAfter: d.revise.runAfter ?? null, error: d.revise.error ?? null, notes: d.revise.notes } : null,
     sends: (d.sends ?? []).map((s) => ({ pipeline: s.pipeline, version: s.version, ok: s.ok, summary: s.summary, at: s.at })),
     canSend: approved && AI_PIPELINE_KINDS.includes(d.kind),
+    review: d.review ? { score: d.review.score, note: d.review.note ?? null, byName: n.get(d.review.by.toString()) ?? null, at: d.review.at, version: d.review.version } : null,
     updatedAt: d.updatedAt,
   };
 }
@@ -294,7 +297,7 @@ export async function draftsPage(authIn: AuthPayload | null, projectId: string, 
   const { project } = await loadProject(authIn, projectId, "viewer");
   return queryPage(AiDraft, { projectId: project._id, archived: !!args.archived }, { updatedAt: -1 }, args, async (docs) => {
     const ds = docs as unknown as IAiDraft[];
-    const n = await names(ds.flatMap((d) => [d.createdBy, d.approvedBy]));
+    const n = await names(ds.flatMap((d) => [d.createdBy, d.approvedBy, d.review?.by]));
     return ds.map((d) => draftView(d, n));
   }, 20);
 }
@@ -302,7 +305,7 @@ export async function draftsPage(authIn: AuthPayload | null, projectId: string, 
 export async function draft(authIn: AuthPayload | null, draftId: string): Promise<{ draft: DraftView; version: DraftVersionView }> {
   const { draft: d } = await loadDraft(authIn, draftId, "viewer");
   const v = await AiDraftVersion.findOne({ draftId: d._id, version: d.currentVersion }).lean();
-  const n = await names([d.createdBy, d.approvedBy, v?.createdBy]);
+  const n = await names([d.createdBy, d.approvedBy, v?.createdBy, d.review?.by]);
   return { draft: draftView(d, n), version: versionView(v as unknown as IAiDraftVersion, n) };
 }
 
@@ -337,6 +340,21 @@ export async function approveDraft(authIn: AuthPayload | null, draftId: string):
   const { auth, draft: d } = await loadDraft(authIn, draftId, "owner");
   await AiDraft.updateOne({ _id: d._id }, { $set: { approvedVersion: d.currentVersion, approvedBy: new Types.ObjectId(auth.userId), approvedAt: new Date() } });
   await writeAudit({ eventKind: "AI_DRAFT_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiDraft", targetId: draftId, meta: { action: "approve", version: d.currentVersion } });
+  return (await draft(auth, draftId)).draft;
+}
+
+/**
+ * The pilot score (W-6, PRD §8): the owner judges a draft — usable as-is / minor fixes /
+ * rewrite — against a Claude-made one on the same instructions. Analytics count them (W-7).
+ */
+export async function scoreDraft(authIn: AuthPayload | null, draftId: string, input: { score: string; note?: string | null }): Promise<DraftView> {
+  const { auth, draft: d } = await loadDraft(authIn, draftId, "owner");
+  if (!["usable", "minor", "rewrite"].includes(input.score)) throw new AiWorkspaceError("মূল্যায়ন সঠিক নয়");
+  await AiDraft.updateOne(
+    { _id: d._id },
+    { $set: { review: { score: input.score, note: input.note?.trim().slice(0, 1000) || null, by: new Types.ObjectId(auth.userId), at: new Date(), version: d.currentVersion } } },
+  );
+  await writeAudit({ eventKind: "AI_DRAFT_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiDraft", targetId: draftId, meta: { action: "score", score: input.score, version: d.currentVersion } });
   return (await draft(auth, draftId)).draft;
 }
 

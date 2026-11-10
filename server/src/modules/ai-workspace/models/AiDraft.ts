@@ -56,6 +56,8 @@ export interface IAiDraft extends Document {
   origin: "app" | "claude";
   revise?: IAiDraftRevise | null;
   sends: IAiDraftSend[];
+  /** W-6 pilot (PRD §8): the owner judges the AI's draft against a Claude-made one. */
+  review?: { score: "usable" | "minor" | "rewrite"; note?: string | null; by: Types.ObjectId; at: Date; version: number } | null;
   archived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -109,6 +111,19 @@ const AiDraftSchema = new Schema<IAiDraft>(
       default: [],
     },
     archived: { type: Boolean, required: true, default: false },
+    review: {
+      type: new Schema(
+        {
+          score: { type: String, required: true, enum: ["usable", "minor", "rewrite"] },
+          note: { type: String, default: null, maxlength: 1000 },
+          by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+          at: { type: Date, required: true },
+          version: { type: Number, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
   },
   { timestamps: true },
 );

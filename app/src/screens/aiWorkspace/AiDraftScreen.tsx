@@ -23,11 +23,12 @@ import {
   SAVE_AI_DRAFT_VERSION,
   SEND_AI_DRAFT_TO_PIPELINE,
   SET_AI_DRAFT_ARCHIVED,
+  SCORE_AI_DRAFT,
 } from "../../graphql/aiWorkspaceDrafts";
 import { AI_PROJECT } from "../../graphql/aiWorkspace";
 import { AI_PRICE_CLOCK } from "../../graphql/aiWorkspaceChat";
 import type { AiWorkspaceStackParamList } from "../../navigation/types";
-import { Screen, Card, Body, Muted, Button, Field, Notice, Loader, ErrorBanner, Select, Badge, breakAnywhere } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Field, Notice, Loader, ErrorBanner, Select, Badge, Chip, ChipRow, breakAnywhere } from "../../components/ui";
 import { Pager } from "../../components/Pager";
 import { usePageState } from "../../lib/paging";
 import { downloadAiDraft } from "../../lib/files";
@@ -42,6 +43,7 @@ import { isJsonKind, kindLabel, sourceLabel } from "./draftUi";
 
 type Props = NativeStackScreenProps<AiWorkspaceStackParamList, "AiDraft">;
 const CURATION_TAGS = ["KEEP_AS_IS", "NEEDS_REPLACEMENT", "FLEXIBLE"];
+const pilotLabel = (s: string) => (s === "usable" ? STR.awPilotUsable : s === "minor" ? STR.awPilotMinor : STR.awPilotRewrite);
 
 export default function AiDraftScreen({ route, navigation }: Props): React.ReactElement {
   const { draftId } = route.params;
@@ -60,6 +62,7 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
   const [, cancelRevise] = useMutation(CANCEL_AI_DRAFT_REVISION);
   const [, send] = useMutation(SEND_AI_DRAFT_TO_PIPELINE);
   const [, archive] = useMutation(SET_AI_DRAFT_ARCHIVED);
+  const [, score] = useMutation(SCORE_AI_DRAFT);
 
   const [editing, setEditing] = React.useState(false);
   const [body, setBody] = React.useState("");
@@ -253,6 +256,21 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
                 onPress={() => void onSend()}
               />
             </>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {role === "owner" || d.review ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.awPilotTitle}</Body>
+          <Muted>{STR.awPilotHelp}</Muted>
+          {d.review ? <Muted>{fill(STR.awPilotDone, { score: pilotLabel(d.review.score), v: d.review.version, who: d.review.byName ?? "—" })}</Muted> : null}
+          {role === "owner" ? (
+            <ChipRow>
+              {(["usable", "minor", "rewrite"] as const).map((s) => (
+                <Chip key={s} label={pilotLabel(s)} selected={d.review?.score === s && d.review.version === d.currentVersion} onPress={() => void run("score", score({ draftId, score: s }), STR.awSaved)} />
+              ))}
+            </ChipRow>
           ) : null}
         </Card>
       ) : null}
