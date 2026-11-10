@@ -1,5 +1,15 @@
 # STATUS
 
+- 2026-11-10: **BUILT — AI Workspace W-7: analytics per project (D-#1257); EVERY AI Workspace slice (W-1…W-7) is now built** (branch `feat/ws7-analytics`, stacked on `feat/ws6-migration`). Reports → এআই ব্যবহার… gains a per-project section and a workspace budget line.
+  - **PR chain into dev:** #1440 W-1 ✅ merged, #1441 W-2 ✅ merged, then #1442 W-3 → #1444 W-4 → #1445 W-5 → #1446 W-6 → W-7. Each later PR carries the ones before it until they merge, so merge in that order. Then promote dev → main and publish an OTA (app screens).
+  - **Owner switch-on list (in order):**
+    1. VM setup: `tesseract-ocr tesseract-ocr-ben fonts-noto-core`; the job-worker systemd units (`ops/systemd/scdhub-ai-worker-*.service`); Caddy `@api` + `/mcp* /oauth* /.well-known/oauth-*`; `PUBLIC_BASE_URL`. Optional: the DeepSeek tokenizer.
+    2. A DeepSeek key, if not saved yet. Check `aiPrices.ts` against the console.
+    3. AI settings → budget: raise the school total to cover the caps (the screen warns). Check the workspace cap and the defaults.
+    4. Switch on the workspace features you want: chat / draft revision / batch jobs; "Gemini দিয়ে ফাইল পড়া" only if wanted.
+    5. Create the pilot project and import its references (`scripts/ai-workspace-import.ts`, dry run first). Run the pilot and score the drafts.
+    6. Connect Claude (PRD §12 end-to-end check) and record it here.
+    7. Capture the five draft help guides and clear their draft flags.
 - 2026-11-10: **BUILT — AI Workspace W-6: migration script + pilot score (D-#1255/#1256)** (branch `feat/ws6-migration`, stacked on `feat/ws5-mcp`; docs/prd-ai-workspace.md §8).
   - **Migration (on the VM, after the workspace is live):** clone scd-central, create the project in the app, then `npx tsx scripts/ai-workspace-import.ts --source <clone>/canon/refs --project "<name>" --as <Principal email>` (dry run). Read the plan, then add `--apply`. All of canon/refs is about 268k tokens (estimated), over the 150k warning. Pin only what the project needs: `--unpinned`, then pin in the Files tab. Files only on claude.ai: download them and use the Files tab.
   - **Pilot (owner — still to choose, §11 ruling 6):** pick the project (e.g. Project 09, C1 Bangla lesson plans), import its references, make 3 items with DeepSeek, compare them with Claude's on the same instructions, and score each draft (পাইলট মূল্যায়ন on the draft page). Move the next project only after a pass.

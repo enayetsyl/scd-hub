@@ -116,6 +116,20 @@ export default function AiUsageReportScreen(): React.ReactElement {
             ))}
           </Card>
 
+          {/* AI Workspace (W-7): spend, cache, drafts, jobs and pilot scores per project. */}
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.aurByProject}</Body>
+            {r.byProject.length === 0 ? <Muted>{STR.aurNone}</Muted> : null}
+            {r.byProject.map((p) => (
+              <View key={p.projectId} style={{ marginTop: space(1) }}>
+                <Body style={{ fontWeight: "600" }}>{p.name}</Body>
+                <Muted>{fill(STR.aurProjectSpend, { usd: usd(p.usd), calls: p.calls, cache: pctOf(p.cacheHitRate), inK: Math.round(p.inputTokens / 1000), outK: Math.round(p.outputTokens / 1000) })}</Muted>
+                <Muted>{fill(STR.aurProjectWork, { drafts: p.draftsCreated, approved: p.draftsApproved, revised: p.revisions, jobs: p.jobs, done: p.jobsDone, failed: p.jobsFailed, claude: p.byClaude })}</Muted>
+                {p.scoreUsable + p.scoreMinor + p.scoreRewrite > 0 ? <Muted>{fill(STR.aurProjectScores, { usable: p.scoreUsable, minor: p.scoreMinor, rewrite: p.scoreRewrite })}</Muted> : null}
+              </View>
+            ))}
+          </Card>
+
           <BucketTable title={STR.aurByPerson} rows={r.byPerson} />
           <BucketTable title={STR.aurByFeature} rows={r.byFeature} />
           <BucketTable title={STR.aurByModel} rows={r.byModel} />

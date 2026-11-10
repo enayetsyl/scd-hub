@@ -45,6 +45,26 @@ export interface AiUsageReportT {
     overrideRate: number | null;
     issueTypes: Array<{ type: string; count: number }>;
   }>;
+  /** AI Workspace (W-7): one row per project active in the range. */
+  byProject: Array<{
+    projectId: string;
+    name: string;
+    usd: number;
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    cacheHitRate: number | null;
+    draftsCreated: number;
+    draftsApproved: number;
+    revisions: number;
+    jobs: number;
+    jobsDone: number;
+    jobsFailed: number;
+    scoreUsable: number;
+    scoreMinor: number;
+    scoreRewrite: number;
+    byClaude: number;
+  }>;
 }
 
 const B = "key label calls usd capped errors";
@@ -57,6 +77,7 @@ export const AI_USAGE_REPORT = gql<{ aiUsageReport: AiUsageReportT }, { fromKey:
       byDay { ${B} } byPerson { ${B} } byFeature { ${B} } byModel { ${B} }
       budget { scope label spentUsd capUsd projectedUsd pct }
       quality { userId name checks issuesFound issuesAccepted overrode notChecked acceptanceRate overrideRate issueTypes { type count } }
+      byProject { projectId name usd calls inputTokens outputTokens cacheHitRate draftsCreated draftsApproved revisions jobs jobsDone jobsFailed scoreUsable scoreMinor scoreRewrite byClaude }
     }
   }
 `;
