@@ -98,6 +98,17 @@ exports.run = async (h) => {
     anchor: { text: "এখানে নতুন উপ-শিখনফল যোগ করুন" },
   });
 
+  // Undo a split from the objective's own page (D-#1260). Not saved either: only the confirm is shown.
+  await openMastery(h, R, "তালিকা পর্যালোচনা");
+  await h.tap(R, "তালিকা পর্যালোচনা", 3000);
+  await openRound(h, R, null);
+  await h.tap(R, "১০০ পর্যন্ত সংখ্যা কথায় লেখা", 3000);
+  await h.topmost(R, { text: "ভাগ ফিরিয়ে নিন" }, { scroll: true });
+  await h.tap(R, "ভাগ ফিরিয়ে নিন", 1200);
+  await h.shot(R, "mastery-review-undo-split", 0, [{ text: "ভাগ ফিরিয়ে নিন" }, { text: "হ্যাঁ, ভাগ ফিরিয়ে নিন" }], {
+    anchor: { text: "ভাগ ফিরিয়ে নিন" },
+  });
+
   await openMastery(h, R, "তালিকা পর্যালোচনা");
   await h.tap(R, "তালিকা পর্যালোচনা", 3000);
   await openRound(h, R, null);
