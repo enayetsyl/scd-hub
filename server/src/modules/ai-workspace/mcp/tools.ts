@@ -10,7 +10,7 @@
  */
 import { z } from "zod";
 import { Types } from "mongoose";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServerLike } from "./sdk";
 import type { AuthPayload } from "../../../context";
 import { AiUsage } from "../../platform/models/AiUsage";
 import { WORKSPACE_AI_FEATURES } from "../../platform/services/AiSettingService";
@@ -30,6 +30,9 @@ const RUN_AT = z
   .enum(["now", "offpeak"])
   .describe("When to run: 'now' (current price) or 'offpeak' (half price, waits for DeepSeek's off-peak window). REQUIRED — ask the Principal and state both estimated costs before choosing.");
 const KIND = z.enum(["free", "lesson_plan", "question_bank", "book_chapter", "storybook", "paper"]).describe("The draft kind each result becomes.");
+
+/** The arguments every run-starting tool shares. */
+type ToolRun = { project_id: string; title: string; kind: string; model: string; thinking: string; run_at: string };
 
 type Reply = { content: Array<{ type: "text"; text: string }>; isError?: boolean };
 
@@ -62,9 +65,17 @@ const slice = (text: string, offset?: number, length?: number) => {
   return { offset: from, length: Math.min(len, total - from), total_chars: total, text: text.slice(from, from + len), more: from + len < total };
 };
 
-export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, clientName: string): void {
-  const t = <S extends z.ZodRawShape>(name: string, description: string, inputSchema: S, fn: (args: z.objectOutputType<S, z.ZodTypeAny>) => Promise<unknown>) =>
-    server.registerTool(name, { description, inputSchema }, logged(auth, clientName, name, fn as never) as never);
+/**
+ * Registration WITHOUT the SDK's generics. `registerTool<…>` infers a zod v3/v4-compatible
+ * type for every input shape; ten of them made `tsc` run out of memory (4 GB, CI and local).
+ * The zod schemas still validate at runtime; each callback types its own arguments.
+ */
+type PlainRegister = (name: string, config: { description: string; inputSchema: Record<string, z.ZodTypeAny> }, cb: (args: never) => Promise<Reply>) => unknown;
+
+export function registerWorkspaceTools(server: McpServerLike, auth: AuthPayload, clientName: string): void {
+  const register = (server.registerTool as unknown as PlainRegister).bind(server);
+  const t = <A>(name: string, description: string, inputSchema: Record<string, z.ZodTypeAny>, fn: (args: A) => Promise<unknown>) =>
+    register(name, { description, inputSchema }, logged(auth, clientName, name, fn as never));
 
   t("list_projects", "Projects in the SCD Hub AI Workspace, with their context size in tokens (instructions + pinned files) and defaults.", {}, async () => {
     const page = await aiProjectsPage(auth, { page: 1, pageSize: 100 });
@@ -81,7 +92,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "read_project",
     "A project's CURRENT instructions (the master copy — apply them) and its file list with token counts. Read this before working on a project.",
     { project_id: z.string() },
-    async ({ project_id }) => {
+    async ({ project_id }: { project_id: string }) => {
       const { project } = await loadProject(auth, project_id, "viewer");
       const [instr, files, budget] = await Promise.all([aiProjectInstructions(auth, project_id), aiProjectFilesPage(auth, project_id, { page: 1, pageSize: 100 }), contextBudgetOf(project)]);
       const body = instr?.body ?? "";
@@ -99,7 +110,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "read_file",
     "One project file's text by character range (keeps your context small). Default 20,000 characters; at most 50,000.",
     { file_id: z.string(), offset: z.number().int().min(0).optional(), length: z.number().int().min(1).max(MAX_SLICE).optional() },
-    async ({ file_id, offset, length }) => {
+    async ({ file_id, offset, length }: { file_id: string; offset?: number; length?: number }) => {
       const r = await aiProjectFileText(auth, file_id, offset ?? 0, length ?? 20_000);
       return { file_id, name: r.name, offset: r.offset, total_chars: r.totalChars, text: r.text, more: r.offset + r.text.length < r.totalChars };
     },
@@ -109,7 +120,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "update_instructions",
     "Save a NEW version of a project's instructions (it becomes current). Only after the Principal has approved the exact change.",
     { project_id: z.string(), body: z.string().min(1), note: z.string().max(500).optional() },
-    async ({ project_id, body, note }) => {
+    async ({ project_id, body, note }: { project_id: string; body: string; note?: string }) => {
       const v = await saveAiProjectInstructions(auth, project_id, body, note ?? "Claude-এর মাধ্যমে (প্রধান শিক্ষকের অনুমোদনে)");
       return { project_id, version: v.version, hash: v.hash };
     },
@@ -128,7 +139,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
       thinking: THINKING,
       run_at: RUN_AT,
     },
-    async ({ project_id, title, kind, prompt, file_ids, model, thinking, run_at }) => {
+    async ({ project_id, title, kind, prompt, file_ids, model, thinking, run_at }: ToolRun & { prompt: string; file_ids?: string[] }) => {
       let item = prompt;
       if (file_ids?.length) {
         const files = await AiProjectFile.find({ _id: { $in: file_ids.filter((id) => Types.ObjectId.isValid(id)) }, projectId: project_id, status: "ready" }).select("name text").lean();
@@ -145,7 +156,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "run_batch",
     "Run one template over many items (each item replaces {{item}}); each result becomes a draft. Returns a job id and the estimate. model, thinking and run_at are required: ask the Principal and state both estimated costs first.",
     { project_id: z.string(), title: z.string().min(2), kind: KIND, template: z.string().min(2), items: z.array(z.string().min(1)).min(1).max(200), model: MODEL, thinking: THINKING, run_at: RUN_AT },
-    async ({ project_id, title, kind, template, items, model, thinking, run_at }) => {
+    async ({ project_id, title, kind, template, items, model, thinking, run_at }: ToolRun & { template: string; items: string[] }) => {
       const input = { title, kind, template, items, model, thinking, runAt: run_at, origin: "claude" as const };
       const est = await estimateJob(auth, project_id, input);
       const j = await createJob(auth, project_id, input);
@@ -153,7 +164,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     },
   );
 
-  t("job_status", "A job's progress, failures, cost and cache-hit rate, with each item's draft id.", { job_id: z.string() }, async ({ job_id }) => {
+  t("job_status", "A job's progress, failures, cost and cache-hit rate, with each item's draft id.", { job_id: z.string() }, async ({ job_id }: { job_id: string }) => {
     const j = await job(auth, job_id);
     return {
       job_id,
@@ -173,7 +184,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "read_draft",
     "A draft (current version, or a given version) by character range, with its status and any running revision.",
     { draft_id: z.string(), version: z.number().int().min(1).optional(), offset: z.number().int().min(0).optional(), length: z.number().int().min(1).max(MAX_SLICE).optional() },
-    async ({ draft_id, version, offset, length }) => {
+    async ({ draft_id, version, offset, length }: { draft_id: string; version?: number; offset?: number; length?: number }) => {
       const d = await draft(auth, draft_id);
       const v = version ? await draftVersion(auth, draft_id, version) : d.version;
       return {
@@ -195,7 +206,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "revise_draft",
     "DeepSeek writes the next version of a draft from your notes (the project's cached prefix + the current draft). model, thinking and run_at are required: ask the Principal first. Poll read_draft for the new version.",
     { draft_id: z.string(), notes: z.string().min(2), model: MODEL, thinking: THINKING, run_at: RUN_AT },
-    async ({ draft_id, notes, model, thinking, run_at }) => {
+    async ({ draft_id, notes, model, thinking, run_at }: { draft_id: string; notes: string; model: string; thinking: string; run_at: string }) => {
       const { draft: d, done } = await reviseDraft(auth, draft_id, { notes, model, thinking, runAt: run_at, origin: "claude" });
       done.catch(() => undefined);
       return { draft_id, revise: d.revise, current_version: d.currentVersion };
@@ -206,7 +217,7 @@ export function registerWorkspaceTools(server: McpServer, auth: AuthPayload, cli
     "usage_report",
     "AI Workspace spend for a Dhaka month (default: this month) by project, feature and day.",
     { month: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("YYYY-MM") },
-    async ({ month }) => {
+    async ({ month }: { month?: string }) => {
       const start = month ? new Date(`${month}-01T00:00:00+06:00`) : dhakaMonthStart(new Date());
       const end = new Date(start);
       end.setUTCMonth(end.getUTCMonth() + 1);

@@ -9,8 +9,7 @@
  *   claude mcp add --transport http scd-hub https://<host>/mcp
  */
 import express, { type Request, type Response, type Router } from "express";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { McpServer, StreamableHTTPServerTransport, type McpServerLike } from "./sdk";
 import { baseUrlOf, verifyAccessToken } from "./oauth";
 import { registerWorkspaceTools } from "./tools";
 
@@ -20,7 +19,7 @@ export const MCP_INSTRUCTIONS = `SCD Hub AI Workspace (a Bangladeshi school's ow
 - ds_draft, run_batch and revise_draft need model, thinking and run_at. Ask the Principal which to use — "now" or "offpeak" (half price) — and state the estimated cost of each before starting anything long.
 - Replies are small summaries with ids; read long text with read_file / read_draft by range.`;
 
-export function buildMcpServer(auth: Parameters<typeof registerWorkspaceTools>[1], clientName: string): McpServer {
+export function buildMcpServer(auth: Parameters<typeof registerWorkspaceTools>[1], clientName: string): McpServerLike {
   const server = new McpServer({ name: "scd-hub-ai-workspace", version: "1.0.0" }, { instructions: MCP_INSTRUCTIONS });
   registerWorkspaceTools(server, auth, clientName);
   return server;
