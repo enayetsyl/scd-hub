@@ -1,5 +1,10 @@
 # STATUS
 
+- 2026-11-10: **BUILT — AI Workspace W-5: MCP bridge for Claude (D-#1252–#1254)** (branch `feat/ws5-mcp`, stacked on `feat/ws4-jobs`; docs/prd-ai-workspace.md §7). `/mcp` with ten tools for Claude / Claude Code, OAuth 2.1 through the Hub login (Principal only), and a "Claude সংযোগ" card on the workspace home (address, command, connected clients, disconnect).
+  - **VM setup (owner / deploy):** (1) add `/mcp* /oauth* /.well-known/oauth-*` to the `@api` matcher of BOTH sites in `/etc/caddy/Caddyfile` (back up, `caddy validate`, reload; `ops/Caddyfile` has the new line). Without it, the connector gets the web app's HTML. (2) Set `PUBLIC_BASE_URL=https://<host>` in each env's `.env`. (3) If Cloudflare's bot protection challenges non-browser POSTs, allow `/mcp` and `/oauth/*`.
+  - **PRD §12 end-to-end check (owner, after deploy):** claude.ai → Settings → Connectors → Add custom connector → `https://<host>/mcp` → sign in as the Principal → ask Claude to call `list_projects`. Record the result here.
+  - **Help guide:** `ai-workspace-claude` is `draft: true`.
+  - **Now / next:** PR → dev after #1444 (W-4); then W-6 (migration + pilot).
 - 2026-11-10: **BUILT — AI Workspace W-4: batch jobs + worker (D-#1250/#1251)** (branch `feat/ws4-jobs`, stacked on `feat/ws3-drafts`; docs/prd-ai-workspace.md §6). A project's ব্যাচ কাজ tab: an instruction with {{item}} + items, the estimate shown for now AND off-peak, and when to run picked (no default). The separate worker runs two items at a time, makes a draft from each, sends lesson plans back to the AI when the validator refuses them (twice), retries failures, and notifies when the job is done.
   - **VM setup (after this is deployed):** copy `ops/systemd/scdhub-ai-worker-{dev,prod}.service` to `/etc/systemd/system/`, then `sudo systemctl daemon-reload && sudo systemctl enable --now scdhub-ai-worker-dev` (and `-prod` after promotion). Without it, jobs stay "waiting". `scripts/deploy.sh` restarts it after the API when its unit is installed (non-fatal).
   - **Owner, to switch on:** "কর্মক্ষেত্র: ব্যাচ কাজ" in Admin → এআই কী ও মডেল → features.

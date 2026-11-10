@@ -41,7 +41,7 @@ scdhub.shafayet.me {
 	import cloudflare_only
 	encode gzip zstd
 	import security_headers
-	@api path /graphql* /healthz /readyz /pdf* /files* /triggers* /events* /export*
+	@api path /graphql* /healthz /readyz /pdf* /files* /triggers* /events* /export* /mcp* /oauth* /.well-known/oauth-*
 	handle @api {
 		reverse_proxy 127.0.0.1:4000 {
 			header_up X-Real-IP {client_ip}
@@ -71,7 +71,7 @@ scdhub.shafayet.me {
 (dev_site) {
 	encode gzip zstd
 	import security_headers
-	@api path /graphql* /healthz /readyz /pdf* /files* /triggers* /events* /export*
+	@api path /graphql* /healthz /readyz /pdf* /files* /triggers* /events* /export* /mcp* /oauth* /.well-known/oauth-*
 	handle @api {
 		reverse_proxy 127.0.0.1:4001 {
 			header_up X-Real-IP {client_ip}

@@ -1,0 +1,61 @@
+{
+  "id": "ai-workspace-claude",
+  "category": "admin_access",
+  "order": 60,
+  "draft": true,
+  "title": "Claude-কে এআই কর্মক্ষেত্রে যুক্ত করা (MCP সংযোগ)",
+  "intro": "Claude (claude.ai বা Claude Code) একটি সংযোগের মাধ্যমে এআই কর্মক্ষেত্রের প্রকল্প পড়তে আর খসড়া ও ব্যাচ কাজ শুরু করতে পারে। অনুমতি শুধু প্রধান শিক্ষক দিতে পারেন; DeepSeek-এর কী Claude কখনো পায় না।",
+  "keywords": [
+    "Claude",
+    "MCP",
+    "সংযোগ",
+    "connector",
+    "এআই কর্মক্ষেত্র"
+  ],
+  "perms": [
+    "ai_workspace:admin"
+  ],
+  "screens": [
+    "AiWorkspaceTab/AiWorkspaceHome"
+  ],
+  "goTo": {
+    "route": "AiWorkspaceTab",
+    "screen": "AiWorkspaceHome"
+  },
+  "rows": [
+    {
+      "heading": "Claude-এ সংযোগ যোগ করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>এআই কর্মক্ষেত্র</b> খুলে নিচের <b>Claude সংযোগ</b> কার্ড থেকে সংযোগের ঠিকানা কপি করুন।",
+          "box": null
+        },
+        {
+          "text": "claude.ai-তে <b>Settings → Connectors → Add custom connector</b> খুলে ঠিকানাটি দিন। Claude Code-এ কার্ডে লেখা <b>claude mcp add</b> কমান্ডটি চালান।",
+          "box": null
+        },
+        {
+          "text": "যে সাইন-ইন পাতা খোলে সেখানে প্রধান শিক্ষকের ইমেইল/ফোন ও পাসওয়ার্ড দিয়ে <b>অনুমতি দিন</b> চাপুন। অন্য কেউ অনুমতি দিতে পারেন না।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "নজর রাখা ও বন্ধ করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "Claude যা শুরু করে — খসড়া, ব্যাচ কাজ — অ্যাপে <b>Claude থেকে</b> চিহ্নসহ দেখা যায়; খরচ একই সীমার ভেতরে গোনা হয়।",
+          "box": null
+        },
+        {
+          "text": "<b>Claude সংযোগ</b> কার্ডে কোন সংযোগ কবে ব্যবহার হয়েছে দেখা যায়; <b>সংযোগ বন্ধ করুন</b> চাপলে সঙ্গে সঙ্গে সব অনুমতি বাতিল হয়।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

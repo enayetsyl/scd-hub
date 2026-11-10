@@ -357,6 +357,8 @@ export type AuditEventKind =
   | "AI_PROJECT_FILE_CHANGED" // AI Workspace file added / re-read / pinned / removed (W-1) — meta.action/fileId/name; never the text
   | "AI_DRAFT_CHANGED"        // AI Workspace draft created / new version / approved / sent to a pipeline (W-3) — meta.action/version/pipeline/ok
   | "AI_JOB_CHANGED"          // AI Workspace batch job created / cancelled (W-4) — meta.action/items/runAt/model/estimateUsd
+  | "AI_MCP_AUTHORIZED"       // the Principal allowed an MCP client (Claude) into the AI Workspace (W-5) — meta.client/clientId
+  | "AI_MCP_REVOKED"          // the Principal disconnected an MCP client (W-5) — meta.clientId/tokens
   | "STUDENT_BANGLA_NAME_SET" // a student's Bangla name set (AI-4, D-#1131) — meta.before/after
   | "WORKSHEET_SENT_TO_PRINT" // a generated Nursery/KG paper filed to the print queue (D-#747) — meta.kind/subject/seed
   | "WORKSHEET_PLAN_SAVED"    // how a class level × subject's মানবন্টন rows are generated, + presets (D-#745)

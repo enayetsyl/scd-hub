@@ -33,6 +33,7 @@ import {
   type AiProjectFileView,
 } from "../services/FileIngestService";
 import type { ProjectPolicyVersion, AiPolicyVersionView } from "../../platform/services/AiPolicyService";
+import { mcpConnections, revokeMcpConnection, type McpConnectionView } from "../mcp/connections";
 
 const WS_SCOPE: { hasAnyPermission: Permission[] } = { hasAnyPermission: ["ai_workspace:use", "ai_workspace:admin"] };
 const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : null);
@@ -317,5 +318,36 @@ builder.mutationField("deleteAiProjectFile", (t) =>
     authScopes: WS_SCOPE,
     args: { fileId: t.arg.string({ required: true }) },
     resolve: (_r, a, ctx) => deleteAiProjectFile(ctx.auth, a.fileId),
+  }),
+);
+
+// ---- W-5: the MCP bridge's connections (D-#1214) ----
+
+const McpConnectionRef = builder.objectRef<McpConnectionView>("AiMcpConnection").implement({
+  fields: (t) => ({
+    clientId: t.string({ resolve: (c) => c.clientId }),
+    clientName: t.string({ resolve: (c) => c.clientName }),
+    connectedAt: t.string({ resolve: (c) => iso(c.connectedAt)! }),
+    lastUsedAt: t.string({ nullable: true, resolve: (c) => iso(c.lastUsedAt) }),
+    calls30d: t.int({ resolve: (c) => c.calls30d }),
+    replyKb30d: t.float({ description: "Size of the replies sent to this client in 30 days (PRD §7).", resolve: (c) => c.replyKb30d }),
+  }),
+});
+
+builder.queryField("aiMcpConnections", (t) =>
+  t.field({
+    type: [McpConnectionRef],
+    description: "Clients (Claude, Claude Code) holding live MCP tokens. ai_workspace:admin.",
+    authScopes: { hasPermission: "ai_workspace:admin" },
+    resolve: (_r, _a, ctx) => mcpConnections(ctx.auth),
+  }),
+);
+
+builder.mutationField("revokeAiMcpConnection", (t) =>
+  t.boolean({
+    description: "Disconnect a client: revokes every token it holds. ai_workspace:admin. Audited.",
+    authScopes: { hasPermission: "ai_workspace:admin" },
+    args: { clientId: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => revokeMcpConnection(ctx.auth, a.clientId),
   }),
 );
