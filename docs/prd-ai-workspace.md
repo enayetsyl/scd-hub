@@ -1,10 +1,10 @@
 # PRD — AI Workspace: Projects + chat on DeepSeek, shared with Claude through an MCP bridge
 
 **Status:** PLANNED (build contract) · **Owner:** Principal (SCD) · **Audience:** Principal and assigned staff (coordinator, teachers); Claude (via the MCP bridge)
-**Decisions:** D-#1200 … D-#1216 (owner rulings 2026-11-10, Claude Desktop planning; numbered against the live `DECISIONS.md`, whose highest row anywhere was D-#1189 at pre-flight).
+**Decisions:** D-#1200 … D-#1216 (owner rulings 2026-11-10, Claude Desktop planning; numbered against the live `DECISIONS.md`, whose highest row anywhere was D-#1189 at pre-flight), plus D-#1225 … D-#1231 (the owner's rulings on the pre-flight findings, 2026-11-10; §14).
 **Builds on (do not rebuild):** `aiSend` router (`server/src/modules/platform/ai/aiRouter.ts`, AI-1); `AiUsage` ledger + caps (AI-2); `AiPolicy` versioned rules (AI-3); de-identification + fail-closed gate (AI-4); `AiAssistSession` / `AiAssistMessage` (AI-6); AI analytics (AI-7); the `AiExchange` request/reply log (D-#1179); `docxConvert` (docx → PDF via headless LibreOffice); `DriveStore` + `StoredFile` file storage; the support-book worker pattern (`BookBuildWorker`, separate process, Mongo-claimed jobs, log tailed over SSE).
 
-> **Pre-flight against the live repo (2026-11-10).** Several reuse claims in the planning draft did not match the live code. Each place is corrected in its section below and marked **Pre-flight:**; §13 lists every finding and answers the two open questions (lesson-plan import path; tokenizer). The live repo wins.
+> **Pre-flight against the live repo (2026-11-10).** Several reuse claims in the planning draft did not match the live code. Each place is corrected in its section below and marked **Pre-flight:**; §13 lists every finding and answers the two open questions (lesson-plan import path; tokenizer). The live repo wins. §14 records the owner's rulings on those findings; where a ruling changed a section, the section says so.
 
 ## 0. One-screen summary
 - [ ] **One workspace, two doors (D-#1200).** Principal and staff use it in the SCD Hub app. Claude uses it through an MCP connector. Both read and write the SAME projects, files, chats, drafts and jobs, so work started in one door can be reviewed in the other.
@@ -56,8 +56,16 @@ Each slice: own branch off `dev`, own PR, own D-# rows, help guide in the same P
     - text PDFs: `pdftotext -layout -enc UTF-8`. This is already shelled out to in `activity-sheets/services/pdfTools.ts`; reuse that helper.
     - xlsx: one CSV block per sheet, read with `exceljs` (already a server dependency).
     - **Pre-flight, docx:** `docxConvert` only converts **docx → PDF**; it has no text output. W-1 adds a sibling `docxToText` in the same file, on the same isolated-profile `soffice --headless --convert-to txt:Text (encoded):UTF8` pattern (`jszip` reading of `word/document.xml` is the fallback). It does not reuse `docxToPdf` and then `pdftotext`, because that loses headings and table order.
-  - Scanned (image-only) PDFs are refused in v1 with a clear Bangla message. OCR is a later slice.
-  - **Token count:** see §13 (b). v1 uses the character estimate, stamps `tokenMethod: "estimate"`, and replaces it with the real count once the file has been sent once.
+  - **Images and scanned PDFs are read in v1 (owner ruling D-#1227; replaces "scanned PDFs refused, OCR later").** The DeepSeek API this repo calls takes text only, so pictures go through OCR first.
+    - Image types: png, jpg/jpeg, webp, gif (first frame), tiff, heic where the VM's tools read it.
+    - A scanned PDF is a PDF whose `pdftotext` output is (nearly) empty. Its pages are rasterised with `pdftoppm` (poppler, already on the VM) and OCR'd page by page.
+    - **Default reader: Tesseract on the VM** (`ben+eng` language data), free, and nothing leaves the server. Installing `tesseract-ocr` + `tesseract-ocr-ben` is a deploy step in W-1's PR.
+    - **Per-file option: "Gemini দিয়ে পড়ুন" (read with Gemini vision)** for a poor Tesseract result (handwriting, tables, complex layouts). This is its own AI feature `workspace_ocr`: OFF by default, metered through the ledger, capped like the others, and inside the school budget. It is separate from the chat fallback, which stays off (D-#1226). Each OCR'd file records `textSource: "text" | "tesseract" | "gemini"` so the reader knows how far to trust it.
+    - Each file shows its extracted text for checking before it is pinned.
+    - A file with nothing readable is refused with a clear Bangla message.
+  - **Token count (owner ruling D-#1230):** a small Python helper counts with DeepSeek's official offline tokenizer package. It runs through `execFile`, the same way the server already runs `validate_import.py`, and stamps `tokenMethod: "tokenizer"`.
+    - If the helper is missing or fails, the character estimate is used (`"estimate"`).
+    - Once the file has been sent, the count is replaced by the exact figure DeepSeek returns (`"measured"`); the API count is the authority. See §13 (b).
 - **Context budget:** the project page shows instructions + pinned files in tokens, and the estimated cost per message on cache hit and on miss (`priceOf` from `aiPrices.ts`). Warn above 150k tokens; refuse above 400k.
   - **Pre-flight:** the model context windows are not recorded anywhere in the repo. W-1 adds them as config beside `AI_PRICES` and checks them against DeepSeek's model page. If a window is below 400k, the refuse line is that window minus the output limit.
 - **Permissions (D-#1208):** new catalogue module `ai_workspace` with actions `use` (whoever the Principal grants) and `admin` (Principal). Project membership decides access within a project.
@@ -101,18 +109,22 @@ Each slice: own branch off `dev`, own PR, own D-# rows, help guide in the same P
 - **Student data:** follows the project's `nameProtection` switch (W-1).
 - **Ledger:** feature `workspace_chat`, `projectId`, `sessionId`, `userId` on every `AiUsage` row.
   - **Pre-flight:** `AiUsage` has no `projectId`; it has `refType` / `refId`, and the router stores the session in `refId`. W-1/W-2 add `projectId` (optional, indexed `{projectId, at}`), which `recordAiUsage` and the AI-7 aggregations read.
-  - New feature keys join `AI_FEATURES` in `AiSettingService` in the slice that builds them (`workspace_chat` W-2, `workspace_draft` W-3, `workspace_job` W-4). Like every AI feature they default to OFF.
+  - New feature keys join `AI_FEATURES` in `AiSettingService` in the slice that builds them (`workspace_ocr` W-1, `workspace_chat` W-2, `workspace_draft` W-3, `workspace_job` W-4). Like every AI feature they default to OFF.
 - **Request/reply log (D-#1179). Pre-flight:**
   - `AiExchange` copies the full history into every row (60k characters per turn), and `AiPromptText` keeps at most 200k characters of a prefix.
   - For a project chat that would grow the log quadratically and cut the instructions + files prefix.
-  - Workspace rows therefore store the new message + reply and point at the session for the history. The prefix is stored by hash without the 200k cut (or by reference to the policy version + file ids).
+  - **Owner ruling D-#1228: reference, no copies.** Workspace rows store the new message + reply and point at the session (and the message range) for the history. The exact request stays rebuildable from the saved messages + the policy version + the file ids, because nothing is ever edited in place. The prefix is stored by hash without the 200k cut (or by reference to the policy version + file ids).
   - A row from a project with name protection OFF is flagged `deidentified: false`, because D-#1179's "a row names nobody" only holds when the gate ran.
-- **Fallback. Pre-flight:** `AiFeatureSetting.fallback` defaults to ON, which retries on Gemini. Proposed for the workspace features: fallback OFF by default. A chat picked as DeepSeek V4 Pro should not silently answer from another provider and model, and a Gemini answer does not hit DeepSeek's cache. Settle this in W-2's own D-# row.
+- **Fallback. Pre-flight:** `AiFeatureSetting.fallback` defaults to ON, which retries on Gemini. Proposed for the workspace features: fallback OFF by default. A chat picked as DeepSeek V4 Pro should not silently answer from another provider and model, and a Gemini answer does not hit DeepSeek's cache. **Owner ruling D-#1226:** fallback is OFF by default for every workspace feature. The Principal can switch it on per feature on the existing AI settings screen.
 - **Caps:** per person per day (turns + $), per project per month ($), and the school monthly cap. Refuse before sending.
   - **Pre-flight:**
     - `assertWithinCaps` has per-person-day, per-session, per-feature-month and school-budget caps. It has no per-project cap; W-2 adds one.
     - The per-session turn cap must be `null` for workspace features (the assistant's is 40).
-    - **Conflict to settle with the owner:** the school-wide budget (`AiBudgetSetting`, default **$8/month**) covers every capped feature. If the workspace features are capped features, the $10 workspace cap (§11 ruling 2) can never be reached before the school budget stops everything. Either raise the school budget to cover both (e.g. $18), or keep the workspace cap as its own line outside the school budget. Recommended: raise the school budget when the workspace is switched on, so one total still bounds all AI spend.
+    - **Conflict to settle with the owner:** the school-wide budget (`AiBudgetSetting`, default **$8/month**) covers every capped feature. If the workspace features are capped features, the $10 workspace cap (§11 ruling 2) can never be reached before the school budget stops everything. Either raise the school budget to cover both (e.g. $18), or keep the workspace cap as its own line outside the school budget. **Owner ruling D-#1225: every budget figure is configurable in ONE place**, the existing AI settings / caps screen.
+      - The school budget, each feature's monthly cap (workspace features included, default $10 across them) and the per-person day caps live there and nowhere else. No dollar figure is hard-coded beyond the first-run defaults.
+      - The workspace features count inside the school budget, so one total still bounds all AI spend.
+      - The screen warns when the feature caps add up to more than the school budget, so a cap can never be unreachable without the Principal seeing it.
+      - The per-project monthly cap is set on the project page but read by the same cap check.
 
 ## 5. W-3 — Drafts, approval, export, pipelines
 - **`AiDraft` (D-#1211):** `projectId, title, kind (free | lesson_plan | question_bank | book_chapter | storybook | paper), body (markdown or JSON), version, status (draft | approved), sourceSessionId?, policyHash, createdBy, approvedBy, at`.
@@ -127,6 +139,15 @@ Each slice: own branch off `dev`, own PR, own D-# rows, help guide in the same P
   - `kind: question_bank` → the existing import contract and harness: `importContentFiles` with one bank JSON (`{stimuli, questions}`) + a curation tag. Permission `question_bank:import`.
   - `kind: lesson_plan` → **exists** (pre-flight, §13 (a)): `importContentFiles` with a plan JSON (`plan_type`) + its rendered Markdown under the same filename stem. This is auto-wrapped by `build_envelope.py` and gated by `validate_import.py`, the same path as the import screen. Permission `lesson_plans:import`.
     - So a `lesson_plan` draft must carry BOTH parts (the plan JSON and its Markdown), not one Markdown body. W-3 stores them as two fields of `body`.
+    - **What sending means (owner ruling D-#1229).** Sending is a publish:
+      - The plan becomes the CURRENT plan at its address (class · subject · chapter · session). Teachers and the AI assistant see it at once.
+      - The previous version is superseded, not overwritten.
+      - Any open review round on it is closed as "superseded by re-import". A de-identified corpus event is written.
+    - Therefore:
+      - only an **approved** draft can be sent, by someone holding `lesson_plans:import`;
+      - a confirm step names the plan it replaces ("C1 · BAN · অধ্যায় 4 · সেশন 2 — বর্তমান পরিকল্পনা প্রতিস্থাপিত হবে");
+      - the project's instructions must include the plan JSON format, so DeepSeek writes what the validator accepts.
+    - The same approved-only + confirm rule applies to `question_bank` and `book_chapter` sends.
   - Never write around a validator. A refusal is shown to the user (and returned to the job's retry loop, W-4) word for word.
 
 ## 6. W-4 — Batch jobs
@@ -186,7 +207,7 @@ Each slice: own branch off `dev`, own PR, own D-# rows, help guide in the same P
 
 ## 10. Efficiency rules (apply in every slice, D-#1215)
 - **No new infrastructure:** same VM, same Mongo, same Drive storage. One extra worker process (expect under 200 MB RAM; the VM has about 22 GB free and no swap, so concurrency stays at 2).
-- **Disk:** originals in Drive; Mongo holds extracted text only (expect under 1 GB for years). This holds only with the `AiExchange` change in §4. Without it, the log is the largest collection.
+- **Disk:** originals in Drive; Mongo holds extracted text only (expect under 1 GB for years). This holds because of the `AiExchange` reference rule (D-#1228). A copied history would make the log the largest collection, and every hourly backup (48 kept on Drive) bigger and slower.
 - **Cost (without trading away quality):**
   - Fixed prompt prefix and an exact repeat of history each turn, so cache hits stay above 80%.
   - Off-peak option for chats and jobs.
@@ -245,7 +266,7 @@ For W-5, also an end-to-end check: add the connector in Claude, call `list_proje
 
 **(a) Is there a lesson-plan import path for W-3 "send to pipeline"?** **Yes.** `ContentService.importContentFiles` takes a plan JSON (with `plan_type`) + its rendered Markdown under the same filename stem. It auto-wraps them with `build_envelope.py` and runs the full `validate_import.py` gate (`importEnvelope`) before anything is stored. It is gated by `lesson_plans:import` (`importFilesKind` → `plan`). A built envelope on its own is also accepted. So `kind: lesson_plan` is a real pipeline in v1, not export-only. The draft must hold both the plan JSON and its Markdown.
 
-**(b) Is there a JS-side DeepSeek tokenizer, or should W-1 use the character estimate?** **Use the estimate in v1.**
+**(b) Is there a JS-side DeepSeek tokenizer, or should W-1 use the character estimate?** The pre-flight answer was "use the estimate in v1". **Superseded by the owner's ruling D-#1230: count with Python** (§14). The original reasoning is kept below for the record.
 - No tokenizer is in the repo or its dependencies.
 - DeepSeek's documented offline tokenizer is a Hugging Face `tokenizer.json` package meant for Python. A JS route would mean adding a Hugging Face tokenizers library and confirming the vocabulary matches the V4 models. That is new weight, and it is unverified, for a number that only drives a budget display.
 - So W-1 stamps `tokenMethod: "estimate"`, with characters ÷ 2.6 for Bangla-heavy text and ÷ 4 for Latin text.
@@ -253,3 +274,18 @@ For W-5, also an end-to-end check: add the connector in Claude, call `list_proje
 - Calibrate the ÷ 2.6 ratio on one real Bangla file during the AI-8 bake-off or the W-6 pilot, and record the result in W-1's D-# row.
 
 **Permissions:** `ai_workspace:use` / `ai_workspace:admin` are free. They are added in `shared/permissionCatalogue.ts`, which feeds `PERMISSIONS` / labels / build status in `shared/vocab.ts`. The `verify_shared_vocab.mjs` harness pins the LOCKED list (sixteen today) and the role defaults: a LOCKED `admin` means editing that pinned list in the same PR. Then run the verifier and the server tests.
+
+## 14. Owner rulings on the pre-flight (2026-11-10)
+The owner answered every §13 finding. Numbers refer to the "Differs from the draft" list.
+
+| # | Finding | Ruling | D-# |
+|---|---|---|---|
+| 9 | $8 school budget below the $10 workspace cap | Every budget figure is configurable in ONE place (the AI settings / caps screen); the workspace counts inside the school budget; the screen warns when the caps add up to more than the budget | D-#1225 |
+| 8 | Gemini fallback ON by default | OFF for every workspace feature; the Principal switches it on per feature if ever needed | D-#1226 |
+| 1 | `docxConvert` is docx → PDF only | New reading code: md / txt / json / csv, docx, text PDFs, xlsx, AND images + scanned PDFs (Tesseract `ben+eng` on the VM by default; per-file Gemini vision as the capped `workspace_ocr` feature) | D-#1227 |
+| 7 | `AiExchange` copies the full history per row | Reference, no copies: new message + reply + a pointer to the session; the request stays rebuildable | D-#1228 |
+| (a) | Lesson-plan import path exists | Sending is a publish: approved drafts only, `lesson_plans:import`, a confirm step naming the plan it replaces; the same for question banks and book chapters | D-#1229 |
+| (b) | No JS tokenizer | Count with Python using DeepSeek's offline tokenizer package (run like `validate_import.py`); estimate as the fallback; the API count is the authority | D-#1230 |
+| 2, 3, 4, 5, 6, 10 | Policy keys, assistant-model changes, streaming, model override, `projectId`, MCP/OAuth/Caddy | Accepted as written in §3–§7: widen the `AiPolicy` key rule; make the assistant session fields optional, with no 10-turn limit and project chats hidden from assistant lists; streaming on web, a complete reply on Android; a per-call model override; `projectId` on `AiUsage`; add the MCP SDK + OAuth endpoints + the Caddy allowlist entries | D-#1231 |
+
+The request-log storage question was settled with the database's size in view: about 73 GB free on the VM at the 2026-10-23 move, and the prod DB a few hundred MB. Space was never the problem. Duplication and the hourly backup size were.
