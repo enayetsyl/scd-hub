@@ -18,6 +18,7 @@ import {
   reviseDraft,
   saveDraftFromMessage,
   saveDraftVersion,
+  scoreDraft,
   sendDraftToPipeline,
   setDraftArchived,
   type DraftVersionView,
@@ -41,6 +42,17 @@ const ReviseRef = builder.objectRef<ReviseView>("AiDraftRevise").implement({
     runAfter: t.string({ nullable: true, resolve: (r) => iso(r.runAfter) }),
     error: t.string({ nullable: true, resolve: (r) => r.error }),
     notes: t.string({ resolve: (r) => r.notes }),
+  }),
+});
+
+type ReviewView = NonNullable<DraftView["review"]>;
+const ReviewRef = builder.objectRef<ReviewView>("AiDraftReview").implement({
+  fields: (t) => ({
+    score: t.string({ description: "usable | minor | rewrite", resolve: (r) => r.score }),
+    note: t.string({ nullable: true, resolve: (r) => r.note }),
+    byName: t.string({ nullable: true, resolve: (r) => r.byName }),
+    at: t.string({ resolve: (r) => iso(r.at)! }),
+    version: t.int({ resolve: (r) => r.version }),
   }),
 });
 
@@ -71,6 +83,7 @@ const DraftRef = builder.objectRef<DraftView>("AiDraft").implement({
     revise: t.field({ type: ReviseRef, nullable: true, resolve: (d) => d.revise }),
     sends: t.field({ type: [SendRef], resolve: (d) => d.sends }),
     canSend: t.boolean({ description: "Approved, unchanged since, and of a kind with a pipeline.", resolve: (d) => d.canSend }),
+    review: t.field({ type: ReviewRef, nullable: true, description: "W-6 pilot score by the owner.", resolve: (d) => d.review }),
     updatedAt: t.string({ resolve: (d) => iso(d.updatedAt)! }),
   }),
 });
@@ -197,6 +210,16 @@ builder.mutationField("saveAiDraftVersion", (t) =>
 
 builder.mutationField("approveAiDraft", (t) =>
   t.field({ type: DraftRef, description: "Owner: lock the current version.", authScopes: WS_SCOPE, args: { draftId: t.arg.string({ required: true }) }, resolve: (_r, a, ctx) => approveDraft(ctx.auth, a.draftId) }),
+);
+
+builder.mutationField("scoreAiDraft", (t) =>
+  t.field({
+    type: DraftRef,
+    description: "Owner: the pilot score — usable | minor | rewrite (PRD §8).",
+    authScopes: WS_SCOPE,
+    args: { draftId: t.arg.string({ required: true }), score: t.arg.string({ required: true }), note: t.arg.string({ required: false }) },
+    resolve: (_r, a, ctx) => scoreDraft(ctx.auth, a.draftId, { score: a.score, note: a.note }),
+  }),
 );
 
 builder.mutationField("setAiDraftArchived", (t) =>

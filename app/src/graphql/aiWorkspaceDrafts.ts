@@ -22,6 +22,7 @@ export interface AiDraftT {
   revise: { status: string; runAfter: string | null; error: string | null; notes: string } | null;
   sends: Array<{ pipeline: string; version: number; ok: boolean; summary: string; at: string }>;
   canSend: boolean;
+  review: { score: "usable" | "minor" | "rewrite"; note: string | null; byName: string | null; at: string; version: number } | null;
   updatedAt: string;
 }
 
@@ -47,7 +48,7 @@ interface PageT<T> {
 }
 
 const DRAFT_FIELDS =
-  "id projectId title kind status currentVersion approvedVersion approvedByName approvedAt createdByName origin revise { status runAfter error notes } sends { pipeline version ok summary at } canSend updatedAt";
+  "id projectId title kind status currentVersion approvedVersion approvedByName approvedAt createdByName origin revise { status runAfter error notes } sends { pipeline version ok summary at } canSend review { score note byName at version } updatedAt";
 const VERSION_FIELDS = "id version body planJson note source policyHash costUsd createdByName origin at";
 
 export const AI_DRAFTS_PAGE = gql<{ aiDraftsPage: PageT<AiDraftT> }, { projectId: string; archived?: boolean; page: number; pageSize: number }>`
@@ -93,6 +94,10 @@ export const SAVE_AI_DRAFT_VERSION = gql<{ saveAiDraftVersion: AiDraftT }, { dra
 
 export const APPROVE_AI_DRAFT = gql<{ approveAiDraft: AiDraftT }, { draftId: string }>`
   mutation ApproveAiDraft($draftId: String!) { approveAiDraft(draftId: $draftId) { ${DRAFT_FIELDS} } }
+`;
+
+export const SCORE_AI_DRAFT = gql<{ scoreAiDraft: AiDraftT }, { draftId: string; score: string; note?: string | null }>`
+  mutation ScoreAiDraft($draftId: String!, $score: String!, $note: String) { scoreAiDraft(draftId: $draftId, score: $score, note: $note) { ${DRAFT_FIELDS} } }
 `;
 
 export const SET_AI_DRAFT_ARCHIVED = gql<{ setAiDraftArchived: AiDraftT }, { draftId: string; archived: boolean }>`
