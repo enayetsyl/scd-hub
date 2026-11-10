@@ -59,6 +59,7 @@ export const KG_KINDS: ReadonlySet<WorksheetItemKind> = new Set<WorksheetItemKin
   "NAME_FIVE",
   "WRITE_LIST",
   "FRAMED_SENTENCES",
+  "WORD_GAP",
 ]);
 
 export const isKgKind = (k: string): boolean => KG_KINDS.has(k as WorksheetItemKind);
@@ -481,8 +482,43 @@ function framedSentences(row: RowSpec, k: KgCtx): KgBuilt {
   );
 }
 
+/** A bare letter unit — a স্বরবর্ণ or ব্যঞ্জনবর্ণ with no কার/ফলা on it. */
+const BARE_LETTER = /^[অ-হড়ঢ়য়]$/;
+
+/**
+ * শূন্যস্থান পূরণ কর (বর্ণ) — owner 2026-11-09: the blank is a LETTER inside one of the KG book's
+ * own words ("যা ____ ত"), not a gap in the alphabet. Only a bare letter is blanked (never a unit
+ * carrying a কার), and a middle letter is preferred, as in the owner's example.
+ */
+function wordGap(row: RowSpec, k: KgCtx): KgBuilt {
+  const words = [...new Set([...Object.values(BAN_LETTER_WORDS).flat(), ...Object.values(BAN_KAR_WORDS).flat()])];
+  const cands: Array<{ word: string; units: string[]; gap: number; middle: boolean }> = [];
+  for (const word of words) {
+    const units = aksharas(word);
+    if (units.length < 2) continue;
+    const mids = units.map((_, i) => i).filter((i) => i > 0 && i < units.length - 1 && BARE_LETTER.test(units[i]));
+    const any = units.map((_, i) => i).filter((i) => BARE_LETTER.test(units[i]));
+    const at = mids.length ? mids : any;
+    if (!at.length) continue;
+    cands.push({ word, units, gap: at[randInt(k.rng, 0, at.length - 1)], middle: mids.length > 0 });
+  }
+  const ordered = freshFirst(k, cands, (c) => c.word);
+  const picks = [...ordered.filter((c) => c.middle), ...ordered.filter((c) => !c.middle)].slice(0, row.count);
+  picks.forEach((c) => k.usedWords.add(c.word));
+  return prompts(
+    picks.map((c) => {
+      const before = c.units.slice(0, c.gap).join("");
+      const after = c.units.slice(c.gap + 1).join("");
+      return { prompt: [before, "____", after].filter(Boolean).join(" "), sentence: true, gapAnswer: c.units[c.gap], lines: [] };
+    }),
+    row,
+  );
+}
+
 export function buildKgRow(row: RowSpec, k: KgCtx): KgBuilt {
   switch (row.kind) {
+    case "WORD_GAP":
+      return wordGap(row, k);
     case "NUMBER_WORDS":
       return numberWords(row, k);
     case "ODD_EVEN":

@@ -5764,6 +5764,8 @@ export const WORKSHEET_ITEM_KINDS = [
   "NAME_FIVE",
   "WRITE_LIST",
   "FRAMED_SENTENCES",
+  // KG BAN শূন্যস্থান পূরণ কর (বর্ণ) — a book word with one letter left out (owner 2026-11-09)
+  "WORD_GAP",
   "ORAL",
   "MANUAL",
 ] as const;
@@ -5812,6 +5814,7 @@ export const WORKSHEET_ITEM_KIND_LABELS_BN: Record<WorksheetItemKind, string> = 
   NAME_FIVE: "নাম লেখা (বিভাগ অনুযায়ী)",
   WRITE_LIST: "দিন/মাস/দিকের নাম লেখা",
   FRAMED_SENTENCES: "ছাঁচ দেওয়া বাক্য পূরণ",
+  WORD_GAP: "শব্দের বাদ পড়া বর্ণ লেখা",
   ORAL: "মৌখিক (ছাপা হয় না)",
   MANUAL: "নিজে লিখুন (ফাঁকা জায়গা)",
 };
@@ -5859,6 +5862,7 @@ export const WORKSHEET_ITEM_KIND_LABELS_EN: Record<WorksheetItemKind, string> = 
   NAME_FIVE: "Name five (by category)",
   WRITE_LIST: "Write days / months / directions",
   FRAMED_SENTENCES: "Complete framed sentences",
+  WORD_GAP: "Write the missing letter in a word",
   ORAL: "Oral (not printed)",
   MANUAL: "Write it yourself (blank space)",
 };
