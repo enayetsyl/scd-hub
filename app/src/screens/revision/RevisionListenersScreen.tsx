@@ -5,7 +5,7 @@
  * listener. The split is standing: it holds every Saturday until someone changes it.
  * Gated on saturday_revision:assign_listeners (the hub hides the entry; the server re-checks).
  */
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import {
@@ -39,9 +39,17 @@ export default function RevisionListenersScreen(): React.ReactElement {
     if (!s.listenerUserId) continue;
     byListener.set(s.listenerUserId, [...(byListener.get(s.listenerUserId) ?? []), s]);
   }
-  const cardIds = [...new Set([...byListener.keys(), ...extra])].sort((a, b) =>
-    (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? "", "bn"),
-  );
+  // Card order is fixed for the visit (D-#1189): alphabetical when the screen first loads,
+  // then a teacher picked or given a student later goes to the END (where the picker is) and
+  // stays there — so the card does not jump away and the user need not scroll to find it.
+  const order = useRef<string[]>([]);
+  const assignedIds = students.flatMap((s) => (s.listenerUserId ? [s.listenerUserId] : []));
+  if (order.current.length === 0 && assignedIds.length > 0) {
+    order.current = [...new Set(assignedIds)].sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? "", "bn"));
+  }
+  for (const id of [...assignedIds, ...extra]) if (!order.current.includes(id)) order.current.push(id);
+  // A card emptied with ✕ stays (it is in `extra`) so the cards below it do not shift up.
+  const cardIds = order.current.filter((id) => byListener.has(id) || extra.includes(id));
   const unassigned = shown.filter((s) => !s.listenerUserId);
   const teacherOptions = listeners.map((l) => ({ label: l.name, value: l.userId }));
 
@@ -79,7 +87,11 @@ export default function RevisionListenersScreen(): React.ReactElement {
 
           {cardIds.map((uid) => {
             const mine = byListener.get(uid) ?? [];
-            const addable = shown.filter((s) => s.listenerUserId !== uid);
+            // Students with no teacher first; those with another teacher after, marked "এখন: <name>".
+            const addable = [
+              ...shown.filter((s) => !s.listenerUserId),
+              ...shown.filter((s) => s.listenerUserId && s.listenerUserId !== uid),
+            ];
             return (
               <Card key={uid}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -95,7 +107,9 @@ export default function RevisionListenersScreen(): React.ReactElement {
                       key={s.studentId}
                       label={`${studentLabel(s)}  ✕ ${STR.revListenerRemove}`}
                       onPress={() => {
-                        if (!busy) void give(s.studentId, null);
+                        if (busy) return;
+                        setExtra((prev) => (prev.includes(uid) ? prev : [...prev, uid]));
+                        void give(s.studentId, null);
                       }}
                     />
                   ))}
@@ -107,7 +121,9 @@ export default function RevisionListenersScreen(): React.ReactElement {
                     options={addable.map((s) => ({
                       label: studentLabel(s),
                       value: s.studentId,
-                      hint: s.listenerUserId ? nameOf.get(s.listenerUserId) ?? "" : STR.revListenersUnassigned,
+                      hint: s.listenerUserId
+                        ? `${STR.revListenerNowWith} ${nameOf.get(s.listenerUserId) ?? "—"}`
+                        : STR.revListenersUnassigned,
                     }))}
                     onChange={(sid) => void give(sid, uid)}
                     placeholder={STR.revListenerAdd}
