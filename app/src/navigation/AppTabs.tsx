@@ -172,6 +172,8 @@ import AiProjectFileTextScreen from "../screens/aiWorkspace/AiProjectFileTextScr
 import AiProjectChatScreen from "../screens/aiWorkspace/AiProjectChatScreen";
 import AiDraftScreen from "../screens/aiWorkspace/AiDraftScreen";
 import AiDraftNewScreen from "../screens/aiWorkspace/AiDraftNewScreen";
+import AiJobScreen from "../screens/aiWorkspace/AiJobScreen";
+import AiJobNewScreen from "../screens/aiWorkspace/AiJobNewScreen";
 import VivaSheetScreen from "../screens/viva/VivaSheetScreen";
 import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
 import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
@@ -1853,6 +1855,8 @@ function AiWorkspaceNavigator(): React.ReactElement {
       <AiWorkspaceStack.Screen name="AiProjectChat" component={AiProjectChatScreen} options={{ title: STR.awChatTitle }} />
       <AiWorkspaceStack.Screen name="AiDraft" component={AiDraftScreen} options={{ title: STR.awDraftTitle }} />
       <AiWorkspaceStack.Screen name="AiDraftNew" component={AiDraftNewScreen} options={{ title: STR.awNewDraft }} />
+      <AiWorkspaceStack.Screen name="AiJob" component={AiJobScreen} options={{ title: STR.awJobTitle }} />
+      <AiWorkspaceStack.Screen name="AiJobNew" component={AiJobNewScreen} options={{ title: STR.awNewJob }} />
     </AiWorkspaceStack.Navigator>
   );
 }

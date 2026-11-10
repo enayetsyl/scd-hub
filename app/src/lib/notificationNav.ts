@@ -366,6 +366,9 @@ export function notificationTarget(
     // AI-2 (D-#1103): an AI budget alert opens the AI keys & caps screen.
     case "AI_BUDGET_ALERT":
       return { tab: "AdminTab", screen: "AiSettings" };
+    // AI Workspace W-4 (D-#1250): a finished batch job opens the workspace (the job is named in the text).
+    case "AI_JOB_FINISHED":
+      return { tab: "AiWorkspaceTab", screen: "AiWorkspaceHome" };
     case "SCHOOL_NOTICE": {
       // D-#1072 — the page the school named, "Tab/Screen" like a pop-up's OPEN_SCREEN button.
       // No page = a plain message: the detail screen shows it whole with no button.

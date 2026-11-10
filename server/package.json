@@ -11,7 +11,9 @@
     "test": "jest --runInBand --forceExit",
     "test:watch": "jest --watch",
     "worker:book": "tsx src/workers/bookBuildWorker.ts",
-    "worker:book:prod": "node dist/workers/bookBuildWorker.js"
+    "worker:book:prod": "node dist/workers/bookBuildWorker.js",
+    "worker:ai": "tsx src/workers/aiJobWorker.ts",
+    "worker:ai:prod": "node dist/workers/aiJobWorker.js"
   },
   "dependencies": {
     "@pothos/core": "^4.0.0",
