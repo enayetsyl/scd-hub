@@ -2,7 +2,15 @@
 
 - 2026-11-10: **PLANNED — AI Workspace: Projects + chat on DeepSeek, shared with Claude through an MCP bridge (D-#1200–#1216)** (`docs/prd-ai-workspace.md`; docs only, nothing built). Claude.ai-style projects (instructions, pinned files, members) with streamed DeepSeek chat, versioned drafts, batch jobs on a worker, and an MCP connector so Claude can use the same projects. Slices W-1..W-7.
   - **Pre-flight (PRD §13):** 12 places where the live code differs from the draft, corrected in the PRD. Among them: `docxConvert` is docx → PDF only; `AiPolicy` keys are a closed enum; `aiSend` does not stream; there is no `projectId` on `AiUsage`; the `AiExchange` log copies the full history into every row. A lesson-plan import path EXISTS (`importContentFiles`, plan JSON + Markdown, harness-gated). Token counts use the character estimate in v1, corrected from DeepSeek's real counts.
-  - **Owner to decide before W-2:** the school AI budget ($8/month across every capped feature) is below the $10 workspace cap. Raise the budget when the workspace is switched on (recommended), or keep a separate line. Also: Gemini fallback OFF for workspace features (proposed).
+  - **Owner rulings on the pre-flight (D-#1225–#1231, PRD §14):**
+    - Every budget figure is configurable in one place (the AI caps screen), with the workspace counted inside the school budget.
+    - Gemini fallback is OFF.
+    - Files include docx / PDF / md / xlsx / images and scanned PDFs. OCR is Tesseract on the VM, with a per-file Gemini vision option (`workspace_ocr`, off by default).
+    - The request log references history instead of copying it.
+    - Only approved drafts can be sent to a pipeline, with a confirm step.
+    - Token counts come from Python (DeepSeek's offline tokenizer), and the API count wins.
+    - The other corrections are accepted.
+  - **W-1 deploy steps (VM):** install `tesseract-ocr` + `tesseract-ocr-ben`, and the Python tokenizer package; both are listed in W-1's PR.
   - **Pilot project:** to be chosen by the owner later (possibly several at once).
   - **Now / next:** W-1 (projects, members, instructions, file ingest) on its own branch off `dev`.
 - 2026-11-09: **BUILT — owner testing round: Full routine alignment + worksheet counting / rearrange / KG word-gap fixes (D-#1185–#1188)** (branch `fix/owner-batch-1109`, worktree `C:/w/ob1109`). Full routine rows sized from content (D-#1185); counting pictures all drawn + a 1–20 count range on both counting kinds (D-#1186); a one-mark Rearrange counts numbers, not lines (D-#1187); KG শূন্যস্থান পূরণ (বর্ণ) = a letter missing from a book word, new kind WORD_GAP (D-#1188).
