@@ -73,7 +73,7 @@ export class GeminiProvider implements AiProvider {
       });
       if (!res.ok) throw new AiProviderError(classifyStatus(res.status), `Gemini returned ${res.status}`, this.name, res.status);
       return (await res.json()) as GeminiReply;
-    });
+    }, input.abortSignal);
 
     const cand = body.candidates?.[0];
     if (cand?.finishReason !== "STOP") {

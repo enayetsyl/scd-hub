@@ -311,6 +311,9 @@ export const AI_FEATURES = [
   // AI Workspace (docs/prd-ai-workspace.md). Fallback OFF by default (D-#1226). W-1: reading a
   // scanned PDF or a picture with Gemini vision, one file per call (D-#1227).
   { key: "workspace_ocr", bn: "কর্মক্ষেত্র: Gemini দিয়ে ফাইল পড়া", en: "Workspace: read a file with Gemini", dailyPerUser: 100, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "gemini", defaultFallback: false },
+  // W-2: project chat — no per-session turn cap (full history, D-#1204); the model per message
+  // comes from the chat's picker (D-#1205).
+  { key: "workspace_chat", bn: "কর্মক্ষেত্র: প্রকল্পে আলাপ", en: "Workspace: project chat", dailyPerUser: 300, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 

@@ -1435,7 +1435,7 @@ export async function pickAndUploadReferencePaper(input: {
 // PROCESSING row and reads the text in the background (OCR of a scan takes minutes).
 // ---------------------------------------------------------------------------
 
-export async function pickAndUploadAiWorkspaceFile(projectId: string): Promise<{ fileId: string } | null> {
+export async function pickAndUploadAiWorkspaceFile(projectId: string, sessionId?: string): Promise<{ fileId: string } | null> {
   const picked = await DocumentPicker.getDocumentAsync({ type: "*/*", multiple: false, copyToCacheDirectory: true });
   if (picked.canceled || !picked.assets?.[0]) return null;
   const asset = picked.assets[0];
@@ -1448,6 +1448,8 @@ export async function pickAndUploadAiWorkspaceFile(projectId: string): Promise<{
     form.append("file", { uri: asset.uri, name: rnUploadName(asset.name), type } as unknown as Blob);
   }
   form.append("projectId", projectId);
+  // W-2: a file for ONE chat only (it follows the pinned files in that chat).
+  if (sessionId) form.append("sessionId", sessionId);
   const token = getToken();
   const res = await fetch(`${REST_BASE}/files/ai-workspace`, {
     method: "POST",

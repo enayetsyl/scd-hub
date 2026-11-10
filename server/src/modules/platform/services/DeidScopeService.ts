@@ -47,6 +47,25 @@ export async function scopeForStudent(studentId: string): Promise<DeidScope> {
   return { people };
 }
 
+/**
+ * The whole school (AI Workspace W-2, D-#1207): a project with name protection ON is not tied
+ * to a class, so every active child, their guardians and every active staff login. Students
+ * are ordered by id so the same roster always gives the same tokens (the cache stays warm).
+ */
+export async function scopeForSchool(): Promise<DeidScope> {
+  const students = await Student.find({ active: { $ne: false } }).select("name nameBn").sort({ _id: 1 }).lean();
+  const links = students.length ? await GuardianLink.find({ studentId: { $in: students.map((s) => s._id) } }).select("guardianId").lean() : [];
+  const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))].sort();
+  const guardians = guardianIds.length ? await Guardian.find({ _id: { $in: guardianIds } }).select("name").sort({ _id: 1 }).lean() : [];
+  return {
+    people: [
+      ...students.map((s) => ({ kind: "S" as const, id: s._id.toString(), names: names(s.name, s.nameBn) })),
+      ...guardians.map((g) => ({ kind: "G" as const, id: g._id.toString(), names: names(g.name) })),
+      ...(await staffPeople()),
+    ],
+  };
+}
+
 /** The scope for a text about several sections (the teacher assistant, AI-6). */
 export async function scopeForSections(sectionIds: string[]): Promise<DeidScope> {
   const ids = sectionIds.filter((s) => Types.ObjectId.isValid(s)).map((s) => new Types.ObjectId(s));

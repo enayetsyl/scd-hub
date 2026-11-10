@@ -22,6 +22,7 @@ import { aiSend, AiFeatureOffError } from "../../platform/ai/aiRouter";
 import { AiCapError } from "../../platform/services/AiUsageService";
 import { WORKSPACE_PREFIX_MAX_TOKENS } from "../../platform/ai/aiPrices";
 import { AiProjectFile, AI_FILE_MAX_TEXT_CHARS, type IAiProjectFile } from "../models/AiProjectFile";
+import { AiAssistSession } from "../../ai-assist/models/AiAssistSession";
 import type { IAiProject } from "../models/AiProject";
 import { AI_FILE_MAX_BYTES, canonicalMime, FileReadError, readFileText, readKindOf, type CommandRunner } from "./fileText";
 import { countTokens, type PythonRunner } from "./tokenCount";
@@ -116,6 +117,11 @@ export async function startAiProjectFileUpload(
   if (input.data.length === 0 || input.data.length > AI_FILE_MAX_BYTES) throw new AiWorkspaceError(BN.tooBig);
   const name = input.name.trim().slice(0, 300) || "file";
   if (!readKindOf(input.mime, name)) throw new AiWorkspaceError(BN.noMime);
+  // A file attached to one chat (W-2): the chat must be this project's.
+  if (input.sessionId) {
+    const chat = Types.ObjectId.isValid(input.sessionId) ? await AiAssistSession.findById(input.sessionId).select("projectId").lean() : null;
+    if (!chat || chat.projectId?.toString() !== project._id.toString()) throw new AiWorkspaceError("আলাপটি পাওয়া যায়নি");
+  }
 
   let driveFileId: string;
   try {
@@ -271,6 +277,15 @@ export async function rereadAiProjectFile(
 export async function aiProjectFilesPage(authIn: AuthPayload | null, projectId: string, args: PageArgs): Promise<Page<AiProjectFileView>> {
   const { project } = await loadProject(authIn, projectId, "viewer");
   return queryPage(AiProjectFile, { projectId: project._id, sessionId: null }, { order: 1, _id: 1 }, args, (docs) => (docs as unknown as IAiProjectFile[]).map(fileView), 50);
+}
+
+/** Files attached to one chat only (W-2) — they follow the pinned files in that chat's prompt. */
+export async function aiChatFiles(authIn: AuthPayload | null, sessionId: string): Promise<AiProjectFileView[]> {
+  const chat = Types.ObjectId.isValid(sessionId) ? await AiAssistSession.findById(sessionId).select("projectId").lean() : null;
+  if (!chat?.projectId) throw new AiWorkspaceError("আলাপটি পাওয়া যায়নি");
+  await loadProject(authIn, chat.projectId.toString(), "viewer");
+  const rows = await AiProjectFile.find({ sessionId: chat._id }).sort({ order: 1, _id: 1 }).limit(50);
+  return rows.map(fileView);
 }
 
 export interface AiProjectFileText {

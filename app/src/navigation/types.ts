@@ -350,6 +350,8 @@ export type AiWorkspaceStackParamList = {
   AiProjectNew: undefined;
   AiProject: { projectId: string };
   AiProjectFileText: { fileId: string };
+  /** W-2: one project chat; canEdit = the caller may send (editor / owner). */
+  AiProjectChat: { sessionId: string; canEdit: boolean };
 };
 
 export type VivaStackParamList = {
