@@ -450,6 +450,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   AI_EXCHANGES_DELETED: { bn: "এআই-এর অনুরোধ ও উত্তরের লগ মুছেছেন", en: "Deleted AI request and reply log entries", group: "ACCESS" },
   AI_PROJECT_CHANGED: { bn: "এআই কর্মক্ষেত্রের প্রকল্প বদলেছেন", en: "Changed an AI workspace project", group: "ACCESS" },
   AI_PROJECT_FILE_CHANGED: { bn: "এআই প্রকল্পের ফাইল বদলেছেন", en: "Changed an AI workspace project file", group: "ACCESS" },
+  AI_DRAFT_CHANGED: { bn: "এআই কর্মক্ষেত্রের খসড়া বদলেছেন", en: "Changed an AI workspace draft", group: "ACCESS" },
   STUDENT_BANGLA_NAME_SET: { bn: "শিক্ষার্থীর বাংলা নাম লিখেছেন", en: "Set a student's Bangla name", group: "ACCESS" },
   WORKSHEET_SENT_TO_PRINT: { bn: "তৈরি করা প্রশ্নপত্র প্রিন্টে পাঠিয়েছেন", en: "Sent a generated worksheet to print", group: "CONTENT" },
   WORKSHEET_PLAN_SAVED: { bn: "প্রশ্ন-পরিকল্পনা সংরক্ষণ করেছেন", en: "Saved a worksheet plan", group: "CONTENT" },

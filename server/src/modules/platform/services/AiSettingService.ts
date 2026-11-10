@@ -314,6 +314,8 @@ export const AI_FEATURES = [
   // W-2: project chat — no per-session turn cap (full history, D-#1204); the model per message
   // comes from the chat's picker (D-#1205).
   { key: "workspace_chat", bn: "কর্মক্ষেত্র: প্রকল্পে আলাপ", en: "Workspace: project chat", dailyPerUser: 300, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
+  // W-3: "revise with notes" on a draft (up to 32k tokens out).
+  { key: "workspace_draft", bn: "কর্মক্ষেত্র: খসড়া সংশোধন", en: "Workspace: revise a draft", dailyPerUser: 100, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 

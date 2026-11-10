@@ -68,7 +68,7 @@ function ClockCard({ clock, chat, onNewChat }: { clock: AiPriceClockT; chat: AiP
   );
 }
 
-function MessageCard({ m, onStop, canStop }: { m: AiChatMessageT; onStop: () => void; canStop: boolean }): React.ReactElement {
+function MessageCard({ m, onStop, canStop, onSaveDraft }: { m: AiChatMessageT; onStop: () => void; canStop: boolean; onSaveDraft: () => void }): React.ReactElement {
   const mine = m.role === "user";
   return (
     <Card>
@@ -81,6 +81,11 @@ function MessageCard({ m, onStop, canStop }: { m: AiChatMessageT; onStop: () => 
       {m.status === "stopped" ? <Muted>{STR.awStopped}</Muted> : null}
       {!mine && m.status === "done" && m.tokens !== null ? (
         <Muted>{fill(STR.awAnswerMeta, { model: modelLabel(m.modelName ?? ""), tokens: kTokens(m.tokens), cost: usd(m.costUsd ?? 0) })}</Muted>
+      ) : null}
+      {canStop && !mine && m.status === "done" && m.text ? (
+        <View style={{ marginTop: space(1) }}>
+          <Button title={STR.awSaveAsDraft} variant="secondary" onPress={onSaveDraft} />
+        </View>
       ) : null}
       {canStop && (m.status === "running" || m.status === "queued") ? (
         <View style={{ marginTop: space(1) }}>
@@ -190,7 +195,7 @@ export default function AiProjectChatScreen({ route, navigation }: Props): React
       <ClockCard clock={clock} chat={chat} onNewChat={() => void onNewChat()} />
       {data.total > data.rows.length && data.page > 1 ? <Pager page={data.page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}
       {rows.map((m) => (
-        <MessageCard key={m.id} m={m} canStop={canEdit} onStop={() => void onStop(m.id)} />
+        <MessageCard key={m.id} m={m} canStop={canEdit} onStop={() => void onStop(m.id)} onSaveDraft={() => navigation.navigate("AiDraftNew", { projectId: chat.projectId, messageId: m.id })} />
       ))}
       {Platform.OS !== "web" && active?.status === "running" ? <Muted>{STR.awPhoneStream}</Muted> : null}
       {files.length ? (
