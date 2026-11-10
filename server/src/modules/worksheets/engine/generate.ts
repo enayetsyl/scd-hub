@@ -245,32 +245,54 @@ function buildFillMissing(row: RowSpec, c: RowCtx): Built {
   };
 }
 
+/**
+ * How many jumbled lines a REARRANGE row prints, and how long each is.
+ *
+ * `count` means LINES only when each item is worth several marks and is below a line
+ * ("2 sets × 5": count 2, 5 marks each). A one-mark row counts the numbers/letters
+ * themselves — an assignment that trims the Nursery maths "Rearrange" (10 × 1) to 8 used to
+ * print EIGHT lines of ten; now it prints one line of 8 (owner 2026-11-09: "৮টার জায়গায়
+ * একটা বা দুইটা"). A long count splits into near-equal lines of at most `size`.
+ */
+export function rearrangeLines(count: number, marksEach: number, size: number): number[] {
+  if (marksEach > 1 && count < size) return Array.from({ length: count }, () => size);
+  const lines = Math.max(1, Math.ceil(count / size));
+  const base = Math.floor(count / lines);
+  const extra = count % lines;
+  return Array.from({ length: lines }, (_, i) => Math.max(2, base + (i < extra ? 1 : 0)));
+}
+
 function buildRearrange(row: RowSpec, c: RowCtx): Built {
   const axis = row.axis ?? "BAN_ALL";
   const seq = axisSequence(axis, c.input.scope);
   const full = fullSequence(axis);
   const size = Math.max(3, Math.min(row.setSize ?? (isNumberAxis(axis) ? 10 : 5), seq.length));
-  // `count` is either the number of lines ("2 sets × 5") or the letters in total ("5 × 2").
-  const sets = row.count < size ? row.count : Math.max(1, Math.ceil(row.count / size));
+  const lens = rearrangeLines(row.count, row.marksEach, size);
+  const sets = lens.length;
   const out: Array<{ shown: string[]; answer: string[] }> = [];
   for (let k = 0; k < sets; k++) {
+    const len = Math.min(lens[k], seq.length);
     // Owner 2026-10-16: the teacher says where each line starts and ends.
     const rr = resolveRange(full, partRange(row, k));
     let run: string[];
     if (rr) {
       const span = full.slice(rr[0], rr[1] + 1);
-      const st = span.length > size ? randInt(c.rng, 0, span.length - size) : 0;
-      run = span.slice(st, st + size);
+      const st = span.length > len ? randInt(c.rng, 0, span.length - len) : 0;
+      run = span.slice(st, st + len);
     } else {
-      const start = randInt(c.rng, 0, seq.length - size);
-      run = seq.slice(start, start + size);
+      const start = randInt(c.rng, 0, seq.length - len);
+      run = seq.slice(start, start + len);
     }
     if (run.length < 2) continue;
     let shown = shuffle(run, c.rng);
     if (shown.join("|") === run.join("|")) shown = run.slice().reverse();
     out.push({ shown, answer: run });
   }
-  return { section: { layout: "jumble", sets: out }, printed: out.length === sets ? null : out.length };
+  // `printed` is in the row's own count unit: lines for a "2 sets × 5" row, else the
+  // numbers/letters printed.
+  const byLine = row.marksEach > 1 && row.count < size;
+  const made = byLine ? out.length : out.reduce((s, x) => s + x.answer.length, 0);
+  return { section: { layout: "jumble", sets: out }, printed: made === row.count ? null : made };
 }
 
 function buildBeforeAfter(row: RowSpec, c: RowCtx, mode: "BEFORE" | "AFTER" | "BOTH"): Built {
@@ -592,18 +614,26 @@ function countPool(c: RowCtx, axis: WorksheetAxis | null | undefined): PictureRe
   return orderPool(own.length ? own : all, c.rng, c.isFinal);
 }
 
-/** Counting stays small enough to draw and to count: at most 20, never past the scope. */
-function countValues(c: RowCtx, n: number): number[] {
-  const max = Math.min(20, numberUpTo(c.input.scope));
-  const vals = pickIndices(c.rng, 2, max, n);
-  while (vals.length < n) vals.push(randInt(c.rng, 2, max));
+/** Counting stays small enough to draw and to count: at most 20, never past the scope.
+ *  A teacher range (owner 2026-11-09, "option to choose range") overrides the scope but
+ *  never the 20 cap; inside it the counts stay distinct while the range has room. */
+function countValues(row: RowSpec, c: RowCtx, n: number): number[] {
+  let lo = 2;
+  let max = Math.min(20, numberUpTo(c.input.scope));
+  const rr = row.axis ? resolveRange(fullSequence(row.axis), partRange(row, 0)) : null;
+  if (rr) {
+    lo = Math.min(20, rr[0] + 1);
+    max = Math.min(20, rr[1] + 1);
+  }
+  const vals = pickIndices(c.rng, lo, max, n);
+  while (vals.length < n) vals.push(randInt(c.rng, lo, max));
   return vals;
 }
 
 function buildCountPictures(row: RowSpec, c: RowCtx): Built {
   const pool = countPool(c, row.axis);
   if (pool.length === 0) return { section: { layout: "pictures", cols: 2, pictures: [] }, printed: 0 };
-  const values = countValues(c, row.count);
+  const values = countValues(row, c, row.count);
   const pictures = values.map((n, i) => {
     const p = pool[i % pool.length];
     c.usedPictures.add(p.id);
@@ -615,7 +645,7 @@ function buildCountPictures(row: RowSpec, c: RowCtx): Built {
 function buildMatchCount(row: RowSpec, c: RowCtx): Built {
   const pool = countPool(c, row.axis);
   if (pool.length === 0) return { section: { layout: "match", left: [], right: [], answer: [] }, printed: 0 };
-  const values = countValues(c, row.count);
+  const values = countValues(row, c, row.count);
   const chosen = values.map((n, i) => {
     const p = pool[i % pool.length];
     c.usedPictures.add(p.id);

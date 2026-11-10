@@ -87,7 +87,7 @@ function axisOptions(axis: string | null): string[] {
 
 /** The parts of a row a teacher can bound — must match the engine's part order. */
 function rangeParts(
-  r: { kind: string; axis: string | null; setSize: number | null },
+  r: { kind: string; axis: string | null; setSize: number | null; marksEach: number },
   count: number,
 ): Array<{ label: string; options: string[]; max?: number }> {
   const opts = axisOptions(r.axis);
@@ -121,9 +121,15 @@ function rangeParts(
     case "REARRANGE": {
       const numeric = r.axis === "NUM_BN" || r.axis === "NUM_EN";
       const size = r.setSize ?? (numeric ? 10 : 5);
-      const lines = count < size ? count : Math.max(1, Math.ceil(count / size));
+      // Mirrors engine rearrangeLines(): a count below a line is LINES only when each item is
+      // worth several marks ("2 sets × 5"); a one-mark row counts numbers/letters (owner 2026-11-09).
+      const lines = r.marksEach > 1 && count < size ? count : Math.max(1, Math.ceil(count / size));
       return Array.from({ length: Math.min(lines, 20) }, (_, i) => ({ label: `${STR.wsRangeLine} ${bnNum(i + 1)}`, options: opts, max: size }));
     }
+    case "COUNT_PICTURES":
+    case "MATCH_COUNT":
+      // How many pictures a box may hold (owner 2026-11-09): counting is drawn up to 20.
+      return [{ label: STR.wsRangePictureCount, options: opts.slice(0, 20) }];
     case "BEFORE":
     case "AFTER":
     case "BEFORE_AFTER":

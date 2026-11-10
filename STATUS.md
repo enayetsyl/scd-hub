@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-09: **BUILT — owner testing round: Full routine alignment + worksheet counting / rearrange / KG word-gap fixes (D-#1185–#1188)** (branch `fix/owner-batch-1109`, worktree `C:/w/ob1109`). Full routine rows sized from content (D-#1185); counting pictures all drawn + a 1–20 count range on both counting kinds (D-#1186); a one-mark Rearrange counts numbers, not lines (D-#1187); KG শূন্যস্থান পূরণ (বর্ণ) = a letter missing from a book word, new kind WORD_GAP (D-#1188).
+  - **Data (prod, pending):** SP-C5-ENG-0005 item 24 removal — dry run clean (no score carries item 24; 168 → 158); the APPLY was refused in auto mode.
+  - **Now / next:** PR → dev → promote → OTA (app screens: Full routine, worksheet range picker).
 - 2026-11-09: **BUILT — revision marking saves every tap, to the server and to the phone (D-#1180)** (branch `fix/revision-autosave`). From the owner’s dev rehearsal of SR-6: a reload / closed app / dropped connection no longer loses a listener’s marks. Each tap is saved (সংরক্ষিত ✓) and kept on the phone until the server has it; offline it retries every 5 s; the student stays চলছে until শেষ — ফিরে যান, and a half-marked entry is never released.
   - **Dev rehearsal data (2026-11-09):** Hifz groups, 17 students, Quran teachers, their families and 468 revision records were copied prod → dev (no push devices copied); dev staff active flags synced from prod; the Principal’s dev password = prod’s. Dev site password reset (user `dev`; owner has it).
   - **Now / next:** PR → dev; owner continues the rehearsal on dev; then promote SR-6 + this → OTA.

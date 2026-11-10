@@ -6967,6 +6967,7 @@ const STR_BN = {
   // "ا–ي" inside Bangla text is reordered by bidi into "(ي–ا)"; words between keep the order.
   wsArabicLetters: "আরবি হরফ (ا থেকে ي)",
   wsRangeNumbersShown: "যে সংখ্যাগুলো দেখাবে",
+  wsRangePictureCount: "কতগুলো ছবি (১–২০)",
   // Worksheet taught-letter checkboxes (owner 2026-10-16)
   wsTaughtLetters: "যে বর্ণগুলো পড়ানো হয়েছে — টিক দিন",
   wsTickAll: "সব",
@@ -14690,6 +14691,7 @@ const STR_EN: StrTable = {
   // Worksheet Arabic (D-#802)
   wsArabicLetters: "Arabic letters (ا to ي)",
   wsRangeNumbersShown: "Numbers shown",
+  wsRangePictureCount: "How many pictures (1–20)",
   // Worksheet taught-letter checkboxes (owner 2026-10-16)
   wsTaughtLetters: "Tick the letters that have been taught",
   wsTickAll: "All",
