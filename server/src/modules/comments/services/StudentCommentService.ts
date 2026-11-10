@@ -214,11 +214,15 @@ export async function editComment(input: EditCommentInput): Promise<StudentComme
     throw new StudentCommentError("A discarded comment cannot be edited");
   }
 
+  const textBefore = doc.text;
   if (input.type !== undefined) doc.type = assertType(input.type);
   if (input.sentiment !== undefined) doc.sentiment = assertSentiment(input.sentiment);
   if (input.text !== undefined) doc.text = assertText(input.text);
   if (input.attachmentIds !== undefined) doc.attachmentIds = toObjectIds(input.attachmentIds);
-  if (input.aiCheck) doc.aiCheck = input.aiCheck;
+  // D-#1175: re-saving UNCHANGED text needs no new check — keep the earlier CHECKED stamp
+  // instead of overwriting it with "saved unchecked".
+  const keepStamp = input.aiCheck?.status === "NOT_CHECKED" && doc.aiCheck?.status === "CHECKED" && doc.text === textBefore;
+  if (input.aiCheck && !keepStamp) doc.aiCheck = input.aiCheck;
 
   await doc.save();
 

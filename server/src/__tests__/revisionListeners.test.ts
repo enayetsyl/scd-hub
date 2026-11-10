@@ -35,7 +35,7 @@ import {
   releaseBoard,
   releaseSaturday,
 } from "../modules/saturday-revision/services/RevisionListenerService";
-import { RevisionError } from "../modules/saturday-revision/services/RevisionService";
+import { RevisionError, recordEntry } from "../modules/saturday-revision/services/RevisionService";
 
 jest.setTimeout(120_000);
 
@@ -219,4 +219,32 @@ test("release board + release: sends only recorded, unsent Hifz entries of that 
   const sent = (await RevisionEntry.findOne({ studentId: new Types.ObjectId(boy1), date: SAT }).lean())!;
   expect(mockDeliver).toHaveBeenCalledWith(sent._id.toString());
   expect(await Audit.countDocuments({ eventKind: "SR_SATURDAY_RELEASED" })).toBe(1);
+});
+
+test("autosave (D-#1180): a half-marked entry is saved but waits, is never released, and audits only on finish", async () => {
+  const m = (await SubjectGroupMembership.findOne({ studentId: new Types.ObjectId(girl1) }).lean())!;
+  const audits = () => Audit.countDocuments({ eventKind: "SR_REVISION_RECORDED", targetKind: "RevisionEntry" });
+  const before = await audits();
+  const portion = { category: "SABAQ", status: "PARTIAL", fromSurah: 67, fromAyah: 16, toSurah: 67, toAyah: 30, fath: 1 };
+  // Two taps, saved mid-marking.
+  await recordEntry({ groupId: m.groupId.toString(), studentId: girl1, date: SAT, present: true, portions: [portion], actorId: teacherA, inProgress: true });
+  const mid = await recordEntry({ groupId: m.groupId.toString(), studentId: girl1, date: SAT, present: true, portions: [{ ...portion, fath: 2 }], actorId: teacherA, inProgress: true });
+  expect(mid.inProgress).toBe(true);
+  expect(mid.portions[0].fath).toBe(2);
+  expect(await audits()).toBe(before); // no audit row per tap
+
+  const board = await releaseBoard(SAT);
+  expect(board.ready.map((r) => r.entry.studentId)).not.toContain(girl1);
+  expect(board.pending.find((p) => p.studentId === girl1)?.inProgress).toBe(true);
+  mockDeliver.mockClear();
+  await releaseSaturday(SAT, teacherB);
+  expect(mockDeliver).not.toHaveBeenCalledWith(mid.id);
+
+  // The listener taps শেষ: finished, audited once, now ready.
+  const done = await recordEntry({ groupId: m.groupId.toString(), studentId: girl1, date: SAT, present: true, portions: [{ ...portion, fath: 2 }], actorId: teacherA, inProgress: false });
+  expect(done.inProgress).toBe(false);
+  expect(await audits()).toBe(before + 1);
+  const after = await releaseBoard(SAT);
+  expect(after.ready.map((r) => r.entry.studentId)).toContain(girl1);
+  expect(after.pending.map((p) => p.studentId)).not.toContain(girl1);
 });

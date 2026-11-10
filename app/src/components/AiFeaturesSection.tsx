@@ -126,7 +126,7 @@ export function AiFeaturesSection(): React.ReactElement {
         <Muted>{STR.aifIntro}</Muted>
         {r ? (
           <Notice
-            tone={r.missingBanglaName > 0 ? "warn" : "ok"}
+            tone={r.missingBanglaName > 0 ? "info" : "ok"}
             message={r.missingBanglaName > 0 ? fill(STR.aifNamesMissing, { have: r.withBanglaName, all: r.activeStudents }) : STR.aifNamesDone}
           />
         ) : null}

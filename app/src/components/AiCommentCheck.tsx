@@ -3,12 +3,19 @@
  * the daily comment composer and the class-test result form.
  *
  *   useAiCommentCheck(kind)  is the checker on for me? run a check; remember which text
- *                            was checked; build the claim the save mutation carries.
+ *                            was checked; build the claim the save mutation carries; and
+ *                            say whether the text may be saved now (`gate`).
  *   <AiCheckPanel>           the Check button, the suggestions (accept one / accept all /
  *                            keep my text), the "not checked" notice, and the standard.
  *
  * The AI never changes the text by itself: a suggestion lands in the box only when the
  * teacher taps Accept, and "keep my text" saves exactly what was written.
+ *
+ * Round 2 (owner 2026-11-09, D-#1175): the check is REQUIRED before saving while the checker
+ * is on — Save stays locked until the current text is checked, and EVERY edit after a check
+ * needs a new check. Accepting the AI's own suggestion is not an edit. If the check cannot
+ * run (switched off, a limit, the AI down, a name it could not hide, no connection) the text
+ * may be saved as written. Text loaded from an earlier save may be re-saved unchanged.
  */
 import React from "react";
 import { View } from "react-native";
@@ -26,6 +33,13 @@ export type CheckFields = Array<{ field: string; text: string }>;
 
 const snap = (fields: CheckFields) => JSON.stringify(fields.map((f) => [f.field, f.text.trim()]).sort());
 
+/** A blank the AI left for the writer ("[কয়টি]") or a token that was not put back. */
+const BLANK = /\[[^[\]]*[ঀ-৿][^[\]]*\]|\[(?:S\d*|G\d+|T\d+|PHONE|NUM|ID)\]/;
+export const hasBlank = (fields: CheckFields) => fields.some((f) => BLANK.test(f.text));
+
+/** Why Save is locked right now (null = may save). */
+export type CheckGate = null | "NEED_CHECK" | "CHANGED" | "DECIDE" | "BLANKS";
+
 export interface AiCommentCheck {
   available: boolean;
   kind: CheckKindT;
@@ -36,9 +50,13 @@ export interface AiCommentCheck {
   open: CommentCheckIssueT[];
   /** True when these fields are exactly what was last checked / accepted / kept. */
   isCurrent: (fields: CheckFields) => boolean;
+  /** Whether these fields may be saved now, and if not, why. */
+  gate: (fields: CheckFields) => CheckGate;
   check: (studentId: string, fields: CheckFields, extra?: { markPct?: number | null; commentType?: string; sentiment?: string }) => Promise<CommentCheckResultT | null>;
-  /** The writer settled on these fields (accepted or kept their own). */
+  /** The writer settled on these fields (accepted or kept their own, or loaded unchanged). */
   settle: (fields: CheckFields) => void;
+  /** An accepted suggestion changed the text but other suggestions are still open. */
+  advance: (fields: CheckFields) => void;
   accept: (issue: CommentCheckIssueT) => void;
   acceptAll: () => void;
   keepMine: () => void;
@@ -57,7 +75,10 @@ export function useAiCommentCheck(kind: CheckKindT): AiCommentCheck {
   const [error, setError] = React.useState<string | null>(null);
   const [accepted, setAccepted] = React.useState<number[]>([]);
   const [overrode, setOverrode] = React.useState(false);
+  // settled: may be saved as is. reviewing: checked, suggestions still open.
   const [settled, setSettled] = React.useState<string | null>(null);
+  const [reviewing, setReviewing] = React.useState<string | null>(null);
+  const [everChecked, setEverChecked] = React.useState(false);
 
   const reset = React.useCallback(() => {
     setResult(null);
@@ -65,6 +86,8 @@ export function useAiCommentCheck(kind: CheckKindT): AiCommentCheck {
     setAccepted([]);
     setOverrode(false);
     setSettled(null);
+    setReviewing(null);
+    setEverChecked(false);
   }, []);
 
   const check: AiCommentCheck["check"] = async (studentId, fields, extra) => {
@@ -72,21 +95,40 @@ export function useAiCommentCheck(kind: CheckKindT): AiCommentCheck {
     setError(null);
     const res = await run({ kind, studentId, fields: fields.filter((f) => f.text.trim()), markPct: extra?.markPct ?? null, commentType: extra?.commentType ?? null, sentiment: extra?.sentiment ?? null });
     setBusy(false);
+    setEverChecked(true);
+    setAccepted([]);
+    setOverrode(false);
     if (res.error || !res.data) {
+      // Fail-open (D-#1100): no connection / a server error never blocks the save.
       setError(friendlyError(res.error as never));
+      setResult(null);
+      setSettled(snap(fields));
+      setReviewing(null);
       return null;
     }
     const r = res.data.checkComment;
     setResult(r);
-    setAccepted([]);
-    setOverrode(false);
     // Nothing to fix (or not checked at all): the text as it stands is settled.
-    if (r.status !== "CHECKED" || r.issues.length === 0) setSettled(snap(fields));
-    else setSettled(null);
+    if (r.status !== "CHECKED" || r.issues.length === 0) {
+      setSettled(snap(fields));
+      setReviewing(null);
+    } else {
+      setSettled(null);
+      setReviewing(snap(fields));
+    }
     return r;
   };
 
   const open = (result?.issues ?? []).filter((_i, idx) => !accepted.includes(idx));
+
+  const gate = (fields: CheckFields): CheckGate => {
+    if (!available) return null;
+    if (!fields.some((f) => f.text.trim())) return null;
+    const s = snap(fields);
+    if (settled === s) return hasBlank(fields) ? "BLANKS" : null;
+    if (reviewing === s && open.length > 0) return "DECIDE";
+    return everChecked ? "CHANGED" : "NEED_CHECK";
+  };
 
   return {
     available,
@@ -96,8 +138,13 @@ export function useAiCommentCheck(kind: CheckKindT): AiCommentCheck {
     error,
     open,
     isCurrent: (fields) => settled !== null && settled === snap(fields),
+    gate,
     check,
-    settle: (fields) => setSettled(snap(fields)),
+    settle: (fields) => {
+      setSettled(snap(fields));
+      setReviewing(null);
+    },
+    advance: (fields) => setReviewing(snap(fields)),
     accept: (issue) => {
       const idx = (result?.issues ?? []).indexOf(issue);
       if (idx >= 0 && !accepted.includes(idx)) setAccepted([...accepted, idx]);
@@ -110,6 +157,11 @@ export function useAiCommentCheck(kind: CheckKindT): AiCommentCheck {
         : {},
     reset,
   };
+}
+
+/** The sentence shown above a locked Save button. */
+export function gateMessage(g: CheckGate): string | null {
+  return g === "NEED_CHECK" ? STR.aicNeedCheck : g === "CHANGED" ? STR.aicChanged : g === "DECIDE" ? STR.aicDecide : g === "BLANKS" ? STR.aicFillBlanks : null;
 }
 
 /** Read at render, so a language switch shows at once. */
@@ -162,12 +214,17 @@ export function AiCheckPanel({
   const r = ai.result;
   const textOf = (field: string) => fields.find((f) => f.field === field)?.text ?? "";
   const hasText = fields.some((f) => f.text.trim().length > 0);
+  const g = ai.gate(fields);
+  const canCheck = hasText && (g === "NEED_CHECK" || g === "CHANGED");
 
   function acceptOne(issue: CommentCheckIssueT): void {
-    const next = applySuggestion(textOf(issue.field), issue);
-    onChange(issue.field, next);
+    // A note (no quote) changes nothing — it is only acknowledged.
+    const next = issue.quote ? applySuggestion(textOf(issue.field), issue) : textOf(issue.field);
+    if (issue.quote) onChange(issue.field, next);
     ai.accept(issue);
-    if (ai.open.length === 1) ai.settle(fields.map((f) => (f.field === issue.field ? { ...f, text: next } : f)));
+    const nextFields = fields.map((f) => (f.field === issue.field ? { ...f, text: next } : f));
+    if (ai.open.length === 1) ai.settle(nextFields);
+    else ai.advance(nextFields);
   }
 
   function acceptAll(): void {
@@ -184,44 +241,54 @@ export function AiCheckPanel({
   }
 
   return (
-    <View style={{ marginTop: space(2), gap: space(1) }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+    <View style={{ marginTop: space(2), marginBottom: space(3), gap: space(2) }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center" }}>
         <Button
           title={ai.busy ? STR.aicChecking : STR.aicCheck}
-          variant="secondary"
+          variant={canCheck ? "primary" : "secondary"}
           onPress={() => void ai.check(studentId, fields, extra)}
           loading={ai.busy}
-          disabled={disabled || ai.busy || !hasText || ai.isCurrent(fields)}
+          disabled={disabled || ai.busy || !canCheck}
         />
         <Button title={showStandard ? STR.aicHideStandard : STR.aicShowStandard} variant="ghost" onPress={() => setShowStandard(!showStandard)} />
       </View>
 
-      {ai.error ? <Notice tone="danger" message={ai.error} /> : null}
+      {ai.error ? <Notice tone="warn" message={`${STR.aicNotChecked} (${ai.error})`} /> : null}
       {r && r.status === "NOT_CHECKED" ? <Notice tone="warn" message={r.message ?? STR.aicNotChecked} /> : null}
       {r && r.status === "CHECKED" && r.issues.length === 0 ? <Notice tone="ok" message={STR.aicNoIssues} /> : null}
 
-      {r && r.status === "CHECKED" && ai.open.length > 0 ? (
-        <View style={{ gap: space(1) }}>
+      {r && r.status === "CHECKED" && ai.open.length > 0 && g === "DECIDE" ? (
+        <View style={{ gap: space(2) }}>
           <Body style={{ fontWeight: "700" }}>{STR.aicSuggestions}</Body>
-          {ai.open.map((issue, i) => (
-            <View key={`${issue.field}-${i}-${issue.quote}`} style={{ gap: space(1), paddingVertical: space(1) }}>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
-                <Badge text={typeLabel(issue.type)} tone="warn" />
-                {fieldLabels && fields.length > 1 ? <Badge text={fieldLabels[issue.field] ?? issue.field} tone="muted" /> : null}
+          {ai.open.map((issue, i) => {
+            const isNote = !issue.quote;
+            const placeable = isNote || textOf(issue.field).includes(issue.quote);
+            return (
+              <View key={`${issue.field}-${i}-${issue.quote}`} style={{ gap: space(1) }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
+                  <Badge text={typeLabel(issue.type)} tone="warn" />
+                  {fieldLabels && fields.length > 1 ? <Badge text={fieldLabels[issue.field] ?? issue.field} tone="muted" /> : null}
+                </View>
+                {issue.quote ? <Muted>{`${STR.aicWritten}: ${issue.quote}`}</Muted> : null}
+                <Body>{isNote ? issue.suggestion : `${STR.aicBetter}: ${issue.suggestion}`}</Body>
+                {placeable ? (
+                  <View style={{ flexDirection: "row" }}>
+                    <Button title={isNote ? STR.aicNoted : STR.aicAccept} variant="secondary" onPress={() => acceptOne(issue)} disabled={disabled} />
+                  </View>
+                ) : (
+                  <Muted>{STR.aicCantPlace}</Muted>
+                )}
               </View>
-              {issue.quote ? <Muted>{`${STR.aicWritten}: ${issue.quote}`}</Muted> : null}
-              <Body>{`${STR.aicBetter}: ${issue.suggestion}`}</Body>
-              <View style={{ flexDirection: "row" }}>
-                <Button title={STR.aicAccept} variant="secondary" onPress={() => acceptOne(issue)} disabled={disabled || !issue.quote || !textOf(issue.field).includes(issue.quote)} />
-              </View>
-            </View>
-          ))}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+            );
+          })}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) }}>
             <Button title={STR.aicAcceptAll} onPress={acceptAll} disabled={disabled} />
             <Button title={STR.aicKeepMine} variant="secondary" onPress={keepMine} disabled={disabled} />
           </View>
         </View>
       ) : null}
+
+      {g && g !== "DECIDE" ? <Muted>{gateMessage(g)}</Muted> : null}
 
       {showStandard ? (
         <View style={{ marginTop: space(1) }}>
