@@ -19,7 +19,9 @@ export function ClaudeConnectionCard(): React.ReactElement {
   const { confirmAction } = useConfirm();
   const [q, refetch] = useQuery({ query: AI_MCP_CONNECTIONS, requestPolicy: "cache-and-network" });
   const [, revoke] = useMutation(REVOKE_AI_MCP_CONNECTION);
-  const url = `${REST_BASE}/mcp`;
+  // The web build calls the API on its own origin (REST_BASE is ""), but Claude needs the
+  // full address, so a relative base is completed with the page's origin.
+  const url = `${/^https?:\/\//.test(REST_BASE) ? REST_BASE : `${typeof window !== "undefined" && window.location ? window.location.origin : ""}${REST_BASE}`}/mcp`;
   const rows = q.data?.aiMcpConnections ?? [];
 
   async function onRevoke(clientId: string): Promise<void> {
