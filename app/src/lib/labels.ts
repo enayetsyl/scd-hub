@@ -9126,6 +9126,8 @@ const STR_BN = {
   smrKindTitle_GUARDIAN_LINK_UNDONE: "অভিভাবকের সংযোগ অল্প দিনেই খুলে ফেলা হয়েছে",
   smrKindLabel_ABSENT_AT_DELIVERY: "কাজ দেওয়ার উপস্থিতি",
   smrKindTitle_ABSENT_AT_DELIVERY: "খাতায় উপস্থিত শিক্ষার্থীকে কাজ দেওয়ার সময় অনুপস্থিত দেখানো হয়েছে",
+  smrKindLabel_CT_RECHECK_WRONG: "অস্বাভাবিক নম্বরের পুনর্যাচাই",
+  smrKindTitle_CT_RECHECK_WRONG: "খাতা দেখে অস্বাভাবিক নম্বর সংশোধন করতে হয়েছে",
   // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "পপ-আপ বার্তা",
   smrKindTitle_POPUP_NOTICE_CHANGE: "দেখার পর পপ-আপ বার্তা বদলানো / বন্ধ করা হয়েছে",
@@ -17060,6 +17062,8 @@ const STR_EN: StrTable = {
   smrKindTitle_GUARDIAN_LINK_UNDONE: "A guardian link was undone soon after",
   smrKindLabel_ABSENT_AT_DELIVERY: "Absent at delivery",
   smrKindTitle_ABSENT_AT_DELIVERY: "A child present on the register was marked absent when work was given",
+  smrKindLabel_CT_RECHECK_WRONG: "Unusual-mark recheck",
+  smrKindTitle_CT_RECHECK_WRONG: "An unusual mark had to be corrected after the script was checked",
   // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "Pop-up notice",
   smrKindTitle_POPUP_NOTICE_CHANGE: "A pop-up was changed or stopped after people saw it",
