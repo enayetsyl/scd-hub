@@ -159,7 +159,7 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
   const banks = (q.data?.activityBanks ?? []).filter((b) => !skill || b.skillArea === skill);
 
   return (
-    <Screen>
+    <Screen scroll>
       {msg ? <Notice message={msg.text} tone={msg.tone} /> : null}
       {corner || desk || release ? (
         <View style={{ flexDirection: "row", gap: space(2), marginBottom: space(3), flexWrap: "wrap" }}>

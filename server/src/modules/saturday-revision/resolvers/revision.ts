@@ -150,6 +150,7 @@ RevisionEntryRef.implement({
     teacherUserId: t.exposeString("teacherUserId"),
     deliveredAt: t.string({ nullable: true, resolve: (r) => r.deliveredAt }),
     deliveryChannels: t.exposeStringList("deliveryChannels"),
+    inProgress: t.exposeBoolean("inProgress"),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),
@@ -264,10 +265,13 @@ builder.mutationField("recordRevisionEntry", (t) =>
       present: t.arg.boolean({ required: true }),
       portions: t.arg({ type: [PortionInputType], required: false }),
       teacherComment: t.arg.string({ required: false }),
+      /** SR-6 autosave (D-#1180): true while the listener is still marking. */
+      inProgress: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       await assertCanWriteGroup(ctx, args.groupId, args.studentId);
       return recordEntry({
+        inProgress: args.inProgress ?? false,
         groupId: args.groupId,
         studentId: args.studentId,
         date: new Date(args.date),

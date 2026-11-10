@@ -55,7 +55,7 @@ export function GuardianFeatureAccess({ feature }: { feature: GuardianFeatureKey
   const toggleOne = async (guardianId: string, on: boolean): Promise<void> => done(await setOne({ feature, guardianId, on }));
 
   return (
-    <Screen>
+    <Screen scroll>
       {msg ? <Notice message={msg.text} tone={msg.tone} /> : null}
       <Muted style={{ marginBottom: space(3) }}>{STR.gfaIntro}</Muted>
       <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })}>

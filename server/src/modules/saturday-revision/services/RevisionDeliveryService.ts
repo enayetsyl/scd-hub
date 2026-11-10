@@ -113,6 +113,8 @@ export async function deliverEntry(entryId: string, actorId: string): Promise<Re
   if (!Types.ObjectId.isValid(entryId)) throw new RevisionError("Invalid entry id");
   const entry = (await RevisionEntry.findById(entryId)) as IRevisionEntry | null;
   if (!entry) throw new RevisionError("Entry not found");
+  // D-#1180: a listener still marking has not finished — never send a half entry.
+  if (entry.inProgress) throw new RevisionError("শিক্ষক এখনো এই শিক্ষার্থীর রিভিশন শেষ করেননি");
 
   const student = (await Student.findById(entry.studentId)
     .select("name nameBn phone")
@@ -279,7 +281,7 @@ export async function deliverGroupSaturday(
   actorId: string,
 ): Promise<RevisionDeliveryOutcome[]> {
   if (!Types.ObjectId.isValid(groupId)) throw new RevisionError("Invalid group id");
-  const entries = (await RevisionEntry.find({ groupId: new Types.ObjectId(groupId), date })
+  const entries = (await RevisionEntry.find({ groupId: new Types.ObjectId(groupId), date, inProgress: { $ne: true } })
     .select("_id")
     .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
   const out: RevisionDeliveryOutcome[] = [];

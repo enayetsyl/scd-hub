@@ -382,6 +382,8 @@ export interface ReleasePending {
   studentName: string;
   groupNameBn: string;
   listenerName: string | null;
+  /** The listener has started but not finished (autosave, D-#1180). */
+  inProgress: boolean;
 }
 
 export interface ReleaseBoard {
@@ -401,7 +403,9 @@ export async function releaseBoard(date: Date): Promise<ReleaseBoard> {
     studentId: { $in: students.map((s) => new Types.ObjectId(s.studentId)) },
     date,
   }).lean()) as unknown as IRevisionEntry[];
-  const recordedIds = new Set(entries.map((e) => e.studentId.toString()));
+  // A half-marked entry (D-#1180) counts as still waiting, never as recorded or ready.
+  const recordedIds = new Set(entries.filter((e) => !e.inProgress).map((e) => e.studentId.toString()));
+  const startedIds = new Set(entries.filter((e) => e.inProgress).map((e) => e.studentId.toString()));
   const assignments = (await RevisionListener.find({ studentId: { $in: students.map((s) => new Types.ObjectId(s.studentId)) } })
     .select("studentId listenerUserId")
     .lean()) as unknown as Array<{ studentId: Types.ObjectId; listenerUserId: Types.ObjectId }>;
@@ -418,7 +422,7 @@ export async function releaseBoard(date: Date): Promise<ReleaseBoard> {
   }
 
   const ready = entries
-    .filter((e) => !e.deliveredAt)
+    .filter((e) => !e.deliveredAt && !e.inProgress)
     .map((e) => {
       const s = byId.get(e.studentId.toString());
       return {
@@ -434,7 +438,13 @@ export async function releaseBoard(date: Date): Promise<ReleaseBoard> {
     .filter((s) => !recordedIds.has(s.studentId))
     .map((s) => {
       const uid = listenerOf.get(s.studentId);
-      return { studentId: s.studentId, studentName: s.studentName, groupNameBn: s.groupNameBn, listenerName: uid ? names.get(uid) ?? "—" : null };
+      return {
+        studentId: s.studentId,
+        studentName: s.studentName,
+        groupNameBn: s.groupNameBn,
+        listenerName: uid ? names.get(uid) ?? "—" : null,
+        inProgress: startedIds.has(s.studentId),
+      };
     });
 
   return {
@@ -449,7 +459,7 @@ export async function releaseBoard(date: Date): Promise<ReleaseBoard> {
 export async function releaseSaturday(date: Date, actorId: string, entryIds?: string[] | null): Promise<RevisionDeliveryOutcome[]> {
   if (Number.isNaN(date.getTime())) throw new RevisionError("Invalid date");
   const groupIds = (await hifzGroups()).map((g) => g._id);
-  const filter: Record<string, unknown> = { groupId: { $in: groupIds }, date, deliveredAt: null };
+  const filter: Record<string, unknown> = { groupId: { $in: groupIds }, date, deliveredAt: null, inProgress: { $ne: true } };
   if (entryIds && entryIds.length > 0) {
     if (entryIds.some((i) => !Types.ObjectId.isValid(i))) throw new RevisionError("Invalid entry id");
     filter._id = { $in: entryIds.map((i) => new Types.ObjectId(i)) };

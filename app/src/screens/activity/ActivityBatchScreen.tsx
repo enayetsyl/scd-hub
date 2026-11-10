@@ -41,7 +41,7 @@ export default function ActivityBatchScreen(): React.ReactElement {
   };
   let lastGroup = "";
   return (
-    <Screen>
+    <Screen scroll>
       {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
       {rows.length > 0 ? <Button title={STR.actBatchPrint.replace("{n}", bnNum(rows.length))} loading={fetching} onPress={() => void run()} style={{ marginBottom: space(3) }} /> : null}
       {lastRun && PDF_SUPPORTED ? <Button title={STR.actPrintOpen} variant="ghost" onPress={() => open(lastRun)} style={{ marginBottom: space(3) }} /> : null}

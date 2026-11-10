@@ -29,7 +29,7 @@ export default function ActivityStickersScreen(): React.ReactElement {
     reload();
   };
   return (
-    <Screen>
+    <Screen scroll>
       {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
       <QueryGate results={[q]} onRetry={reload} loaderLabel={STR.loading}>
         {rows.length === 0 ? <Muted>{STR.actStickersEmpty}</Muted> : null}

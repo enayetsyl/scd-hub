@@ -74,7 +74,7 @@ const toN = (s: string): number => Number(s.replace(/[০-৯]/g, (d) => String(
 describe("autoMapRow — the published KG rows", () => {
   it("maps every KG Bangla row (no MANUAL left)", () => {
     expect(kinds(KG_BAN, "BAN")).toEqual([
-      "FILL_MISSING", "LETTER_WORDS", "KAR_WORDS", "JUMBLED_WORD", "CONJUNCT_BREAK", "OPPOSITES", "FILL_MISSING",
+      "FILL_MISSING", "LETTER_WORDS", "KAR_WORDS", "JUMBLED_WORD", "CONJUNCT_BREAK", "OPPOSITES", "WORD_GAP",
       "MAKE_SENTENCE", "NAME_FIVE", "WRITE_LIST", "WRITE_LIST", "WRITE_LIST", "FRAMED_SENTENCES",
     ]);
   });
