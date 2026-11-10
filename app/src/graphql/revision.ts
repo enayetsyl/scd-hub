@@ -50,12 +50,14 @@ export interface RevisionEntryT {
   teacherUserId: string | null;
   deliveredAt: string | null;
   deliveryChannels: string[];
+  /** SR-6 autosave (D-#1180): the listener has not finished yet. */
+  inProgress: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 const PORTION_FIELDS = `category status fromSurah fromAyah toSurah toAyah rangeBn ayahs juzs tanbih fath mistakes { harf ghunnah madd other } note`;
-const REVISION_ENTRY_FIELDS = `id groupId studentId date present portions { ${PORTION_FIELDS} } teacherComment teacherUserId deliveredAt deliveryChannels createdAt updatedAt`;
+const REVISION_ENTRY_FIELDS = `id groupId studentId date present portions { ${PORTION_FIELDS} } teacherComment teacherUserId deliveredAt deliveryChannels inProgress createdAt updatedAt`;
 
 export interface RevisionGroupT {
   id: string;
@@ -144,15 +146,16 @@ export const RECORD_REVISION_ENTRY = gql<
     present: boolean;
     portions?: RevisionPortionInput[] | null;
     teacherComment?: string | null;
+    inProgress?: boolean | null;
   }
 >`
   mutation RecordRevisionEntry(
     $groupId: String!, $studentId: String!, $date: String!, $present: Boolean!,
-    $portions: [RevisionPortionInput!], $teacherComment: String
+    $portions: [RevisionPortionInput!], $teacherComment: String, $inProgress: Boolean
   ) {
     recordRevisionEntry(
       groupId: $groupId, studentId: $studentId, date: $date, present: $present,
-      portions: $portions, teacherComment: $teacherComment
+      portions: $portions, teacherComment: $teacherComment, inProgress: $inProgress
     ) { ${REVISION_ENTRY_FIELDS} }
   }
 `;
@@ -595,9 +598,10 @@ export interface RevisionListenEntryT {
   portions: RevisionPortionT[];
   teacherComment: string | null;
   deliveredAt: string | null;
+  inProgress: boolean;
   updatedAt: string;
 }
-const LISTEN_ENTRY_FIELDS = `id groupId studentId date present portions { ${PORTION_FIELDS} } teacherComment deliveredAt updatedAt`;
+const LISTEN_ENTRY_FIELDS = `id groupId studentId date present portions { ${PORTION_FIELDS} } teacherComment deliveredAt inProgress updatedAt`;
 
 export interface RevisionListeningRowT {
   studentId: string;
@@ -622,7 +626,7 @@ export const MY_REVISION_LISTENING_QUERY = gql<{ myRevisionListening: RevisionLi
 export interface RevisionReleaseBoardT {
   listeners: { userId: string; name: string; assigned: number; recorded: number }[];
   ready: { entry: RevisionListenEntryT; studentName: string; groupNameBn: string; recordedByName: string }[];
-  pending: { studentId: string; studentName: string; groupNameBn: string; listenerName: string | null }[];
+  pending: { studentId: string; studentName: string; groupNameBn: string; listenerName: string | null; inProgress: boolean }[];
   releasedCount: number;
 }
 
@@ -631,7 +635,7 @@ export const REVISION_RELEASE_BOARD_QUERY = gql<{ revisionReleaseBoard: Revision
     revisionReleaseBoard(date: $date) {
       listeners { userId name assigned recorded }
       ready { entry { ${LISTEN_ENTRY_FIELDS} } studentName groupNameBn recordedByName }
-      pending { studentId studentName groupNameBn listenerName }
+      pending { studentId studentName groupNameBn listenerName inProgress }
       releasedCount
     }
   }

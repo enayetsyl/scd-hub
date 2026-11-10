@@ -79,6 +79,8 @@ export interface RevisionEntryShape {
   teacherUserId: string;
   deliveredAt: string | null;
   deliveryChannels: string[];
+  /** The listener is still marking (SR-6 autosave, D-#1180). */
+  inProgress: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +143,7 @@ export function shape(d: IRevisionEntry): RevisionEntryShape {
     teacherUserId: d.teacherUserId.toString(),
     deliveredAt: d.deliveredAt ? new Date(d.deliveredAt).toISOString() : null,
     deliveryChannels: d.deliveryChannels ?? [],
+    inProgress: d.inProgress === true,
     createdAt: new Date(d.createdAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };
@@ -280,6 +283,8 @@ export interface RecordEntryInput {
   teacherComment?: string;
   /** The authenticated teacher (ctx.auth.userId) — the author (D-#242). */
   actorId: string;
+  /** SR-6 autosave (D-#1180): true = a mid-marking save; omitted/false = finished. */
+  inProgress?: boolean;
 }
 
 export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntryShape> {
@@ -310,6 +315,7 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
     existing.portions = portions;
     existing.teacherComment = input.teacherComment?.trim() || undefined;
     existing.teacherUserId = new Types.ObjectId(input.actorId);
+    existing.inProgress = input.inProgress ? true : undefined;
     await existing.save();
     doc = existing;
   } else {
@@ -322,8 +328,13 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
       teacherComment: input.teacherComment?.trim() || undefined,
       teacherUserId: new Types.ObjectId(input.actorId),
       deliveryChannels: [],
+      ...(input.inProgress ? { inProgress: true } : {}),
     })) as IRevisionEntry;
   }
+
+  // Autosave (D-#1180) saves on every tap; the audit row is written when the listener
+  // finishes (or for any ordinary save), not once per tap.
+  if (input.inProgress) return shape(doc);
 
   await writeAudit({
     eventKind: "SR_REVISION_RECORDED",

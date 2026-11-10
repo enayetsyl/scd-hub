@@ -67,6 +67,10 @@ export interface IRevisionEntry extends Document {
   /** Corrections made after delivery (D-#1002), oldest first — each keeps what the family had
    *  been sent before it, who corrected it and why. Empty on every uncorrected entry. */
   corrections?: IRevisionCorrection[];
+  /** SR-6 autosave (D-#1180): true while the listener is still marking — every tap is saved,
+   *  but the entry is not finished until they tap শেষ. Never released or delivered while true.
+   *  Absent (undefined) on every finished entry, including all entries before this change. */
+  inProgress?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,6 +128,7 @@ const RevisionEntrySchema = new Schema<IRevisionEntry>(
     deliveredAt: { type: Date },
     deliveryChannels: { type: [String], default: [] },
     corrections: { type: [RevisionCorrectionSchema], default: undefined },
+    inProgress: { type: Boolean },
   },
   { timestamps: true },
 );

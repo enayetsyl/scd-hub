@@ -145,6 +145,7 @@ export default function RevisionReleaseScreen({ route }: Props): React.ReactElem
               {pending.map((p) => (
                 <Muted key={p.studentId} style={{ marginTop: space(1) }}>
                   {p.studentName} · {p.groupNameBn} · {p.listenerName ?? STR.revReleaseNoListener}
+                  {p.inProgress ? ` · ${STR.revListenInProgress}` : ""}
                 </Muted>
               ))}
             </Card>

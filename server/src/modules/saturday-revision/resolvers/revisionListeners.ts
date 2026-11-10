@@ -133,6 +133,7 @@ SrEntryRef.implement({
     portions: t.field({ type: [RevisionPortionRef], resolve: (r) => r.portions }),
     teacherComment: t.string({ nullable: true, resolve: (r) => r.teacherComment }),
     deliveredAt: t.string({ nullable: true, resolve: (r) => r.deliveredAt }),
+    inProgress: t.exposeBoolean("inProgress"),
     updatedAt: t.exposeString("updatedAt"),
   }),
 });
@@ -181,6 +182,7 @@ ReleasePendingRef.implement({
     studentName: t.exposeString("studentName"),
     groupNameBn: t.exposeString("groupNameBn"),
     listenerName: t.string({ nullable: true, resolve: (r) => r.listenerName }),
+    inProgress: t.exposeBoolean("inProgress"),
   }),
 });
 
