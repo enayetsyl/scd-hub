@@ -242,7 +242,7 @@ export default function ActivityBankScreen({ route }: Props): React.ReactElement
   };
 
   return (
-    <Screen>
+    <Screen scroll>
       {msg ? <Notice message={msg.text} tone={msg.tone} /> : null}
       <QueryGate results={[q]} onRetry={reload} loaderLabel={STR.loading}>
         {bank ? (
