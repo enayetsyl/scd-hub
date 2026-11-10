@@ -10,7 +10,7 @@ import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { AI_BUDGET, AI_FEATURE_SETTINGS, SET_AI_BUDGET, SET_AI_FEATURE_SETTING, type AiFeatureSettingT, type AiProviderT } from "../graphql/aiSettings";
 import { BANGLA_NAME_READINESS } from "../graphql/studentBanglaName";
-import { Card, Body, Muted, Field, Button, Notice, Chip, ChipRow, Badge } from "./ui";
+import { Card, Body, Muted, Field, Button, Notice, Chip, ChipRow, Badge, Select } from "./ui";
 import { STR } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { space } from "../theme/tokens";
@@ -91,13 +91,22 @@ function BudgetCard(): React.ReactElement | null {
   const b = q.data?.aiBudget;
   const [monthly, setMonthly] = React.useState<string | null>(null);
   const [pct, setPct] = React.useState<string | null>(null);
+  const [wsCap, setWsCap] = React.useState<string | null>(null);
+  const [wsModel, setWsModel] = React.useState<string | null>(null);
+  const [wsThinking, setWsThinking] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
   if (!b) return null;
   async function onSave(): Promise<void> {
     setBusy(true);
     setMsg(null);
-    const res = await save({ monthlyUsd: num(monthly ?? String(b!.monthlyUsd)), alertPct: num(pct ?? String(b!.alertPct)) });
+    const res = await save({
+      monthlyUsd: num(monthly ?? String(b!.monthlyUsd)),
+      alertPct: num(pct ?? String(b!.alertPct)),
+      workspaceMonthlyUsd: num(wsCap ?? String(b!.workspaceMonthlyUsd)),
+      workspaceDefaultModel: wsModel ?? b!.workspaceDefaultModel,
+      workspaceDefaultThinking: wsThinking ?? b!.workspaceDefaultThinking,
+    });
     setBusy(false);
     setMsg(res.error ? { tone: "danger", text: friendlyError(res.error as never) } : { tone: "ok", text: STR.aifSaved });
   }
@@ -107,6 +116,28 @@ function BudgetCard(): React.ReactElement | null {
       <Muted>{STR.aifBudgetHelp}</Muted>
       <Field label={STR.aifBudgetMonthly} value={monthly ?? String(b.monthlyUsd)} onChangeText={setMonthly} keyboardType="decimal-pad" />
       <Field label={STR.aifBudgetAlert} value={pct ?? String(b.alertPct)} onChangeText={setPct} keyboardType="number-pad" />
+      {/* AI Workspace (D-#1225: every budget figure in this one place; D-#1206 defaults). */}
+      <Field label={STR.aifWsCap} helper={STR.aifWsCapHelp} value={wsCap ?? String(b.workspaceMonthlyUsd)} onChangeText={setWsCap} keyboardType="decimal-pad" />
+      <Select
+        label={STR.aifWsModel}
+        value={wsModel ?? b.workspaceDefaultModel}
+        options={[
+          { label: STR.awModelFlash, value: "deepseek-flash" },
+          { label: STR.awModelPro, value: "deepseek-v4-pro" },
+        ]}
+        onChange={setWsModel}
+      />
+      <Select
+        label={STR.aifWsThinking}
+        value={wsThinking ?? b.workspaceDefaultThinking}
+        options={[
+          { label: STR.awThinkingOff, value: "off" },
+          { label: STR.awThinkingLow, value: "low" },
+          { label: STR.awThinkingHigh, value: "high" },
+        ]}
+        onChange={setWsThinking}
+      />
+      {b.capsOverBudget ? <Notice tone="warn" message={fill(STR.aifCapsOver, { caps: b.capsTotalUsd, budget: b.monthlyUsd })} /> : null}
       {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
       <View style={{ marginTop: space(2) }}>
         <Button title={STR.aifSave} variant="secondary" onPress={() => void onSave()} loading={busy} />

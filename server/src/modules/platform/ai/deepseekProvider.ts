@@ -68,6 +68,8 @@ export class DeepseekProvider implements AiProvider {
   ) {}
 
   async send(input: AiSendInput, model: string): Promise<AiSendResult> {
+    // The chat API takes text only (W-1): never send a picture's bytes as if they were text.
+    if (input.files?.length) throw new AiProviderError("bad_response", "DeepSeek cannot read pictures or PDFs", this.name);
     const started = Date.now();
     const body = await withDeadline(input.timeoutMs ?? DEFAULT_TIMEOUT_MS, this.name, async (signal) => {
       const res = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {

@@ -115,6 +115,7 @@ import "./modules/platform/resolvers/commentCheck";
 import "./modules/ai-assist/resolvers/aiAssist";
 import "./modules/platform/resolvers/aiUsageReport";
 import "./modules/platform/resolvers/aiExchanges";
+import "./modules/ai-workspace/resolvers/aiWorkspace";
 import "./modules/platform/resolvers/navPreference";
 import "./modules/help/resolvers/help";
 import "./modules/engagement/resolvers/guardianView";

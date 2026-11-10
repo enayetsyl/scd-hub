@@ -37,6 +37,18 @@ export interface AiSendInput {
   reasoning: AiReasoning;
   /** Per-call deadline; the router falls back on a timeout. Default 30 s. */
   timeoutMs?: number;
+  /**
+   * Files sent WITH the new input (AI Workspace W-1, D-#1227: reading a picture or a scanned
+   * PDF). Gemini only — DeepSeek's chat API takes text, so a call with files to DeepSeek is
+   * refused before anything is sent. Never logged (the exchange log keeps the text only).
+   */
+  files?: AiInlineFile[];
+}
+
+export interface AiInlineFile {
+  /** image/png, image/jpeg, image/webp, application/pdf … */
+  mime: string;
+  data: Buffer;
 }
 
 export interface AiTokenUsage {

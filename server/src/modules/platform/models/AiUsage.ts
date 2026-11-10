@@ -30,6 +30,8 @@ export interface IAiUsage extends Document {
   attempt: number;
   refType?: string;
   refId?: string;
+  /** The AI Workspace project the call belongs to (W-1, D-#1231); absent elsewhere. */
+  projectId?: Types.ObjectId;
   provider: "deepseek" | "gemini";
   /** The model id asked for (`model` is a reserved Document method). */
   modelName: string;
@@ -56,6 +58,7 @@ const AiUsageSchema = new Schema<IAiUsage>(
     attempt: { type: Number, required: true, default: 1 },
     refType: { type: String },
     refId: { type: String },
+    projectId: { type: Schema.Types.ObjectId, ref: "AiProject" },
     provider: { type: String, required: true, enum: ["deepseek", "gemini"] },
     modelName: { type: String, required: true },
     resolvedModel: { type: String },
@@ -75,5 +78,7 @@ const AiUsageSchema = new Schema<IAiUsage>(
 AiUsageSchema.index({ userId: 1, at: -1 });
 AiUsageSchema.index({ feature: 1, at: -1 });
 AiUsageSchema.index({ at: -1 });
+// Per-project spend and the per-project monthly cap (W-1); sparse — most rows have none.
+AiUsageSchema.index({ projectId: 1, at: -1 }, { sparse: true });
 
 export const AiUsage = model<IAiUsage>("AiUsage", AiUsageSchema);
