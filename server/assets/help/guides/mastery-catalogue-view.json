@@ -1,7 +1,7 @@
 {
   "id": "mastery-catalogue-view",
   "category": "mastery",
-  "order": 9,
+  "order": 10,
   "title": "শিখনফল তালিকা দেখা",
   "intro": "কোন শ্রেণি ও বিষয়ের শিখনফল তালিকা আছে এবং প্রতিটিতে কী কী শিখনফল আছে, তা দেখার নিয়ম।",
   "keywords": [
