@@ -52,7 +52,7 @@ export default function AiJobScreen({ route, navigation }: Props): React.ReactEl
         <Badge text={jobStatusLabel(j.status)} tone={j.status === "done" ? "ok" : j.status === "failed" ? "danger" : "info"} />
         <Muted>{`${kindLabel(j.kind)} · ${modelLabel(j.model)} · ${STR.awThinking}: ${j.thinking} · ${j.runAt === "offpeak" ? STR.awRunOffpeak : STR.awRunNow}`}</Muted>
         <Muted>{fill(STR.awJobProgress, { done: j.done, total: j.total, failed: j.failed, cost: usd(j.costUsd) })}</Muted>
-        <Muted>{`${fill(STR.awJobPriceNow, { usd: usd(j.estimateNowUsd) })} · ${fill(STR.awJobPriceOff, { usd: usd(j.estimateOffpeakUsd), time: "—" })}`}</Muted>
+        <Muted>{`${fill(STR.awJobPriceNow, { usd: usd(j.estimateNowUsd) })} · ${fill(STR.awJobPriceOffShort, { usd: usd(j.estimateOffpeakUsd) })}`}</Muted>
         {j.status === "queued" && j.runAt === "offpeak" ? <Notice tone="info" message={STR.awJobWaitsOffpeak} /> : null}
         {active ? <Button title={STR.awJobCancel} variant="danger" loading={cancelState.fetching} onPress={() => void onCancel()} /> : null}
       </Card>

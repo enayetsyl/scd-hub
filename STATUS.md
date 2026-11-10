@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-11-10: **AI Workspace — help guides captured, VM ready, all of W-1…W-7 on dev** (branch `feat/ai-workspace-help`). The five guides (ai-workspace-projects / -chat / -drafts / -jobs / -claude) are published with 16 pictures from a local walk (`scripts/help/fixtures/ai-workspace.ts` + `specs/ai-workspace.cjs`; rows re-split to one screen each). The walk found two app bugs, fixed here: the Claude card showed only "/mcp" on the web (relative API base) and the job page showed "(— থেকে)" after the off-peak price.
+  - **VM (done 2026-11-10):** tesseract (+ben) installed (Noto, poppler, LibreOffice were there); Caddy `@api` has `/mcp* /oauth* /.well-known/oauth-*` in both sites; `PUBLIC_BASE_URL` + `DEEPSEEK_TOKENIZER_DIR=/opt/scdhub/deepseek_tokenizer` in both `.env`; both worker units installed + enabled (dev worker running since the W-4 deploy). Step 1 of the switch-on list below is done.
+  - **Dev:** #1442/#1444/#1445/#1446/#1448 merged (dev 365cb463, deploy green, /mcp + OAuth discovery answer).
+  - **Now / next:** this PR → dev, then promote dev → main (also carries #1434, D-#1189) and publish an OTA. After promotion check `systemctl is-active scdhub-ai-worker-prod`.
 - 2026-11-10: **BUILT — AI Workspace W-7: analytics per project (D-#1257); EVERY AI Workspace slice (W-1…W-7) is now built** (branch `feat/ws7-analytics`, stacked on `feat/ws6-migration`). Reports → এআই ব্যবহার… gains a per-project section and a workspace budget line.
   - **PR chain into dev:** #1440 W-1 ✅ merged, #1441 W-2 ✅ merged, then #1442 W-3 → #1444 W-4 → #1445 W-5 → #1446 W-6 → W-7. Each later PR carries the ones before it until they merge, so merge in that order. Then promote dev → main and publish an OTA (app screens).
   - **Owner switch-on list (in order):**
