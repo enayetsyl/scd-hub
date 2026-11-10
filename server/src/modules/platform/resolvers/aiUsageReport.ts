@@ -2,6 +2,7 @@
  * AI usage & comment quality (AI-7, D-#1140) — the Principal's report. `reports:ai_usage`.
  */
 import { builder } from "../../../schema";
+import type { ProjectUsageRow } from "../../ai-workspace/services/WorkspaceAnalytics";
 import { aiUsageReport, type AiUsageReport, type BudgetLine, type QualityRow, type UsageBucket } from "../services/AiAnalyticsService";
 
 const BucketRef = builder.objectRef<UsageBucket>("AiUsageBucket").implement({
@@ -28,6 +29,28 @@ const BudgetRef = builder.objectRef<BudgetLine>("AiBudgetLine").implement({
 
 const TypeCountRef = builder.objectRef<{ type: string; count: number }>("AiIssueTypeCount").implement({
   fields: (t) => ({ type: t.string({ resolve: (x) => x.type }), count: t.int({ resolve: (x) => x.count }) }),
+});
+
+const ProjectRowRef = builder.objectRef<ProjectUsageRow>("AiWorkspaceProjectUsage").implement({
+  fields: (t) => ({
+    projectId: t.string({ resolve: (r) => r.projectId }),
+    name: t.string({ resolve: (r) => r.name }),
+    usd: t.float({ resolve: (r) => r.usd }),
+    calls: t.int({ resolve: (r) => r.calls }),
+    inputTokens: t.float({ resolve: (r) => r.inputTokens }),
+    outputTokens: t.float({ resolve: (r) => r.outputTokens }),
+    cacheHitRate: t.float({ nullable: true, resolve: (r) => r.cacheHitRate }),
+    draftsCreated: t.int({ resolve: (r) => r.draftsCreated }),
+    draftsApproved: t.int({ resolve: (r) => r.draftsApproved }),
+    revisions: t.int({ description: "AI revisions (new draft versions written by the AI).", resolve: (r) => r.revisions }),
+    jobs: t.int({ resolve: (r) => r.jobs }),
+    jobsDone: t.int({ resolve: (r) => r.jobsDone }),
+    jobsFailed: t.int({ resolve: (r) => r.jobsFailed }),
+    scoreUsable: t.int({ resolve: (r) => r.scoreUsable }),
+    scoreMinor: t.int({ resolve: (r) => r.scoreMinor }),
+    scoreRewrite: t.int({ resolve: (r) => r.scoreRewrite }),
+    byClaude: t.int({ description: "Drafts + jobs Claude started through the MCP bridge.", resolve: (r) => r.byClaude }),
+  }),
 });
 
 const QualityRef = builder.objectRef<QualityRow>("AiCommentQualityRow").implement({
@@ -71,6 +94,7 @@ const ReportRef = builder.objectRef<AiUsageReport>("AiUsageReport").implement({
     byModel: t.field({ type: [BucketRef], resolve: (r) => r.byModel }),
     budget: t.field({ type: [BudgetRef], description: "Always the current Dhaka month.", resolve: (r) => r.budget }),
     quality: t.field({ type: [QualityRef], resolve: (r) => r.quality }),
+    byProject: t.field({ type: [ProjectRowRef], description: "AI Workspace: one row per project active in the range (W-7).", resolve: (r) => r.byProject }),
   }),
 });
 
