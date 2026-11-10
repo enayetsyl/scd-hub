@@ -238,6 +238,7 @@ import FileBundleScreen from "../screens/archive/FileBundleScreen";
 import BundleDetailScreen from "../screens/archive/BundleDetailScreen";
 import StorageBoxScreen from "../screens/archive/StorageBoxScreen";
 import CtScriptUploadScreen from "../screens/classtest/CtScriptUploadScreen";
+import ClassTestRecheckRulesScreen from "../screens/classtest/ClassTestRecheckRulesScreen";
 import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
 import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
 import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
@@ -1197,6 +1198,8 @@ function ClassTestNavigator(): React.ReactElement {
         component={CtScriptUploadScreen}
         options={({ route }) => ({ title: route.params.title || STR.csUploadTitle })}
       />
+      {/* CT-RC: the unusual-mark % thresholds. */}
+      <ClassTestStack.Screen name="ClassTestRecheckRules" component={ClassTestRecheckRulesScreen} options={{ title: STR.ctrcRulesTitle }} />
     </ClassTestStack.Navigator>
   );
 }

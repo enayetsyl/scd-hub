@@ -24,6 +24,7 @@ import { MyPeriodsSelfCard } from "../../components/MyPeriodsStrip";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
+import { CtHeldResultsCard } from "../../components/CtHeldResultsCard";
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTeacherCard";
 import { MeetingNotesTeacherCard } from "../../components/MeetingNotesTeacherCard";
@@ -268,6 +269,8 @@ export default function AdminTodayScreen(): React.ReactElement {
         {/* CS-1..CS-3 (D-#715–#719) — ক্লাস টেস্টের খাতা: receive, scan & tag, publish,
             hand back. Everyone here holds roster:manage (Principal + Office). */}
         {can("class_test_script:scan") ? <CtScriptOfficeCard /> : null}
+        {/* CT-RC Option B — results an approver held at approval to see the paper. Own query; nothing when empty. */}
+        {can("class_test:publish") ? <CtHeldResultsCard /> : null}
 
         {/* SP-4 (D-#738) — improvement tasks of today not yet ticked, with the list to mark
             on the teacher's behalf; and any task this person was given to do themselves. */}
