@@ -15,6 +15,11 @@
 // Boxes are FRACTIONS of the screenshot ([x, y, w, h], 0–1), recorded by the capture
 // script (HC-3); the app draws them over the clean picture so a tapped step can light
 // its own box. A `draft` guide may lack shots and boxes and is never shown to anyone.
+//
+// D-#1280: a guide may instead be a READING guide (`kind: "read"`), a short training
+// article with no screenshots: 1–15 `sections`, each a heading and blocks (paragraph,
+// bullet list, table, checklist). A reading guide has no `rows`; every other rule
+// (id, category, perms/audience, screens, goTo, order, draft) is the same.
 
 import { FEATURE_CATALOGUE } from "./permissionCatalogue";
 import { GUARDIAN_FEATURES, type GuardianFeature } from "./vocab";
@@ -24,6 +29,23 @@ export type HelpAudience = (typeof HELP_AUDIENCES)[number];
 
 export const HELP_MAX_ROWS = 4;
 export const HELP_MAX_STEPS = 8;
+export const HELP_MAX_SECTIONS = 15;
+
+/** `steps` (the default when absent): screenshot rows with numbered steps. `read`: text sections (D-#1280). */
+export const HELP_GUIDE_KINDS = ["steps", "read"] as const;
+export type HelpGuideKind = (typeof HELP_GUIDE_KINDS)[number];
+
+/** One block of a reading guide: exactly one of these keys. Every string: `<b>…</b>` markup only. */
+export type HelpBlockFile =
+  | { p: string }
+  | { list: string[] }
+  | { table: { head: string[]; rows: string[][] } }
+  | { check: string[] };
+
+export interface HelpSectionFile {
+  heading: string;
+  blocks: HelpBlockFile[];
+}
 
 export type HelpBox = [number, number, number, number];
 
@@ -62,7 +84,12 @@ export interface HelpGuideFile {
   /** Position inside its category (work order: import before review before lock); default last. */
   order?: number;
   draft?: boolean;
-  rows: HelpRowFile[];
+  /** Absent = "steps". */
+  kind?: HelpGuideKind;
+  /** A steps guide's screen rows (required there; forbidden on a reading guide). */
+  rows?: HelpRowFile[];
+  /** A reading guide's sections (required there; forbidden on a steps guide). */
+  sections?: HelpSectionFile[];
 }
 
 export interface HelpCategoryFile {
@@ -102,6 +129,57 @@ function markupProblem(text: string): string | null {
   if (open) return "unclosed <b>";
   if (/[<>]/.test(text.replace(/<\/?b>/g, ""))) return "stray < or >";
   return null;
+}
+
+const BLOCK_KEYS = ["p", "list", "table", "check"] as const;
+
+/** A reading guide's sections (D-#1280): pushes every problem onto `p`. */
+function checkSections(sections: unknown, p: string[]): void {
+  if (!Array.isArray(sections) || sections.length === 0 || sections.length > HELP_MAX_SECTIONS) {
+    p.push(`sections: 1–${HELP_MAX_SECTIONS} sections`);
+    return;
+  }
+  const text = (at: string, v: unknown): void => {
+    if (!isStr(v)) return void p.push(`${at}: text is required`);
+    const m = markupProblem(v);
+    if (m) p.push(`${at}: ${m}`);
+  };
+  const texts = (at: string, v: unknown): void => {
+    if (!Array.isArray(v) || v.length === 0) return void p.push(`${at}: a non-empty list of text`);
+    v.forEach((s, i) => text(`${at}[${i}]`, s));
+  };
+  sections.forEach((s, si) => {
+    const at = `sections[${si}]`;
+    if (!s || typeof s !== "object" || Array.isArray(s)) return void p.push(`${at}: not an object`);
+    const sec = s as { heading?: unknown; blocks?: unknown };
+    text(`${at}.heading`, sec.heading);
+    if (!Array.isArray(sec.blocks) || sec.blocks.length === 0) return void p.push(`${at}: at least one block`);
+    sec.blocks.forEach((b, bi) => {
+      const bat = `${at}.blocks[${bi}]`;
+      if (!b || typeof b !== "object" || Array.isArray(b)) return void p.push(`${bat}: not an object`);
+      const keys = Object.keys(b);
+      if (keys.length !== 1 || !(BLOCK_KEYS as readonly string[]).includes(keys[0])) {
+        return void p.push(`${bat}: exactly one of ${BLOCK_KEYS.join(", ")}`);
+      }
+      const blk = b as Record<string, unknown>;
+      if (keys[0] === "p") text(`${bat}.p`, blk.p);
+      else if (keys[0] === "list") texts(`${bat}.list`, blk.list);
+      else if (keys[0] === "check") texts(`${bat}.check`, blk.check);
+      else {
+        const t = blk.table as { head?: unknown; rows?: unknown } | null;
+        if (!t || typeof t !== "object" || Array.isArray(t)) return void p.push(`${bat}.table: must be { head, rows }`);
+        texts(`${bat}.table.head`, t.head);
+        const cols = Array.isArray(t.head) ? t.head.length : 0;
+        if (!Array.isArray(t.rows) || t.rows.length === 0) return void p.push(`${bat}.table.rows: at least one row`);
+        t.rows.forEach((r, ri) => {
+          const rat = `${bat}.table.rows[${ri}]`;
+          if (!Array.isArray(r)) return void p.push(`${rat}: a list of cells`);
+          if (r.length !== cols) p.push(`${rat}: ${r.length} cells; the head has ${cols}`);
+          r.forEach((c, ci) => text(`${rat}[${ci}]`, c));
+        });
+      }
+    });
+  });
 }
 
 /** Every structural problem with one guide file; [] = valid. */
@@ -144,6 +222,17 @@ export function checkHelpGuide(raw: unknown, env: HelpCheckEnv): string[] {
       p.push("goTo must be { route, screen? }");
     }
   }
+
+  if (g.kind !== undefined && !(HELP_GUIDE_KINDS as readonly unknown[]).includes(g.kind)) {
+    p.push(`kind must be one of ${HELP_GUIDE_KINDS.join(", ")}`);
+    return p;
+  }
+  if (g.kind === "read") {
+    if (g.rows !== undefined) p.push('a reading guide (kind "read") has no rows');
+    checkSections(g.sections, p);
+    return p;
+  }
+  if (g.sections !== undefined) p.push('sections need kind "read"');
 
   const draft = g.draft === true;
   const id = isStr(g.id) ? g.id : "";

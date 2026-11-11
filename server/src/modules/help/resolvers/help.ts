@@ -9,8 +9,10 @@ import {
   markHelpOpened,
   myHelpGuides,
   recordHelpFeedback,
+  type HelpBlockView,
   type HelpGuideView,
   type HelpRowView,
+  type HelpSectionView,
   type HelpStepView,
   type MyHelpView,
 } from "../services/HelpGuideService";
@@ -32,10 +34,34 @@ const HelpRowRef = builder.objectRef<HelpRowView>("HelpRow").implement({
   }),
 });
 
+// A reading guide's text (D-#1280). Every string: Bangla, markup <b>…</b> only.
+const HelpTableRowRef = builder.objectRef<string[]>("HelpTableRow").implement({
+  fields: (t) => ({ cells: t.stringList({ resolve: (r) => r }) }),
+});
+
+const HelpBlockRef = builder.objectRef<HelpBlockView>("HelpBlock").implement({
+  description: "One block of a reading guide; exactly one of p / list / check / table (tableHead + tableRows) is set.",
+  fields: (t) => ({
+    p: t.exposeString("p", { nullable: true, description: "A paragraph." }),
+    list: t.exposeStringList("list", { nullable: true, description: "Bullet points." }),
+    check: t.exposeStringList("check", { nullable: true, description: "Checklist items (shown with a box)." }),
+    tableHead: t.exposeStringList("tableHead", { nullable: true }),
+    tableRows: t.field({ type: [HelpTableRowRef], nullable: true, resolve: (b) => b.tableRows }),
+  }),
+});
+
+const HelpSectionRef = builder.objectRef<HelpSectionView>("HelpSection").implement({
+  fields: (t) => ({
+    heading: t.exposeString("heading"),
+    blocks: t.field({ type: [HelpBlockRef], resolve: (s) => s.blocks }),
+  }),
+});
+
 const HelpGuideRef = builder.objectRef<HelpGuideView>("HelpGuide").implement({
   description: "One small task's step-by-step guide (D-#968).",
   fields: (t) => ({
     id: t.exposeString("id"),
+    kind: t.exposeString("kind", { description: '"steps" (screenshot rows) or "read" (text sections, D-#1280).' }),
     category: t.exposeString("category"),
     title: t.exposeString("title"),
     intro: t.exposeString("intro"),
@@ -48,7 +74,12 @@ const HelpGuideRef = builder.objectRef<HelpGuideView>("HelpGuide").implement({
       description: "Bangla name of the permission that unlocks it; null for an everyone/guardian guide.",
     }),
     isNew: t.exposeBoolean("isNew", { description: "Not yet opened and not seen at the first Help open (D-#972)." }),
-    rows: t.field({ type: [HelpRowRef], resolve: (g) => g.rows }),
+    rows: t.field({ type: [HelpRowRef], resolve: (g) => g.rows, description: "Empty on a reading guide." }),
+    sections: t.field({
+      type: [HelpSectionRef],
+      resolve: (g) => g.sections,
+      description: "A reading guide's text (D-#1280); empty on a steps guide.",
+    }),
   }),
 });
 

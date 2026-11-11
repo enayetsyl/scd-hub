@@ -37,7 +37,8 @@ function GuideLink({ g, onOpen }: { g: HelpGuideT; onOpen: () => void }): React.
         opacity: pressed ? 0.6 : 1,
       })}
     >
-      <Text style={{ fontSize: 16 }}>📄</Text>
+      {/* 📖 = a reading guide (D-#1280); 📄 = a step guide with pictures. */}
+      <Text style={{ fontSize: 16 }}>{g.kind === "read" ? "📖" : "📄"}</Text>
       <Text style={{ flex: 1, minWidth: 0, color: colors.textPrimary, fontFamily: fonts.medium, fontSize: 16, lineHeight: 24 }}>
         {g.title}
       </Text>
