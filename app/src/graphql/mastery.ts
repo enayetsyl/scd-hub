@@ -630,6 +630,34 @@ const HEAT_COLUMN_FIELDS = `
   masteredPct
 `;
 
+/** PR-B (D-#1315): earlier-class codes this section has evidence on (paged; empty ⇒ section hidden). */
+export interface MasteryEarlierClassRow {
+  code: string;
+  labelBn: string;
+  classToken: string;
+  assessed: number;
+  weak: number;
+  weakStudents: { studentId: string; name: string; rollNumber: string | null }[];
+}
+
+export const MASTERY_EARLIER_CLASS_SUMMARY_QUERY = gql`
+  query MasteryEarlierClassSummary($sectionId: String!, $subject: String!, $page: Int, $pageSize: Int) {
+    masteryEarlierClassSummary(sectionId: $sectionId, subject: $subject, page: $page, pageSize: $pageSize) {
+      total
+      page
+      pageSize
+      rows {
+        code
+        labelBn
+        classToken
+        assessed
+        weak
+        weakStudents { studentId name rollNumber }
+      }
+    }
+  }
+`;
+
 export const MASTERY_SECTION_HEATMAP_QUERY = gql`
   query MasterySectionHeatmap($sectionId: String!, $subject: String!) {
     masterySectionHeatmap(sectionId: $sectionId, subject: $subject) {

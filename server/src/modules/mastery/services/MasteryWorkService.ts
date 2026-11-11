@@ -12,7 +12,7 @@
  */
 import { Types } from "mongoose";
 import { untaggedRefusal } from "../taggedGuard";
-import { callerHasPermission, MASTERY_RUBRIC_STEPS } from "@scd/shared";
+import { callerHasPermission, MASTERY_CLASS_TOKENS, MASTERY_RUBRIC_STEPS } from "@scd/shared";
 import type { AccessProfile, MasteryClassToken, MasterySubject } from "@scd/shared";
 import { MasteryPaper, type IMasteryPaper, type IMasteryPaperItem, type MasteryPaperSource } from "../models/MasteryPaper";
 import { MasteryResult, type MasteryResultStatus } from "../models/MasteryResult";
@@ -59,6 +59,21 @@ export function classTokenForLevel(level: number): MasteryClassToken | null {
   if (level === 0) return "KG";
   return level >= 1 && level <= 6 ? (`C${level}` as MasteryClassToken) : null;
 }
+
+/** Class order for the earlier-class rule (D-#1314): NUR < KG < C1 … C6 (MASTERY_CLASS_TOKENS order). */
+export function classIndex(token: string): number {
+  return (MASTERY_CLASS_TOKENS as readonly string[]).indexOf(token);
+}
+
+/** True when `token` is the section's own class or an earlier one. */
+export function isSameOrEarlierClass(token: string, sectionToken: string): boolean {
+  const i = classIndex(token);
+  const j = classIndex(sectionToken);
+  return i >= 0 && j >= 0 && i <= j;
+}
+
+/** The default title of a sheet made only of earlier-class codes (PR-B). */
+export const EARLIER_ONLY_TITLE_BN = "ভিত্তি যাচাই";
 
 /** "YYYY-MM-DD" → that calendar day at 00:00Z (the HomeworkItem.dateGiven convention). */
 export function dayOf(ymd: string): Date {
@@ -159,8 +174,14 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   const byCode = new Map(outcomes.map((o) => [o.code, o]));
   for (const c of codes) {
     const o = byCode.get(c);
-    if (!o || o.classToken !== ctx.classToken || o.subject !== input.subject) {
-      throw new MasteryWorkError(`${c} এই শ্রেণি-বিষয়ের তালিকায় নেই।`);
+    // PR-B (D-#1314): a code of the same subject from the section's class OR an earlier one
+    // (NUR < KG < C1 … C6) — a start-of-year baseline, or tracing a weakness back. A later class is refused.
+    if (!o || o.subject !== input.subject || !isSameOrEarlierClass(o.classToken, ctx.classToken)) {
+      throw new MasteryWorkError(
+        o && o.subject === input.subject
+          ? `${c} পরের শ্রেণির — এই শ্রেণি বা আগের শ্রেণির তালিকা থেকেই নেওয়া যায়।`
+          : `${c} এই শ্রেণি-বিষয়ের তালিকায় নেই।`,
+      );
     }
     if (o.status !== "LOCKED") throw new MasteryWorkError(`${c} লক করা নয় — লক করা শিখনফলই ব্যবহার করা যায়।`);
   }
@@ -168,14 +189,15 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     if (byCode.get(c)!.assess !== "RUBRIC") throw new MasteryWorkError(`${c} রুব্রিকে যাচাইয়ের শিখনফল নয়।`);
   }
 
-  const qts = new Map(
-    (await MasteryQuestionType.find({ classToken: ctx.classToken, subject: input.subject, active: true }).lean()).map((q) => [q.code, q]),
-  );
+  // Marks come from the marks table of the CODE's own class (an earlier-class code keeps its class's marks).
+  const classTokens = [...new Set(outcomes.map((o) => o.classToken))];
+  const qtRows = await MasteryQuestionType.find({ classToken: { $in: classTokens }, subject: input.subject, active: true }).lean();
+  const qts = new Map(qtRows.map((q) => [`${q.classToken}|${q.code}`, q]));
   const built: Omit<IMasteryPaperItem, "itemNo">[] = [];
   for (const it of input.items) {
     const o = byCode.get(it.loCode)!;
     if (o.assess !== "QUESTION") throw new MasteryWorkError(`${it.loCode} প্রশ্নে যাচাইয়ের শিখনফল নয় — রুব্রিক কাজ তৈরি করুন।`);
-    const qt = qts.get(it.questionTypeCode);
+    const qt = qts.get(`${o.classToken}|${it.questionTypeCode}`);
     if (!qt) throw new MasteryWorkError(`প্রশ্নের ধরন ${it.questionTypeCode} এই শ্রেণি-বিষয়ে নেই।`);
     if (qt.marks === null || qt.marks === undefined) throw new MasteryWorkError(`${it.questionTypeCode}-এর নম্বর ঠিক করা নেই — আগে নম্বর-তালিকায় দিন।`);
     let artifactId: Types.ObjectId | undefined;
@@ -222,7 +244,8 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   const paper = await MasteryPaper.create({
     paperId: await nextPaperId(ctx.classToken, input.subject),
     source: input.source,
-    title: input.title?.trim() || undefined,
+    // A sheet made only of earlier-class codes is a baseline check by default (PR-B).
+    title: input.title?.trim() || (codes.every((c) => byCode.get(c)!.classToken !== ctx.classToken) ? EARLIER_ONLY_TITLE_BN : undefined),
     sectionId: ctx.sectionId,
     classId: ctx.classId,
     academicYearId: ctx.academicYearId,

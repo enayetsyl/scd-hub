@@ -309,6 +309,7 @@ App: `MasteryTab` opens on `mastery:view` || `mastery:settings` || `mastery:ente
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryStudentDiagnosis | `mastery:view`; svc: routine holder or `mastery:edit_all` (the student's section × subject) |
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryOutcomeTrail | `mastery:view`; svc: routine holder or `mastery:edit_all` |
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masterySectionHeatmap | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryEarlierClassSummary (PR-B, D-#1315) | `mastery:view`; svc: routine holder or `mastery:edit_all`; paged |
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryQualityPapersPage | `mastery:view`; svc: routine holder or `mastery:edit_all` |
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryPaperQuality | `mastery:view`; svc: routine holder or `mastery:edit_all` |
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | excludeMasteryItem | `mastery:enter_results`; svc: routine holder or `mastery:edit_all`; reason required |
