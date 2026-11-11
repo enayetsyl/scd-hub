@@ -197,6 +197,19 @@ describe("decisions — one event per write (§10 item 6)", () => {
     await setup();
     await expect(decide({ action: "EDIT", code: "LO-C1-MATH-02-01", prereqCodes: ["LO-C1-MATH-99-01"] })).rejects.toThrow(/\[PREREQ_RESOLVES\]/);
   });
+
+  it("D-#1284: a ref with a comma in its lesson name saves whole; a comma-shredded list is refused", async () => {
+    await setup();
+    const P = "LO-C1-MATH-12-04";
+    const ex = ((await row(P))!.bookRef as any).exercises as string[];
+    const withComma = ex.find((x) => x.includes(", "));
+    expect(withComma).toBeDefined();
+    const shredded = ex.flatMap((x) => x.split(",")).map((x) => x.trim());
+    await expect(decide({ action: "EDIT", code: P, exercises: shredded })).rejects.toThrow(/অধ্যায়\/পাঠ\/নম্বর/);
+    expect(((await row(P))!.bookRef as any).exercises).toEqual(ex);
+    await oneEvent(() => decide({ action: "EDIT", code: P, exercises: [...ex].reverse() }));
+    expect(new Set(((await row(P))!.bookRef as any).exercises)).toEqual(new Set(ex));
+  });
 });
 
 describe("split / merge (§10 item 3)", () => {

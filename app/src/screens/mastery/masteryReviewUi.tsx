@@ -66,6 +66,16 @@ export function roundStateTone(s: string): Tone {
 export const codeTail = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-Z]+-(SK-)?/, "");
 
 /**
+ * The exercises box → refs, ONE PER LINE only (D-#1284). A lesson name may hold a comma
+ * ("12/জোড়া, হালি, ডজন/1"), so splitting on commas shredded the ref on any save.
+ */
+export const exerciseLines = (t: string): string[] =>
+  t
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+/**
  * A stored exercise ref "<chapter>/<lesson>/<no>" as the reviewer reads it (same wording as the
  * Word review copy): "7/হাতে রাখি/2" → "অ.৭ · হাতে রাখি · অনুশীলনী ২"; "1/কম – বেশি/—" (a class
  * activity, no numbered exercise) → "অ.১ · কম – বেশি (শ্রেণির কাজ)". Anything else is shown as stored.
