@@ -4,7 +4,7 @@
  */
 import { gql } from "urql";
 
-export type AiProviderT = "gemini" | "deepseek";
+export type AiProviderT = "gemini" | "deepseek" | "anthropic";
 
 export interface AiSettingsT {
   provider: AiProviderT;

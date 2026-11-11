@@ -12,7 +12,8 @@
  * reach a teacher or a guardian (the CommentProvider lesson).
  */
 
-export const AI_PROVIDERS = ["deepseek", "gemini"] as const;
+/** "anthropic" = Claude (anthropicProvider.ts), added for the school's Claude API credit. */
+export const AI_PROVIDERS = ["deepseek", "gemini", "anthropic"] as const;
 export type AiProviderName = (typeof AI_PROVIDERS)[number];
 
 /** "off" = no thinking (cheapest); DeepSeek maps it to reasoning_effort "none". */
@@ -62,6 +63,11 @@ export interface AiInlineFile {
 export interface AiTokenUsage {
   cacheHitTokens: number;
   cacheMissTokens: number;
+  /**
+   * The part of `cacheMissTokens` written INTO the cache (Claude bills a cache write at 1.25×
+   * the input price). Absent for providers that do not charge for writing.
+   */
+  cacheWriteTokens?: number;
   /** Billed output tokens — INCLUDES any reasoning/thinking tokens. */
   outputTokens: number;
   /** The reasoning part of `outputTokens`; null when the provider does not report it. */

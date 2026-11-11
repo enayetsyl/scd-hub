@@ -39,7 +39,7 @@ import { useToast } from "../../state/ToastContext";
 import { STR, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
-import { fill, MODEL_OPTIONS, THINKING_OPTIONS } from "./aiWorkspaceUi";
+import { fill, isClaudeModel, MODEL_OPTIONS, THINKING_OPTIONS } from "./aiWorkspaceUi";
 import { dhakaTime } from "./AiProjectChatScreen";
 import { isJsonKind, kindLabel, sourceLabel } from "./draftUi";
 
@@ -265,6 +265,7 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
                 ]}
                 onChange={setRunAt}
               />
+              {isClaudeModel(model) && runAt === "offpeak" ? <Muted>{STR.awClaudeNoOffpeak}</Muted> : null}
               <Button
                 title={STR.awReviseRun}
                 loading={busy === "revise"}

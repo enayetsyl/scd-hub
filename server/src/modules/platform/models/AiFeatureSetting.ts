@@ -13,7 +13,7 @@ export interface IAiFeatureSetting extends Document {
   _id: Types.ObjectId;
   feature: string;
   enabled: boolean;
-  provider: "deepseek" | "gemini";
+  provider: "deepseek" | "gemini" | "anthropic";
   /** Absent = the provider's own model (saved → .env → default). */
   modelName?: string;
   fallback: boolean;
@@ -30,7 +30,7 @@ const AiFeatureSettingSchema = new Schema<IAiFeatureSetting>(
   {
     feature: { type: String, required: true, unique: true, trim: true, maxlength: 40 },
     enabled: { type: Boolean, required: true, default: false },
-    provider: { type: String, required: true, enum: ["deepseek", "gemini"], default: "deepseek" },
+    provider: { type: String, required: true, enum: ["deepseek", "gemini", "anthropic"], default: "deepseek" },
     modelName: { type: String, trim: true, maxlength: 80 },
     fallback: { type: Boolean, required: true, default: true },
     dailyPerUser: { type: Number, min: 0 },

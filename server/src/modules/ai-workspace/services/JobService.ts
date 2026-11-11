@@ -20,7 +20,7 @@ import { saveProjectPolicyVersion } from "../../platform/services/AiPolicyServic
 import { aiSend, AiFeatureOffError, AiModelOverrideError } from "../../platform/ai/aiRouter";
 import { AiProviderError, type AiTurn } from "../../platform/ai/provider";
 import { isPeak, priceClock, priceOf } from "../../platform/ai/aiPrices";
-import { DEEPSEEK_MODELS } from "../../platform/ai/deepseekProvider";
+import { hasOffPeak, providerOfModel, WORKSPACE_MODELS } from "../../platform/ai/models";
 import { reidentify, DeidentifyError, type DeidScope } from "../../platform/ai/deidentify";
 import { AiCapError } from "../../platform/services/AiUsageService";
 import { AiUsage } from "../../platform/models/AiUsage";
@@ -184,7 +184,7 @@ function checkInput(input: JobInput, requireRun: boolean): { kind: AiDraftKind; 
   if (!template.includes("{{item}}")) throw new AiWorkspaceError(BN.template);
   const items = cleanItems(input.items ?? []);
   if (items.length < 1 || items.length > MAX_JOB_ITEMS) throw new AiWorkspaceError(BN.items);
-  if (!(DEEPSEEK_MODELS as readonly string[]).includes(input.model)) throw new AiWorkspaceError(BN.model);
+  if (!WORKSPACE_MODELS.includes(input.model)) throw new AiWorkspaceError(BN.model);
   if (!["off", "low", "high"].includes(input.thinking)) throw new AiWorkspaceError(BN.thinking);
   if (requireRun && input.runAt !== "now" && input.runAt !== "offpeak") throw new AiWorkspaceError(BN.run);
   return { kind: input.kind as AiDraftKind, items, template };
@@ -193,7 +193,7 @@ function checkInput(input: JobInput, requireRun: boolean): { kind: AiDraftKind; 
 /** Both prices, before anything starts (PRD §6 "pre-flight estimate"). */
 export async function estimateFor(project: IAiProject, input: { kind: AiDraftKind; template: string; items: string[]; model: string }, now: Date = new Date()): Promise<JobEstimate> {
   const budget = await contextBudgetOf(project, now);
-  const price = priceOf("deepseek", input.model);
+  const price = priceOf(providerOfModel(input.model) ?? "deepseek", input.model);
   const prefix = budget.totalTokens + estimateTokens(input.template);
   const perItemOut = EXPECTED_OUTPUT_TOKENS[input.kind];
   let full = 0;
@@ -208,6 +208,10 @@ export async function estimateFor(project: IAiProject, input: { kind: AiDraftKin
   });
   const clock = priceClock("deepseek", now);
   const round = (n: number) => Math.round(n * 10_000) / 10_000;
+  // Claude: the same price at any hour (its 1.25x cache writes are estimated as plain input).
+  if (!hasOffPeak(input.model)) {
+    return { items: input.items.length, inputTokens, outputTokens: perItemOut * input.items.length, nowUsd: round(full), offpeakUsd: round(full), peakNow: false, offpeakStartsAt: now };
+  }
   return {
     items: input.items.length,
     inputTokens,
@@ -244,7 +248,8 @@ export async function createJob(authIn: AuthPayload | null, projectId: string, i
     items: c.items.map((value) => ({ value })),
     modelName: input.model,
     thinking: input.thinking,
-    runAt: input.runAt,
+    // Claude has no cheaper hours: an "off-peak" Claude job runs now (the worker would otherwise wait for the DeepSeek window).
+    runAt: hasOffPeak(input.model) ? input.runAt : "now",
     status: "queued",
     estimate: { nowUsd: est.nowUsd, offpeakUsd: est.offpeakUsd, inputTokens: est.inputTokens, outputTokens: est.outputTokens },
     createdBy: new Types.ObjectId(auth.userId),

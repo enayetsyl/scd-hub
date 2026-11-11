@@ -32,7 +32,7 @@ export interface IAiUsage extends Document {
   refId?: string;
   /** The AI Workspace project the call belongs to (W-1, D-#1231); absent elsewhere. */
   projectId?: Types.ObjectId;
-  provider: "deepseek" | "gemini";
+  provider: "deepseek" | "gemini" | "anthropic";
   /** The model id asked for (`model` is a reserved Document method). */
   modelName: string;
   resolvedModel?: string;
@@ -59,7 +59,7 @@ const AiUsageSchema = new Schema<IAiUsage>(
     refType: { type: String },
     refId: { type: String },
     projectId: { type: Schema.Types.ObjectId, ref: "AiProject" },
-    provider: { type: String, required: true, enum: ["deepseek", "gemini"] },
+    provider: { type: String, required: true, enum: ["deepseek", "gemini", "anthropic"] },
     modelName: { type: String, required: true },
     resolvedModel: { type: String },
     policyHash: { type: String },

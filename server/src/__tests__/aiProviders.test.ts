@@ -8,7 +8,7 @@
  */
 import { DeepseekProvider, deepseekBody } from "../modules/platform/ai/deepseekProvider";
 import { GeminiProvider, geminiBody, THINKING_ALLOWANCE } from "../modules/platform/ai/geminiProvider";
-import { AiProviderError, type AiSendInput, type FetchLike } from "../modules/platform/ai/provider";
+import { AiProviderError, type AiProviderName, type AiSendInput, type FetchLike } from "../modules/platform/ai/provider";
 import { aiSend, AiFeatureOffError, type ProviderFactory } from "../modules/platform/ai/aiRouter";
 import type { AiRoute } from "../modules/platform/services/AiSettingService";
 
@@ -140,7 +140,7 @@ describe("the router", () => {
     fallback: { provider: "gemini", model: "gemini-flash-latest", key: "g" },
     ...r,
   });
-  const ok = (provider: "deepseek" | "gemini") => ({
+  const ok = (provider: AiProviderName) => ({
     provider,
     model: "m",
     resolvedModel: "m",

@@ -51,8 +51,14 @@ function FeatureCard({ f }: { f: AiFeatureSettingT }): React.ReactElement {
       <ChipRow>
         <Chip label="DeepSeek" selected={provider === "deepseek"} onPress={() => setProvider("deepseek")} />
         <Chip label="Gemini" selected={provider === "gemini"} onPress={() => setProvider("gemini")} />
+        <Chip label="Claude" selected={provider === "anthropic"} onPress={() => setProvider("anthropic")} />
       </ChipRow>
-      <Field label={STR.aifModel} value={model} onChangeText={setModel} placeholder={provider === "deepseek" ? "deepseek-flash" : "gemini-flash-latest"} />
+      <Field
+        label={STR.aifModel}
+        value={model}
+        onChangeText={setModel}
+        placeholder={provider === "deepseek" ? "deepseek-flash" : provider === "anthropic" ? "claude-opus-5-5" : "gemini-flash-latest"}
+      />
       <ChipRow>
         <Chip label={fallback ? STR.aifFallbackOn : STR.aifFallbackOff} selected={fallback} onPress={() => setFallback(!fallback)} />
       </ChipRow>
@@ -124,6 +130,9 @@ function BudgetCard(): React.ReactElement | null {
         options={[
           { label: STR.awModelFlash, value: "deepseek-flash" },
           { label: STR.awModelPro, value: "deepseek-v4-pro" },
+          { label: STR.awModelClaudeOpus, value: "claude-opus-5-5" },
+          { label: STR.awModelClaudeSonnet, value: "claude-sonnet-5-5" },
+          { label: STR.awModelClaudeHaiku, value: "claude-haiku-5-5" },
         ]}
         onChange={setWsModel}
       />

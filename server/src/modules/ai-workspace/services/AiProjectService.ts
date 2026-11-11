@@ -22,7 +22,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { aiBudgetConfig, WORKSPACE_THINKING, type WorkspaceThinking } from "../../platform/services/AiSettingService";
 import { schoolBranch, projectSpentSince, dhakaMonthStart } from "../../platform/services/AiUsageService";
 import { activeProjectPolicy, projectPolicyVersionsPage, saveProjectPolicyVersion, type AiPolicyVersionView, type ProjectPolicyVersion } from "../../platform/services/AiPolicyService";
-import { DEEPSEEK_MODELS } from "../../platform/ai/deepseekProvider";
+import { providerOfModel, WORKSPACE_MODELS } from "../../platform/ai/models";
 import { CONTEXT_WINDOW_TOKENS, priceOf, WORKSPACE_PREFIX_MAX_TOKENS, WORKSPACE_PREFIX_WARN_TOKENS } from "../../platform/ai/aiPrices";
 import { AiProject, AI_PROJECT_ROLES, type AiProjectRole, type IAiProject } from "../models/AiProject";
 import { AiProjectFile } from "../models/AiProjectFile";
@@ -148,7 +148,7 @@ function cleanName(raw: string | null | undefined): string {
 }
 
 function checkModel(m: string): string {
-  if (!(DEEPSEEK_MODELS as readonly string[]).includes(m)) throw new AiWorkspaceError("এই মডেলটি কর্মক্ষেত্রে চলে না");
+  if (!WORKSPACE_MODELS.includes(m)) throw new AiWorkspaceError("এই মডেলটি কর্মক্ষেত্রে চলে না");
   return m;
 }
 
@@ -329,7 +329,7 @@ export async function contextBudgetOf(project: IAiProject, now: Date = new Date(
   const instructionTokens = instr ? estimateTokens(instr.body) : 0;
   const fileTokens = files.reduce((a, f) => a + (f.tokenCount ?? 0), 0);
   const totalTokens = instructionTokens + fileTokens;
-  const price = priceOf("deepseek", project.defaultModel);
+  const price = priceOf(providerOfModel(project.defaultModel) ?? "deepseek", project.defaultModel);
   const round = (usd: number) => Math.round(usd * 1_000_000) / 1_000_000;
   return {
     model: project.defaultModel,
