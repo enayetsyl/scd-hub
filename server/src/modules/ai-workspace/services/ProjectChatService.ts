@@ -30,7 +30,7 @@ import { AiAssistMessage, type IAiAssistMessage } from "../../ai-assist/models/A
 import { aiSend, AiFeatureOffError, AiModelOverrideError } from "../../platform/ai/aiRouter";
 import { AiProviderError } from "../../platform/ai/provider";
 import { CONTEXT_WINDOW_TOKENS, isPeak, nextOffPeak, priceClock, priceOf, type PriceClock } from "../../platform/ai/aiPrices";
-import { DEEPSEEK_MODELS } from "../../platform/ai/deepseekProvider";
+import { ANTHROPIC_MODELS, hasOffPeak, WORKSPACE_MODELS } from "../../platform/ai/models";
 import { assertDeidentified, deidentify, DeidentifyError, reidentify, type DeidScope } from "../../platform/ai/deidentify";
 import { scopeForSchool } from "../../platform/services/DeidScopeService";
 import { AiCapError } from "../../platform/services/AiUsageService";
@@ -224,13 +224,28 @@ export async function projectChatMessage(authIn: AuthPayload | null, messageId: 
 // The price clock
 // ---------------------------------------------------------------------------
 
-export function workspacePriceClock(now: Date = new Date()): PriceClock & { flashPerMillion: { hit: number; miss: number; output: number }; proPerMillion: { hit: number; miss: number; output: number } } {
+/** A Claude model's price per million tokens (the same at any hour). */
+export interface ClaudePriceNow {
+  model: string;
+  hit: number;
+  miss: number;
+  output: number;
+}
+
+export function workspacePriceClock(
+  now: Date = new Date(),
+): PriceClock & { flashPerMillion: { hit: number; miss: number; output: number }; proPerMillion: { hit: number; miss: number; output: number }; claudePerMillion: ClaudePriceNow[] } {
   const clock = priceClock("deepseek", now);
   const f = (m: string) => {
     const p = priceOf("deepseek", m);
     return { hit: p.cacheHit * clock.factor, miss: p.cacheMiss * clock.factor, output: p.output * clock.factor };
   };
-  return { ...clock, flashPerMillion: f("deepseek-flash"), proPerMillion: f("deepseek-v4-pro") };
+  // Claude costs the same at any hour (no off-peak factor).
+  const claude = ANTHROPIC_MODELS.map((m) => {
+    const p = priceOf("anthropic", m);
+    return { model: m, hit: p.cacheHit, miss: p.cacheMiss, output: p.output };
+  });
+  return { ...clock, flashPerMillion: f("deepseek-flash"), proPerMillion: f("deepseek-v4-pro"), claudePerMillion: claude };
 }
 
 // ---------------------------------------------------------------------------
@@ -250,7 +265,7 @@ export async function sendProjectMessage(
   const text = (input.text ?? "").replace(/\r\n/g, "\n").trim();
   if (!text) throw new AiWorkspaceError(BN.empty);
   if (text.length > MAX_MESSAGE) throw new AiWorkspaceError(BN.tooLong);
-  if (!(DEEPSEEK_MODELS as readonly string[]).includes(input.model)) throw new AiWorkspaceError(BN.model);
+  if (!WORKSPACE_MODELS.includes(input.model)) throw new AiWorkspaceError(BN.model);
   if (!["off", "low", "high"].includes(input.thinking)) throw new AiWorkspaceError(BN.thinking);
   if (input.runAt !== "now" && input.runAt !== "offpeak") throw new AiWorkspaceError(BN.runAt);
   const pending = await AiAssistMessage.exists({ sessionId: session._id, role: "assistant", status: { $in: ["queued", "running"] } });
@@ -258,7 +273,8 @@ export async function sendProjectMessage(
 
   const now = deps.now?.() ?? new Date();
   const warning = !project.nameProtection && NUMBER_LIKE.test(text) ? BN.warnNumbers : null;
-  const offpeakWait = input.runAt === "offpeak" && isPeak("deepseek", now);
+  // Claude has no cheaper hours: "off-peak" on a Claude model runs now.
+  const offpeakWait = input.runAt === "offpeak" && hasOffPeak(input.model) && isPeak("deepseek", now);
   const [u, a] = await AiAssistMessage.insertMany([
     { sessionId: session._id, teacherId: new Types.ObjectId(auth.userId), projectId: project._id, role: "user", text, at: now, status: "done", warning },
     {

@@ -3,7 +3,7 @@ import { Schema, model, Document, Types } from "mongoose";
 /**
  * AiSetting (D-#967, D-#1090) — the key + model the Principal sets in the app for each AI
  * provider, so a key can be changed without editing the VM's .env and restarting. ONE row
- * per provider (`name: "gemini"` | `"deepseek"`).
+ * per provider (`name: "gemini"` | `"deepseek"` | `"anthropic"` = Claude).
  *
  * The key is stored ENCRYPTED (AES-256-GCM, AiSettingService) and is never sent back to
  * any client — only its last 4 characters. No row, or no key on the row, falls back to
@@ -12,7 +12,7 @@ import { Schema, model, Document, Types } from "mongoose";
  */
 export interface IAiSetting extends Document {
   _id: Types.ObjectId;
-  name: "gemini" | "deepseek";
+  name: "gemini" | "deepseek" | "anthropic";
   /** base64(iv | tag | ciphertext); absent = use the .env key. */
   keyEnc?: string;
   keyLast4?: string;
@@ -25,7 +25,7 @@ export interface IAiSetting extends Document {
 
 const AiSettingSchema = new Schema<IAiSetting>(
   {
-    name: { type: String, required: true, unique: true, enum: ["gemini", "deepseek"] },
+    name: { type: String, required: true, unique: true, enum: ["gemini", "deepseek", "anthropic"] },
     keyEnc: { type: String },
     keyLast4: { type: String, maxlength: 4 },
     modelName: { type: String, trim: true, maxlength: 80 },

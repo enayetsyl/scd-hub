@@ -5,7 +5,7 @@
  * versioned AiPolicy, run time REQUIRED), list, read, cancel.
  * Worker side (`workers/aiJobWorker.ts`, a separate process): claim one queued item at a time
  * (atomic), run it on the project's cached prefix + the template with {{item}} filled in,
- * check it with the draft kind's validator (lesson plans: the import gate as a dry run; JSON
+ * check it with the draft kind's validator (lesson plans: validate_plan.py, then the import gate as a dry run; JSON
  * kinds: must parse), send the refusal back to the AI up to twice, retry a provider failure
  * twice with backoff, save the result as a draft, and when the last item ends mark the job
  * and notify the person who started it.
@@ -20,7 +20,7 @@ import { saveProjectPolicyVersion } from "../../platform/services/AiPolicyServic
 import { aiSend, AiFeatureOffError, AiModelOverrideError } from "../../platform/ai/aiRouter";
 import { AiProviderError, type AiTurn } from "../../platform/ai/provider";
 import { isPeak, priceClock, priceOf } from "../../platform/ai/aiPrices";
-import { DEEPSEEK_MODELS } from "../../platform/ai/deepseekProvider";
+import { hasOffPeak, providerOfModel, WORKSPACE_MODELS } from "../../platform/ai/models";
 import { reidentify, DeidentifyError, type DeidScope } from "../../platform/ai/deidentify";
 import { AiCapError } from "../../platform/services/AiUsageService";
 import { AiUsage } from "../../platform/models/AiUsage";
@@ -31,6 +31,7 @@ import { AI_DRAFT_KINDS, type AiDraftKind } from "../models/AiDraft";
 import { AiWorkspaceError, contextBudgetOf, loadProject } from "./AiProjectService";
 import { projectPrefix, protectParts } from "./ProjectChatService";
 import { contentFromAnswer, createDraft, DRAFT_MAX_OUTPUT_TOKENS } from "./DraftService";
+import { checkPlanVersion, renderPlanMarkdown } from "./planTools";
 import { estimateTokens } from "./tokenCount";
 
 export const MAX_JOB_ITEMS = 200;
@@ -183,7 +184,7 @@ function checkInput(input: JobInput, requireRun: boolean): { kind: AiDraftKind; 
   if (!template.includes("{{item}}")) throw new AiWorkspaceError(BN.template);
   const items = cleanItems(input.items ?? []);
   if (items.length < 1 || items.length > MAX_JOB_ITEMS) throw new AiWorkspaceError(BN.items);
-  if (!(DEEPSEEK_MODELS as readonly string[]).includes(input.model)) throw new AiWorkspaceError(BN.model);
+  if (!WORKSPACE_MODELS.includes(input.model)) throw new AiWorkspaceError(BN.model);
   if (!["off", "low", "high"].includes(input.thinking)) throw new AiWorkspaceError(BN.thinking);
   if (requireRun && input.runAt !== "now" && input.runAt !== "offpeak") throw new AiWorkspaceError(BN.run);
   return { kind: input.kind as AiDraftKind, items, template };
@@ -192,7 +193,7 @@ function checkInput(input: JobInput, requireRun: boolean): { kind: AiDraftKind; 
 /** Both prices, before anything starts (PRD §6 "pre-flight estimate"). */
 export async function estimateFor(project: IAiProject, input: { kind: AiDraftKind; template: string; items: string[]; model: string }, now: Date = new Date()): Promise<JobEstimate> {
   const budget = await contextBudgetOf(project, now);
-  const price = priceOf("deepseek", input.model);
+  const price = priceOf(providerOfModel(input.model) ?? "deepseek", input.model);
   const prefix = budget.totalTokens + estimateTokens(input.template);
   const perItemOut = EXPECTED_OUTPUT_TOKENS[input.kind];
   let full = 0;
@@ -207,6 +208,10 @@ export async function estimateFor(project: IAiProject, input: { kind: AiDraftKin
   });
   const clock = priceClock("deepseek", now);
   const round = (n: number) => Math.round(n * 10_000) / 10_000;
+  // Claude: the same price at any hour (its 1.25x cache writes are estimated as plain input).
+  if (!hasOffPeak(input.model)) {
+    return { items: input.items.length, inputTokens, outputTokens: perItemOut * input.items.length, nowUsd: round(full), offpeakUsd: round(full), peakNow: false, offpeakStartsAt: now };
+  }
   return {
     items: input.items.length,
     inputTokens,
@@ -243,7 +248,8 @@ export async function createJob(authIn: AuthPayload | null, projectId: string, i
     items: c.items.map((value) => ({ value })),
     modelName: input.model,
     thinking: input.thinking,
-    runAt: input.runAt,
+    // Claude has no cheaper hours: an "off-peak" Claude job runs now (the worker would otherwise wait for the DeepSeek window).
+    runAt: hasOffPeak(input.model) ? input.runAt : "now",
     status: "queued",
     estimate: { nowUsd: est.nowUsd, offpeakUsd: est.offpeakUsd, inputTokens: est.inputTokens, outputTokens: est.outputTokens },
     createdBy: new Types.ObjectId(auth.userId),
@@ -287,8 +293,8 @@ export async function cancelJob(authIn: AuthPayload | null, jobId: string): Prom
 export interface JobDeps {
   send?: typeof aiSend;
   scope?: () => Promise<DeidScope>;
-  /** The lesson-plan validator (default: build_envelope + validate_import, dry run). */
-  validate?: (kind: AiDraftKind, content: { body: string; planJson: string | null }) => Promise<string[]>;
+  /** The lesson-plan validator (default: validate_plan.py, then build_envelope + validate_import, dry run). */
+  validate?: (kind: AiDraftKind, content: { body: string; planJson: string | null }, ctx: { projectId: Types.ObjectId }) => Promise<string[]>;
   now?: () => Date;
 }
 
@@ -335,26 +341,36 @@ async function setItem(jobId: Types.ObjectId, itemId: Types.ObjectId, set: Parti
   await AiJob.updateOne({ _id: jobId, "items._id": itemId }, { $set, ...(Object.keys($inc).length ? { $inc } : {}) });
 }
 
-/** The lesson-plan validator: build the envelope and run the import gate without saving. */
-async function defaultValidate(kind: AiDraftKind, content: { body: string; planJson: string | null }): Promise<string[]> {
+/** Added to a lesson-plan job's task: the answer is the plan JSON only (the Markdown is rendered from it). */
+export const PLAN_ANSWER_TAIL = "\n\nReturn ONE plan as its plan JSON in one ```json block and nothing else — no Markdown (the school renders it from the JSON with render_plan.py and checks it with validate_plan.py).";
+
+/**
+ * The lesson-plan validator: validate_plan.py (P09 plan tools; a session plan against its
+ * chapter plan when the project has one), then the Markdown rendered from the JSON goes
+ * through build_envelope + the import gate without saving.
+ */
+async function defaultValidate(kind: AiDraftKind, content: { body: string; planJson: string | null }, ctx: { projectId: Types.ObjectId }): Promise<string[]> {
   if (kind !== "lesson_plan") return [];
-  const built = await buildEnvelopeFromPair("aiws-job-check", content.planJson ?? "", content.body, "aiws-job-check.json", "AI Workspace");
+  const check = await checkPlanVersion(ctx.projectId, null, content.planJson ?? "");
+  if (check.verdict !== "PASS") return check.fails;
+  const md = await renderPlanMarkdown(content.planJson ?? "");
+  if (!md.ok) return [md.error];
+  const built = await buildEnvelopeFromPair("aiws-job-check", content.planJson ?? "", md.md, "aiws-job-check.json", "AI Workspace");
   if (!built.ok || !built.envelope) return [built.error ?? "the plan could not be wrapped into an envelope"];
   const gate = await runImportGate(built.envelope);
   return gate.verdict === "PASS" ? [] : gate.failChecks;
 }
 
-/** Shape check for the kind (JSON must parse; a lesson plan needs both parts). */
+/** Shape check for the kind (JSON must parse; a lesson plan is its plan JSON — the Markdown is rendered from it). */
 function shapeErrors(kind: AiDraftKind, c: { body: string; planJson: string | null }): string[] {
-  if (!c.body.trim()) return ["the answer was empty"];
   if (kind === "lesson_plan") {
-    if (!c.planJson) return ["a lesson plan needs its plan JSON in one ```json block, then the Markdown"];
+    if (!c.planJson) return ["a lesson plan answer is the plan JSON in one ```json block (the Markdown is rendered from it)"];
     try {
       JSON.parse(c.planJson);
     } catch (e) {
       return [`the plan JSON does not parse: ${(e as Error).message}`];
     }
-  }
+  } else if (!c.body.trim()) return ["the answer was empty"];
   if (kind === "question_bank" || kind === "book_chapter") {
     try {
       JSON.parse(c.body);
@@ -384,7 +400,7 @@ export async function runItem(jobId: Types.ObjectId, itemId: Types.ObjectId, dep
     const project = await AiProject.findById(j.projectId);
     if (!project) return void (await fail(BN.notFound));
     const prefix = await projectPrefix(project);
-    const task = j.template.split("{{item}}").join(item.value);
+    const task = j.template.split("{{item}}").join(item.value) + (j.kind === "lesson_plan" ? PLAN_ANSWER_TAIL : "");
     let parts = [prefix.stablePrefix, task];
     let map: Record<string, string> = {};
     if (project.nameProtection) {
@@ -420,7 +436,7 @@ export async function runItem(jobId: Types.ObjectId, itemId: Types.ObjectId, dep
       await setItem(jobId, itemId, {}, { costUsd: cost, cacheHitTokens: out.result.usage.cacheHitTokens, cacheMissTokens: out.result.usage.cacheMissTokens, outputTokens: out.result.usage.outputTokens });
       const raw = out.result.text;
       const content = contentFromAnswer(j.kind as AiDraftKind, project.nameProtection ? reidentify(raw, map) : raw);
-      const errors = [...shapeErrors(j.kind as AiDraftKind, content), ...(shapeErrors(j.kind as AiDraftKind, content).length ? [] : await validate(j.kind as AiDraftKind, content))];
+      const errors = [...shapeErrors(j.kind as AiDraftKind, content), ...(shapeErrors(j.kind as AiDraftKind, content).length ? [] : await validate(j.kind as AiDraftKind, content, { projectId: project._id }))];
       if (errors.length === 0) {
         const draft = await createDraft(await authOf(j.createdBy), project._id.toString(), {
           title: `${j.title} — ${item.value.slice(0, 80)}`,

@@ -294,6 +294,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
               extra={{ commentType: type, sentiment }}
               onChange={(_field, t) => setText(t)}
               onKeepMine={() => void onSave(true)}
+              onPickTone={(s) => setSentiment(s)}
               disabled={busy}
             />
           ) : null}

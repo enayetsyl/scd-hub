@@ -3,6 +3,7 @@
  *
  *   Gemini:   key = the saved key → GEMINI_API_KEY → none;  model = saved → GEMINI_MODEL → "gemini-flash-latest"
  *   DeepSeek: key = the saved key → DEEPSEEK_API_KEY → none; model = saved → DEEPSEEK_MODEL → "deepseek-flash"
+ *   Claude:   key = the saved key → ANTHROPIC_API_KEY → none; model = saved → ANTHROPIC_MODEL → "claude-opus-5-5"
  *
  * The existing Gemini callers (monthly comments, observation rota, support-book author,
  * voice tasks) build their provider synchronously, so the saved rows are held in memory:
@@ -14,7 +15,7 @@
  *
  * AI-1 adds the per-FEATURE settings (`AiFeatureSetting`): which provider + model answers
  * each new AI feature, whether it is switched on (default OFF, D-#1101), and whether it may
- * fall back to the other provider once. The router (`ai/aiRouter.ts`) reads them.
+ * fall back to another provider once (FALLBACK_TO). The router (`ai/aiRouter.ts`) reads them.
  */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { Types } from "mongoose";
@@ -27,7 +28,9 @@ import { AiFeatureSetting } from "../models/AiFeatureSetting";
 import { AiBudgetSetting } from "../models/AiBudgetSetting";
 import { writeAudit } from "./AuditService";
 import { AI_PROVIDERS, type AiProviderName } from "../ai/provider";
-import { DEEPSEEK_BASE_URL, DEEPSEEK_DEFAULT_MODEL, DEEPSEEK_MODELS } from "../ai/deepseekProvider";
+import { DEEPSEEK_BASE_URL, DEEPSEEK_DEFAULT_MODEL } from "../ai/deepseekProvider";
+import { pingAnthropic } from "../ai/anthropicProvider";
+import { ANTHROPIC_DEFAULT_MODEL, WORKSPACE_MODELS } from "../ai/models";
 
 /** The alias Google keeps pointed at the current Flash — never retired. */
 export const GEMINI_DEFAULT_MODEL = "gemini-flash-latest";
@@ -42,12 +45,18 @@ interface Cached {
   updatedBy: string | null;
   loadedAt: number;
 }
-const cache: Record<AiProviderName, Cached | null> = { gemini: null, deepseek: null };
+const cache: Record<AiProviderName, Cached | null> = { gemini: null, deepseek: null, anthropic: null };
 
-const ENV_KEY: Record<AiProviderName, string> = { gemini: "GEMINI_API_KEY", deepseek: "DEEPSEEK_API_KEY" };
-const ENV_MODEL: Record<AiProviderName, string> = { gemini: "GEMINI_MODEL", deepseek: "DEEPSEEK_MODEL" };
-const DEFAULT_MODEL: Record<AiProviderName, string> = { gemini: GEMINI_DEFAULT_MODEL, deepseek: DEEPSEEK_DEFAULT_MODEL };
-const LABEL: Record<AiProviderName, string> = { gemini: "Gemini", deepseek: "DeepSeek" };
+const ENV_KEY: Record<AiProviderName, string> = { gemini: "GEMINI_API_KEY", deepseek: "DEEPSEEK_API_KEY", anthropic: "ANTHROPIC_API_KEY" };
+const ENV_MODEL: Record<AiProviderName, string> = { gemini: "GEMINI_MODEL", deepseek: "DEEPSEEK_MODEL", anthropic: "ANTHROPIC_MODEL" };
+const DEFAULT_MODEL: Record<AiProviderName, string> = { gemini: GEMINI_DEFAULT_MODEL, deepseek: DEEPSEEK_DEFAULT_MODEL, anthropic: ANTHROPIC_DEFAULT_MODEL };
+const LABEL: Record<AiProviderName, string> = { gemini: "Gemini", deepseek: "DeepSeek", anthropic: "Claude" };
+/**
+ * Which provider a feature falls back to (once) when fallback is on and that provider has a key.
+ * DeepSeek ↔ Gemini as before; Claude falls back to DeepSeek. Nothing falls back TO Claude, so
+ * the Claude credit is spent only where the Principal chose Claude.
+ */
+const FALLBACK_TO: Record<AiProviderName, AiProviderName> = { deepseek: "gemini", gemini: "deepseek", anthropic: "deepseek" };
 
 function cipherKey(): Buffer {
   return createHash("sha256")
@@ -233,9 +242,24 @@ export async function testDeepseek(key: string, modelName: string, ping: (k: str
   throw new Error(`DeepSeek সাড়া দেয়নি (${status}) — একটু পরে আবার চেষ্টা করুন`);
 }
 
+/**
+ * Claude (Models API read, no tokens spent): 401 wrong key, 403 no permission, 404 unknown
+ * model, 429 rate limit, 5xx busy. A key with no credit left passes this test; its first
+ * real call is then refused (400 "credit balance is too low") and shows as an AI error.
+ */
+export async function testAnthropic(key: string, modelName: string, ping: (k: string, m: string) => Promise<number> = pingAnthropic): Promise<void> {
+  const status = await ping(key, modelName);
+  if (status >= 200 && status < 300) return;
+  if (status === 401 || status === 403) throw new Error("কী (key) সঠিক নয় — Claude Console (platform.claude.com) থেকে আবার কপি করুন");
+  if (status === 404) throw new Error(`"${modelName}" মডেলটি Claude চেনে না — ${ANTHROPIC_DEFAULT_MODEL} দিন`);
+  if (status === 429) throw new Error("এই কী-র সীমা শেষ (429) — পরে আবার চেষ্টা করুন");
+  throw new Error(`Claude সাড়া দেয়নি (${status}) — একটু পরে আবার চেষ্টা করুন`);
+}
+
 const TESTERS: Record<AiProviderName, (key: string, model: string) => Promise<void>> = {
   gemini: (k, m) => testGemini(k, m),
   deepseek: (k, m) => testDeepseek(k, m),
+  anthropic: (k, m) => testAnthropic(k, m),
 };
 
 /**
@@ -253,7 +277,8 @@ export async function setAiSettings(
   await refreshAiConfig(true);
   const newKey = input.apiKey?.trim() || null;
   // Shape only — the provider's own test below is the real check. Keys are not one format:
-  // classic "AIza…" (39 chars), the newer AI Studio "AQ.…" keys with dots, DeepSeek "sk-…".
+  // classic "AIza…" (39 chars), the newer AI Studio "AQ.…" keys with dots, DeepSeek "sk-…",
+  // Claude "sk-ant-…" (about 108 chars).
   if (newKey && /\s/.test(newKey)) throw new Error("কী-র মাঝে ফাঁকা জায়গা আছে — আবার কপি করে বসান");
   if (newKey && !/^[\x21-\x7E]{20,300}$/.test(newKey)) throw new Error("কী (key) দেখতে সঠিক নয়");
   const modelChanged = input.model !== undefined && input.model !== null;
@@ -492,7 +517,7 @@ export async function aiRouteFor(featureKey: string): Promise<AiRoute> {
   await refreshAiConfig();
   const row = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
   const v = featureView(f, row);
-  const other: AiProviderName = v.provider === "deepseek" ? "gemini" : "deepseek";
+  const other: AiProviderName = FALLBACK_TO[v.provider];
   const otherKey = providerKey(other);
   return {
     enabled: v.enabled,
@@ -579,7 +604,7 @@ export async function setAiBudget(
   if (input.alertPct !== null && input.alertPct !== undefined && (!Number.isInteger(input.alertPct) || input.alertPct < 1 || input.alertPct > 100)) {
     throw new Error("সতর্কবার্তার শতাংশ ১ থেকে ১০০-এর মধ্যে পূর্ণ সংখ্যা দিন");
   }
-  if (input.workspaceDefaultModel && !(DEEPSEEK_MODELS as readonly string[]).includes(input.workspaceDefaultModel)) {
+  if (input.workspaceDefaultModel && !WORKSPACE_MODELS.includes(input.workspaceDefaultModel)) {
     throw new Error("এই মডেলটি কর্মক্ষেত্রে চলে না");
   }
   if (input.workspaceDefaultThinking && !(WORKSPACE_THINKING as readonly string[]).includes(input.workspaceDefaultThinking)) {

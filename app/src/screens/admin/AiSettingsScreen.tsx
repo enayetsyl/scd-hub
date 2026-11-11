@@ -1,8 +1,9 @@
 /**
  * AiSettingsScreen (D-#967, D-#1090) — the Principal changes each AI service's key and
  * model here instead of editing the server's .env. `system_health:ai_key` (LOCKED).
- * Two services: Gemini (voice tasks, monthly comments, the observation rota, the book
- * author) and DeepSeek (the new AI features of docs/prd-ai-assist.md). Keys are write-only:
+ * Three services: Gemini (voice tasks, monthly comments, the observation rota, the book
+ * author), DeepSeek (the new AI features of docs/prd-ai-assist.md) and Claude (the school's
+ * Claude API credit — used only where a feature or a workspace picker chooses it). Keys are write-only:
  * the screen shows where a key comes from and its last 4 characters, never the key.
  * Saving is tested against the service first, so a wrong key or an unknown model is refused.
  */
@@ -27,6 +28,7 @@ const fill = (tpl: string, vars: Record<string, string | number>) =>
 const PROVIDERS: Array<{ id: AiProviderT; label: string }> = [
   { id: "gemini", label: "Gemini" },
   { id: "deepseek", label: "DeepSeek" },
+  { id: "anthropic", label: "Claude" },
 ];
 
 export default function AiSettingsScreen(_props: Props): React.ReactElement {
@@ -71,6 +73,7 @@ export default function AiSettingsScreen(_props: Props): React.ReactElement {
   if (q.error || !s) return <Screen scroll>{chips}<ErrorBanner message={friendlyError(q.error as never)} /></Screen>;
 
   const isDeepseek = provider === "deepseek";
+  const isClaude = provider === "anthropic";
   const modelChanged = model !== null && model.trim() !== (s.modelSaved ?? "");
   const canSave = key.trim().length > 0 || modelChanged;
 
@@ -111,22 +114,23 @@ export default function AiSettingsScreen(_props: Props): React.ReactElement {
           <Muted>{fill(STR.aiUpdated, { name: s.updatedByName, when: new Date(s.updatedAt).toLocaleString() })}</Muted>
         ) : null}
         {isDeepseek ? <Muted>{STR.aiDeepseekNote}</Muted> : null}
+        {isClaude ? <Muted>{STR.aiClaudeNote}</Muted> : null}
       </Card>
 
       <Card>
         <Field
-          label={isDeepseek ? STR.aiNewKeyDeepseek : STR.aiNewKey}
+          label={isClaude ? STR.aiNewKeyClaude : isDeepseek ? STR.aiNewKeyDeepseek : STR.aiNewKey}
           value={key}
           onChangeText={setKey}
           secureTextEntry
           secureToggle
-          helper={isDeepseek ? STR.aiNewKeyHelpDeepseek : STR.aiNewKeyHelp}
+          helper={isClaude ? STR.aiNewKeyHelpClaude : isDeepseek ? STR.aiNewKeyHelpDeepseek : STR.aiNewKeyHelp}
         />
         <Field
-          label={isDeepseek ? fill(STR.aiModelDeepseek, { model: s.defaultModel }) : STR.aiModel}
+          label={isDeepseek || isClaude ? fill(STR.aiModelDeepseek, { model: s.defaultModel }) : STR.aiModel}
           value={model ?? ""}
           onChangeText={setModel}
-          helper={isDeepseek ? STR.aiModelHelpDeepseek : STR.aiModelHelp}
+          helper={isClaude ? STR.aiModelHelpClaude : isDeepseek ? STR.aiModelHelpDeepseek : STR.aiModelHelp}
           placeholder={s.defaultModel}
         />
         {error ? <Notice tone="danger" message={error} /> : null}

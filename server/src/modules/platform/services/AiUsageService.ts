@@ -65,7 +65,7 @@ export interface AiUsageRowInput {
   refId?: string | null;
   /** AI Workspace project (W-1). */
   projectId?: string | null;
-  provider: "deepseek" | "gemini";
+  provider: "deepseek" | "gemini" | "anthropic";
   model: string;
   resolvedModel?: string | null;
   policyHash?: string | null;
@@ -136,7 +136,7 @@ export interface CapContext {
   /** The assistant session, for the per-session cap. */
   sessionId?: string | null;
   callId: string;
-  provider: "deepseek" | "gemini";
+  provider: "deepseek" | "gemini" | "anthropic";
   model: string;
   refType?: string | null;
   refId?: string | null;

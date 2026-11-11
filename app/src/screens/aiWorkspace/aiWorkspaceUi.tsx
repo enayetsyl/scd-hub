@@ -9,13 +9,29 @@ export const fill = (tpl: string, vars: Record<string, string | number>) => tpl.
 
 export const roleLabel = (r: AiProjectRoleT): string => (r === "owner" ? STR.awRoleOwner : r === "editor" ? STR.awRoleEditor : STR.awRoleViewer);
 
-export const modelLabel = (m: string): string => (m === "deepseek-v4-pro" ? STR.awModelPro : m === "deepseek-flash" ? STR.awModelFlash : m);
+/** Claude models (the school's Claude API credit); the same price at any hour. */
+export const CLAUDE_MODELS = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"] as const;
+export const isClaudeModel = (m: string | null | undefined): boolean => !!m && m.startsWith("claude-");
+
+export const modelLabel = (m: string): string =>
+  m === "deepseek-v4-pro"
+    ? STR.awModelPro
+    : m === "deepseek-flash"
+      ? STR.awModelFlash
+      : m === "claude-opus-5-5"
+        ? STR.awModelClaudeOpus
+        : m === "claude-sonnet-5-5"
+          ? STR.awModelClaudeSonnet
+          : m === "claude-haiku-5-5"
+            ? STR.awModelClaudeHaiku
+            : m;
 
 export const thinkingLabel = (t: string): string => (t === "off" ? STR.awThinkingOff : t === "low" ? STR.awThinkingLow : STR.awThinkingHigh);
 
 export const MODEL_OPTIONS = (): Array<{ label: string; value: string }> => [
   { label: STR.awModelFlash, value: "deepseek-flash" },
   { label: STR.awModelPro, value: "deepseek-v4-pro" },
+  ...CLAUDE_MODELS.map((m) => ({ label: modelLabel(m), value: m })),
 ];
 
 export const THINKING_OPTIONS = (): Array<{ label: string; value: string }> => [

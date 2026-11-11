@@ -3,7 +3,9 @@
  * every `AiUsage` row. It is CONFIG, not truth: a wrong price only mis-states cost, it
  * never changes what a model is asked.
  *
- * ⚠ UNVERIFIED. DeepSeek's official pricing table did not render for a reader on
+ * Claude prices are Anthropic's published first-party rates (see the `anthropic` row).
+ *
+ * ⚠ UNVERIFIED (DeepSeek / Gemini). DeepSeek's official pricing table did not render for a reader on
  * 2026-11-08 and secondary sources disagree (PRD P10, D-#1120). These figures follow the
  * PRD's time-of-day model (off-peak = half price; peak = weekdays 01:00–04:00 and
  * 06:00–10:00 UTC) with the most recent secondary figures. The owner checks them against
@@ -19,6 +21,8 @@ export interface ModelPrice {
   cacheMiss: number;
   /** Output tokens — reasoning tokens are billed as output and are already inside it. */
   output: number;
+  /** Input tokens written into the cache (Claude: 1.25× input for the 5-minute TTL); absent = cacheMiss. */
+  cacheWrite?: number;
 }
 
 interface ProviderPrices {
@@ -54,6 +58,20 @@ export const AI_PRICES: Record<AiProviderName, ProviderPrices> = {
     offPeakFactor: 1,
     peakUtcHours: [],
   },
+  // Claude (Anthropic first-party API prices, cached model table of 2026-10): cache reads
+  // $0.20 on Opus 5.5 / Sonnet 5.5 and 0.1× input on Haiku 5.5; a 5-minute cache write is
+  // 1.25× input. Haiku 5.5's price doubles above 100K prompt tokens ($0.50 / $2.50) — not
+  // modelled here. No time-of-day pricing.
+  anthropic: {
+    models: {
+      "claude-opus-5-5": { cacheHit: 0.2, cacheMiss: 4, output: 20, cacheWrite: 5 },
+      "claude-sonnet-5-5": { cacheHit: 0.2, cacheMiss: 2, output: 10, cacheWrite: 2.5 },
+      "claude-haiku-5-5": { cacheHit: 0.01, cacheMiss: 0.1, output: 0.5, cacheWrite: 0.125 },
+    },
+    fallbackModel: "claude-opus-5-5",
+    offPeakFactor: 1,
+    peakUtcHours: [],
+  },
 };
 
 /**
@@ -64,6 +82,10 @@ export const AI_PRICES: Record<AiProviderName, ProviderPrices> = {
 export const CONTEXT_WINDOW_TOKENS: Record<string, number> = {
   "deepseek-flash": 1_000_000,
   "deepseek-v4-pro": 1_000_000,
+  // Claude: 1M context on all three (Anthropic's model table).
+  "claude-opus-5-5": 1_000_000,
+  "claude-sonnet-5-5": 1_000_000,
+  "claude-haiku-5-5": 1_000_000,
 };
 
 /** AI Workspace context budget (PRD §3): warn above, refuse above (instructions + pinned files). */
@@ -122,7 +144,9 @@ export function priceOf(provider: AiProviderName, model: string): ModelPrice {
 export function costUsd(provider: AiProviderName, model: string, usage: AiTokenUsage, at: Date): number {
   const price = priceOf(provider, model);
   const factor = isPeak(provider, at) ? 1 : AI_PRICES[provider].offPeakFactor;
+  // Cache writes are inside cacheMissTokens; they pay the write premium on top of the miss price.
+  const writePremium = (usage.cacheWriteTokens ?? 0) * Math.max(0, (price.cacheWrite ?? price.cacheMiss) - price.cacheMiss);
   const usd =
-    ((usage.cacheHitTokens * price.cacheHit + usage.cacheMissTokens * price.cacheMiss + usage.outputTokens * price.output) / 1_000_000) * factor;
+    ((usage.cacheHitTokens * price.cacheHit + usage.cacheMissTokens * price.cacheMiss + writePremium + usage.outputTokens * price.output) / 1_000_000) * factor;
   return Math.round(usd * 1_000_000) / 1_000_000;
 }

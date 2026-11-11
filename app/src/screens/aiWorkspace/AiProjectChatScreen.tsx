@@ -32,7 +32,7 @@ import { useToast } from "../../state/ToastContext";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
-import { fill, kTokens, modelLabel, THINKING_OPTIONS, usd } from "./aiWorkspaceUi";
+import { fill, isClaudeModel, kTokens, modelLabel, THINKING_OPTIONS, usd } from "./aiWorkspaceUi";
 import { Platform } from "react-native";
 
 type Props = NativeStackScreenProps<AiWorkspaceStackParamList, "AiProjectChat">;
@@ -152,7 +152,7 @@ export default function AiProjectChatScreen({ route, navigation }: Props): React
   const pickedModel = model ?? chat.model;
   const pickedThinking = thinking ?? chat.thinking;
   const pickedRun = runAt ?? chat.runAt;
-  const price = (m: string) => (m === "deepseek-v4-pro" ? clock.proPerMillion : clock.flashPerMillion);
+  const price = (m: string) => (m === "deepseek-v4-pro" ? clock.proPerMillion : clock.claudePerMillion?.find((c) => c.model === m) ?? clock.flashPerMillion);
 
   async function onSend(): Promise<void> {
     if (!pickedRun) return;
@@ -211,7 +211,7 @@ export default function AiProjectChatScreen({ route, navigation }: Props): React
           <Select
             label={STR.awModel}
             value={pickedModel}
-            options={["deepseek-flash", "deepseek-v4-pro"].map((m) => ({ label: fill(STR.awModelPrice, { name: modelLabel(m), out: price(m).output.toFixed(2) }), value: m }))}
+            options={["deepseek-flash", "deepseek-v4-pro", ...(clock.claudePerMillion ?? []).map((c) => c.model)].map((m) => ({ label: fill(STR.awModelPrice, { name: modelLabel(m), out: price(m).output.toFixed(2) }), value: m }))}
             onChange={setModel}
           />
           <Select label={STR.awThinking} value={pickedThinking} options={THINKING_OPTIONS()} onChange={setThinking} />
@@ -226,6 +226,7 @@ export default function AiProjectChatScreen({ route, navigation }: Props): React
             onChange={setRunAt}
           />
           {!pickedRun ? <Muted>{STR.awRunPick}</Muted> : null}
+          {isClaudeModel(pickedModel) && pickedRun === "offpeak" ? <Muted>{STR.awClaudeNoOffpeak}</Muted> : null}
           <Field label={STR.awMessage} value={text} onChangeText={setText} multiline autoCapitalize="sentences" inputStyle={{ minHeight: 100 }} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
             <Button title={STR.awSend} onPress={() => void onSend()} loading={busy} disabled={!text.trim() || !pickedRun || !!active} />

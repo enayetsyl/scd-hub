@@ -14,12 +14,14 @@
  *      Principal's study of the model — the input is already de-identified by the caller.
  */
 import { randomUUID } from "crypto";
-import { aiRouteFor } from "../services/AiSettingService";
+import { aiRouteFor, providerKey } from "../services/AiSettingService";
 import { alertIfBudget, assertWithinCaps, recordAiUsage, type AiUsageRowInput, type CapContext } from "../services/AiUsageService";
 import { recordAiExchange, type AiExchangeInput } from "../services/AiExchangeService";
 import { costUsd } from "./aiPrices";
-import { DeepseekProvider, DEEPSEEK_MODELS } from "./deepseekProvider";
+import { AnthropicProvider } from "./anthropicProvider";
+import { DeepseekProvider } from "./deepseekProvider";
 import { GeminiProvider } from "./geminiProvider";
+import { providerOfModel, WORKSPACE_MODELS } from "./models";
 import {
   AiProviderError,
   type AiErrorKind,
@@ -70,8 +72,10 @@ export interface AiCallContext {
   projectId?: string | null;
   projectMonthlyUsd?: number | null;
   /**
-   * The chat's Model picker (W-2, D-#1205): answers this call with that DeepSeek model instead
-   * of the feature's saved one. Only `DEEPSEEK_MODELS`, and only on a DeepSeek route.
+   * The chat's Model picker (W-2, D-#1205): answers this call with that model instead of the
+   * feature's saved one. Only `WORKSPACE_MODELS` (DeepSeek and Claude), and only on a route
+   * whose provider is one of those two. A model of the other of the two switches the provider
+   * for this call (its own key); the fallback is kept only when it is a different provider.
    */
   modelOverride?: string | null;
   /**
@@ -108,20 +112,27 @@ export const defaultLedger: AiLedger = {
 };
 
 export const defaultProviderFactory: ProviderFactory = (provider, key) =>
-  provider === "deepseek" ? new DeepseekProvider(key) : new GeminiProvider(key);
+  provider === "deepseek" ? new DeepseekProvider(key) : provider === "anthropic" ? new AnthropicProvider(key) : new GeminiProvider(key);
 
 export async function aiSend(
   feature: string,
   input: AiSendInput,
   ctx: AiCallContext,
-  deps: { makeProvider?: ProviderFactory; route?: typeof aiRouteFor; ledger?: AiLedger; now?: () => Date } = {},
+  deps: { makeProvider?: ProviderFactory; route?: typeof aiRouteFor; ledger?: AiLedger; now?: () => Date; keyFor?: typeof providerKey } = {},
 ): Promise<AiSendOutcome> {
   const routed = await (deps.route ?? aiRouteFor)(feature);
   if (!routed.enabled) throw new AiFeatureOffError(feature);
   let route = routed;
   if (ctx.modelOverride) {
-    if (routed.primary.provider !== "deepseek" || !(DEEPSEEK_MODELS as readonly string[]).includes(ctx.modelOverride)) throw new AiModelOverrideError();
-    route = { ...routed, primary: { ...routed.primary, model: ctx.modelOverride } };
+    const to = providerOfModel(ctx.modelOverride);
+    const pickerRoute = routed.primary.provider === "deepseek" || routed.primary.provider === "anthropic";
+    if (!to || !WORKSPACE_MODELS.includes(ctx.modelOverride) || !pickerRoute) throw new AiModelOverrideError();
+    const key = to === routed.primary.provider ? routed.primary.key : (deps.keyFor ?? providerKey)(to);
+    route = {
+      ...routed,
+      primary: { provider: to, model: ctx.modelOverride, key },
+      fallback: routed.fallback && routed.fallback.provider !== to ? routed.fallback : null,
+    };
   }
   const make = deps.makeProvider ?? defaultProviderFactory;
   const ledger = deps.ledger ?? defaultLedger;

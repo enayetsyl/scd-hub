@@ -16,15 +16,9 @@ import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
-import { codeTail, useReviewAction } from "./masteryReviewUi";
+import { codeTail, exerciseLines, useReviewAction } from "./masteryReviewUi";
 
 const isOut = (r: ReviewRow) => r.reviewState === "REJECTED" || !!r.mergedInto;
-
-const splitList = (t: string) =>
-  t
-    .split(/[\n,]/)
-    .map((x) => x.trim())
-    .filter(Boolean);
 
 export function AddCard({ q, onDone, fixedParent }: { q: ReviewQueue; onDone: () => void; fixedParent?: ReviewRow }): React.ReactElement {
   const levels = useMasteryLevelLabels();
@@ -94,7 +88,7 @@ export function AddCard({ q, onDone, fixedParent }: { q: ReviewQueue; onDone: ()
                   domainCode: level === "OBJECTIVE" ? domain : null,
                   homeTipBn: level === "OBJECTIVE" ? tip : null,
                   labelBn: label,
-                  exercises: splitList(exercises),
+                  exercises: exerciseLines(exercises),
                   reason,
                 },
               },

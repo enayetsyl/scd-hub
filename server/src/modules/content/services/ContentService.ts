@@ -38,7 +38,7 @@ export function sessionPeriodIndexOf(payload: Record<string, unknown>): number |
 }
 
 /** Wrap execFile in a Promise that always resolves (never throws) — returns {stdout,stderr,code}. */
-function execFilePromise(
+export function execFilePromise(
   file: string,
   args: string[],
 ): Promise<{ stdout: string; stderr: string; code: number }> {
@@ -68,7 +68,7 @@ const ENVELOPE_SCHEMA_PATH = path.join(SCHEMA_DIR, "../../docs/import-contract.s
 // ships only `python`. A hardcoded "python" is why imports passed locally (Windows)
 // but FAILed in production (Ubuntu). Default by platform; PYTHON_BIN overrides for
 // non-standard environments (e.g. a venv path).
-const PYTHON_BIN = process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
+export const PYTHON_BIN = process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
 
 export interface GateOutput {
   verdict: "PASS" | "FAIL";

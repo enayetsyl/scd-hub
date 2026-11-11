@@ -13,7 +13,7 @@ import { Screen, Card, Button, Field, Select, ErrorBanner, Muted, Notice } from 
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
-import { fill, kTokens, MODEL_OPTIONS, THINKING_OPTIONS, usd } from "./aiWorkspaceUi";
+import { fill, isClaudeModel, kTokens, MODEL_OPTIONS, THINKING_OPTIONS, usd } from "./aiWorkspaceUi";
 import { DRAFT_KINDS, kindLabel } from "./draftUi";
 import { dhakaTime } from "./AiProjectChatScreen";
 
@@ -85,6 +85,7 @@ export default function AiJobNewScreen({ route, navigation }: Props): React.Reac
               onChange={setRunAt}
             />
             {!runAt ? <Muted>{STR.awJobRunPick}</Muted> : null}
+            {isClaudeModel(model) && runAt === "offpeak" ? <Muted>{STR.awClaudeNoOffpeak}</Muted> : null}
             <Button title={STR.awJobStart} loading={busy === "start"} disabled={!runAt} onPress={() => void onStart()} />
           </>
         ) : null}

@@ -24,7 +24,7 @@ import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
-import { ReviewThreads, TapText, codeTail, formatExerciseRef, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
+import { ReviewThreads, TapText, codeTail, exerciseLines, formatExerciseRef, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
 import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
@@ -70,7 +70,7 @@ function EditForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i: 
             prereqCodes: lines(prereqs),
             homeTipBn: r.level !== "SUB" ? tip : undefined,
             domainCode: r.level !== "SUB" ? domain : undefined,
-            exercises: lines(exercises),
+            exercises: exerciseLines(exercises),
           })
         }
       />
