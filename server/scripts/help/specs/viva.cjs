@@ -6,7 +6,9 @@
  *
  * LOCAL ONLY: it draws, marks, saves examiners and fixes a question's wording, because those
  * screens only exist after those steps. Data: scripts/help/fixtures/viva.ts (--reset first):
- * নার্সারি, 22 example children, বাংলা oral TODAY (teacher@help.test), ইংরেজি in 3 days.
+ * নার্সারি, 22 example children, বাংলা oral TODAY (teacher@help.test), ইংরেজি in 3 days, আরবি
+ * picture oral tomorrow (D-#1282: the Office's picture picker, the teacher's picture viewer).
+ * The fixture draws its example pictures with Chrome, so set PLAYWRIGHT_CORE for it too.
  */
 const L = require("./exam-lib.cjs");
 const SETS = require("../../../assets/viva/nursery-sets-2026.json");
@@ -131,8 +133,56 @@ async function office(h) {
   await O.context().close();
 }
 
+// ── Picture question (D-#1282): আরবি oral tomorrow, 4 sets × 10 pictures ─────────────────────
+const ARB = "নার্সারি · আরবি";
+
+async function officePictures(h) {
+  const O = await L.login(h, "office@help.test");
+  await L.go(h, O, null, VIVA, 5000);
+  await h.tap(O, inCard(ARB, "প্রশ্নপত্র"), 5000);
+  await h.shot(O, "exam-viva-picture-paper", 0, [{ re: "^১\\. " }, { text: "ছবি বাছুন" }, { text: "প্রতি ছবিতে নম্বর" }], { anchor: { re: "^প্রশ্ন ১$" } });
+  await h.tap(O, "ছবি বাছুন", 4000);
+  await h.shot(O, "exam-viva-picture-paper", 1, [{ text: "আরবি বই ১ (নার্সারি)" }, { text: "جَمَلٌ" }, { re: "^বাছাই শেষ \\(" }]);
+  // Take the first picture out and put it back at the end, then check the count stays ১০.
+  await h.tap(O, { text: "بَيْتٌ" }, 800);
+  await expectText(O, /বাছাই শেষ \(৯টি\)/, "one picture taken out");
+  await h.tap(O, { text: "بَيْتٌ" }, 800);
+  await expectText(O, /বাছাই শেষ \(১০টি\)/, "and put back");
+  await h.tap(O, { re: "^বাছাই শেষ \\(" }, 1500);
+  await expectText(O, /১০টি ছবি · মোট ১০/, "the question is 10 pictures × 1 = 10");
+  await h.topmost(O, { text: "+ ছবির প্রশ্ন" }, { scroll: true });
+  await h.shot(O, "exam-viva-picture-paper", 2, [{ text: "+ ছবির প্রশ্ন" }, { text: "সংরক্ষণ করুন" }], { anchor: { text: "+ প্রশ্ন যোগ করুন" } });
+  await h.tap(O, "সংরক্ষণ করুন", 4000);
+  await expectText(O, new RegExp(ARB), "paper saved (back on the list)");
+  await O.context().close();
+}
+
+async function teacherPictures(h) {
+  const T = await L.login(h, "teacher@help.test");
+  await L.go(h, T, null, VIVA, 5000);
+  await h.tap(T, inCard(ARB, "নম্বর দিন"), 5000);
+  await h.tap(T, { text: FIRST }, 3500);
+  // The first picture chip (not the roll number "১" above it).
+  const chip1 = { css: "xpath=//*[starts-with(normalize-space(.),'ছবি দেখে শব্দ বলা')]/following::*[normalize-space(text())='১'][1]" };
+  await h.shot(T, "exam-viva-pictures", 0, [chip1, { text: "ছবি দেখান" }]);
+  await h.tap(T, "ছবি দেখান", 3000);
+  const right = { re: "^✓ পেরেছে \\(১\\)" };
+  const wrong = { re: "^✗ পারেনি \\(০\\)" };
+  await h.shot(T, "exam-viva-pictures", 1, [{ text: "১/১০" }, { text: "উত্তর দেখুন" }, right, wrong, { text: "পরের ›" }, { text: "বন্ধ করুন" }]);
+  await h.tap(T, "উত্তর দেখুন", 800);
+  await expectText(T, /লুকাতে আবার চাপুন/, "answer shown on tap");
+  // ✓ ✓ ✗ then ✓ for the rest → 9/10; every mark moves on by itself.
+  for (let i = 0; i < 10; i++) await h.tap(T, i === 2 ? wrong : right, 1200);
+  await expectText(T, /১০\/১০টি ছবির নম্বর · মোট ৯/, "10 pictures marked, total 9");
+  await h.tap(T, "বন্ধ করুন", 1500);
+  await expectText(T, /৯\/১০/, "card shows 9/10");
+  await T.context().close();
+}
+
 exports.run = async (h) => {
   if (h.PROD) throw new Error("the viva spec draws, marks and saves while it walks; run it locally (see its header)");
   await teacher(h);
   await office(h);
+  await officePictures(h);
+  await teacherPictures(h);
 };
