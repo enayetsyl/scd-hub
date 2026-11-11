@@ -391,6 +391,7 @@ const PAPER_FIELDS = `
   subject
   date
   hwItemId
+  classTestId
   entryState
   totalMarks
   rubricLoCodes
@@ -423,6 +424,8 @@ export const MASTERY_PAPER_QUERY = gql`
   query MasteryPaper($paperId: String!) {
     masteryPaper(paperId: $paperId) {
       paper { ${PAPER_FIELDS} }
+      classTest { classTestId ctId totalMarks examDate status }
+      classTestMismatches { studentId name sheetStatus sheetMarks classTestStatus classTestMarks }
       roster {
         studentId
         name
@@ -446,6 +449,50 @@ export const MASTERY_PAPER_QUERY = gql`
           }
         }
       }
+    }
+  }
+`;
+
+/** PR-C (D-#1317): the section's class tests a CT sheet can own (no sheet yet). */
+export interface MasteryClassTestOption {
+  classTestId: string;
+  ctId: string;
+  testNumber: number;
+  examDate: string;
+  totalMarks: number;
+  status: string;
+}
+
+export const MASTERY_CLASS_TEST_OPTIONS_QUERY = gql`
+  query MasteryClassTestOptions($sectionId: String!, $subject: String!) {
+    masteryClassTestOptions(sectionId: $sectionId, subject: $subject) {
+      classTestId
+      ctId
+      testNumber
+      examDate
+      totalMarks
+      status
+    }
+  }
+`;
+
+/** PR-C (D-#1319): is mastery on for this test, and which sheet owns its totals. */
+export interface MasteryClassTestSheetLink {
+  enabled: boolean;
+  paperId: string | null;
+  entryState: string | null;
+  sectionId: string | null;
+  classLevel: number | null;
+}
+
+export const MASTERY_CLASS_TEST_SHEET_QUERY = gql`
+  query MasteryClassTestSheet($classTestId: String!) {
+    masteryClassTestSheet(classTestId: $classTestId) {
+      enabled
+      paperId
+      entryState
+      sectionId
+      classLevel
     }
   }
 `;
@@ -482,6 +529,7 @@ export const CREATE_MASTERY_PAPER = gql`
     $date: String!
     $title: String
     $hwItemId: String
+    $classTestId: String
     $items: [MasteryPaperItemInput!]!
     $rubricLoCodes: [String!]
   ) {
@@ -492,6 +540,7 @@ export const CREATE_MASTERY_PAPER = gql`
       date: $date
       title: $title
       hwItemId: $hwItemId
+      classTestId: $classTestId
       items: $items
       rubricLoCodes: $rubricLoCodes
     ) {
@@ -550,10 +599,22 @@ export type MasteryPaperRow = {
   subject: string;
   date: string;
   hwItemId: string | null;
+  /** PR-C: the class test whose totals this sheet writes (null when none). */
+  classTestId?: string | null;
   entryState: string;
   totalMarks: number;
   rubricLoCodes: string[];
   items: MasteryPaperItemRow[];
+};
+
+/** PR-C: a student whose class-test mark differs from the sheet total (another flow changed it). */
+export type MasteryClassTestMismatch = {
+  studentId: string;
+  name: string;
+  sheetStatus: string;
+  sheetMarks: number | null;
+  classTestStatus: string | null;
+  classTestMarks: number | null;
 };
 
 export type MasteryResultRow = {

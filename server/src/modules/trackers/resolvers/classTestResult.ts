@@ -17,6 +17,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import {
+  ClassTestResultError,
   enterResult,
   studentResult,
   testResults,
@@ -166,6 +167,11 @@ builder.mutationField("enterClassTestResult", (t) =>
         "enter_classtest_result",
         CLASS_TEST_REACH,
       );
+      // PR-C (D-#1319): while a question sheet owns this test's totals, a mark or status that differs
+      // from the sheet's is refused here (comments still save). Lazy import: mastery imports trackers.
+      const { classTestEntryGuard } = await import("../../mastery/classTestLink");
+      const sheetRefusal = await classTestEntryGuard(args.testId, args.studentId, args.status, args.marks);
+      if (sheetRefusal) throw new ClassTestResultError(sheetRefusal);
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,

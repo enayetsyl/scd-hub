@@ -120,5 +120,10 @@ const MasteryPaperSchema = new Schema<IMasteryPaper>(
 MasteryPaperSchema.index({ paperId: 1 }, { unique: true });
 // The section's list, newest first.
 MasteryPaperSchema.index({ sectionId: 1, subject: 1, date: -1, _id: -1 });
+// PR-C (D-#1317): a class test has at most one question sheet (the sheet owns its totals).
+MasteryPaperSchema.index(
+  { "links.classTestId": 1 },
+  { unique: true, partialFilterExpression: { "links.classTestId": { $type: "objectId" } } },
+);
 
 export const MasteryPaper = model<IMasteryPaper>("MasteryPaper", MasteryPaperSchema);
