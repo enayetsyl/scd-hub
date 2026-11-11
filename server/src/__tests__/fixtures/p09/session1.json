@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "pinned_to": { "chapter_layout": "v3.3", "session_layout": "v11", "production_core": "SCD-Guide-v3" },
+  "plan_type": "session_plan",
+  "subject": "BAN",
+  "class_level": 1,
+  "curation_tag": "KEEP_AS_IS",
+  "division": { "anchor_word": "পাঠ", "number": 53, "title": "আমাদের বাগান" },
+  "session_plan": {
+    "session_form": "multi_period",
+    "chapter_ref": "LOCKED_SCD_C1_BAN_U53_ChapterPlan_v1.json",
+    "period_index": 1,
+    "period_of": 2,
+    "session_title": "গল্প পড়া",
+    "summary": {
+      "paragraph": "আজকের লক্ষ্য: শুধু পড়া — আপনি গল্পটি একবার পড়বেন, তারপর প্রত্যেক শিশু দুটি বাক্য পড়বে। ঝুঁকি: সবার পালা নাও আসতে পারে — সেক্ষেত্রে যারা বাকি থাকবে, তারা Exit-Check-এ আগে সুযোগ পাবে।",
+      "prep_checklist": ["বোর্ডে একটি গাছের নাম লিখে রাখবেন।", "শ্রেণির তালিকা হাতে রাখবেন।"]
+    },
+    "session_header": {
+      "objective": "শিশুরা গল্পটি নিজে পড়বে।",
+      "must_cover": "আপনি গল্পটি পড়বেন; প্রত্যেক শিশু দুটি বাক্য পড়বে।",
+      "exit_check_text": "শিশু বই থেকে একটি বাক্য পড়বে।",
+      "homework": "গল্পটি একবার পড়া",
+      "islamic_one_liner": "গাছপালা আল্লাহর দান।"
+    },
+    "lesson_flow": {
+      "intro": "আজ পুরো সময় পড়ার জন্য।",
+      "segments": [
+        { "name": "Opening", "display": "সূচনা / Opening", "minutes": 3, "mandatory": true, "is_checkbox": true, "body": [
+          "সালাম দেবেন, তারপর বোর্ডের গাছের নামটি দেখিয়ে জিজ্ঞেস করবেন: এটি কোথায় থাকে?",
+          "সবাই বিসমিল্লাহ বলবে।",
+          "'রাব্বি যিদনি ইলমা' বলে আজকের লক্ষ্য বলবেন: আজ আমরা বাগানের গল্প পড়া শিখব।",
+          "উপকরণ-যাচাই — বই, খাতা ও পেনসিল বের করা।"
+        ] },
+        { "name": "Hook", "display": "Hook", "minutes": 3, "mandatory": true, "body": "শিশুরা বলবে তারা কোন গাছ চেনে।" },
+        { "name": "DirectInstruction", "display": "সরাসরি পাঠদান / Direct Instruction", "minutes": 8, "mandatory": false, "body": "আপনি গল্পটি পড়বেন এবং চারটি শব্দের মানে বুঝিয়ে দেবেন।" },
+        { "name": "GuidedPractice", "display": "পরিচালিত অনুশীলন / Guided Practice", "minutes": 8, "mandatory": false, "body": "নাম ধরে এলোমেলোভাবে ডেকে প্রত্যেক শিশুকে দুটি বাক্য পড়তে দেবেন।" },
+        { "name": "IndependentPractice", "display": "স্বাধীন অনুশীলন / Independent Practice", "minutes": 6, "mandatory": false, "body": "সবাই চুপচাপ নিজে একবার পড়বে; আগে শেষ হলে বাড়তি কাজ ১ ও ২ করবে।" },
+        { "name": "ExitCheck", "display": "Exit-Check", "minutes": 4, "mandatory": true, "body": "শিশু বই থেকে একটি বাক্য পড়বে।" },
+        { "name": "Closing", "display": "সমাপ্তি / Closing", "minutes": 3, "mandatory": true, "is_checkbox": true, "body": [
+          "আজ কী শিখলাম তা একজন শিশু বলবে।",
+          "বাড়ির কাজ বুঝিয়ে দেবেন।",
+          "বই-খাতা ব্যাগে রাখবে।",
+          "সবাই আলহামদুলিল্লাহ বলবে।",
+          "সালাম দিয়ে শেষ করবেন।"
+        ] }
+      ]
+    },
+    "flex_zone": {
+      "intro": "দরকার হলে এখান থেকে নেবেন।",
+      "example_banks": [ { "heading": "যা শেখাতে হবে — আগে শেষ হলে", "items": ["নিজের পড়া আবার মিলিয়ে দেখবে।", "বাড়তি কাজ ১: গল্পের তিনটি শব্দ খাতায় লিখবে।", "বাড়তি কাজ ২: একটি গাছের নাম লিখবে।"] } ],
+      "discovery_ways": ["ছবি দেখে শিশু আগে অনুমান করবে।", "শিশু নিজে শব্দের মানে আন্দাজ করবে।", "শিশু গল্পের শেষটা আগে বলবে।"],
+      "fallback": "আবিষ্কার কাজ না করলে আপনি একটি প্রশ্ন করে অপেক্ষা করবেন।"
+    },
+    "flow_card": {
+      "rows": [
+        { "segment": "Opening", "one_line": "সালাম ও গাছের প্রশ্ন দিয়ে শুরু করবেন।" },
+        { "segment": "Hook", "one_line": "শিশুরা চেনা গাছের নাম বলবে।" },
+        { "segment": "DirectInstruction", "one_line": "আপনি গল্পটি পড়বেন।" },
+        { "segment": "GuidedPractice", "one_line": "প্রত্যেক শিশু দুটি বাক্য পড়বে।" },
+        { "segment": "IndependentPractice", "one_line": "সবাই চুপচাপ নিজে পড়বে।" },
+        { "segment": "ExitCheck", "one_line": "একটি বাক্য পড়া দেখবেন।" },
+        { "segment": "Closing", "one_line": "আলহামদুলিল্লাহ ও সালাম দিয়ে শেষ করবেন।" }
+      ],
+      "remember_strip": "প্রত্যেক শিশু নিজে পড়বে; ভুল হলে প্রশংসা করে আলতো করে শুধরে দেবেন।"
+    }
+  }
+}

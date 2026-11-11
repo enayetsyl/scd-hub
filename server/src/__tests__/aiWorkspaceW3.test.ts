@@ -22,6 +22,17 @@ jest.mock("../modules/content/services/ContentService", () => {
     runImportGate: (...a: unknown[]) => mockGate(...a),
   };
 });
+// The P09 plan tools (Python) are stubbed here; aiWorkspacePlanTools.test.ts runs the real ones.
+const PASS_CHECK = { verdict: "PASS", fails: [] as string[], warns: [] as string[], chapterDraftId: null, chapterVersion: null, at: new Date() };
+const mockCheck = jest.fn(async (..._a: unknown[]) => PASS_CHECK);
+jest.mock("../modules/ai-workspace/services/planTools", () => {
+  const actual = jest.requireActual("../modules/ai-workspace/services/planTools");
+  return {
+    ...actual,
+    checkPlanVersion: (...a: unknown[]) => mockCheck(...a),
+    preparePlanContent: async (_p: unknown, _d: unknown, planJson: string) => ({ body: `# rendered ${JSON.parse(planJson).plan_type}`, planCheck: await mockCheck() }),
+  };
+});
 
 import { promises as fs } from "fs";
 import mongoose, { Types } from "mongoose";
@@ -44,6 +55,7 @@ import {
   previewDraftSend,
   processQueuedRevisions,
   REVISE_INSTRUCTIONS,
+  REVISE_PLAN_INSTRUCTIONS,
   reviseDraft,
   saveDraftFromMessage,
   saveDraftVersion,
@@ -101,7 +113,7 @@ describe("content rules", () => {
 
   it("refuses bad JSON, a lesson plan without both parts, an unknown kind", async () => {
     await expect(createDraft(editor, projectId, { title: "Bank", kind: "question_bank", body: "not json" })).rejects.toThrow("JSON");
-    await expect(createDraft(editor, projectId, { title: "Plan", kind: "lesson_plan", body: "# md only" })).rejects.toThrow("দুটোই");
+    await expect(createDraft(editor, projectId, { title: "Plan", kind: "lesson_plan", body: "# md only" })).rejects.toThrow("JSON লাগে");
     await expect(createDraft(editor, projectId, { title: "X", kind: "poem", body: "x" })).rejects.toThrow("ধরন");
   });
 });
@@ -135,7 +147,8 @@ describe("save from chat, revise", () => {
     const m = await AiAssistMessage.create({ sessionId: chat.id, teacherId: principal.userId, projectId, role: "assistant", text: `# সেশন ১\nপাঠ\n\`\`\`json\n${PLAN}\n\`\`\``, at: new Date(), status: "done" });
     const d = await saveDraftFromMessage(principal, m._id.toString(), { title: "সেশন ১", kind: "lesson_plan" });
     const full = await draft(principal, d.id);
-    expect(full.version).toMatchObject({ body: "# সেশন ১\nপাঠ", planJson: PLAN, source: "chat" });
+    // The Markdown is rendered from the JSON (render_plan.py); the answer's own Markdown is dropped.
+    expect(full.version).toMatchObject({ body: "# rendered session_plan", planJson: PLAN, source: "chat", planCheck: { verdict: "PASS" } });
     const running = await AiAssistMessage.create({ sessionId: chat.id, teacherId: principal.userId, projectId, role: "assistant", text: "", at: new Date(), status: "running" });
     await expect(saveDraftFromMessage(principal, running._id.toString(), { title: "x", kind: "free" })).rejects.toThrow("শেষ হওয়া");
   });
@@ -176,6 +189,46 @@ describe("save from chat, revise", () => {
   });
 });
 
+describe("lesson plans (P09 plan tools)", () => {
+  const CH = JSON.stringify({ plan_type: "chapter_plan", subject: "BAN", class_level: 1, division: { number: 53 } });
+  const S1 = JSON.stringify({ plan_type: "session_plan", subject: "BAN", class_level: 1, division: { number: 53 }, session_plan: { session_form: "multi_period", period_index: 1, period_of: 2 } });
+
+  it("an answer with a chapter plan and its session plans becomes one draft per plan, chapter first", async () => {
+    const chat = await startProjectChat(principal, projectId);
+    const text = `পাঠ ৫৩\n\`\`\`json\n${S1}\n\`\`\`\n\n\`\`\`json\n${CH}\n\`\`\`\n\`\`\`json\n{"note":"not a plan"}\n\`\`\``;
+    const m = await AiAssistMessage.create({ sessionId: chat.id, teacherId: principal.userId, projectId, role: "assistant", text, at: new Date(), status: "done" });
+    const first = await saveDraftFromMessage(principal, m._id.toString(), { title: "পাঠ ৫৩", kind: "lesson_plan" });
+    expect(first).toMatchObject({ title: "পাঠ ৫৩ — অধ্যায় পরিকল্পনা", savedTogether: 2 });
+    const made = await AiDraft.find({ sourceMessageId: m._id }).sort({ _id: 1 }).lean();
+    expect(made.map((d) => d.title)).toEqual(["পাঠ ৫৩ — অধ্যায় পরিকল্পনা", "পাঠ ৫৩ — পিরিয়ড ১/২"]);
+  });
+
+  it("a bare JSON answer (no fence) is the plan", () => {
+    expect(contentFromAnswer("lesson_plan", ` ${CH} `)).toEqual({ body: "", planJson: CH });
+  });
+
+  it("approval re-runs the check and refuses a plan that fails it", async () => {
+    const d = await createDraft(editor, projectId, { title: "ফেল", kind: "lesson_plan", body: "", planJson: S1 });
+    mockCheck.mockResolvedValueOnce({ ...PASS_CHECK, verdict: "FAIL", fails: ["[SUM-35] segment minutes sum to 34, not 35"] });
+    await expect(approveDraft(principal, d.id)).rejects.toThrow("SUM-35");
+    expect((await draft(principal, d.id)).version.planCheck).toMatchObject({ verdict: "FAIL" });
+    expect(await approveDraft(principal, d.id)).toMatchObject({ status: "approved" });
+  });
+
+  it("revise sends the plan JSON only, with the validator's findings, and asks for JSON back", async () => {
+    mockCheck.mockResolvedValueOnce({ ...PASS_CHECK, verdict: "FAIL", fails: ["[OPEN-4] Opening must be the 4 canonical rituals (got 3)"] });
+    const d = await createDraft(editor, projectId, { title: "রিভাইজ প্ল্যান", kind: "lesson_plan", body: "", planJson: S1 });
+    const seen: AiSendInput[] = [];
+    const r = await reviseDraft(editor, d.id, { notes: "ত্রুটি ঠিক করুন", model: "deepseek-flash", thinking: "low", runAt: "now" }, { send: stubSend(`\`\`\`json\n${S1.replace("53", "54")}\n\`\`\``, seen) });
+    await r.done;
+    expect(seen[0].context).toContain(`# CURRENT PLAN (lesson_plan, version 1)\n\n\`\`\`json\n${S1}\n\`\`\``);
+    expect(seen[0].context).toContain("[OPEN-4]");
+    expect(seen[0].context).not.toContain("# rendered");
+    expect(seen[0].variablePart).toBe(`${REVISE_PLAN_INSTRUCTIONS}ত্রুটি ঠিক করুন`);
+    expect((await draft(editor, d.id)).version).toMatchObject({ version: 2, source: "revise", body: "# rendered session_plan" });
+  });
+});
+
 describe("send to a pipeline", () => {
   let planId = "";
   beforeAll(async () => {
@@ -212,7 +265,7 @@ describe("send to a pipeline", () => {
     const [files, actor, author] = mockImport.mock.calls[0] as [Array<{ filename: string; content: string }>, string, string];
     expect(files.map((f) => f.filename)).toEqual([`aiws-${planId}-v1.json`, `aiws-${planId}-v1.md`]);
     expect(files[0].content).toBe(PLAN);
-    expect(files[1].content).toBe("# সেশন ২");
+    expect(files[1].content).toBe("# rendered session_plan");
     expect([actor, author]).toEqual([principal.userId, "Head Teacher"]);
     expect((await AiDraft.findById(planId).lean())?.sends).toMatchObject([{ pipeline: "lesson_plan", version: 1, ok: true }]);
   });

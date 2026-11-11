@@ -1,6 +1,7 @@
 /**
  * AiDraftNewScreen (AI Workspace W-3) — a new draft: from a finished AI answer ("save as
- * draft" in a chat — a ```json block becomes the JSON part), or written by hand.
+ * draft" in a chat — a ```json block becomes the JSON part; an answer with several lesson
+ * plans becomes one draft per plan), or written by hand (a lesson plan: its JSON only).
  */
 import React from "react";
 import { View } from "react-native";
@@ -11,13 +12,16 @@ import type { AiWorkspaceStackParamList } from "../../navigation/types";
 import { Screen, Card, Button, Field, Select, ErrorBanner, Muted } from "../../components/ui";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
+import { fill } from "./aiWorkspaceUi";
 import { DRAFT_KINDS, isJsonKind, kindLabel } from "./draftUi";
 
 type Props = NativeStackScreenProps<AiWorkspaceStackParamList, "AiDraftNew">;
 
 export default function AiDraftNewScreen({ route, navigation }: Props): React.ReactElement {
   const { projectId, messageId } = route.params;
+  const toast = useToast();
   const [, create] = useMutation(CREATE_AI_DRAFT);
   const [, fromMessage] = useMutation(SAVE_AI_DRAFT_FROM_MESSAGE);
   const [title, setTitle] = React.useState("");
@@ -32,11 +36,13 @@ export default function AiDraftNewScreen({ route, navigation }: Props): React.Re
     setError(null);
     const res = messageId
       ? await fromMessage({ messageId, title, kind })
-      : await create({ projectId, title, kind, body, planJson: kind === "lesson_plan" ? planJson : null });
+      : await create({ projectId, title, kind, body: kind === "lesson_plan" ? "" : body, planJson: kind === "lesson_plan" ? planJson : null });
     setBusy(false);
     if (res.error || !res.data) return setError(friendlyError(res.error as never));
-    const id = "saveAiDraftFromMessage" in res.data ? res.data.saveAiDraftFromMessage.id : res.data.createAiDraft.id;
-    navigation.replace("AiDraft", { draftId: id });
+    const saved = "saveAiDraftFromMessage" in res.data ? res.data.saveAiDraftFromMessage : res.data.createAiDraft;
+    // One answer with a chapter plan and its session plans → one draft per plan (the first opens).
+    if (saved.savedTogether > 1) toast.show(fill(STR.awSavedTogether, { n: saved.savedTogether }), "ok");
+    navigation.replace("AiDraft", { draftId: saved.id });
   }
 
   return (
@@ -48,13 +54,24 @@ export default function AiDraftNewScreen({ route, navigation }: Props): React.Re
           <Muted>{STR.awSaveAsDraft}</Muted>
         ) : (
           <>
-            <Field label={isJsonKind(kind) ? STR.awDraftJsonBody : STR.awDraftBody} value={body} onChangeText={setBody} multiline inputStyle={{ minHeight: 200 }} />
-            {kind === "lesson_plan" ? <Field label={STR.awDraftPlanJson} value={planJson} onChangeText={setPlanJson} multiline inputStyle={{ minHeight: 160 }} /> : null}
+            {kind === "lesson_plan" ? (
+              <>
+                <Muted>{STR.awPlanJsonOnly}</Muted>
+                <Field label={STR.awDraftPlanJson} value={planJson} onChangeText={setPlanJson} multiline inputStyle={{ minHeight: 200 }} />
+              </>
+            ) : (
+              <Field label={isJsonKind(kind) ? STR.awDraftJsonBody : STR.awDraftBody} value={body} onChangeText={setBody} multiline inputStyle={{ minHeight: 200 }} />
+            )}
           </>
         )}
         {error ? <ErrorBanner message={error} /> : null}
         <View style={{ marginTop: space(2) }}>
-          <Button title={STR.awDraftCreate} onPress={() => void onCreate()} loading={busy} disabled={title.trim().length < 2 || (!messageId && !body.trim())} />
+          <Button
+            title={STR.awDraftCreate}
+            onPress={() => void onCreate()}
+            loading={busy}
+            disabled={title.trim().length < 2 || (!messageId && !(kind === "lesson_plan" ? planJson : body).trim())}
+          />
         </View>
       </Card>
     </Screen>

@@ -197,6 +197,7 @@ export function registerWorkspaceTools(server: McpServerLike, auth: AuthPayload,
         revise: d.draft.revise,
         has_plan_json: !!v.planJson,
         plan_json: v.planJson && (offset ?? 0) === 0 ? v.planJson.slice(0, MAX_SLICE) : undefined,
+        plan_check: v.planCheck ? { verdict: v.planCheck.verdict, fails: v.planCheck.fails, warns: v.planCheck.warns, chapter_draft_id: v.planCheck.chapterDraftId } : undefined,
         ...slice(v.body, offset, length),
       };
     },

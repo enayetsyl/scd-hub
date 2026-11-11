@@ -1,9 +1,11 @@
 /**
  * AiDraftScreen (AI Workspace W-3, docs/prd-ai-workspace.md §5) — one draft.
  *
- *   read      the current version (Markdown / JSON; a lesson plan shows both parts)
- *   edit      saves the next version (an approved draft becomes a draft again)
- *   approve   owner — locks the current version
+ *   read      the current version (Markdown / JSON). A lesson plan shows the Markdown rendered
+ *             from its JSON (render_plan.py), the JSON on request, and validate_plan.py's verdict
+ *   edit      saves the next version (an approved draft becomes a draft again); a lesson plan
+ *             edits its JSON only
+ *   approve   owner — locks the current version (a lesson plan only when the check passed)
  *   revise    notes + the three pickers → DeepSeek writes the next version (now / off-peak)
  *   export    Word / PDF, no AI
  *   send      approved + the pipeline's permission: "check first" (dry run + what it replaces),
@@ -75,6 +77,7 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
   const [preview, setPreview] = React.useState<{ verdict: string | null; failChecks: string[]; replaces: string | null; adds: string } | null>(null);
   const [curation, setCuration] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [showJson, setShowJson] = React.useState(false);
 
   const d = q.data?.aiDraft.draft;
   const v = q.data?.aiDraft.version;
@@ -144,6 +147,10 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
   }
 
   const clock = cq.data?.aiPriceClock;
+  const isPlan = d.kind === "lesson_plan";
+  const check = v.planCheck;
+  // A lesson plan is approved only when the validator passed (the server checks again).
+  const canApprove = !isPlan || check?.verdict === "PASS";
   return (
     <Screen scroll>
       <Card>
@@ -156,15 +163,21 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
 
       {editing ? (
         <Card>
-          <Field label={isJsonKind(d.kind) ? STR.awDraftJsonBody : STR.awDraftBody} value={body} onChangeText={setBody} multiline inputStyle={{ minHeight: 260 }} />
-          {d.kind === "lesson_plan" ? <Field label={STR.awDraftPlanJson} value={planJson} onChangeText={setPlanJson} multiline inputStyle={{ minHeight: 160 }} /> : null}
+          {isPlan ? (
+            <>
+              <Muted>{STR.awPlanJsonOnly}</Muted>
+              <Field label={STR.awDraftPlanJson} value={planJson} onChangeText={setPlanJson} multiline inputStyle={{ minHeight: 260 }} />
+            </>
+          ) : (
+            <Field label={isJsonKind(d.kind) ? STR.awDraftJsonBody : STR.awDraftBody} value={body} onChangeText={setBody} multiline inputStyle={{ minHeight: 260 }} />
+          )}
           <Field label={STR.awDraftNote} value={note} onChangeText={setNote} />
           <View style={{ flexDirection: "row", gap: space(1), marginTop: space(1) }}>
             <Button
               title={STR.awDraftSaveVersion}
               loading={busy === "save"}
               onPress={async () => {
-                const ok = await run("save", saveVersion({ draftId, body, planJson: d.kind === "lesson_plan" ? planJson : null, note: note || null }), STR.awSaved);
+                const ok = await run("save", saveVersion({ draftId, body: isPlan ? "" : body, planJson: isPlan ? planJson : null, note: note || null }), STR.awSaved);
                 if (ok) setEditing(false);
               }}
             />
@@ -172,9 +185,36 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
           </View>
         </Card>
       ) : (
+        <>
+        {isPlan && check ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.awPlanCheckTitle}</Body>
+            <Notice
+              tone={check.verdict === "PASS" ? "ok" : "danger"}
+              message={check.verdict === "PASS" ? STR.awPlanPass : check.verdict === "ERROR" ? STR.awPlanError : STR.awPlanFail}
+            />
+            {check.fails.map((f, i) => (
+              <Muted key={`f${i}`} style={breakAnywhere}>{`✗ ${f}`}</Muted>
+            ))}
+            {check.warns.length ? <Muted style={{ fontWeight: "700" }}>{STR.awPlanWarns}</Muted> : null}
+            {check.warns.map((w, i) => (
+              <Muted key={`w${i}`} style={breakAnywhere}>{`! ${w}`}</Muted>
+            ))}
+            {check.chapterVersion !== null ? <Muted>{fill(STR.awPlanChapter, { v: check.chapterVersion })}</Muted> : null}
+            {check.verdict === "FAIL" && canEdit && !reviseActive ? (
+              <Button title={STR.awPlanFixWithAi} variant="secondary" onPress={() => setNotes(STR.awPlanFixNotes)} />
+            ) : null}
+          </Card>
+        ) : null}
         <Card>
           <Body style={breakAnywhere}>{v.body}</Body>
-          {v.planJson ? <Muted style={breakAnywhere}>{v.planJson}</Muted> : null}
+          {v.planJson && !isPlan ? <Muted style={breakAnywhere}>{v.planJson}</Muted> : null}
+          {v.planJson && isPlan ? (
+            <>
+              <Button title={showJson ? STR.awPlanHideJson : STR.awPlanShowJson} variant="secondary" onPress={() => setShowJson((s) => !s)} />
+              {showJson ? <Muted style={breakAnywhere}>{v.planJson}</Muted> : null}
+            </>
+          ) : null}
           <Muted>{fill(STR.awVersionLine, { v: v.version, source: sourceLabel(v.source), when: isoDateTimeLabel(v.at), by: v.createdByName ? ` · ${v.createdByName}` : "" })}</Muted>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
             {canEdit && !reviseActive ? (
@@ -189,11 +229,14 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
                 }}
               />
             ) : null}
-            {role === "owner" && d.status !== "approved" ? <Button title={STR.awApprove} loading={busy === "approve"} onPress={() => void run("approve", approve({ draftId }), STR.awSaved)} /> : null}
+            {role === "owner" && d.status !== "approved" ? (
+              <Button title={STR.awApprove} loading={busy === "approve"} disabled={!canApprove} onPress={() => void run("approve", approve({ draftId }), STR.awSaved)} />
+            ) : null}
             <Button title={STR.awExportDocx} variant="secondary" loading={busy === "docx"} onPress={() => void onExport("docx")} />
             <Button title={STR.awExportPdf} variant="secondary" loading={busy === "pdf"} onPress={() => void onExport("pdf")} />
           </View>
         </Card>
+        </>
       )}
 
       {canEdit ? (
