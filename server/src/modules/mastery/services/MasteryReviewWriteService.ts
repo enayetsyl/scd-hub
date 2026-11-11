@@ -782,6 +782,21 @@ export interface ReviewDecisionInput {
 const trimOrNull = (s: string | null | undefined) => (typeof s === "string" && s.trim() ? s.trim() : null);
 const cleanList = (xs: string[] | null | undefined) => [...new Set((xs ?? []).map((x) => x.trim()).filter(Boolean))];
 
+/**
+ * Exercise refs from a reviewer form, each "<chapter>/<lesson>/<no>" (D-#1284). An older app split
+ * the box on commas too, shredding "12/জোড়া, হালি, ডজন/1" into "12/জোড়া", "হালি", "ডজন/1" — a part
+ * without two non-empty slashes is refused rather than saved.
+ */
+export function exerciseRefs(xs: string[] | null | undefined): string[] {
+  const list = cleanList(xs);
+  const bad = list.filter((x) => {
+    const parts = x.split("/");
+    return parts.length < 3 || parts.some((p) => !p.trim());
+  });
+  if (bad.length > 0) fail(`অনুশীলনী লিখুন "অধ্যায়/পাঠ/নম্বর" রূপে, প্রতি লাইনে একটি। ঠিক নেই: ${bad.join(" · ")}`);
+  return list;
+}
+
 function checkAssess(a: string | null | undefined): "QUESTION" | "RUBRIC" {
   if (a !== "QUESTION" && a !== "RUBRIC") return fail("যাচাইয়ের ধরন হবে প্রশ্ন (QUESTION) বা রুব্রিক (RUBRIC)।");
   return a;
@@ -876,7 +891,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       }
       let exercisesChanged = false;
       if (input.exercises) {
-        const x = cleanList(input.exercises);
+        const x = exerciseRefs(input.exercises);
         if (JSON.stringify(x) !== JSON.stringify(exercisesOf(row))) {
           ws.setExercises(row.code, x);
           exercisesChanged = true;
@@ -904,7 +919,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
         const label = k.labelBn.trim();
         if (!label) fail("প্রতিটি ভাগের লেবেল লিখুন।");
         const code = ws.nextSubCode(row.code);
-        const exercises = cleanList(k.exercises);
+        const exercises = exerciseRefs(k.exercises);
         const assess = k.assess ? checkAssess(k.assess) : row.assess;
         const qts = k.questionTypeCodes && k.questionTypeCodes.length ? checkQts(ws, cleanList(k.questionTypeCodes)) : [...(row.questionTypeCodes ?? [])];
         ws.create({
@@ -1057,7 +1072,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       const parentRow = level === "SUB" ? ws.liveDraft(input.parentCode) : null;
       const assess = input.assess ? checkAssess(input.assess) : (parentRow?.assess ?? "QUESTION");
       const qts = given.length > 0 || input.assess ? given : [...(parentRow?.questionTypeCodes ?? [])];
-      let exercises = cleanList(input.exercises);
+      let exercises = exerciseRefs(input.exercises);
       const reason = trimOrNull(input.reason);
       if (exercises.length === 0 && !reason) fail("বইয়ের অনুশীলনী (যেমন 7/হাতে রাখি/2) বা নতুন যোগের কারণ লিখুন।");
       let code: string;
