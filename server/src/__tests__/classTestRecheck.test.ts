@@ -272,13 +272,19 @@ describe("CT-RC flow", () => {
     const v = await recheckView(testId);
     expect(v.classFlag).toMatchObject({ confirmed: false });
     expect(v.classFlag!.classPct - v.classFlag!.usualPct).toBeGreaterThanOrEqual(15);
-    // Several are far above their own level too (Ayesha 60% → 90%); tick each of them first.
+    // Several are far above their own level too (Ayesha 60% → 90%), but only HIGH: the ONE
+    // class tick covers them — the teacher is not asked to tick every child.
     expect(v.rows.length).toBeGreaterThan(0);
-    for (const r of v.rows) await confirmRecheck({ testId, studentId: r.studentId, confirmed: true, actorId: teacher });
+    expect(v.rows.every((r) => r.classCovers && !r.confirmed)).toBe(true);
+    expect(v.unconfirmedCount).toBe(1);
     void kids;
     await expect(submitExam(testId, teacher)).rejects.toThrow(/পুরো শ্রেণির নম্বর অস্বাভাবিক বেশি/);
+    await expect(submitExam(testId, teacher)).rejects.not.toThrow(/জনের অস্বাভাবিক নম্বর/);
     await confirmRecheck({ testId, studentId: null, confirmed: true, note: "প্রশ্ন সহজ ছিল", actorId: teacher });
-    expect((await recheckView(testId)).classFlag).toMatchObject({ confirmed: true, note: "প্রশ্ন সহজ ছিল" });
+    const after = await recheckView(testId);
+    expect(after.classFlag).toMatchObject({ confirmed: true, note: "প্রশ্ন সহজ ছিল" });
+    expect(after.rows.every((r) => r.confirmed && r.note === "প্রশ্ন সহজ ছিল")).toBe(true);
+    expect(after.unconfirmedCount).toBe(0);
     await expect(submitExam(testId, teacher)).resolves.toMatchObject({ count: 4 });
   });
 

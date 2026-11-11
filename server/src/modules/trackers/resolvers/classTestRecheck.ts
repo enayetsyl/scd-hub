@@ -87,6 +87,7 @@ const rowFields = (t: any) => ({
   confirmedAt: t.string({ nullable: true, resolve: (r: RecheckRowView) => r.confirmedAt }),
   confirmedByName: t.string({ nullable: true, resolve: (r: RecheckRowView) => r.confirmedByName }),
   note: t.string({ nullable: true, resolve: (r: RecheckRowView) => r.note }),
+  classCovers: t.exposeBoolean("classCovers", { description: "R4 is up and this mark is only high/full — the class tick covers it." }),
   submitted: t.exposeBoolean("submitted"),
   published: t.exposeBoolean("published"),
   held: t.exposeBoolean("held"),

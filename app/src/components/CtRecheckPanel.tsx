@@ -108,7 +108,7 @@ function TeacherRow({ testId, r, onDone }: { testId: string; r: CtRecheckRowT; o
   }
 
   return (
-    <Card style={{ borderWidth: 2, borderColor: r.confirmed ? colors.border : colors.warning }}>
+    <Card style={{ borderWidth: 2, borderColor: r.confirmed || r.classCovers ? colors.border : colors.warning }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2) }}>
         <Body style={{ fontWeight: "700", flexShrink: 1 }}>{r.studentName}</Body>
         <Body style={{ fontWeight: "700" }}>
@@ -121,16 +121,26 @@ function TeacherRow({ testId, r, onDone }: { testId: string; r: CtRecheckRowT; o
         ))}
         <Muted>{avgLine(r)}</Muted>
       </View>
-      {!r.confirmed ? <Muted style={{ marginTop: space(1) }}>{STR.ctrcHint}</Muted> : null}
-      <View style={{ marginTop: space(2) }}>
-        <TickBox
-          checked={r.confirmed}
-          label={STR.ctrcTick}
-          disabled={fetching || locked}
-          onPress={() => void run(!r.confirmed, r.confirmed ? undefined : note)}
-        />
-      </View>
-      {r.confirmed ? (
+      {r.classCovers ? (
+        // R4: the one class tick above covers a high / full mark — no tick per child.
+        <Muted style={{ marginTop: space(1), color: r.confirmed ? colors.primary : colors.textSecondary }}>
+          {r.confirmed ? "✓ " : ""}
+          {STR.ctrcCoveredByClass}
+        </Muted>
+      ) : (
+        <>
+          {!r.confirmed ? <Muted style={{ marginTop: space(1) }}>{STR.ctrcHint}</Muted> : null}
+          <View style={{ marginTop: space(2) }}>
+            <TickBox
+              checked={r.confirmed}
+              label={STR.ctrcTick}
+              disabled={fetching || locked}
+              onPress={() => void run(!r.confirmed, r.confirmed ? undefined : note)}
+            />
+          </View>
+        </>
+      )}
+      {r.confirmed && !r.classCovers ? (
         <View style={{ marginTop: space(2) }}>
           <Field label={STR.ctrcNote} value={note} onChangeText={setNote} placeholder={STR.ctrcNotePh} editable={!locked} />
           {!locked && note.trim() !== (r.note ?? "").trim() ? (
@@ -242,7 +252,7 @@ export function CtRecheckPanel({
   return (
     <View style={{ marginTop: space(2) }}>
       <Text style={{ ...typeScale.sectionTitle, color: colors.textPrimary, marginBottom: space(1) }}>
-        {STR.ctrcTitle} · {bnNum(rows.length + (cf ? 1 : 0))}
+        {STR.ctrcTitle} · {bnNum(rows.length)}
       </Text>
       {mode === "teacher" ? (
         data.unconfirmedCount > 0 ? (

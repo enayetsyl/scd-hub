@@ -160,6 +160,7 @@ export async function heldResults(): Promise<HeldResultShape[]> {
           confirmedAt: null,
           confirmedByName: null,
           note: null,
+          classCovers: false,
           submitted: true,
           published: false,
           held: true,

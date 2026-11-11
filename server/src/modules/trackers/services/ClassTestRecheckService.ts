@@ -175,6 +175,8 @@ export interface RecheckRowView {
   confirmedAt: string | null;
   confirmedByName: string | null;
   note: string | null;
+  /** R4 is up and this mark is only high / full: the ONE class tick covers it (no own tick). */
+  classCovers: boolean;
   submitted: boolean;
   published: boolean;
   held: boolean;
@@ -249,8 +251,20 @@ async function namesOf(ids: Types.ObjectId[], kind: "student" | "user"): Promise
   return new Map(docs.map((d) => [d._id.toString(), d.name]));
 }
 
+/** Under a whole-class flag (R4) a mark that is only HIGH / FULL is the class's story, so the
+ *  one class tick covers it; a LOW mark in an inflated class still needs its own look. */
+function classCovers(c: Computed, r: RowLite): boolean {
+  const f = c.flags.get(r.studentId.toString());
+  return !!c.classFlag && !!f && f.kinds.every((k) => k !== "LOW");
+}
+
+function rowValid(c: Computed, r: RowLite): boolean {
+  return rowTickValid(r) || (classCovers(c, r) && c.classTickValid);
+}
+
 function unpublishedUnconfirmed(c: Computed): RowLite[] {
-  return c.rows.filter((r) => !r.publishedAt && c.flags.has(r.studentId.toString()) && !rowTickValid(r));
+  // A covered row is owed through the class tick (counted once by classOpen), not per child.
+  return c.rows.filter((r) => !r.publishedAt && c.flags.has(r.studentId.toString()) && !rowValid(c, r) && !classCovers(c, r));
 }
 
 const classOpen = (c: Computed): boolean => !!c.classFlag && !c.classTickValid && c.rows.some((r) => !r.publishedAt);
@@ -265,7 +279,10 @@ export async function recheckView(testId: string): Promise<RecheckView> {
 
   const rows: RecheckRowView[] = flaggedRows.map((r) => {
     const f = c.flags.get(r.studentId.toString())!;
-    const valid = rowTickValid(r);
+    const own = rowTickValid(r);
+    const viaClass = !own && classCovers(c, r) && c.classTickValid;
+    const valid = own || viaClass;
+    const cr0 = c.test.classRecheck;
     return {
       studentId: r.studentId.toString(),
       studentName: studentNames.get(r.studentId.toString()) ?? "শিক্ষার্থী",
@@ -277,9 +294,14 @@ export async function recheckView(testId: string): Promise<RecheckView> {
       priorCount: f.priorCount,
       kinds: f.kinds,
       confirmed: valid,
-      confirmedAt: valid ? new Date(r.recheck!.confirmedAt).toISOString() : null,
-      confirmedByName: valid ? userNames.get(r.recheck!.confirmedBy.toString()) ?? null : null,
-      note: valid ? r.recheck!.note ?? null : null,
+      confirmedAt: own ? new Date(r.recheck!.confirmedAt).toISOString() : viaClass && cr0 ? new Date(cr0.confirmedAt).toISOString() : null,
+      confirmedByName: own
+        ? userNames.get(r.recheck!.confirmedBy.toString()) ?? null
+        : viaClass && cr0
+          ? userNames.get(cr0.confirmedBy.toString()) ?? null
+          : null,
+      note: own ? r.recheck!.note ?? null : viaClass && cr0 ? cr0.note ?? null : null,
+      classCovers: classCovers(c, r),
       submitted: !!r.submittedAt,
       published: !!r.publishedAt,
       held: !!r.recheckHold,

@@ -4711,7 +4711,8 @@ const STR_BN = {
   ctSubmittedLocked: "অনুমোদনের অপেক্ষায় — সম্পাদনার আগে ফেরত নিন।",
   // CT-RC — unusual-mark recheck + the script hand-in pop-up
   ctrcTitle: "অস্বাভাবিক নম্বর",
-  ctrcBannerTeacher: "{n} জনের নম্বর অস্বাভাবিক। এদের খাতা আবার দেখে নিশ্চিত করুন — নিশ্চিত না করলে জমা দেওয়া যাবে না।",
+  ctrcBannerTeacher: "{n}টি অস্বাভাবিক নম্বর এখনো নিশ্চিত করা হয়নি। খাতা আবার দেখে টিক দিন — টিক না দিলে জমা দেওয়া যাবে না।",
+  ctrcCoveredByClass: "পুরো শ্রেণির টিকেই এটি নিশ্চিত হবে",
   ctrcAllConfirmed: "সব অস্বাভাবিক নম্বর নিশ্চিত করা হয়েছে।",
   ctrcKindHIGH: "অস্বাভাবিক বেশি",
   ctrcKindLOW: "অস্বাভাবিক কম",
@@ -12738,7 +12739,8 @@ const STR_EN: StrTable = {
   ctSubmittedLocked: "Pending approval — recall to edit.",
   // CT-RC — unusual-mark recheck + the script hand-in pop-up
   ctrcTitle: "Unusual marks",
-  ctrcBannerTeacher: "{n} marks are unusual. Check these scripts again and confirm — you cannot submit until you do.",
+  ctrcBannerTeacher: "{n} unusual marks are not confirmed yet. Check the scripts again and tick — you cannot submit until you do.",
+  ctrcCoveredByClass: "The whole-class tick confirms this one",
   ctrcAllConfirmed: "Every unusual mark is confirmed.",
   ctrcKindHIGH: "Unusually high",
   ctrcKindLOW: "Unusually low",

@@ -31,6 +31,8 @@ export interface CtRecheckRowT {
   confirmedAt: string | null;
   confirmedByName: string | null;
   note: string | null;
+  /** R4 is up and this mark is only high / full: the class tick covers it. */
+  classCovers: boolean;
   submitted: boolean;
   published: boolean;
   held: boolean;
@@ -65,7 +67,7 @@ export interface CtHeldResultT extends CtRecheckRowT {
 }
 
 const RULES = `enabled highPct lowPct fullMarksBelowPct classHighPct minPriorTests isDefault`;
-const ROW = `studentId studentName marks totalMarks percent averagePct basis priorCount kinds confirmed confirmedAt confirmedByName note submitted published held heldAt`;
+const ROW = `studentId studentName marks totalMarks percent averagePct basis priorCount kinds confirmed confirmedAt confirmedByName note classCovers submitted published held heldAt`;
 const VIEW = `testId rules { ${RULES} } rows { ${ROW} } classFlag { classPct usualPct usualTests confirmed confirmedAt confirmedByName note } unconfirmedCount awaitingApprovalCount`;
 const PUBLISH_OUTCOME = `testId unreachableCount recipients { studentId studentName kind messageBn waLink unreachableByWa notifiedGuardianIds publishedVersion }`;
 
