@@ -10,7 +10,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { MASTERY_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS } from "@scd/shared";
 import { MASTERY_PAPERS_PAGE_QUERY, type MasteryPaperRow } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
 import { useAccessibleClasses } from "../../components/ClassSectionDashboard";
@@ -84,7 +84,8 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
         ))}
       </ChipRow>
       <ChipRow>
-        {MASTERY_SUBJECTS.map((s) => (
+        {/* Sheets follow the routine / homework subjects; ICT, BAN2, ENG2 are content-only until Class 6 onboarding (D-#1312). */}
+        {HW_SUBJECTS.map((s) => (
           <Chip key={s} label={hwSubjectLabel(s)} selected={s === subject} onPress={() => { setSubject(s); setPage(1); }} />
         ))}
       </ChipRow>

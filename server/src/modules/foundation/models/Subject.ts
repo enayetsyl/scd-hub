@@ -1,7 +1,9 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { SUBJECTS } from "@scd/shared";
+import { NCTB_GENERAL_SUBJECTS } from "@scd/shared";
 
-export const FOUNDATION_SUBJECTS = [...SUBJECTS, "ISLAM"] as const;
+/** The operational Subject collection: the five NCTB general subjects + ISLAM. Pinned to the
+ *  general list so the 2027 content codes (ICT, BAN2, ENG2) do not leak into it (D-#1310). */
+export const FOUNDATION_SUBJECTS = [...NCTB_GENERAL_SUBJECTS, "ISLAM"] as const;
 export type FoundationSubjectCode = (typeof FOUNDATION_SUBJECTS)[number];
 
 export interface ISubject extends Document {

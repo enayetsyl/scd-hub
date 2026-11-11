@@ -177,7 +177,7 @@ def check_surface(plan):
         m = re.search(pat, surface)
         if m:
             fail("SURFACE", f"forbidden code on surface: {lbl} ('{m.group(0)}')")
-    if plan["subject"] == "ENG":
+    if plan["subject"] in ("ENG", "ENG2"):  # ENG2 = English 2nd paper (D-#1310)
         # The ENG strict-Latin rule (Layout v10 §C) polices numerals the plan
         # GENERATES on the surface (minutes, flow-card #, counts, period index).
         # It does NOT touch the Bangla numerals baked into the frozen bilingual

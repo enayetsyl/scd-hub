@@ -60,22 +60,35 @@
 
 import { DEFAULT_ADVICE_LETTER_BODY } from "./adviceLetter";
 
-/** Subject codes. MIRROR of envelope `subject`. */
-export const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS"] as const;
+/** Content subject codes. MIRROR of envelope `subject`. D-#1310 (2027 content): ISLAM (Classes
+ *  1–5), and for Class 6 ICT, BAN2 (Bangla 2nd paper), ENG2 (English 2nd paper). BAN / ENG keep
+ *  meaning the only paper, or the 1st paper in Class 6. A CONTENT axis only — routine, homework
+ *  and class tests keep their own lists (HW_SUBJECTS / ROUTINE_SUBJECTS). */
+export const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"] as const;
 export type Subject = (typeof SUBJECTS)[number];
+
+/** The five NCTB general subjects (the pre-2027 content list). Anything exam- or scholarship-
+ *  specific that means "the five general subjects" reads this, not `SUBJECTS` (D-#1310). */
+export const NCTB_GENERAL_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS"] as const;
+export type NctbGeneralSubject = (typeof NCTB_GENERAL_SUBJECTS)[number];
+
+/** Content subjects WITHOUT REF-19 topic slugs: a question's `ref19_topic_id` is optional for
+ *  them and, when present, is not checked against the registry (D-#1311). BAN2 / ENG2 use the
+ *  BAN- / ENG- slugs and stay required. Mirrors validate_import.py `REF19_OPTIONAL_SUBJECTS`. */
+export const REF19_OPTIONAL_SUBJECTS: readonly Subject[] = ["ISLAM", "ICT"];
 
 /** Foundation-only subject codes. These live on the operational plane (Subject
  *  collection) and may exceed the locked content-envelope subject enum. */
-type FoundationSubjectCode = Subject | "ISLAM";
+type FoundationSubjectCode = Subject;
 
-/** Class levels C1–C5 (one evolving plan schema spans all, R-IMP2). Range, not enum.
- *  CONTENT axis: curriculum content is authored for C1–C5 only. MIRROR of the LOCKED
- *  envelope `class_level` (1..5) — do NOT widen these to fit roster pre-primary classes
- *  (Nursery/KG); the roster uses its own range below (ROSTER_CLASS_LEVELS). */
-export const CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
+/** Class levels C1–C6 (one evolving plan schema spans all, R-IMP2). Range, not enum.
+ *  CONTENT axis: curriculum content is authored for C1–C6 (Class 6 added for 2027, D-#1310).
+ *  MIRROR of the LOCKED envelope `class_level` (1..6) — do NOT widen these to fit roster
+ *  pre-primary classes (Nursery/KG); the roster uses its own range below (ROSTER_CLASS_LEVELS). */
+export const CLASS_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 export type ClassLevel = (typeof CLASS_LEVELS)[number];
 export const CLASS_LEVEL_MIN = 1;
-export const CLASS_LEVEL_MAX = 5;
+export const CLASS_LEVEL_MAX = 6;
 
 /** ROSTER axis: the school enrolls pre-primary classes (Nursery, KG) that carry NO
  *  curriculum content. A SUPERSET of the content range — One..Five keep 1..5 so content
@@ -254,6 +267,11 @@ export const QUESTION_TIME_RATES: Record<Subject, Record<QuestionType, number>> 
   MATH: { mcq: 1.3, short_answer: 2.0, true_false: 1.0, fill_blank: 1.2, matching: 1.0, descriptive: 1.25 },
   SCI:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
   BGS:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  // D-#1310: the 2027 subjects borrow the nearest seeded row until real timings exist.
+  ISLAM: { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  ICT:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  BAN2: { mcq: 1.0, short_answer: 1.5, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 2.0 },
+  ENG2: { mcq: 1.0, short_answer: 1.2, true_false: 0.8, fill_blank: 0.8, matching: 0.8, descriptive: 2.0 },
 };
 
 /** Fallback when a question carries a subject or type the grid does not know. */
@@ -361,6 +379,9 @@ export const SUBJECT_LABELS_BN: Record<FoundationSubjectCode, string> = {
   SCI: "বিজ্ঞান",
   BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
   ISLAM: "ইসলাম শিক্ষা",
+  ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
+  BAN2: "বাংলা ২য় পত্র",
+  ENG2: "ইংরেজি ২য় পত্র",
 };
 
 export const DOC_TYPE_LABELS_BN: Record<DocType, string> = {
@@ -1061,6 +1082,9 @@ export const SUBJECT_LABELS_EN: Record<FoundationSubjectCode, string> = {
   SCI: "Science",
   BGS: "Bangladesh & Global Studies",
   ISLAM: "Islamic Studies",
+  ICT: "Information & Communication Technology",
+  BAN2: "Bangla 2nd paper",
+  ENG2: "English 2nd paper",
 };
 
 export const DOC_TYPE_LABELS_EN: Record<DocType, string> = {
@@ -5325,9 +5349,37 @@ export const SCHOLARSHIP_CLASS_LEVELS: readonly number[] = [5];
 export const MASTERY_CLASS_TOKENS = ["NUR", "KG", "C1", "C2", "C3", "C4", "C5", "C6"] as const;
 export type MasteryClassToken = (typeof MASTERY_CLASS_TOKENS)[number];
 
-/** Subjects the module covers: every homework subject — Quran is not one (D-#784). */
-export const MASTERY_SUBJECTS = HW_SUBJECTS;
-export type MasterySubject = HwSubject;
+/** Subjects the module covers: every homework subject — Quran is not one (D-#784) — plus the
+ *  Class 6 content subjects ICT, BAN2, ENG2 so their objective trees can be imported (D-#1312).
+ *  Those three are not routine / homework / class-test subjects yet (Class 6 onboarding). */
+export const MASTERY_SUBJECTS = [...HW_SUBJECTS, "ICT", "BAN2", "ENG2"] as const;
+export type MasterySubject = (typeof MASTERY_SUBJECTS)[number];
+
+/** Bangla label of a mastery subject (homework subjects + the Class 6 content subjects). */
+export const MASTERY_SUBJECT_LABELS_BN: Record<MasterySubject, string> = {
+  BAN: "বাংলা",
+  ENG: "ইংরেজি",
+  MATH: "গণিত",
+  SCI: "বিজ্ঞান",
+  BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
+  ARABIC: "আরবি",
+  ISLAM: "ইসলাম শিক্ষা",
+  ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
+  BAN2: "বাংলা ২য় পত্র",
+  ENG2: "ইংরেজি ২য় পত্র",
+};
+export const MASTERY_SUBJECT_LABELS_EN: Record<MasterySubject, string> = {
+  BAN: "Bangla",
+  ENG: "English",
+  MATH: "Mathematics",
+  SCI: "Science",
+  BGS: "Bangladesh & Global Studies",
+  ARABIC: "Arabic",
+  ISLAM: "Islamic Studies",
+  ICT: "Information & Communication Technology",
+  BAN2: "Bangla 2nd paper",
+  ENG2: "English 2nd paper",
+};
 
 /** How an LO is assessed: a written question, or the 4-step rubric (D-#778). */
 export const MASTERY_ASSESS = ["QUESTION", "RUBRIC"] as const;
@@ -5407,10 +5459,10 @@ export const MASTERY_RUBRIC_LABELS_BN: Record<1 | 2 | 3 | 4, string> = {
  *  `LO-<class>-<subject>-SK-<STRAND>-<NN>` for a skill that spans chapters. Either may take a
  *  sub-objective suffix `.N` (N = 1..99): `LO-C1-MATH-07-03.2` (objective tree, D-#921). */
 export const MASTERY_LO_CODE_RE =
-  /^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\d{2}|SK-[A-Z]{2,8})-\d{2}(\.\d{1,2})?$/;
+  /^LO-(NUR|KG|C[1-6])-(BAN2|ENG2|BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM|ICT)-(\d{2}|SK-[A-Z]{2,8})-\d{2}(\.\d{1,2})?$/;
 
 /** A school-wide domain code of the objective tree (D-#921): `DOM-<SUBJ>-<SLUG>`. */
-export const MASTERY_DOMAIN_CODE_RE = /^DOM-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-[A-Z0-9]{2,12}$/;
+export const MASTERY_DOMAIN_CODE_RE = /^DOM-(BAN2|ENG2|BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM|ICT)-[A-Z0-9]{2,12}$/;
 
 /** Objective-tree levels (D-#921). A domain is not a MasteryOutcome row (MasteryDomain). */
 export const MASTERY_OUTCOME_LEVELS = ["OBJECTIVE", "SUB"] as const;

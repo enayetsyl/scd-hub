@@ -62,7 +62,8 @@ check("HR_CATEGORY_LABELS_BN total",       total(V.HR_CATEGORY_LABELS_BN, V.HR_C
 check("EMPLOYMENT_TYPE_LABELS_BN total",   total(V.EMPLOYMENT_TYPE_LABELS_BN, V.EMPLOYMENT_TYPES));
 check("EMPLOYMENT_STATUS_LABELS_BN total", total(V.EMPLOYMENT_STATUS_LABELS_BN, V.EMPLOYMENT_STATUSES));
 check("HW_SUBJECT_LABELS_BN total",        total(V.HW_SUBJECT_LABELS_BN, V.HW_SUBJECTS));
-check("HW_SUBJECTS superset of SUBJECTS",  V.SUBJECTS.every((s) => V.HW_SUBJECTS.includes(s)));
+check("HW_SUBJECTS superset of the five NCTB general subjects (content SUBJECTS adds ICT/BAN2/ENG2, D-#1310)",  V.NCTB_GENERAL_SUBJECTS.every((s) => V.HW_SUBJECTS.includes(s)) && V.NCTB_GENERAL_SUBJECTS.every((s) => V.SUBJECTS.includes(s)));
+check("2027 content subjects ISLAM ICT BAN2 ENG2 in SUBJECTS; REF19_OPTIONAL_SUBJECTS = ISLAM, ICT (D-#1310/#1311)", ["ISLAM", "ICT", "BAN2", "ENG2"].every((s) => V.SUBJECTS.includes(s)) && eq(V.REF19_OPTIONAL_SUBJECTS, ["ISLAM", "ICT"]));
 check("LIFECYCLE_STATE_LABELS_BN total",   total(V.LIFECYCLE_STATE_LABELS_BN, V.LIFECYCLE_STATES));
 check("HW_RESULT_LABELS_BN total",         total(V.HW_RESULT_LABELS_BN, V.HW_RESULTS));
 check("RECON_STATE_LABELS_BN total",       total(V.RECON_STATE_LABELS_BN, V.RECON_STATES));
@@ -819,8 +820,14 @@ check("mastery:approve is on the PRINCIPAL template only — Office holders get 
 check("TEACHER holds mastery:read + mastery:enter (routine-scoped in the service); GUARDIAN holds no mastery:*",
   V.roleHasPermission("TEACHER", "mastery:read") && V.roleHasPermission("TEACHER", "mastery:enter") &&
   !V.PERMISSIONS.filter((p) => p.startsWith("mastery:")).some((p) => V.roleHasPermission("GUARDIAN", p)));
-check("mastery covers every homework subject and no Quran (D-#784)",
-  eq([...V.MASTERY_SUBJECTS], [...V.HW_SUBJECTS]) && !V.MASTERY_SUBJECTS.includes("QURAN"));
+check("mastery covers every homework subject + ICT/BAN2/ENG2, and no Quran (D-#784, D-#1312)",
+  eq([...V.MASTERY_SUBJECTS], [...V.HW_SUBJECTS, "ICT", "BAN2", "ENG2"]) && !V.MASTERY_SUBJECTS.includes("QURAN"));
+check("MASTERY_SUBJECT_LABELS_BN/EN total", total(V.MASTERY_SUBJECT_LABELS_BN, V.MASTERY_SUBJECTS) && total(V.MASTERY_SUBJECT_LABELS_EN, V.MASTERY_SUBJECTS));
+check("LO/domain codes accept Class 6 ICT / BAN2 / ENG2, refuse Class 7 (D-#1312)",
+  V.MASTERY_LO_CODE_RE.test("LO-C6-BAN2-03-02.1") && V.MASTERY_LO_CODE_RE.test("LO-C6-ICT-01-01") &&
+  V.MASTERY_LO_CODE_RE.test("LO-C6-ENG2-02-01") && !V.MASTERY_LO_CODE_RE.test("LO-C7-ICT-01-01") &&
+  V.parseMasteryLoCode("LO-C6-BAN2-03-02.1")?.subject === "BAN2" &&
+  V.MASTERY_DOMAIN_CODE_RE.test("DOM-ENG2-TENSE") && V.MASTERY_DOMAIN_CODE_RE.test("DOM-ICT-SAFE"));
 check("LO code pattern: chapter outcome + skill strand accepted, malformed refused (D-#776)",
   V.MASTERY_LO_CODE_RE.test("LO-C3-MATH-07-03") && V.MASTERY_LO_CODE_RE.test("LO-C1-BAN-SK-HW-01") &&
   V.MASTERY_LO_CODE_RE.test("LO-NUR-ENG-01-01") && !V.MASTERY_LO_CODE_RE.test("LO-C7-MATH-01-01") &&
