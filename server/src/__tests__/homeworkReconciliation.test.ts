@@ -58,6 +58,15 @@ jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
   HomeworkNilDeclaration: { find: (f: unknown) => ({ select: () => ({ lean: () => mockNilFind(f) }) }) },
 }));
 
+// GlitchTip #74 — tallyDay falls back to the section's class when classId is "".
+const mockSectionFindById = jest.fn();
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: {
+    findById: (id: unknown) => ({ select: () => ({ lean: () => mockSectionFindById(id) }) }),
+    find: () => ({ select: () => ({ lean: () => Promise.resolve([]) }), lean: () => Promise.resolve([]) }),
+  },
+}));
+
 // Import AFTER mocks
 import {
   tallyDay,
@@ -146,6 +155,23 @@ describe("T2.1/T2.5 — tallyDay (live DAY_TOTAL vs 120)", () => {
     expect(r.bandWarnings).toContain("HW-C1-MATH-0009");
     expect(r.items[0].bandWarning).toBe(true);
     expect(r.withinCeiling).toBe(true); // 45 ≤ 120 day-sum → not blocked
+  });
+
+  test("GlitchTip #74: classId \"\" is resolved from the section, never queried as \"\"", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: new mongoose.Types.ObjectId(CLASS_ID) });
+    mockList.mockResolvedValue([leanItem({ timeDecl: 25 })]);
+    const r = await tallyDay("", A_TUESDAY, SECTION_ID);
+    expect(mockList).toHaveBeenCalledWith(CLASS_ID, A_TUESDAY, SECTION_ID);
+    expect(r.dayTotal).toBe(25);
+  });
+
+  test("GlitchTip #74: classId \"\" with no resolvable section → empty tally, no query", async () => {
+    mockSectionFindById.mockResolvedValue(null);
+    const r = await tallyDay("", A_TUESDAY, SECTION_ID);
+    expect(mockList).not.toHaveBeenCalled();
+    expect(r.items).toEqual([]);
+    expect(r.dayTotal).toBe(0);
+    expect(r.state).toBe("within_ceiling");
   });
 
   test("a reconciled day reports state=reconciled", async () => {
