@@ -90,9 +90,31 @@ Conflicts that git did not flag (found by typecheck / tests / reading):
 
 ## Verified (commands + result tails)
 
-_Filled in below from this session's runs._
+All run in this session on this container (Linux, Node from the repo's lockfile, 15 GB RAM).
+Heap: server `tsc` and the schema-building Jest suites need more than Node's default heap here
+(they died with "JavaScript heap out of memory" at the default); CI sets
+`NODE_OPTIONS=--max-old-space-size=4096`, and the runs below used 4096 (Jest, export) or 6144
+(server `tsc`, `--runInBand` exam suites).
 
-VERIFIED_PLACEHOLDER
+| Check | Command | Result tail |
+|---|---|---|
+| Shared vocab / RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` | `RESULT: PASS — all checks green` |
+| Descriptive answer carriers | `node skills/_tools/verify_descriptive_carriers.mjs` | `RESULT: PASS — all 11 descriptive cases gate as intended` |
+| LO-code conformance | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes` | `RESULT: PASS — all 13 lo-codes cases gate as intended` |
+| Objective tree | `node skills/_tools/verify_objective_tree.mjs docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json` | `coverage: 164 / 164 exercises mapped, 0 unmapped` · `ALL CHECKS PASSED` |
+| Mastery catalogue | `npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue` | `RESULT: PASS — 11 catalogue files valid` |
+| Import envelope | `python3 server/import/validate_import.py docs/examples/envelope_C5_ENG_U09_S01.json --envelope-schema docs/import-contract.schema.json` | `RESULT: PASS (0 warn, 0 advisory) — importable` |
+| Help guides | `node skills/_tools/verify_help_guides.mjs` | `help guides: 361 file(s), 20 draft(s), 16 categories` · `ALL CHECKS PASSED` (6 of the drafts are the new exam guides) |
+| Build shared | `npm run build --workspace=shared` | exit 0 |
+| Typecheck shared | `npm run typecheck --workspace=shared` | exit 0 |
+| Typecheck server | `NODE_OPTIONS=--max-old-space-size=6144 npm run typecheck --workspace=server` | exit 0, 0 `error TS` |
+| Typecheck app | `cd app && npm run typecheck` | exit 0, 0 `error TS` |
+| Exam suites + gates (`--runInBand`) | `npx jest --runInBand` exams, examAssignment, examMark, examRecheck, examCustody, examPublish, reportCard, navInitialRoute, examRowCompat, exam, examSyllabus, examSyllabusRead, examRoutine, examPapers, quranExam, permissionCatalogueGates, graphqlDocuments, helpGuides, notificationNavCoverage, expectedErrorRegistry | `Test Suites: 20 passed, 20 total` · `Tests: 398 passed, 398 total`; plus `viva` + `worksheetService`: `Tests: 37 passed, 37 total` |
+| Full server suite | `npx jest --maxWorkers=2` | `Test Suites: 417 passed, 417 total` · `Tests: 6936 passed, 6936 total` · `Time: 387.147 s` · `EXIT 0` — this run started before the last two edits (guardian-null EX fields in `resolvers/exams.ts`, screen indentation); the suites those touch were re-run after (row above). A rerun on the final tree is noted below if it finished. |
+| Web export | `cd app && npx expo export --platform web` (to a scratch output dir) | `Web Bundled 73027ms index.js (4278 modules)` · `App exported to: …/webdist` · real exit code `EXIT 0` |
+
+Not run: Lint (the AGENTS table lists it as _TBD_); the Python envelope auto-wrap
+(`build_envelope.py`) — no plan pair was changed, so there was nothing to wrap.
 
 ## Not done
 
