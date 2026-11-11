@@ -331,8 +331,14 @@ export const PUBLISH_CLASS_TEST_RESULT = gql<
     publishClassTestResult(testId: $testId, studentId: $studentId) { ${PUBLISH_OUTCOME_FIELDS} }
   }
 `;
-export const PUBLISH_CLASS_TEST_EXAM = gql<{ publishClassTestExam: ClassTestPublishOutcomeT }, { testId: string }>`
-  mutation PublishClassTestExam($testId: String!) { publishClassTestExam(testId: $testId) { ${PUBLISH_OUTCOME_FIELDS} } }
+// CT-RC: `flagsReviewed` = the approver ticked "I have looked at the unusual marks".
+export const PUBLISH_CLASS_TEST_EXAM = gql<
+  { publishClassTestExam: ClassTestPublishOutcomeT },
+  { testId: string; flagsReviewed?: boolean | null }
+>`
+  mutation PublishClassTestExam($testId: String!, $flagsReviewed: Boolean) {
+    publishClassTestExam(testId: $testId, flagsReviewed: $flagsReviewed) { ${PUBLISH_OUTCOME_FIELDS} }
+  }
 `;
 export const UNPUBLISH_CLASS_TEST_RESULT = gql<
   { unpublishClassTestResult: ClassTestUnpublishOutcomeT },
@@ -351,8 +357,14 @@ export interface ClassTestSubmitOutcomeT {
   testId: string;
   count: number;
 }
-export const SUBMIT_CLASS_TEST_EXAM = gql<{ submitClassTestExam: ClassTestSubmitOutcomeT }, { testId: string }>`
-  mutation SubmitClassTestExam($testId: String!) { submitClassTestExam(testId: $testId) { testId count } }
+// CT-RC: `scriptReminderAck` = the teacher tapped "বুঝেছি" on the script hand-in pop-up.
+export const SUBMIT_CLASS_TEST_EXAM = gql<
+  { submitClassTestExam: ClassTestSubmitOutcomeT },
+  { testId: string; scriptReminderAck?: boolean | null }
+>`
+  mutation SubmitClassTestExam($testId: String!, $scriptReminderAck: Boolean) {
+    submitClassTestExam(testId: $testId, scriptReminderAck: $scriptReminderAck) { testId count }
+  }
 `;
 export const RECALL_CLASS_TEST_EXAM = gql<{ recallClassTestExam: ClassTestSubmitOutcomeT }, { testId: string }>`
   mutation RecallClassTestExam($testId: String!) { recallClassTestExam(testId: $testId) { testId count } }

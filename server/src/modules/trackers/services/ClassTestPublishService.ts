@@ -40,6 +40,8 @@ import { ClassTestResultError } from "./ClassTestResultService";
 import { startScriptClock } from "./ClassTestScriptService";
 import { personName } from "../../../lib/personName";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { approvalFlagCount, assertNoSubmitBlockers, submittedFlagCount } from "./ClassTestRecheckService";
+import { bnNum } from "../../../lib/bnNum";
 
 // ---------------------------------------------------------------------------
 // Message build (rendered from the MT registry; §8 Regular / Excellent / Absent)
@@ -209,10 +211,11 @@ export async function publishResult(testId: string, studentId: string, actorId: 
   if (!prior) throw new ClassTestResultError("No result entered for this student — nothing to publish");
   const changed = marksSnapshotDiff(prior);
 
-  // Stamp + bump atomically; a non-existent result can't be published.
+  // Stamp + bump atomically; a non-existent result can't be published. CT-RC: this is
+  // also how a HELD row is released, so the hold goes with it.
   const doc = (await ClassTestResult.findOneAndUpdate(
     { testId: new Types.ObjectId(testId), studentId: new Types.ObjectId(studentId) },
-    { $set: { publishedAt: new Date(), publishedSnapshot: snapshotOf(prior) }, $inc: { publishedVersion: 1 } },
+    { $set: { publishedAt: new Date(), publishedSnapshot: snapshotOf(prior), recheckHold: null }, $inc: { publishedVersion: 1 } },
     { new: true },
   )) as IClassTestResult | null;
   if (!doc) throw new ClassTestResultError("No result entered for this student — nothing to publish");
@@ -244,12 +247,15 @@ export async function publishResult(testId: string, studentId: string, actorId: 
 export async function publishExam(testId: string, actorId: string): Promise<PublishResultOutcome> {
   const test = await loadPrintedTest(testId);
 
-  const existing = (await ClassTestResult.find({ testId: new Types.ObjectId(testId) })
-    .select("_id studentId marks status enteredBy publishedSnapshot")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId; studentId: Types.ObjectId } & Parameters<typeof marksSnapshotDiff>[0]>;
-  if (existing.length === 0) {
+  const all = (await ClassTestResult.find({ testId: new Types.ObjectId(testId) })
+    .select("_id studentId marks status enteredBy publishedSnapshot recheckHold")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; studentId: Types.ObjectId; recheckHold?: unknown } & Parameters<typeof marksSnapshotDiff>[0]>;
+  if (all.length === 0) {
     throw new ClassTestResultError("No results entered for this exam — nothing to publish");
   }
+  // CT-RC Option B: a row the approver HELD to see the paper waits; it is released on
+  // its own (publishResult) once the Principal has looked at the script.
+  const existing = all.filter((r) => !r.recheckHold);
 
   const titleBn = await renderTemplate("class_test.result.title"); // N+1 guard: once per batch
   const studentById = await loadStudents(existing.map((r) => r.studentId));
@@ -304,7 +310,9 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
       teacherUserId: notifyTeacherId.toString(),
       publishedVersion: recipients.reduce((m, r) => Math.max(m, r.publishedVersion), 0),
       titleBn: "ক্লাস টেস্টের ফলাফল প্রকাশিত হয়েছে",
-      bodyBn: `আপনার ${subjectBn} ক্লাস টেস্টের (${test.ctId}) ফলাফল প্রকাশিত হয়েছে।`,
+      // CT-RC (owner 2026-11-10): the moment the paper changes hands — Office first,
+      // never straight to the students.
+      bodyBn: `আপনার ${subjectBn} ক্লাস টেস্টের (${test.ctId}) ফলাফল প্রকাশিত হয়েছে। এখন খাতা অফিসে জমা দিন — শিক্ষার্থীদের নয়।`,
     });
   }
 
@@ -378,7 +386,11 @@ export interface SubmitOutcome {
 
 /** Teacher: propose the exam's DRAFT results for release. Sets submittedAt (guardian
  *  does NOT see yet) and clears any prior send-back. PRINTED-only; needs entered rows. */
-export async function submitExam(testId: string, actorId: string): Promise<SubmitOutcome> {
+export async function submitExam(
+  testId: string,
+  actorId: string,
+  opts: { scriptReminderAck?: boolean | null } = {},
+): Promise<SubmitOutcome> {
   const test = await loadPrintedTest(testId);
   const oid = new Types.ObjectId(testId);
   if ((await ClassTestResult.countDocuments({ testId: oid })) === 0) {
@@ -403,6 +415,11 @@ export async function submitExam(testId: string, actorId: string): Promise<Submi
   });
   if (actionable === 0) return { testId, count: 0 };
 
+  // CT-RC: a mark far from the student's own level (or the whole class unusually
+  // high) needs the teacher's "I checked the script again" tick before it can go up.
+  // Enforced here, not only on the screen, so an older installed app cannot skip it.
+  await assertNoSubmitBlockers(testId);
+
   const submittedAt = new Date();
   const res = await ClassTestResult.updateMany(
     { testId: oid, publishedAt: null },
@@ -417,18 +434,29 @@ export async function submitExam(testId: string, actorId: string): Promise<Submi
     actorId,
     targetId: oid,
     targetKind: "ClassTest",
-    meta: { testId, count },
+    // CT-RC: the teacher tapped "বুঝেছি" on the script hand-in pop-up (an older app
+    // sends nothing → null, never false).
+    meta: { testId, count, scriptReminderAck: opts.scriptReminderAck ?? null },
   });
 
   // CT-8 notify: every approver (active Principal/Office) learns results await
   // their review. Deduped on this submit's stamp, so a re-submit re-notifies.
+  // CT-RC: the notice says up front how many unusual marks the approver will see.
   const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[test.subject] ?? test.subject;
+  let flagged = 0;
+  try {
+    flagged = await submittedFlagCount(testId);
+  } catch {
+    flagged = 0; // the notice is best-effort; never fail a landed submit over its wording
+  }
   await emitCtResultSubmitted({
     testId,
     ctId: test.ctId,
     submittedAtMs: submittedAt.getTime(),
     titleBn: "ক্লাস টেস্টের ফলাফল জমা হয়েছে",
-    bodyBn: `${subjectBn} ক্লাস টেস্ট (${test.ctId}) ফলাফল জমা হয়েছে — অনুমোদন করুন।`,
+    bodyBn:
+      `${subjectBn} ক্লাস টেস্ট (${test.ctId}) ফলাফল জমা হয়েছে — অনুমোদন করুন।` +
+      (flagged > 0 ? ` ${bnNum(flagged)}টি অস্বাভাবিক নম্বর · শিক্ষক দ্বিতীয়বার দেখেছেন।` : ""),
   });
 
   return { testId, count };
@@ -488,11 +516,34 @@ export async function sendBackExam(testId: string, actorId: string, reason: stri
 
 /** Office/Principal: APPROVE = release + guardian delivery. Requires the teacher to
  *  have submitted (the gate direction); reuses publishExam for stamping + delivery. */
-export async function approveExam(testId: string, actorId: string): Promise<PublishResultOutcome> {
+export async function approveExam(
+  testId: string,
+  actorId: string,
+  opts: { flagsReviewed?: boolean | null } = {},
+): Promise<PublishResultOutcome> {
   const oid = new Types.ObjectId(testId);
   const submitted = await ClassTestResult.countDocuments({ testId: oid, submittedAt: { $ne: null }, publishedAt: null });
   if (submitted === 0) {
     throw new ClassTestResultError("No submitted results to approve — the teacher must submit first");
+  }
+  // CT-RC: flagged marks in this submission need the approver's own "I have looked at
+  // the unusual marks" tick. An older app sends no flag → a Bangla refusal with the
+  // reason, never a schema error (the D-#713 lesson).
+  const flagged = await approvalFlagCount(testId);
+  if (flagged > 0 && !opts.flagsReviewed) {
+    throw new ClassTestResultError(
+      `${bnNum(flagged)}টি অস্বাভাবিক নম্বর আছে। অনুমোদনের আগে সেগুলো দেখে "অস্বাভাবিক নম্বরগুলো আমি দেখেছি" টিক দিন।`,
+    );
+  }
+  if (flagged > 0) {
+    const held = await ClassTestResult.countDocuments({ testId: oid, publishedAt: null, recheckHold: { $ne: null } });
+    await writeAudit({
+      eventKind: "CLASS_TEST_RECHECK_REVIEWED",
+      actorId,
+      targetId: oid,
+      targetKind: "ClassTest",
+      meta: { testId, flagged, held },
+    });
   }
   return publishExam(testId, actorId);
 }

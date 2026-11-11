@@ -82,6 +82,8 @@ async function teacher(h) {
   await h.tap(T, "জমা দিন", 3500);
   await h.shot(T, "exam-ct-submit", 1, [{ text: "প্রকাশের জন্য জমা দিন" }, { text: "ফেরত নিন" }]);
   await h.tap(T, "প্রকাশের জন্য জমা দিন", 3000);
+  // CT-RC (D-#1268): the script hand-in pop-up must be acknowledged before the submit runs.
+  await h.tap(T, "বুঝেছি, জমা দিন", 3000);
   await L.back(T);
   await L.back(T);
 

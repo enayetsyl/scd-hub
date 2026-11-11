@@ -137,6 +137,10 @@ export type AuditEventKind =
   | "CLASS_TEST_RESULT_SENT_BACK" // Office/Principal sent a submission back to the teacher with a reason (CT-8)
   | "CLASS_TEST_RESULT_PUBLISHED" // APPROVE: a student's / an exam's results released → guardian delivery (CT-3/CT-8, §5/J4, D-#160; publishedVersion bumped)
   | "CLASS_TEST_RESULT_UNPUBLISHED" // a student's / an exam's results unpublished — pulled from the guardian card (CT-3, §5/J4, D-#160)
+  | "CLASS_TEST_RECHECK_CONFIRMED"  // CT-RC: teacher ticked (or un-ticked) "I checked the script again" on an unusual mark / the whole class
+  | "CLASS_TEST_RECHECK_REVIEWED"   // CT-RC: approver confirmed they looked at the unusual marks before approving
+  | "CLASS_TEST_RECHECK_HELD"       // CT-RC Option B: approver held (or un-held) one result to see the paper
+  | "CLASS_TEST_RECHECK_RULES_CHANGED" // CT-RC: the unusual-mark % thresholds were changed
   | "VOCAB_RESULT_RECORDED"       // a student's vocab marks recorded — attendance + per-position mistakes (VC-3, §3.6, D-#142)
   | "VOCAB_RESULT_MESSAGED"       // guardian vocab-result messages generated for a test — wa.me + emit() (VC-4, §8, D-#154)
   | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)

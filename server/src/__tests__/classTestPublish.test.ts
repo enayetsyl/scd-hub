@@ -37,6 +37,14 @@ const mockCtFind = jest.fn();
 jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
   recordPlaceMistake: jest.fn().mockResolvedValue(false),
 }));
+// CT-RC: the unusual-mark gates read real history; this DB-free suite has none to flag
+// (classTestRecheck.test.ts covers them on an in-memory Mongo).
+const mockApprovalFlagCount = jest.fn().mockResolvedValue(0);
+jest.mock("../modules/trackers/services/ClassTestRecheckService", () => ({
+  assertNoSubmitBlockers: jest.fn().mockResolvedValue(undefined),
+  approvalFlagCount: (...a: unknown[]) => mockApprovalFlagCount(...a),
+  submittedFlagCount: jest.fn().mockResolvedValue(0),
+}));
 jest.mock("../modules/trackers/models/ClassTest", () => ({
   ClassTest: {
     findById: (id: unknown) => mockCtFindById(id),

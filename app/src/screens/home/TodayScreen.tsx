@@ -59,6 +59,7 @@ import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { CtScriptTeacherCard } from "../../components/CtScriptTeacherCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
+import { CtHeldResultsCard } from "../../components/CtHeldResultsCard";
 import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTeacherCard";
 import { MeetingNotesTeacherCard } from "../../components/MeetingNotesTeacherCard";
 import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeacherCard";
@@ -554,6 +555,8 @@ export default function TodayScreen(): React.ReactElement {
       {/* The Office's queue, for a TEACHER login carrying the OFFICE template — AppTabs
           routes by primary role, so Tazkir/Akter Hossen land here, not on AdminToday. */}
       {can("class_test_script:scan") ? <CtScriptOfficeCard /> : null}
+      {/* CT-RC Option B — results an approver held at approval to see the paper. Own query; nothing when empty. */}
+      {can("class_test:publish") ? <CtHeldResultsCard /> : null}
 
       {/* SP-2/SP-3 (D-#735/#736) — improvement actions: the teacher's own and covered tasks;
           and for an OFFICE-template teacher login, today's not-ticked list. OUTSIDE the
