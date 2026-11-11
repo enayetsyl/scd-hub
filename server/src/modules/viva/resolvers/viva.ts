@@ -6,13 +6,17 @@
  *   vivaSheet               — view|manage|edit_all|lock|examine: one paper's children; the
  *                             service narrows `examine` to the caller's own children.
  *   vivaExaminerCandidates  — manage: who can be made an examiner.
- *   saveVivaPaper           — manage: questions + marks (refused once a mark exists).
+ *   saveVivaPaper           — manage: questions + marks, one list or sets (refused once a
+ *                             mark exists or a set is drawn; D-#1275/#1277).
+ *   drawVivaSet             — examine (own child) | edit_all: the tap that draws a child's
+ *                             set, evenly and finally (D-#1276).
  *   saveVivaExaminers       — manage: who hears which child.
  *   setVivaMark / setVivaAbsent — examine (own child) | edit_all: one tap, saved at once.
  *   lockVivaPaper           — lock.
  */
 import { builder } from "../../../schema";
 import {
+  drawVivaSet,
   lockVivaPaper,
   myVivaPapers,
   saveVivaExaminers,
@@ -28,6 +32,7 @@ import {
   type VivaPaperShape,
   type VivaProgressShape,
   type VivaRowShape,
+  type VivaSetShape,
   type VivaSheetShape,
 } from "../services/VivaService";
 
@@ -38,6 +43,18 @@ ItemRef.implement({
     label: t.exposeString("label"),
     marks: t.exposeFloat("marks"),
     ref: t.exposeString("ref"),
+    parts: t.exposeStringList("parts"),
+    partMarks: t.exposeFloat("partMarks"),
+  }),
+});
+
+const SetRef = builder.objectRef<VivaSetShape>("VivaSet");
+SetRef.implement({
+  fields: (t) => ({
+    key: t.exposeString("key"),
+    label: t.exposeString("label"),
+    items: t.field({ type: [ItemRef], resolve: (s) => s.items }),
+    drawn: t.exposeInt("drawn"),
   }),
 });
 
@@ -78,6 +95,7 @@ PaperRef.implement({
     fullMarks: t.exposeFloat("fullMarks"),
     syllabusMarks: t.float({ nullable: true, resolve: (p) => p.syllabusMarks }),
     items: t.field({ type: [ItemRef], resolve: (p) => p.items }),
+    sets: t.field({ type: [SetRef], resolve: (p) => p.sets }),
     examiners: t.field({ type: [ExaminerRef], resolve: (p) => p.examiners }),
     frozen: t.exposeBoolean("frozen"),
     lockedAt: t.string({ nullable: true, resolve: (p) => p.lockedAt }),
@@ -106,6 +124,8 @@ RowRef.implement({
     examinerId: t.string({ nullable: true, resolve: (r) => r.examinerId }),
     examinerName: t.exposeString("examinerName"),
     absent: t.exposeBoolean("absent"),
+    setKey: t.string({ nullable: true, resolve: (r) => r.setKey }),
+    needsDraw: t.exposeBoolean("needsDraw"),
     marks: t.field({ type: [MarkRef], resolve: (r) => r.marks }),
     total: t.exposeFloat("total"),
     done: t.exposeBoolean("done"),
@@ -131,6 +151,16 @@ const ItemInput = builder.inputType("VivaItemInput", {
     label: t.string({ required: true }),
     marks: t.float({ required: true }),
     ref: t.string({ required: false }),
+    parts: t.stringList({ required: false }),
+    partMarks: t.float({ required: false }),
+  }),
+});
+
+const SetInput = builder.inputType("VivaSetInput", {
+  fields: (t) => ({
+    key: t.string({ required: false }),
+    label: t.string({ required: false }),
+    items: t.field({ type: [ItemInput], required: true }),
   }),
 });
 
@@ -183,8 +213,24 @@ builder.mutationField("saveVivaPaper", (t) =>
   t.field({
     type: PaperRef,
     authScopes: { hasPermission: "viva:manage" },
-    args: { paperId: t.arg.string({ required: true }), items: t.arg({ type: [ItemInput], required: true }) },
-    resolve: (_r, args, ctx) => saveVivaPaper(ctx, args.paperId, args.items),
+    args: {
+      paperId: t.arg.string({ required: true }),
+      // One list (a one-set paper) or `sets` (two or more, D-#1275); `sets` wins when given.
+      items: t.arg({ type: [ItemInput], required: false }),
+      sets: t.arg({ type: [SetInput], required: false }),
+    },
+    resolve: (_r, args, ctx) => saveVivaPaper(ctx, args.paperId, args.items ?? null, args.sets ?? null),
+  }),
+);
+
+builder.mutationField("drawVivaSet", (t) =>
+  t.field({
+    type: RowRef,
+    // The examiner's tap on a child's name (D-#1276); the service admits `examine` only for
+    // the caller's own child. Final: an already-drawn child gets the same set back.
+    authScopes: { hasAnyPermission: ["viva:examine", "viva:edit_all"] },
+    args: { paperId: t.arg.string({ required: true }), studentId: t.arg.string({ required: true }) },
+    resolve: (_r, args, ctx) => drawVivaSet(ctx, args.paperId, args.studentId),
   }),
 );
 
