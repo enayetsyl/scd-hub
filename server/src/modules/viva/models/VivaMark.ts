@@ -20,6 +20,12 @@ export interface IVivaMark extends Document {
   paperId: Types.ObjectId;
   studentId: Types.ObjectId;
   absent: boolean;
+  /** The question set this child was given (D-#1276) — drawn when the examiner taps the name,
+   *  then final. Null on a one-set paper (the only set applies) or before the draw. */
+  setKey?: string | null;
+  drawnAt?: Date | null;
+  drawnBy?: Types.ObjectId | null;
+  /** Per question key; a letter question's letters are stored as `<key>:<index>` (D-#1277). */
   marks: IVivaItemMark[];
   enteredBy?: Types.ObjectId | null;
   enteredAt?: Date | null;
@@ -40,6 +46,9 @@ const VivaMarkSchema = new Schema<IVivaMark>(
     paperId: { type: Schema.Types.ObjectId, ref: "VivaPaper", required: true },
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true },
     absent: { type: Boolean, default: false },
+    setKey: { type: String, default: null },
+    drawnAt: { type: Date, default: null },
+    drawnBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     marks: { type: [ItemMarkSchema], default: [] },
     enteredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     enteredAt: { type: Date, default: null },

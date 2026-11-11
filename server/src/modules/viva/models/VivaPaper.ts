@@ -21,6 +21,19 @@ export interface IVivaItem {
   marks: number;
   /** A short book reference, e.g. "পৃ. ৩৪" — pictures are shown from the book (owner, 2026-11-06). */
   ref: string;
+  /** A letter question (D-#1277): the letters the child makes words with, each marked on its
+   *  own (0 … `partMarks` in halves) and stored under `<key>:<index>`. The question's mark is
+   *  the sum, so `marks` = parts.length × partMarks. Empty = an ordinary question. */
+  parts?: string[];
+  partMarks?: number;
+}
+
+/** One question set (D-#1275). Every set of a paper adds up to the same full marks; item keys
+ *  are unique across the whole paper, so a stored mark always names one question. */
+export interface IVivaSet {
+  key: string;
+  label: string;
+  items: IVivaItem[];
 }
 
 export interface IVivaExaminer {
@@ -37,7 +50,15 @@ export interface IVivaPaper extends Document {
   /** `YYYY-MM-DD`, synced from the routine's ORAL slot on every read. */
   dateKey: string;
   fullMarks: number;
+  /** The paper's questions when it has one set (the VV-1 shape). With `sets`, it mirrors set 1
+   *  so an app that predates sets still reads something sensible. */
   items: IVivaItem[];
+  /** Two or more question sets (D-#1275); empty = one set, `items`. Each child gets one set,
+   *  drawn when the examiner taps their name (D-#1276). */
+  sets: IVivaSet[];
+  /** Optimistic-concurrency counter for the draw: bumped by every draw so two examiners
+   *  tapping at once can't both take the same least-used set (D-#1276). */
+  drawSeq: number;
   examiners: IVivaExaminer[];
   /** False once the routine no longer has this ORAL slot; the paper is kept, hidden. */
   inRoutine: boolean;
@@ -54,6 +75,17 @@ const ItemSchema = new Schema<IVivaItem>(
     label: { type: String, required: true, trim: true },
     marks: { type: Number, required: true, min: 0.5 },
     ref: { type: String, default: "", trim: true },
+    parts: { type: [String], default: [] },
+    partMarks: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
+const SetSchema = new Schema<IVivaSet>(
+  {
+    key: { type: String, required: true },
+    label: { type: String, required: true, trim: true },
+    items: { type: [ItemSchema], default: [] },
   },
   { _id: false },
 );
@@ -74,6 +106,8 @@ const VivaPaperSchema = new Schema<IVivaPaper>(
     dateKey: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     fullMarks: { type: Number, required: true, min: 0.5 },
     items: { type: [ItemSchema], default: [] },
+    sets: { type: [SetSchema], default: [] },
+    drawSeq: { type: Number, default: 0 },
     examiners: { type: [ExaminerSchema], default: [] },
     inRoutine: { type: Boolean, default: true },
     lockedAt: { type: Date, default: null },
