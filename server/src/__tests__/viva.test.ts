@@ -33,6 +33,7 @@ import { RoutineSlot } from "../modules/routine/models/RoutineSlot";
 import { VivaPaper } from "../modules/viva/models/VivaPaper";
 import { VivaMark } from "../modules/viva/models/VivaMark";
 import { Audit } from "../modules/platform/models/Audit";
+import { WorksheetPicture } from "../modules/worksheets/models/WorksheetPicture";
 import {
   drawVivaSet,
   isValidMark,
@@ -46,6 +47,8 @@ import {
   setVivaMark,
   syncVivaPapers,
   vivaOverview,
+  vivaPictureBank,
+  vivaPictures,
   vivaSheet,
 } from "../modules/viva/services/VivaService";
 
@@ -488,6 +491,61 @@ describe("viva: question sets + draw at the tap (D-#1275–#1277)", () => {
     const qid = await t.paper("QURAN");
     const row = (await vivaSheet(t.office, qid)).rows[0]!;
     expect(row).toMatchObject({ setKey: "s1", needsDraw: false });
+  });
+});
+
+describe("viva: picture questions (D-#1282)", () => {
+  const WORDS = ["بَيْتٌ", "جَمَلٌ", "حِمَارٌ", "خَيْلٌ", "دِيكٌ", "ذِئْبٌ", "رَجُلٌ", "شَمْسٌ", "فِيلٌ", "قُفْلٌ", "مَوْزٌ", "نَجْمٌ"];
+  async function bank(): Promise<string[]> {
+    await WorksheetPicture.deleteMany({});
+    const ids: string[] = [];
+    for (const [i, word] of WORDS.entries()) {
+      const d = await WorksheetPicture.create({
+        book: "ARABIC", page: i + 1, imageIndex: 1, sourceKey: `ARABIC:${i + 1}:1`, word, wordEn: `w${i}`, letter: word[0],
+        uses: ["WORD"], active: true, image: Buffer.from([0xff, 0xd8, i]), thumb: Buffer.from([0xff, 0xd8]), mime: "image/jpeg", width: 300, height: 260,
+      });
+      ids.push(String(d._id));
+    }
+    return ids;
+  }
+  const picSet = (label: string, ids: string[]) => ({ label, items: [{ label: "ছবি দেখে শব্দ বলা", marks: 0, pictureIds: ids }] });
+
+  it("one mark per picture; words come from the bank; draw, mark, pictures for the examiner only", async () => {
+    const t = await setup();
+    const pics = await bank();
+    const id = await t.paper("BAN");
+    const p = await saveVivaPaper(t.office, id, null, [picSet("সেট ১", pics.slice(0, 5)), picSet("সেট ২", pics.slice(5, 10))]);
+    expect(p.fullMarks).toBe(5);
+    expect(p.sets[0]!.items[0]).toMatchObject({ marks: 5, partMarks: 1, parts: WORDS.slice(0, 5), pictureIds: pics.slice(0, 5) });
+    await expect(saveVivaPaper(t.office, id, null, [picSet("সেট ১", [pics[0]!, pics[0]!])])).rejects.toThrow(/দুবার/);
+    await expect(saveVivaPaper(t.office, id, null, [picSet("সেট ১", [String(new Types.ObjectId())])])).rejects.toThrow(/ছবির ভাণ্ডারে নেই/);
+
+    const me = t.teacher(t.bangla);
+    const row = await drawVivaSet(me, id, t.kids[0]!);
+    const item = p.sets.find((s) => s.key === row.setKey)!.items[0]!;
+    let r = row;
+    for (const [i, v] of [1, 1, 0, 1, 1].entries()) r = await setVivaMark(me, id, t.kids[0]!, `${item.key}:${i}`, v);
+    expect(r).toMatchObject({ done: true, total: 4 });
+    await expect(setVivaMark(me, id, t.kids[0]!, `${item.key}:5`, 1)).rejects.toThrow(/ছবিটি এই প্রশ্নে নেই/);
+    await expect(setVivaMark(me, id, t.kids[0]!, `${item.key}:0`, 2)).rejects.toThrow(/০ থেকে/);
+
+    const shown = await vivaPictures(me, id);
+    expect(shown).toHaveLength(10);
+    expect(shown[0]!.uri).toMatch(/^data:image\/jpeg;base64,/);
+    expect(new Set(shown.map((x) => x.word))).toEqual(new Set(WORDS.slice(0, 10)));
+    // A teacher with no child on this paper sees nothing.
+    await expect(vivaPictures(t.teacher(t.other), id)).rejects.toThrow(/কোনো শিশু নেই/);
+    expect(await vivaPictureBank("ARABIC")).toHaveLength(12);
+
+    // After the draw a picture may be swapped (wording-level fix), but not added or removed.
+    const asIs = (await vivaSheet(t.office, id)).paper.sets.map((s) => ({
+      key: s.key, label: s.label, items: s.items.map((i) => ({ key: i.key, label: i.label, marks: i.marks, partMarks: i.partMarks, pictureIds: i.pictureIds })),
+    }));
+    asIs[0]!.items[0]!.pictureIds = [...asIs[0]!.items[0]!.pictureIds.slice(0, 4), pics[11]!];
+    const fixed = await saveVivaPaper(t.office, id, null, asIs);
+    expect(fixed.sets[0]!.items[0]!.parts[4]).toBe(WORDS[11]);
+    asIs[0]!.items[0]!.pictureIds = asIs[0]!.items[0]!.pictureIds.slice(0, 4);
+    await expect(saveVivaPaper(t.office, id, null, asIs)).rejects.toThrow(/শুধু প্রশ্নের লেখা/);
   });
 });
 

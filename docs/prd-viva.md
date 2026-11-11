@@ -161,3 +161,18 @@ English Set 1's crossed-out questions (6 body parts, 4 birds) are left out.
   or set names changed; no text kept).
 - Teachers do not get this by default; the Principal can give one teacher `viva:manage` in the
   permission matrix (that also lets them change examiners).
+
+### 9.6 Picture questions (D-#1282/#1283)
+- A question may show **pictures from the worksheet picture bank** (ছবির ভাণ্ডার, the pictures cut
+  from the class books for worksheets). Each picture is marked on its own, 0 … marks per picture
+  (default 1); the question's marks = pictures × per-picture. Stored per picture as `<key>:<index>`.
+- **Examiner:** the child's card shows a numbered chip per picture (✓ / ✗ once marked) and
+  **ছবি দেখান**. The viewer fills the screen: one big picture, "৩/১০", **উত্তর দেখুন** (the Arabic
+  word + English meaning, hidden until tapped so the child never sees it), **✓ পেরেছে** /
+  **✗ পারেনি** (moves on by itself), ‹ আগের / পরের ›, বন্ধ করুন. Tapping the chosen mark again clears it.
+- **Office:** "+ ছবির প্রশ্ন" opens the picker — pick a book, tap pictures in the order the child will
+  see them (tap again to remove); "প্রতি ছবিতে নম্বর". Pictures hidden from worksheets are dimmed but
+  can be chosen. After the first draw a picture may be swapped, not added or removed (§9.5).
+- **2026 Nursery আরবি (1 Dec, 10 marks):** 4 sets × 10 pictures from the 27 active book-1 pictures,
+  drawn at the tap; every picture used, 13 twice, any two sets share 2–3 (proposed by Claude, Office
+  may change). Data: `server/assets/viva/nursery-arabic-2026.json`.
