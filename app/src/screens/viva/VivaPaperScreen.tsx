@@ -1,8 +1,8 @@
 /**
  * VivaPaperScreen (D-#1081, mockup screen 3) — the Office writes one oral paper: each
  * question, its marks (halves allowed) and an optional book page (pictures are shown from
- * the book). The questions' sum is checked against the syllabus oral marks. Read-only once
- * a mark exists, a set is drawn, or the paper is locked.
+ * the book). The questions' sum is checked against the syllabus oral marks. Once a mark exists
+ * or a set is drawn only the wording can be fixed (D-#1281); read-only when the paper is locked.
  *
  * Question sets (D-#1275): "+ সেট" copies the open set into a new tab; every set must add up
  * to the same total. Each child is given one set when the examiner taps their name (D-#1276).
@@ -70,7 +70,9 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
     }
   }, [paper]);
 
-  const ro = !paper || paper.frozen || !!paper.lockedAt;
+  // ro = nothing editable (locked); fixed = questions and marks stay (marking or drawing started).
+  const ro = !paper || !!paper.lockedAt;
+  const fixed = ro || !!paper?.frozen;
   const many = sets.length > 1;
   const open = sets[Math.min(cur, sets.length - 1)];
   const items = open?.items ?? [];
@@ -129,8 +131,8 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
             <Body style={{ fontWeight: "700" }}>
               {paper.classLabelBn} · {paper.subjectLabelBn}
             </Body>
-            {ro ? <Notice tone="warn" message={paper.lockedAt ? STR.vivaLockedBadge : STR.vivaPaperFrozen} /> : <Muted>{STR.vivaPaperHelp}</Muted>}
-            {many || !ro ? (
+            {fixed ? <Notice tone="warn" message={paper.lockedAt ? STR.vivaLockedBadge : STR.vivaPaperFrozen} /> : <Muted>{STR.vivaPaperHelp}</Muted>}
+            {many || !fixed ? (
               <ChipRow>
                 {sets.map((s, i) => (
                   <Chip
@@ -140,7 +142,7 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
                     onPress={() => setCur(i)}
                   />
                 ))}
-                {ro ? null : <Chip label={STR.vivaAddSet} selected={false} onPress={addSet} />}
+                {fixed ? null : <Chip label={STR.vivaAddSet} selected={false} onPress={addSet} />}
               </ChipRow>
             ) : null}
             {many ? <Muted>{STR.vivaSetsHelp}</Muted> : null}
@@ -162,13 +164,13 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
                       <Field label={STR.vivaQLetters} value={x.parts} editable={!ro} onChangeText={(t) => set(i, { parts: t })} />
                     </View>
                     <View style={{ width: 110 }}>
-                      <Field label={STR.vivaQPerLetter} value={x.partMarks} editable={!ro} keyboardType="decimal-pad" onChangeText={(t) => set(i, { partMarks: t })} />
+                      <Field label={STR.vivaQPerLetter} value={x.partMarks} editable={!fixed} keyboardType="decimal-pad" onChangeText={(t) => set(i, { partMarks: t })} />
                     </View>
                   </View>
                 ) : (
                   <View style={{ flexDirection: "row", gap: space(2) }}>
                     <View style={{ width: 96 }}>
-                      <Field label={STR.vivaQMarks} value={x.marks} editable={!ro} keyboardType="decimal-pad" onChangeText={(t) => set(i, { marks: t })} />
+                      <Field label={STR.vivaQMarks} value={x.marks} editable={!fixed} keyboardType="decimal-pad" onChangeText={(t) => set(i, { marks: t })} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Field label={STR.vivaQRef} value={x.ref} editable={!ro} onChangeText={(t) => set(i, { ref: t })} />
@@ -182,7 +184,7 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
                       .replace("{m}", Number.isFinite(draftMarks(x)) ? vivaNum(draftMarks(x)) : "?")}
                   </Muted>
                 ) : null}
-                {ro ? null : (
+                {fixed ? null : (
                   <View style={{ flexDirection: "row", gap: space(2) }}>
                     {i > 0 ? (
                       <Button
@@ -196,7 +198,7 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
                 )}
               </Card>
             ))}
-            {ro ? null : (
+            {fixed ? null : (
               <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
                 <Button
                   title={STR.vivaAddQ}
@@ -222,7 +224,7 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
             {ro ? null : (
               <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
                 <Button title={STR.vivaSave} loading={st.fetching} onPress={() => void onSave()} />
-                {many ? <Button title={STR.vivaRemoveSet} variant="ghost" onPress={removeSet} /> : null}
+                {many && !fixed ? <Button title={STR.vivaRemoveSet} variant="ghost" onPress={removeSet} /> : null}
               </View>
             )}
           </View>

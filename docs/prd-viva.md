@@ -148,3 +148,16 @@ English (15): Q1 = "2 words with each letter", 5 letters × 2 words × ½ = 1 pe
 | 3 | Y, U, P, A, H | 6 fruits (3) · 7 days (3) · 4 animals (2) · 4 birds (2) |
 | 4 | V, L, D, X, R | 12 months (4) · 4 family members (2) · 4 flowers (2) · 6 body parts (2) |
 English Set 1's crossed-out questions (6 body parts, 4 birds) are left out.
+
+### 9.5 Fixing the wording after the start (D-#1281)
+- Once any child has drawn a set or has a mark, Office (`viva:manage`) can still correct the
+  **wording**: a question's text, its letters, its book page and set names — e.g. a spelling mistake.
+- The **shape** stays: the same sets, the same questions in the same order, the same marks, the
+  same number of letters and marks per letter. So every child is still marked out of the same paper
+  and marks already given stay on the same question/letter.
+- Paper editor after the start: text fields editable, marks fields greyed, no add / remove / reorder /
+  add-set / remove-set; the notice says what can still change. A locked paper changes nothing.
+- Each such save is audited (`VIVA_PAPER_SAVED`, `meta.wordingOnly`, `changed` = how many questions
+  or set names changed; no text kept).
+- Teachers do not get this by default; the Principal can give one teacher `viva:manage` in the
+  permission matrix (that also lets them change examiners).

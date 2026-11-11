@@ -546,8 +546,43 @@ export interface VivaSetInput {
 
 const MAX_SETS = 8;
 
+const WORDING_ONLY =
+  "এই প্রশ্নপত্রে নম্বর দেওয়া বা সেট আনা শুরু হয়েছে — এখন শুধু প্রশ্নের লেখা, বর্ণ, বইয়ের পৃষ্ঠা আর সেটের নাম ঠিক করা যায়; প্রশ্ন যোগ-বাদ, ক্রম বা নম্বর বদলানো যাবে না।";
+
+/** Same sets, same questions in the same order, same marks and the same number of letters. */
+function sameShape(a: IVivaSet[], b: IVivaSet[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((s, i) => {
+    const t = b[i]!;
+    if (s.key !== t.key || s.items.length !== t.items.length) return false;
+    return s.items.every((x, j) => {
+      const y = t.items[j]!;
+      return (
+        x.key === y.key &&
+        x.marks === y.marks &&
+        (x.parts ?? []).length === (y.parts ?? []).length &&
+        ((x.parts ?? []).length === 0 || (x.partMarks ?? 0) === (y.partMarks ?? 0))
+      );
+    });
+  });
+}
+
+/** How many questions / set names a wording fix touched (audit only — no text kept). */
+function wordingChanges(a: IVivaSet[], b: IVivaSet[]): number {
+  let n = 0;
+  a.forEach((s, i) => {
+    const t = b[i]!;
+    if ((s.label ?? "") !== (t.label ?? "")) n += 1;
+    s.items.forEach((x, j) => {
+      const y = t.items[j]!;
+      if (x.label !== y.label || (x.ref ?? "") !== (y.ref ?? "") || (x.parts ?? []).join("|") !== (y.parts ?? []).join("|")) n += 1;
+    });
+  });
+  return n;
+}
+
 /** Office: the questions and their marks — one list (`items`) or two or more sets (`sets`,
- *  D-#1275). Refused once any mark is entered or any set drawn (D-#1081). */
+ *  D-#1275). Once any mark is entered or any set drawn (D-#1081) only the wording may change (D-#1281). */
 export async function saveVivaPaper(
   ctx: AppContext,
   paperId: string,
@@ -556,9 +591,10 @@ export async function saveVivaPaper(
 ): Promise<VivaPaperShape> {
   const p = await mustPaper(paperId);
   if (p.lockedAt) throw new VivaError("নম্বর লক করা হয়েছে — প্রশ্নপত্র বদলানো যাবে না।");
-  if (await VivaMark.exists({ paperId: p._id, $or: [{ "marks.0": { $exists: true } }, { setKey: { $ne: null } }] })) {
-    throw new VivaError("এই প্রশ্নপত্রে নম্বর দেওয়া বা সেট আনা শুরু হয়েছে — প্রশ্ন আর বদলানো যাবে না।");
-  }
+  // Once marking or drawing has started only the WORDING may change (D-#1281): question text,
+  // letters, book page and set names. Questions, their order and their marks stay as they were,
+  // so every child is still marked out of the same paper.
+  const started = !!(await VivaMark.exists({ paperId: p._id, $or: [{ "marks.0": { $exists: true } }, { setKey: { $ne: null } }] }));
   const raw: VivaSetInput[] = setsInput?.length ? setsInput : [{ items: input ?? [] }];
   if (raw.length > MAX_SETS) throw new VivaError(`একটি প্রশ্নপত্রে সর্বোচ্চ ${bn(MAX_SETS)}টি সেট।`);
   const oldSets = setsOf(p);
@@ -609,6 +645,7 @@ export async function saveVivaPaper(
     return { key, label: setName, items };
   });
 
+  if (started && !sameShape(oldSets, sets)) throw new VivaError(WORDING_ONLY);
   const totals = sets.map((s) => sumMarks(s.items));
   if (totals.some((t) => t !== totals[0])) {
     throw new VivaError(`সব সেটের মোট নম্বর সমান হতে হবে (${sets.map((s, i) => `${s.label}: ${bn(totals[i]!)}`).join(", ")})।`);
@@ -625,7 +662,11 @@ export async function saveVivaPaper(
     actorRole: ctx.auth!.role,
     targetId: p._id,
     targetKind: "VivaPaper",
-    meta: { before, after: { fullMarks: p.fullMarks, sets: sets.length, items: sets.reduce((a, s) => a + s.items.length, 0) } },
+    meta: {
+      before,
+      after: { fullMarks: p.fullMarks, sets: sets.length, items: sets.reduce((a, s) => a + s.items.length, 0) },
+      ...(started ? { wordingOnly: true, changed: wordingChanges(oldSets, sets) } : {}),
+    },
   });
   return (await vivaSheet(ctx, paperId)).paper;
 }
