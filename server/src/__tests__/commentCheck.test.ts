@@ -167,13 +167,13 @@ describe("fail-open", () => {
 describe("the stamp on save", () => {
   test("CHECKED needs a valid token for THIS child; a forged or foreign token is SKIPPED; checker off → nothing", async () => {
     await turnOn();
-    mockSend.mockResolvedValue(reply({ issues: [{ field: "text", type: "tone", quote: "a", suggestion: "b" }, { field: "text", type: "punctuation", quote: "c", suggestion: "d" }], corrected: { text: "ঠিক।" } }));
+    mockSend.mockResolvedValue(reply({ issues: [{ field: "text", type: "spelling", quote: "a", suggestion: "b" }, { field: "text", type: "punctuation", quote: "c", suggestion: "d" }], corrected: { text: "ঠিক।" } }));
     const r = await checkComment(teacher, daily("মন্তব্য"));
 
     expect(await aiCheckStamp({ token: r.token, issuesAccepted: 1, teacherOverrode: false }, studentId, "DAILY")).toMatchObject({
       status: "CHECKED",
       issuesFound: 2,
-      issueTypes: { tone: 1, punctuation: 1 },
+      issueTypes: { spelling: 1, punctuation: 1 },
       issuesAccepted: 1,
       teacherOverrode: false,
       model: "deepseek-flash",

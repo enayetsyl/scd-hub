@@ -25,7 +25,7 @@
  */
 import { createHmac, timingSafeEqual } from "crypto";
 import type { AuthPayload } from "../../../context";
-import { callerHasPermission, COMMENT_SENTIMENT_LABELS_BN, COMMENT_TYPE_LABELS_BN, type CommentSentiment, type CommentType } from "@scd/shared";
+import { callerHasPermission, COMMENT_SENTIMENTS, COMMENT_SENTIMENT_LABELS_BN, COMMENT_TYPE_LABELS_BN, type CommentSentiment, type CommentType } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
 import { aiSend, AiFeatureOffError } from "../ai/aiRouter";
 import { AiProviderError } from "../ai/provider";
@@ -50,15 +50,17 @@ export const CHECKER_INSTRUCTIONS = `You check comments that teachers of a Bangl
 
 Rules:
 - Tokens like [S], [S1], [G1], [T1], [PHONE], [NUM], [ID] stand for hidden names and numbers. Keep every token exactly as written, in the same place. Never invent a name.
-- [S] is the child the comment is about. উনি / উনার / উনাকে / তিনি may stand ONLY for [S]. Never turn another child's token ([S1], [S2] …) into উনি or উনাকে — that changes who the sentence is about. Another child may become "একজন সহপাঠী".
-- Keep the teacher's meaning and facts. Never add a fact, a date, a number or a promise the teacher did not write. Never invent what happened: how many mistakes, which words, which page, a score, an example. When the standard asks for such a detail and the teacher did not give it, write a short blank in square brackets for the teacher to fill, in Bangla, e.g. "[কয়টি]", "[উদাহরণ]", "[পৃষ্ঠা]". (A suggested home practice — how many minutes, how many days — is advice, not a fact, and may be proposed.)
+- [S] is the child the comment is about. Write [S] as উনি / উনার / উনাকে (never তিনি / তাঁর / তাঁকে). These words stand ONLY for [S]. Never turn another child's token ([S1], [S2] …) into উনি or উনাকে — that changes who the sentence is about. Another child may become "একজন সহপাঠী".
+- KEEP WHAT THE TEACHER WROTE. Every fact, event, request and judgement in the comment stays, with the same meaning. You correct spelling, grammar, honorific form and punctuation, and you ADD what the standard asks for beside the teacher's words. Never replace something the teacher said with a blank or with a different thing: "দুষ্টামি করছে" stays (as "দুষ্টামি করেছেন"), never "[কী করেছেন]"; "পড়া পেরেছে" stays পেরেছেন, never "বলেছেন"; a request like "বাসায় একটু কথা বলবেন" stays a request to talk (you may add more after it), never a different request.
+- Never add a detail of your own: when or where it happened, who sat beside whom, how many questions the test had, marks out of how many, a count, a page, an example. When the standard needs such a fact about what happened and the teacher did not give it, write a short Bangla blank in square brackets for the teacher to fill, e.g. "[কয়টি]", "[উদাহরণ]". A blank is ONLY for a missing fact — never for advice: propose home practice yourself (e.g. "প্রতিদিন ১০ মিনিট"), never "[কত মিনিট]".
+- Keep every English word the teacher used, written in English or in Bangla letters (Tense, রিভিশন, রেজাল্ট, হোমওয়ার্ক …), unless the standard names a replacement for that word.
 - Each issue is ONE replacement: "suggestion" replaces "quote" exactly. To ADD words (a greeting, a closing line), quote the words right next to where they go and repeat them in "suggestion" together with the addition (quote "বলবেন।" → suggestion "বলবেন। জাযাকুমুল্লাহু খাইরান।").
 - Two issues must never quote overlapping words. If one sentence needs several fixes, give ONE issue for the whole sentence.
-- "quote" must be copied exactly from the field it is in. Give at most 8 issues, the most important first.
-- Write suggestions in Bangla. Keep an English word the teacher used (e.g. রিভিশন) unless the standard names a replacement for it.
-- For a daily comment, "sentiment" / "commentType" are what the teacher picked on the screen (their Bangla names are given). If the text clearly does not fit them, add ONE issue of type "tone" with "quote": "" and a Bangla "suggestion" saying which one to pick.
+- "quote" must be copied exactly from the field it is in. Give at most 8 issues, the most important first. Write suggestions in Bangla.
+- "type" names the MAIN change: "spelling" a misspelt word · "punctuation" । , ? marks · "honorific" সে/তার → উনি/উনার or করেছে → করেছেন · "structure" a part the standard requires is missing (greeting, closing, home practice) or a whole sentence is rebuilt · "standard" anything else the standard asks for or forbids · "marks" ONLY when the text says the opposite of the mark · "tone" ONLY for the note about the picked tone below.
+- For a daily comment, "sentiment" is the tone the teacher picked on the screen; the only tones are CONCERN and POSITIVE. If the text clearly fits the OTHER tone, add ONE issue {"type":"tone","quote":"","pick":"CONCERN" or "POSITIVE","suggestion":""}. Never name any other tone, and never mention "sentiment" or "commentType" in a suggestion.
 - "corrected" holds every field you were given, rewritten to follow the standard (unchanged if it already does).
-- For a class test, "markPct" is the child's mark. Flag text that does not fit the mark (type "marks").
+- For a class test, "markPct" is the child's mark as a percentage — you are not told how many questions or marks the test had. Use type "marks" ONLY when the text clearly says the opposite of the mark (praise with a low mark, "weak" with a high mark). With a high mark (80% or more), praise or "no weakness" fits: do not ask for a weakness and do not add a blank for one.
 - A line flagged as a school consequence (refusing entry, expulsion): report it as type "standard" and leave it unchanged in "corrected".
 - If the comment already follows the standard, return {"issues":[],"corrected":{...the fields unchanged...}}.
 
@@ -70,6 +72,8 @@ export interface CheckIssue {
   type: string;
   quote: string;
   suggestion: string;
+  /** A "tone" note only: the tone the text fits better (CONCERN | POSITIVE), shown by its screen label (round 3). */
+  pick?: string | null;
 }
 
 export interface CheckResult {
@@ -170,7 +174,8 @@ export function parseReply(json: unknown, allowed: Set<string>): { issues: Check
       const type = typeof i.type === "string" && (ISSUE_TYPES as readonly string[]).includes(i.type) ? i.type : "standard";
       const quote = typeof i.quote === "string" ? i.quote.slice(0, 500) : "";
       const suggestion = typeof i.suggestion === "string" ? i.suggestion.slice(0, 1000) : "";
-      if (quote || suggestion) issues.push({ field, type, quote, suggestion });
+      const pick = typeof i.pick === "string" ? i.pick.trim().toUpperCase() : "";
+      if (quote || suggestion || pick) issues.push({ field, type, quote, suggestion, ...(pick ? { pick } : {}) });
     }
   }
   const corrected: Record<string, string> = {};
@@ -194,6 +199,8 @@ export interface PreparedCheck {
   policyHash: string;
   stablePrefix: string;
   variablePart: string;
+  /** Daily only: the tone the writer picked (a "tone" note must pick the OTHER one). */
+  sentiment?: string | null;
 }
 
 /**
@@ -250,6 +257,7 @@ export async function prepareCheck(input: CheckInput): Promise<PreparedCheck | C
     policyHash,
     stablePrefix,
     variablePart: JSON.stringify(variable),
+    ...(kind === "DAILY" ? { sentiment: input.sentiment ?? null } : {}),
   };
 }
 
@@ -265,14 +273,37 @@ export const CHECK_SEND = { json: true, maxOutputTokens: 800, reasoning: "off" a
  *   - a suggestion identical to its quote is dropped;
  *   - an issue whose quote overlaps an earlier (more important) one is dropped — "accept
  *     all" still applies the full corrected text, so nothing is lost;
- *   - an issue with no quote (e.g. "pick the other tone") stays, as a note.
+ *   - an issue with no quote stays, as a note.
+ * Round 3 (owner test 2026-11-11):
+ *   - a "tone" note is kept only for a daily comment, only when it picks a REAL tone
+ *     (CONCERN | POSITIVE) other than the one picked, and its text is ours, not the model's
+ *     (the test named tones that do not exist and said "sentiment"); one at most;
+ *   - "tone" on quoted words is relabelled "standard" (tone is the chip note only);
+ *   - a rewrite of (nearly) the whole field that adds words is labelled "structure", whatever
+ *     the model called it (the test showed a whole rewrite as "honorific").
  */
-export function cleanIssues(issues: CheckIssue[], deidText: Record<string, string>, corrected: Record<string, string>): CheckIssue[] {
+export function cleanIssues(
+  issues: CheckIssue[],
+  deidText: Record<string, string>,
+  corrected: Record<string, string>,
+  ctx: { kind?: CheckKind; sentiment?: string | null } = {},
+): CheckIssue[] {
   const out: CheckIssue[] = [];
   const taken: Record<string, Array<[number, number]>> = {};
+  let toneNote = false;
   for (const raw of issues) {
     const issue = { ...raw };
     const text = deidText[issue.field] ?? "";
+    if (!issue.quote.trim() && (issue.type === "tone" || issue.pick)) {
+      const pick = (issue.pick ?? "").toUpperCase();
+      if (ctx.kind === "CT" || toneNote || !(COMMENT_SENTIMENTS as readonly string[]).includes(pick) || pick === ctx.sentiment) continue;
+      toneNote = true;
+      out.push({ field: issue.field, type: "tone", quote: "", pick, suggestion: `লেখাটির সাথে “${COMMENT_SENTIMENT_LABELS_BN[pick as CommentSentiment]}” সুর বেশি মেলে — উপরে সেটি বেছে নিন।` });
+      continue;
+    }
+    delete issue.pick;
+    if (issue.quote && issue.type === "tone") issue.type = "standard";
+    if (issue.quote && text && issue.quote.trim().length >= text.trim().length * 0.8 && issue.suggestion.trim().length >= issue.quote.trim().length * 1.3) issue.type = "structure";
     if (issue.quote && issue.suggestion.trim() === issue.quote.trim()) continue;
     if (issue.quote && text.includes(issue.quote)) {
       const fix = corrected[issue.field] ?? "";
@@ -298,7 +329,7 @@ const issueTypesOf = (issues: CheckIssue[]) => issues.reduce<Record<string, numb
 export function finishCheck(p: PreparedCheck, json: unknown, model: string, callId?: string): CheckResult {
   const parsed = parseReply(json, new Set(p.fields.map((f) => f.field)));
   const deidText: Record<string, string> = Object.fromEntries(p.deid.map((d) => [d.field, d.text]));
-  const cleaned = cleanIssues(parsed.issues, deidText, parsed.corrected);
+  const cleaned = cleanIssues(parsed.issues, deidText, parsed.corrected, { kind: p.kind, sentiment: p.sentiment });
   const back = (field: string, s: string) => restoreNumbers(reidentify(s, p.map), p.seqs[field]);
   const issues = cleaned.map((i) => ({ ...i, quote: back(i.field, i.quote), suggestion: back(i.field, i.suggestion) }));
   const corrected = p.fields.map((f) => ({ field: f.field, text: back(f.field, parsed.corrected[f.field] ?? deidText[f.field]) }));
