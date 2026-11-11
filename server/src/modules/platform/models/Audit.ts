@@ -394,6 +394,7 @@ export type AuditEventKind =
   | "VIVA_EXAMINERS_SAVED"        // who examines which child on an oral paper (D-#1083) — meta.before/after
   | "VIVA_MARKS_LOCKED"           // an oral paper's marks locked (D-#1084) — meta.classId/subject/dateKey
   | "VIVA_MARKS_UNLOCKED"         // an oral paper's marks unlocked (D-#1084)
+  | "VIVA_SET_DRAWN"              // a child's oral question set drawn at the examiner's tap (D-#1276) — meta.studentId/setKey/counts
   | "EXAM_ROUTINE_SAVED"          // one class's exam routine saved (D-#883) — meta.classId/slots
   | "EXAM_ROUTINE_PUBLISHED"      // the exam routine published or withdrawn (D-#883) — meta.published
   | "GUARDIAN_FEATURE_SET"        // a guardian feature switched on/off for all or one guardian (D-#1011) — meta.feature/onForAll/guardianId/on

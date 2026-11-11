@@ -7,18 +7,27 @@
  * each with their examiner, and the list refreshes itself every 15 seconds so progress is
  * live. Questions up to 2 marks show every half step; larger ones show whole numbers and a
  * "+½" switch, so a 10-mark question stays one row.
+ *
+ * Question sets (D-#1275–#1277): on a paper with sets, a child shows only their name until the
+ * examiner taps it — that tap draws the child's set (evenly, final) and the set's questions
+ * appear under the name with a set badge. Letter questions mark each letter on its own.
  */
 import React from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
+  VIVA_DRAW_SET,
   VIVA_SET_ABSENT,
   VIVA_SET_MARK,
   VIVA_SHEET,
+  vivaItemValue,
+  vivaItemsOf,
   vivaNum,
+  vivaSetLabel,
   vivaSteps,
   type VivaItemT,
+  type VivaPaperT,
   type VivaRowT,
 } from "../../graphql/viva";
 import { Badge, Body, Button, Card, Chip, ChipRow, Muted, Notice, Screen } from "../../components/ui";
@@ -86,43 +95,123 @@ export function MarkPicker({
   );
 }
 
+/** A set's badge colour, by its place on the paper. */
+export const SET_TONES = ["brand", "info", "gold", "warn", "ok", "muted"] as const;
+export const setTone = (paper: VivaPaperT, setKey: string | null) =>
+  SET_TONES[Math.max(0, paper.sets.findIndex((s) => s.key === setKey)) % SET_TONES.length]!;
+
+/**
+ * A letter question (D-#1277): one control per letter, the letter shown large so the teacher
+ * can read it out. ½-mark letters (one word each) are one chip that cycles
+ * not-yet → ✓ (½) → ✗ (০) → not-yet; bigger letters (two words, up to ১) get a 0 … max row.
+ */
+function LetterPicker({
+  item,
+  byKey,
+  disabled,
+  onMark,
+}: {
+  item: VivaItemT;
+  byKey: Map<string, number>;
+  disabled: boolean;
+  onMark: (key: string, v: number | null) => void;
+}): React.ReactElement {
+  if (item.partMarks <= 0.5) {
+    return (
+      <ChipRow>
+        {item.parts.map((letter, i) => {
+          const k = `${item.key}:${i}`;
+          const v = byKey.has(k) ? byKey.get(k)! : null;
+          const mark = v == null ? "" : v > 0 ? " ✓" : " ✗";
+          return (
+            <Chip
+              key={k}
+              label={`${letter}${mark}`}
+              selected={v != null && v > 0}
+              onPress={() => !disabled && onMark(k, v == null ? item.partMarks : v > 0 ? 0 : null)}
+            />
+          );
+        })}
+      </ChipRow>
+    );
+  }
+  return (
+    <View style={{ gap: space(1) }}>
+      {item.parts.map((letter, i) => {
+        const k = `${item.key}:${i}`;
+        return (
+          <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+            <Body style={{ fontWeight: "700", fontSize: 20, width: 32, textAlign: "center" }}>{letter}</Body>
+            <View style={{ flex: 1 }}>
+              <MarkPicker max={item.partMarks} value={byKey.has(k) ? byKey.get(k)! : null} disabled={disabled} onPick={(v) => onMark(k, v)} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function ChildCard({
   row,
-  items,
-  fullMarks,
+  paper,
   showExaminer,
   busy,
   onMark,
   onAbsent,
+  onDraw,
 }: {
   row: VivaRowT;
-  items: VivaItemT[];
-  fullMarks: number;
+  paper: VivaPaperT;
   showExaminer: boolean;
   busy: boolean;
   onMark: (key: string, v: number | null) => void;
   onAbsent: (absent: boolean) => void;
+  onDraw: () => void;
 }): React.ReactElement {
+  const fullMarks = paper.fullMarks;
+  const items = vivaItemsOf(paper, row);
+  const setLabel = vivaSetLabel(paper, row.setKey);
   const byKey = new Map(row.marks.map((m) => [m.key, m.value]));
-  const filled = items.filter((i) => byKey.has(i.key)).length;
+  const filled = items.filter((i) => vivaItemValue(i, byKey) != null).length;
+  const waiting = row.needsDraw && !row.absent;
   const state = row.absent
     ? STR.vivaAbsentNote
-    : row.done
-      ? STR.vivaStateDone
-      : filled
-        ? STR.vivaStateStarted.replace("{f}", bnNum(filled)).replace("{n}", bnNum(items.length))
-        : STR.vivaStateNone;
+    : waiting
+      ? row.canEdit
+        ? STR.vivaTapToDraw
+        : STR.vivaNotDrawn
+      : row.done
+        ? STR.vivaStateDone
+        : filled || row.marks.length
+          ? STR.vivaStateStarted.replace("{f}", bnNum(filled)).replace("{n}", bnNum(items.length))
+          : STR.vivaStateNone;
+  const header = (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+      <Muted style={{ width: 28 }}>{row.roll ? bnNum(row.roll) : ""}</Muted>
+      <View style={{ flex: 1 }}>
+        <Body style={{ fontWeight: "700" }}>{row.name}</Body>
+        <Muted>{state}</Muted>
+        {showExaminer ? <Muted>{row.examinerName ? STR.vivaExaminerOf.replace("{name}", row.examinerName) : STR.vivaNoExaminer}</Muted> : null}
+      </View>
+      {setLabel ? <Badge text={setLabel} tone={setTone(paper, row.setKey)} /> : null}
+      {!row.absent && row.marks.length ? <Badge text={`${vivaNum(row.total)}/${vivaNum(fullMarks)}`} tone={row.done ? "ok" : "warn"} /> : null}
+    </View>
+  );
   return (
     <Card>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-        <Muted style={{ width: 28 }}>{row.roll ? bnNum(row.roll) : ""}</Muted>
-        <View style={{ flex: 1 }}>
-          <Body style={{ fontWeight: "700" }}>{row.name}</Body>
-          <Muted>{state}</Muted>
-          {showExaminer ? <Muted>{row.examinerName ? STR.vivaExaminerOf.replace("{name}", row.examinerName) : STR.vivaNoExaminer}</Muted> : null}
-        </View>
-        {!row.absent && filled ? <Badge text={`${vivaNum(row.total)}/${vivaNum(fullMarks)}`} tone={row.done ? "ok" : "warn"} /> : null}
-      </View>
+      {waiting && row.canEdit ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${row.name} — ${STR.vivaTapToDraw}`}
+          disabled={busy}
+          onPress={onDraw}
+        >
+          {header}
+        </Pressable>
+      ) : (
+        header
+      )}
       {row.canEdit ? (
         <Button
           title={row.absent ? STR.vivaMakePresent : STR.vivaAbsent}
@@ -131,7 +220,8 @@ function ChildCard({
           onPress={() => onAbsent(!row.absent)}
         />
       ) : null}
-      {row.absent ? null : (
+      {waiting && row.canEdit ? <Button title={STR.vivaDrawSet} variant="secondary" disabled={busy} onPress={onDraw} /> : null}
+      {row.absent || waiting ? null : (
         <View style={{ gap: space(2), marginTop: space(1) }}>
           {items.map((it) => (
             <View key={it.key} style={{ gap: space(1) }}>
@@ -139,7 +229,11 @@ function ChildCard({
                 {it.label}
                 {it.ref ? ` (${it.ref})` : ""} <Muted>· {vivaNum(it.marks)}</Muted>
               </Body>
-              <MarkPicker max={it.marks} value={byKey.has(it.key) ? byKey.get(it.key)! : null} disabled={!row.canEdit} onPick={(v) => onMark(it.key, v)} />
+              {it.parts.length ? (
+                <LetterPicker item={it} byKey={byKey} disabled={!row.canEdit} onMark={onMark} />
+              ) : (
+                <MarkPicker max={it.marks} value={byKey.has(it.key) ? byKey.get(it.key)! : null} disabled={!row.canEdit} onPick={(v) => onMark(it.key, v)} />
+              )}
             </View>
           ))}
         </View>
@@ -158,6 +252,7 @@ export default function VivaSheetScreen({ route }: Props): React.ReactElement {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [, setMark] = useMutation(VIVA_SET_MARK);
   const [, setAbsent] = useMutation(VIVA_SET_ABSENT);
+  const [, drawSet] = useMutation(VIVA_DRAW_SET);
   const sheet = q.data?.vivaSheet;
 
   React.useEffect(() => {
@@ -185,6 +280,15 @@ export default function VivaSheetScreen({ route }: Props): React.ReactElement {
       return;
     }
     replace(res.data.setVivaMark);
+  };
+
+  const onDraw = async (row: VivaRowT) => {
+    setErr(null);
+    setBusy(row.studentId);
+    const res = await drawSet({ paperId, studentId: row.studentId });
+    setBusy(null);
+    if (res.error || !res.data) return setErr(friendlyError(res.error));
+    replace(res.data.drawVivaSet);
   };
 
   const onAbsent = async (row: VivaRowT, absent: boolean) => {
@@ -235,12 +339,12 @@ export default function VivaSheetScreen({ route }: Props): React.ReactElement {
               <ChildCard
                 key={r.studentId}
                 row={r}
-                items={sheet.paper.items}
-                fullMarks={sheet.paper.fullMarks}
+                paper={sheet.paper}
                 showExaminer={sheet.seesAll}
                 busy={busy === r.studentId}
                 onMark={(key, v) => void onMark(r, key, v)}
                 onAbsent={(a) => void onAbsent(r, a)}
+                onDraw={() => void onDraw(r)}
               />
             ))}
           </View>

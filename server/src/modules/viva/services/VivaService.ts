@@ -12,6 +12,7 @@
  *   examine (SELF)                   — only the children the caller examines;
  *   edit_all                         — mark any child; examine marks only their own.
  */
+import { randomInt } from "node:crypto";
 import { Types } from "mongoose";
 import { callerHasPermission, ROUTINE_SUBJECT_LABELS_BN, type Permission, type RoutineSubject } from "@scd/shared";
 import type { AppContext } from "../../../context";
@@ -25,7 +26,7 @@ import { User } from "../../foundation/models/User";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
-import { VivaPaper, type IVivaPaper, type IVivaItem } from "../models/VivaPaper";
+import { VivaPaper, type IVivaPaper, type IVivaItem, type IVivaSet } from "../models/VivaPaper";
 import { VivaMark, type IVivaMark } from "../models/VivaMark";
 
 export class VivaError extends Error {}
@@ -64,6 +65,18 @@ export interface VivaItemShape {
   label: string;
   marks: number;
   ref: string;
+  /** Letter question (D-#1277): the letters, each marked 0 … partMarks; [] = ordinary. */
+  parts: string[];
+  partMarks: number;
+}
+
+export interface VivaSetShape {
+  key: string;
+  /** "" on a one-set paper. */
+  label: string;
+  items: VivaItemShape[];
+  /** Children given this set so far, absent ones left out (the even-split count, D-#1276). */
+  drawn: number;
 }
 
 export interface VivaExaminerShape {
@@ -97,9 +110,12 @@ export interface VivaPaperShape {
   fullMarks: number;
   /** The oral marks the syllabus gives this subject (null = the syllabus has no oral row). */
   syllabusMarks: number | null;
+  /** Set 1's questions (the only set on a one-set paper). */
   items: VivaItemShape[];
+  /** Every set (always at least one); more than one = each child draws a set (D-#1275). */
+  sets: VivaSetShape[];
   examiners: VivaExaminerShape[];
-  /** Any mark entered — questions can no longer change (D-#1081). */
+  /** Any mark entered or set drawn — questions can no longer change (D-#1081, D-#1275). */
   frozen: boolean;
   lockedAt: string | null;
   progress: VivaProgressShape;
@@ -118,6 +134,10 @@ export interface VivaRowShape {
   examinerId: string | null;
   examinerName: string;
   absent: boolean;
+  /** The child's set (the only set's key on a one-set paper); null = not drawn yet. */
+  setKey: string | null;
+  /** A paper with sets whose set this child hasn't drawn yet: tap the name to draw (D-#1276). */
+  needsDraw: boolean;
   marks: { key: string; value: number }[];
   /** Absent = 0 (owner, 2026-11-06). */
   total: number;
@@ -165,6 +185,47 @@ export function seedItems(rows: SyllabusRow[]): Omit<IVivaItem, "key">[] {
 
 const keyed = (items: Omit<IVivaItem, "key">[]): IVivaItem[] => items.map((it, i) => ({ ...it, key: `q${i + 1}` }));
 const sumMarks = (items: { marks: number }[]): number => Math.round(items.reduce((a, x) => a + x.marks, 0) * 2) / 2;
+
+// ── Sets and letter questions (D-#1275–#1277) ─────────────────────────────────
+
+/** The paper's sets; a VV-1 paper (no `sets`) is one set holding `items`. */
+export function setsOf(p: Pick<IVivaPaper, "sets" | "items">): IVivaSet[] {
+  return p.sets?.length ? p.sets : [{ key: "s1", label: "", items: p.items }];
+}
+
+/** More than one set: each child draws one (D-#1276). */
+export const hasSets = (p: Pick<IVivaPaper, "sets">): boolean => (p.sets?.length ?? 0) > 1;
+
+/** The questions a child is marked on; null = the paper has sets and the child hasn't drawn. */
+export function itemsFor(p: Pick<IVivaPaper, "sets" | "items">, setKey: string | null | undefined): IVivaItem[] | null {
+  if (!hasSets(p)) return setsOf(p)[0]!.items;
+  return p.sets.find((s) => s.key === setKey)?.items ?? null;
+}
+
+const partKey = (key: string, i: number): string => `${key}:${i}`;
+
+/** One question's mark from the stored taps; undefined until fully marked (every letter of a
+ *  letter question). */
+export function itemValue(it: IVivaItem, byKey: Map<string, number>): number | undefined {
+  const parts = it.parts ?? [];
+  if (!parts.length) return byKey.get(it.key);
+  let sum = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const v = byKey.get(partKey(it.key, i));
+    if (v == null) return undefined;
+    sum += v;
+  }
+  return Math.round(sum * 2) / 2;
+}
+
+const shapeItem = (i: IVivaItem): VivaItemShape => ({
+  key: i.key,
+  label: i.label,
+  marks: i.marks,
+  ref: i.ref ?? "",
+  parts: [...(i.parts ?? [])],
+  partMarks: i.partMarks ?? 0,
+});
 
 // ── Default examiner (D-#1083) ────────────────────────────────────────────────
 
@@ -287,19 +348,23 @@ function examinerMap(p: IVivaPaper, studentIds: string[]): Map<string, string | 
   return new Map(studentIds.map((s) => [s, listed.get(s) ?? first]));
 }
 
-function rowTotal(p: IVivaPaper, m: IVivaMark | undefined): { total: number; done: boolean; filled: number } {
-  if (!m) return { total: 0, done: false, filled: 0 };
+/** A child's total on their own set. `filled` = questions fully marked; `touched` = any tap. */
+function rowTotal(p: IVivaPaper, m: IVivaMark | undefined): { total: number; done: boolean; filled: number; touched: boolean } {
+  if (!m) return { total: 0, done: false, filled: 0, touched: false };
+  const touched = m.marks.length > 0;
+  const items = itemsFor(p, m.setKey);
+  if (!items) return { total: 0, done: false, filled: 0, touched };
   const byKey = new Map(m.marks.map((x) => [x.key, x.value]));
   let total = 0;
   let filled = 0;
-  for (const it of p.items) {
-    const v = byKey.get(it.key);
+  for (const it of items) {
+    const v = itemValue(it, byKey);
     if (v == null) continue;
     filled += 1;
     total += v;
   }
-  if (m.absent) return { total: 0, done: false, filled };
-  return { total: Math.round(total * 2) / 2, done: filled === p.items.length && p.items.length > 0, filled };
+  if (m.absent) return { total: 0, done: false, filled, touched };
+  return { total: Math.round(total * 2) / 2, done: filled === items.length && items.length > 0, filled, touched };
 }
 
 async function marksOf(paperIds: Types.ObjectId[]): Promise<Map<string, Map<string, IVivaMark>>> {
@@ -327,21 +392,24 @@ function shapePaper(p: IVivaPaper, c: Ctx, marks: Map<string, IVivaMark> | undef
   const per = new Map<string, { children: number; done: number; absent: number }>();
   for (const e of p.examiners) per.set(String(e.userId), { children: 0, done: 0, absent: 0 });
   let frozen = false;
-  for (const m of marks?.values() ?? []) if (m.marks.length) frozen = true;
+  for (const m of marks?.values() ?? []) if (m.marks.length || m.setKey) frozen = true;
+  const drawn = new Map<string, number>();
   for (const id of ids) {
     const m = marks?.get(id);
     const t = rowTotal(p, m);
     const ex = exam.get(id);
     const bucket = ex ? per.get(ex) : undefined;
     if (bucket) bucket.children += 1;
+    if (m?.setKey && !m.absent) drawn.set(m.setKey, (drawn.get(m.setKey) ?? 0) + 1);
     if (m?.absent) {
       progress.absent += 1;
       if (bucket) bucket.absent += 1;
     } else if (t.done) {
       progress.done += 1;
       if (bucket) bucket.done += 1;
-    } else if (t.filled > 0) progress.started += 1;
+    } else if (t.touched) progress.started += 1;
   }
+  const sets = setsOf(p);
   const cls = c.classes.get(String(p.classId));
   return {
     id: String(p._id),
@@ -355,7 +423,8 @@ function shapePaper(p: IVivaPaper, c: Ctx, marks: Map<string, IVivaMark> | undef
     dateKey: p.dateKey,
     fullMarks: p.fullMarks,
     syllabusMarks,
-    items: p.items.map((i) => ({ key: i.key, label: i.label, marks: i.marks, ref: i.ref ?? "" })),
+    items: sets[0]!.items.map(shapeItem),
+    sets: sets.map((s) => ({ key: s.key, label: s.label, items: s.items.map(shapeItem), drawn: drawn.get(s.key) ?? 0 })),
     examiners: p.examiners.map((e) => ({
       userId: String(e.userId),
       name: c.names.get(String(e.userId)) ?? "",
@@ -431,6 +500,7 @@ export async function vivaSheet(ctx: AppContext, paperId: string): Promise<VivaS
     const m = marks?.get(id);
     const t = rowTotal(p, m);
     const ex = exam.get(id) ?? null;
+    const setKey = hasSets(p) ? (m?.setKey ?? null) : setsOf(p)[0]!.key;
     return {
       studentId: id,
       name: k.name,
@@ -438,6 +508,8 @@ export async function vivaSheet(ctx: AppContext, paperId: string): Promise<VivaS
       examinerId: ex,
       examinerName: ex ? c.names.get(ex) ?? "" : "",
       absent: !!m?.absent,
+      setKey,
+      needsDraw: setKey == null,
       marks: (m?.marks ?? []).map((x) => ({ key: x.key, value: x.value })),
       total: t.total,
       done: t.done,
@@ -458,39 +530,93 @@ export async function vivaExaminerCandidates(): Promise<{ userId: string; name: 
 export interface VivaItemInput {
   key?: string | null;
   label: string;
+  /** Ignored for a letter question: its marks are parts × partMarks. */
   marks: number;
   ref?: string | null;
+  /** Letter question (D-#1277): the letters, each marked 0 … partMarks. */
+  parts?: string[] | null;
+  partMarks?: number | null;
 }
 
-/** Office: the questions and their marks. Refused once any mark is entered (D-#1081). */
-export async function saveVivaPaper(ctx: AppContext, paperId: string, input: VivaItemInput[]): Promise<VivaPaperShape> {
+export interface VivaSetInput {
+  key?: string | null;
+  label?: string | null;
+  items: VivaItemInput[];
+}
+
+const MAX_SETS = 8;
+
+/** Office: the questions and their marks — one list (`items`) or two or more sets (`sets`,
+ *  D-#1275). Refused once any mark is entered or any set drawn (D-#1081). */
+export async function saveVivaPaper(
+  ctx: AppContext,
+  paperId: string,
+  input: VivaItemInput[] | null,
+  setsInput?: VivaSetInput[] | null,
+): Promise<VivaPaperShape> {
   const p = await mustPaper(paperId);
   if (p.lockedAt) throw new VivaError("নম্বর লক করা হয়েছে — প্রশ্নপত্র বদলানো যাবে না।");
-  if (await VivaMark.exists({ paperId: p._id, "marks.0": { $exists: true } })) {
-    throw new VivaError("এই প্রশ্নপত্রে নম্বর দেওয়া শুরু হয়েছে — প্রশ্ন আর বদলানো যাবে না।");
+  if (await VivaMark.exists({ paperId: p._id, $or: [{ "marks.0": { $exists: true } }, { setKey: { $ne: null } }] })) {
+    throw new VivaError("এই প্রশ্নপত্রে নম্বর দেওয়া বা সেট আনা শুরু হয়েছে — প্রশ্ন আর বদলানো যাবে না।");
   }
-  if (!input.length) throw new VivaError("অন্তত একটি প্রশ্ন দিন।");
-  if (input.length > 60) throw new VivaError("একটি প্রশ্নপত্রে সর্বোচ্চ ৬০টি প্রশ্ন।");
-  const used = new Set<string>();
-  const existing = new Set(p.items.map((i) => i.key));
-  let next = Math.max(0, ...[...existing].map((k) => Number(k.replace(/^q/, "")) || 0)) + 1;
-  const items: IVivaItem[] = input.map((it) => {
-    const label = (it.label ?? "").trim();
-    if (!label) throw new VivaError("প্রতিটি প্রশ্নের লেখা দিন।");
-    if (label.length > 300) throw new VivaError("প্রশ্নের লেখা ৩০০ অক্ষরের মধ্যে রাখুন।");
-    if (!isValidItemMarks(it.marks)) throw new VivaError(`"${label}"-এর নম্বর ০-এর বেশি পূর্ণ বা আধা সংখ্যা হতে হবে।`);
-    let key = it.key && existing.has(it.key) && !used.has(it.key) ? it.key : "";
+  const raw: VivaSetInput[] = setsInput?.length ? setsInput : [{ items: input ?? [] }];
+  if (raw.length > MAX_SETS) throw new VivaError(`একটি প্রশ্নপত্রে সর্বোচ্চ ${bn(MAX_SETS)}টি সেট।`);
+  const oldSets = setsOf(p);
+  const usedItems = new Set<string>();
+  const existingItems = new Set(oldSets.flatMap((s) => s.items.map((i) => i.key)));
+  let next = Math.max(0, ...[...existingItems].map((k) => Number(k.replace(/^q/, "")) || 0)) + 1;
+  const usedSets = new Set<string>();
+  // Only real sets keep their keys; a one-list paper's implicit "s1" is free, so its first set is s1.
+  const existingSets = new Set((p.sets ?? []).map((s) => s.key));
+  let nextSet = Math.max(0, ...[...existingSets].map((k) => Number(k.replace(/^s/, "")) || 0)) + 1;
+
+  const sets: IVivaSet[] = raw.map((s, si) => {
+    const setName = raw.length > 1 ? (s.label ?? "").trim() || `সেট ${bn(si + 1)}` : "";
+    const where = setName ? `${setName}: ` : "";
+    if (!s.items.length) throw new VivaError(`${where}অন্তত একটি প্রশ্ন দিন।`);
+    if (s.items.length > 60) throw new VivaError(`${where}একটি সেটে সর্বোচ্চ ৬০টি প্রশ্ন।`);
+    const items: IVivaItem[] = s.items.map((it) => {
+      const label = (it.label ?? "").trim();
+      if (!label) throw new VivaError(`${where}প্রতিটি প্রশ্নের লেখা দিন।`);
+      if (label.length > 300) throw new VivaError("প্রশ্নের লেখা ৩০০ অক্ষরের মধ্যে রাখুন।");
+      const parts = (it.parts ?? []).map((x) => x.trim()).filter(Boolean);
+      let marks = it.marks;
+      let partMarks = 0;
+      if (parts.length) {
+        if (parts.length > 12) throw new VivaError(`"${label}": একটি প্রশ্নে সর্বোচ্চ ১২টি বর্ণ।`);
+        if (parts.some((x) => x.length > 12)) throw new VivaError(`"${label}": প্রতিটি বর্ণ ছোট রাখুন।`);
+        partMarks = it.partMarks ?? 0;
+        if (!isValidItemMarks(partMarks)) throw new VivaError(`"${label}"-এর প্রতি বর্ণের নম্বর ০-এর বেশি পূর্ণ বা আধা সংখ্যা হতে হবে।`);
+        marks = Math.round(parts.length * partMarks * 2) / 2;
+      }
+      if (!isValidItemMarks(marks)) throw new VivaError(`"${label}"-এর নম্বর ০-এর বেশি পূর্ণ বা আধা সংখ্যা হতে হবে।`);
+      let key = it.key && existingItems.has(it.key) && !usedItems.has(it.key) ? it.key : "";
+      if (!key) {
+        while (existingItems.has(`q${next}`) || usedItems.has(`q${next}`)) next += 1;
+        key = `q${next}`;
+        next += 1;
+      }
+      usedItems.add(key);
+      return { key, label, marks, ref: (it.ref ?? "").trim().slice(0, 60), parts, partMarks };
+    });
+    let key = s.key && existingSets.has(s.key) && !usedSets.has(s.key) ? s.key : "";
     if (!key) {
-      while (existing.has(`q${next}`) || used.has(`q${next}`)) next += 1;
-      key = `q${next}`;
-      next += 1;
+      while (existingSets.has(`s${nextSet}`) || usedSets.has(`s${nextSet}`)) nextSet += 1;
+      key = `s${nextSet}`;
+      nextSet += 1;
     }
-    used.add(key);
-    return { key, label, marks: it.marks, ref: (it.ref ?? "").trim().slice(0, 60) };
+    usedSets.add(key);
+    return { key, label: setName, items };
   });
-  const before = { fullMarks: p.fullMarks, items: p.items.length };
-  p.items = items as never;
-  p.fullMarks = sumMarks(items);
+
+  const totals = sets.map((s) => sumMarks(s.items));
+  if (totals.some((t) => t !== totals[0])) {
+    throw new VivaError(`সব সেটের মোট নম্বর সমান হতে হবে (${sets.map((s, i) => `${s.label}: ${bn(totals[i]!)}`).join(", ")})।`);
+  }
+  const before = { fullMarks: p.fullMarks, sets: oldSets.length, items: oldSets.reduce((a, s) => a + s.items.length, 0) };
+  p.items = sets[0]!.items as never;
+  p.sets = (sets.length > 1 ? sets : []) as never;
+  p.fullMarks = totals[0]!;
   p.updatedBy = oid(ctx.auth!.userId);
   await p.save();
   await writeAudit({
@@ -499,7 +625,7 @@ export async function saveVivaPaper(ctx: AppContext, paperId: string, input: Viv
     actorRole: ctx.auth!.role,
     targetId: p._id,
     targetKind: "VivaPaper",
-    meta: { before, after: { fullMarks: p.fullMarks, items: items.length } },
+    meta: { before, after: { fullMarks: p.fullMarks, sets: sets.length, items: sets.reduce((a, s) => a + s.items.length, 0) } },
   });
   return (await vivaSheet(ctx, paperId)).paper;
 }
@@ -571,10 +697,23 @@ async function rowShape(ctx: AppContext, p: IVivaPaper, row: IVivaMark): Promise
 export async function setVivaMark(ctx: AppContext, paperId: string, studentId: string, key: string, value: number | null): Promise<VivaRowShape> {
   const { p, row } = await editableRow(ctx, paperId, studentId);
   if (row.absent) throw new VivaError("শিশুটি অনুপস্থিত — আগে উপস্থিত করুন।");
-  const item = p.items.find((i) => i.key === key);
-  if (!item) throw new VivaError("প্রশ্নটি প্রশ্নপত্রে নেই।");
-  if (value != null && !isValidMark(value, item.marks)) {
-    throw new VivaError(`নম্বর ০ থেকে ${bn(item.marks)}-এর মধ্যে পূর্ণ বা আধা সংখ্যা হতে হবে।`);
+  const items = itemsFor(p, row.setKey);
+  if (!items) throw new VivaError("আগে শিশুর নামে ট্যাপ করে তার সেট আনুন।");
+  // A letter question's letters are marked one by one as `<key>:<index>` (D-#1277).
+  const [base, idx, extra] = key.split(":");
+  const item = items.find((i) => i.key === base);
+  if (!item || extra !== undefined) throw new VivaError("প্রশ্নটি এই শিশুর প্রশ্নপত্রে নেই।");
+  let max = item.marks;
+  if (item.parts?.length) {
+    const i = Number(idx);
+    if (idx === undefined) throw new VivaError("এই প্রশ্নের প্রতিটি বর্ণে আলাদা নম্বর দিন।");
+    if (!Number.isInteger(i) || i < 0 || i >= item.parts.length) throw new VivaError("বর্ণটি এই প্রশ্নে নেই।");
+    max = item.partMarks ?? 0;
+  } else if (idx !== undefined) {
+    throw new VivaError("প্রশ্নটি এই শিশুর প্রশ্নপত্রে নেই।");
+  }
+  if (value != null && !isValidMark(value, max)) {
+    throw new VivaError(`নম্বর ০ থেকে ${bn(max)}-এর মধ্যে পূর্ণ বা আধা সংখ্যা হতে হবে।`);
   }
   const now = new Date();
   const by = oid(ctx.auth!.userId);
@@ -586,6 +725,52 @@ export async function setVivaMark(ctx: AppContext, paperId: string, studentId: s
     await VivaMark.updateOne({ _id: row._id }, { $push: { marks: { key, value } }, $set: { enteredBy: by, enteredAt: now } });
   }
   return rowShape(ctx, p, (await VivaMark.findById(row._id))!);
+}
+
+/**
+ * Draw a child's question set — the examiner's tap on the child's name (D-#1276). The pick is
+ * random among the sets given to the fewest present children so far, so the class splits
+ * evenly (22 → 6·6·5·5) across every examiner of the paper. The draw is final: a child who
+ * already has a set gets it back unchanged, and nobody can redraw or change it.
+ *
+ * Two examiners tapping at the same moment: each writes its child's set, then bumps the
+ * paper's `drawSeq` from the value it counted at. Only one bump wins; the loser undoes its
+ * write and counts again, now seeing the winner's draw.
+ */
+export async function drawVivaSet(ctx: AppContext, paperId: string, studentId: string): Promise<VivaRowShape> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const { p, row } = await editableRow(ctx, paperId, studentId);
+    if (!hasSets(p) || row.setKey) return rowShape(ctx, p, row);
+    if (row.absent) throw new VivaError("শিশুটি অনুপস্থিত — আগে উপস্থিত করুন।");
+    const seq = p.drawSeq ?? 0;
+    const counts = new Map(p.sets.map((s) => [s.key, 0]));
+    const taken = await VivaMark.find({ paperId: p._id, setKey: { $ne: null }, absent: false }, { setKey: 1 }).lean();
+    for (const r of taken) if (r.setKey && counts.has(r.setKey)) counts.set(r.setKey, counts.get(r.setKey)! + 1);
+    const least = Math.min(...counts.values());
+    const pool = [...counts.entries()].filter(([, n]) => n === least).map(([k]) => k);
+    const pick = pool[randomInt(pool.length)]!;
+    const at = new Date();
+    const mine = await VivaMark.findOneAndUpdate(
+      { _id: row._id, setKey: null },
+      { $set: { setKey: pick, drawnAt: at, drawnBy: oid(ctx.auth!.userId) } },
+      { new: true },
+    );
+    if (!mine) continue; // another tap drew this child first — the next pass returns that draw
+    const bumped = await VivaPaper.updateOne({ _id: p._id, drawSeq: seq === 0 ? { $in: [0, null] } : seq }, { $inc: { drawSeq: 1 } });
+    if (bumped.modifiedCount === 1) {
+      await writeAudit({
+        eventKind: "VIVA_SET_DRAWN",
+        actorId: ctx.auth!.userId,
+        actorRole: ctx.auth!.role,
+        targetId: p._id,
+        targetKind: "VivaPaper",
+        meta: { studentId, setKey: pick, counts: Object.fromEntries(counts) },
+      });
+      return rowShape(ctx, p, mine);
+    }
+    await VivaMark.updateOne({ _id: row._id, setKey: pick, drawnAt: at }, { $set: { setKey: null, drawnAt: null, drawnBy: null } });
+  }
+  throw new VivaError("এই মুহূর্তে সেট আনা গেল না — আবার ট্যাপ করুন।");
 }
 
 /** Absent or present again. Marks already tapped are kept but not counted while absent. */

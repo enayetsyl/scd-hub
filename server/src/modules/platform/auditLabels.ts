@@ -489,6 +489,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   VIVA_EXAMINERS_SAVED: { bn: "মৌখিক পরীক্ষার পরীক্ষক ঠিক করেছেন", en: "Set oral exam examiners", group: "EXAM" },
   VIVA_MARKS_LOCKED: { bn: "মৌখিক নম্বর লক করেছেন", en: "Locked oral exam marks", group: "EXAM" },
   VIVA_MARKS_UNLOCKED: { bn: "মৌখিক নম্বর আনলক করেছেন", en: "Unlocked oral exam marks", group: "EXAM" },
+  VIVA_SET_DRAWN: { bn: "মৌখিক পরীক্ষায় শিশুর প্রশ্নসেট এনেছেন", en: "Drew a child's oral question set", group: "EXAM" },
   EXAM_ROUTINE_SAVED: { bn: "পরীক্ষার রুটিন সংরক্ষণ করেছেন", en: "Saved an exam routine", group: "EXAM" },
   EXAM_ROUTINE_PUBLISHED: { bn: "পরীক্ষার রুটিন প্রকাশ/প্রত্যাহার করেছেন", en: "Published or withdrew the exam routine", group: "EXAM" },
   GUARDIAN_FEATURE_SET: { bn: "অভিভাবকদের জন্য সুবিধা চালু/বন্ধ করেছেন", en: "Switched a feature on/off for guardians", group: "ACCESS" },

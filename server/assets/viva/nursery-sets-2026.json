@@ -1,0 +1,96 @@
+{
+  "_about": "Owner-approved 2026 Nursery oral question sets (D-#1275–#1277, docs/prd-viva.md §9.4). Loaded by server/scripts/load-viva-sets-2026.cjs (prod) and scripts/help/fixtures/viva.ts (local). Each set must total the paper's full marks: BAN 10, ENG 15.",
+  "papers": [
+    {
+      "subject": "BAN",
+      "fullMarks": 10,
+      "sets": [
+        {
+          "label": "সেট ১",
+          "items": [
+            { "label": "নিচের বর্ণ দিয়ে ১টি করে শব্দ বল", "marks": 2, "parts": ["য", "ধ", "ড়", "ঐ"], "partMarks": 0.5 },
+            { "label": "৪ দিকের নাম বল", "marks": 2 },
+            { "label": "৪টি ফুলের নাম বল", "marks": 2 },
+            { "label": "৪টি মাছের নাম বল", "marks": 2 },
+            { "label": "৭ দিনের নাম বল", "marks": 2 }
+          ]
+        },
+        {
+          "label": "সেট ২",
+          "items": [
+            { "label": "নিচের বর্ণগুলো দিয়ে ১টি করে শব্দ বল", "marks": 2, "parts": ["ট", "ষ", "ঈ", "ব"], "partMarks": 0.5 },
+            { "label": "৬ ঋতুর নাম বল", "marks": 2 },
+            { "label": "৪টি ফলের নাম বল", "marks": 2 },
+            { "label": "৪টি পশুর নাম বল", "marks": 2 },
+            { "label": "৪টি রংয়ের নাম বল", "marks": 2 }
+          ]
+        },
+        {
+          "label": "সেট ৩",
+          "items": [
+            { "label": "নিচের বর্ণগুলো দিয়ে ১টি করে শব্দ বল", "marks": 2, "parts": ["ক", "ম", "প", "শ"], "partMarks": 0.5 },
+            { "label": "৪টি সবজির নাম বল", "marks": 2 },
+            { "label": "৭ দিনের নাম বল", "marks": 2 },
+            { "label": "৪টি পাখির নাম বল", "marks": 2 },
+            { "label": "৪ দিকের নাম বল", "marks": 2 }
+          ]
+        },
+        {
+          "label": "সেট ৪",
+          "items": [
+            { "label": "নিচের বর্ণগুলো দিয়ে ১টি করে শব্দ বল", "marks": 2, "parts": ["ণ", "ভ", "ল", "য"], "partMarks": 0.5 },
+            { "label": "বাংলা ১২ মাসের নাম বল", "marks": 4 },
+            { "label": "৪টি মাছের নাম বল", "marks": 2 },
+            { "label": "৪টি পশুর নাম বল", "marks": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "ENG",
+      "fullMarks": 15,
+      "sets": [
+        {
+          "label": "সেট ১",
+          "items": [
+            { "label": "2 words with each letter", "marks": 5, "parts": ["E", "O", "W", "Q", "J"], "partMarks": 1 },
+            { "label": "7 days names", "marks": 3 },
+            { "label": "4 flower names", "marks": 2 },
+            { "label": "6 animal names", "marks": 3 },
+            { "label": "4 family members names", "marks": 2 }
+          ]
+        },
+        {
+          "label": "সেট ২",
+          "items": [
+            { "label": "2 words with each letter", "marks": 5, "parts": ["B", "G", "K", "T", "Z"], "partMarks": 1 },
+            { "label": "12 month names", "marks": 4 },
+            { "label": "6 body part names", "marks": 2 },
+            { "label": "4 birds names", "marks": 2 },
+            { "label": "4 colours names", "marks": 2 }
+          ]
+        },
+        {
+          "label": "সেট ৩",
+          "items": [
+            { "label": "2 words with each letter", "marks": 5, "parts": ["Y", "U", "P", "A", "H"], "partMarks": 1 },
+            { "label": "6 fruit names", "marks": 3 },
+            { "label": "7 days names", "marks": 3 },
+            { "label": "4 animals names", "marks": 2 },
+            { "label": "4 birds names", "marks": 2 }
+          ]
+        },
+        {
+          "label": "সেট ৪",
+          "items": [
+            { "label": "2 words with each letter", "marks": 5, "parts": ["V", "L", "D", "X", "R"], "partMarks": 1 },
+            { "label": "12 months names", "marks": 4 },
+            { "label": "4 family members names", "marks": 2 },
+            { "label": "4 flower names", "marks": 2 },
+            { "label": "6 body parts names", "marks": 2 }
+          ]
+        }
+      ]
+    }
+  ]
+}
