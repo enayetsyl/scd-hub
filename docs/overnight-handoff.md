@@ -17,8 +17,7 @@ Environment notes (all slices):
 
 ## PR-A — the content pipeline accepts the 2027 subjects and Class 6
 
-**Commits:** first `10affdb` · last: the `[PR-A] docs: overnight handoff + LO short-code fix` commit
-(hash recorded in the PR-B section below).
+**Commits:** first `10affdb` · last `fa46e2a`.
 
 ### What was built
 - Import envelope v1.2 (additive): `subject` += ISLAM, ICT, BAN2, ENG2; `class_level` 1–6 — envelope
@@ -89,3 +88,52 @@ the brief).
 2. ENG2 / BAN2 anchor words: no anchor-word rule was added for them (any of পাঠ / অধ্যায় / Unit / Lesson
    passes). Confirm the Class 6 2nd-paper books' division word.
 3. Question-time rates for ISLAM / ICT / BAN2 / ENG2 are borrowed (BGS / BGS / BAN / ENG). Real numbers?
+
+---
+
+## PR-B — a work sheet can carry an earlier class's objectives
+
+**Commits:** first `320ccf6` · last: the `[PR-B] docs: overnight handoff` commit right after it.
+
+### What was built
+- `createPaper` (HW / CT / RUBRIC) accepts a same-subject code of the section's class or any earlier class
+  (NUR < KG < C1 … C6); a later class is refused ("… পরের শ্রেণির …"). LOCKED + tagged as before; question
+  type and marks from the code's own class table; bank question must carry the code (existing check).
+  A sheet of only earlier-class codes defaults to the title "ভিত্তি যাচাই".
+- Evidence written as today (paper's section / class). `liveSectionRows` without a `loCode` keeps only the
+  section's own class codes (`includeEarlierClasses` opt-in), so heat-map, student view, roll-up, guardian
+  view, weekly assignment builder and the section trigger ignore the extra rows.
+- `resolveEarlierSteps` needed no change — it already read the student's own evidence on the prerequisite
+  code from any section with the earlier class's policy; with the rows now written it shows the real state.
+- New paged read `masteryEarlierClassSummary(sectionId, subject, page?, pageSize?)` (`mastery:view` + row
+  rule): label, class, assessed, weak count, weak students. Heat-map section "আগের শ্রেণির ধাপ" (hidden
+  when empty). New-sheet switch "আগের শ্রেণির {objective} যোগ করুন" → class chips → same picker; item
+  chips show the class. Reading guide `mastery-earlier-class`; permission-catalogue doc row.
+
+### Verified (executed; gate worktree at `320ccf6`)
+```
+verifiers (vocab, descriptive 11, lo-codes 13, subjects-2027 15, catalogue 11, tree C1_MATH, help guides,
+  example envelope)               → all PASS / ALL CHECKS PASSED, exit 0
+shared build / typecheck shared / server / app → exit 0 ×4
+jest --runInBand touched (masteryEarlierClass [new], masteryWork, masteryDiagnosis, masteryAssignment,
+  masteryAction, masteryGuardian, masteryRollup, masteryObjectiveTree, masteryObjectiveTreeBank,
+  masteryNotify, graphqlDocuments, permissionCatalogueGates, expectedErrorRegistry, helpGuides)
+                                  → Test Suites: 14 passed, 14 total · Tests: 173 passed, 173 total
+full server suite --maxWorkers=2  → Test Suites: 411 passed, 411 total · Tests: 6752 passed · JEST_EXIT=0
+expo export --platform web        → App exported … EXPO_EXIT=0
+```
+
+### Not done
+- No screenshot guide (the guide is a reading guide; a step guide with pictures needs prod).
+- The weekly assignment builder was verified through the rows it reads (`liveSectionRows`), not by running
+  a full build with earlier-class evidence present.
+
+### Decisions made
+D-#1314 (earlier-class rule, marks from the code's class, default title, one filter in `liveSectionRows`),
+D-#1315 (the summary read is paged from the start), D-#1316 (new-sheet switch, chips, guide).
+
+### Questions for the owner
+1. Should an earlier-class row also appear on the student's own page (not only as the "earlier step" of a
+   weak row), e.g. a short "ভিত্তি যাচাই" list? Not built.
+2. A baseline sheet uses the section class's switch only. Should the earlier class × subject also have to be
+   switched on (its tree locked) — it must be LOCKED already, so this only matters for the switch itself?
