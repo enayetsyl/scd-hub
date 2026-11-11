@@ -36,12 +36,19 @@ import { AiProject, type IAiProject } from "../models/AiProject";
 import { AiDraft, AiDraftVersion, AI_DRAFT_KINDS, AI_PIPELINE_KINDS, type AiDraftKind, type IAiDraft, type IAiDraftVersion } from "../models/AiDraft";
 import { AiWorkspaceError, loadProject } from "./AiProjectService";
 import { projectPrefix, protectParts } from "./ProjectChatService";
+import { checkPlanVersion, parsePlanHead, planLabel, preparePlanContent, type PlanCheck } from "./planTools";
 
 const MAX_BODY = 1_000_000;
 export const DRAFT_MAX_OUTPUT_TOKENS = 32_000;
 const REVISE_TIMEOUT_MS = 15 * 60 * 1000;
 
 export const REVISE_INSTRUCTIONS = `Revise the CURRENT DRAFT above following the notes below. Keep everything the notes do not ask to change. Return the WHOLE revised draft, in the same format as the current draft, and nothing else — no introduction, no comments. If the draft has a JSON part, return it in one \`\`\`json block followed by the Markdown part.
+
+NOTES:
+`;
+
+/** Lesson plans: the model revises the plan JSON only; the Markdown is rendered from it. */
+export const REVISE_PLAN_INSTRUCTIONS = `Revise the CURRENT PLAN JSON above following the notes below. Keep everything the notes do not ask to change. Return the WHOLE revised plan JSON in one \`\`\`json block and nothing else — no Markdown, no introduction, no comments. The school renders the Markdown from the JSON with render_plan.py and checks it with validate_plan.py (LOCKED_SCD_PlanSchema_v2 and its checks), so the JSON must pass that validator.
 
 NOTES:
 `;
@@ -54,7 +61,8 @@ const BN = {
   tooBig: "খসড়া খুব বড়",
   same: "আগের সংস্করণের সঙ্গে কোনো পার্থক্য নেই",
   json: "এই ধরনের খসড়ায় বৈধ JSON লাগে",
-  planJson: "পাঠ পরিকল্পনার খসড়ায় পরিকল্পনার JSON আর Markdown — দুটোই লাগে",
+  planJson: "পাঠ পরিকল্পনার খসড়ায় পরিকল্পনার JSON লাগে — Markdown সেখান থেকে তৈরি হয়",
+  planFailed: "যাচাইয়ে আটকেছে — অনুমোদন দেওয়া যাবে না",
   notApproved: "শুধু অনুমোদিত খসড়া পাঠানো যায় — আগে অনুমোদন দিন",
   changed: "অনুমোদনের পরে নতুন সংস্করণ হয়েছে — আবার অনুমোদন দিন",
   exportOnly: "এই ধরনের খসড়া শুধু ডাউনলোড করা যায়",
@@ -92,6 +100,17 @@ export interface DraftView {
   /** W-6 pilot score (owner). */
   review: { score: string; note: string | null; byName: string | null; at: Date; version: number } | null;
   updatedAt: Date;
+  /** Save-as-draft from an answer holding several plans: how many drafts were made (this is the first). */
+  savedTogether: number;
+}
+
+export interface PlanCheckView {
+  verdict: "PASS" | "FAIL" | "ERROR";
+  fails: string[];
+  warns: string[];
+  chapterDraftId: string | null;
+  chapterVersion: number | null;
+  at: Date;
 }
 
 export interface DraftVersionView {
@@ -105,7 +124,14 @@ export interface DraftVersionView {
   costUsd: number | null;
   createdByName: string | null;
   origin: "app" | "claude";
+  /** lesson_plan: validate_plan.py's verdict (null for other kinds). */
+  planCheck: PlanCheckView | null;
   at: Date;
+}
+
+function planCheckView(c: IAiDraftVersion["planCheck"] | PlanCheck | null | undefined): PlanCheckView | null {
+  if (!c) return null;
+  return { verdict: c.verdict, fails: c.fails ?? [], warns: c.warns ?? [], chapterDraftId: c.chapterDraftId ? c.chapterDraftId.toString() : null, chapterVersion: c.chapterVersion ?? null, at: c.at };
 }
 
 async function names(ids: Array<Types.ObjectId | null | undefined>): Promise<Map<string, string>> {
@@ -132,6 +158,7 @@ function draftView(d: IAiDraft, n: Map<string, string>): DraftView {
     canSend: approved && AI_PIPELINE_KINDS.includes(d.kind),
     review: d.review ? { score: d.review.score, note: d.review.note ?? null, byName: n.get(d.review.by.toString()) ?? null, at: d.review.at, version: d.review.version } : null,
     updatedAt: d.updatedAt,
+    savedTogether: 1,
   };
 }
 
@@ -147,6 +174,7 @@ function versionView(v: IAiDraftVersion, n: Map<string, string>): DraftVersionVi
     costUsd: v.costUsd ?? null,
     createdByName: v.createdBy ? n.get(v.createdBy.toString()) ?? null : null,
     origin: v.origin,
+    planCheck: planCheckView(v.planCheck),
     at: v.at,
   };
 }
@@ -184,8 +212,9 @@ function checkContent(kind: AiDraftKind, body: string, planJson: string | null |
     return { body: b, planJson: null };
   }
   if (kind === "lesson_plan") {
+    // The Markdown part is rendered from the JSON when the version is saved (planTools.ts).
     const pj = (planJson ?? "").trim();
-    if (!b || !pj) throw new AiWorkspaceError(BN.planJson);
+    if (!pj) throw new AiWorkspaceError(BN.planJson);
     try {
       JSON.parse(pj);
     } catch {
@@ -201,13 +230,31 @@ function checkContent(kind: AiDraftKind, body: string, planJson: string | null |
 export function contentFromAnswer(kind: AiDraftKind, text: string): { body: string; planJson: string | null } {
   if (kind === "lesson_plan") {
     const s = splitJsonFence(text);
-    return { body: s.rest, planJson: s.json };
+    if (s.json) return { body: s.rest, planJson: s.json };
+    // A bare JSON answer (no fence) is the plan itself.
+    const t = text.trim();
+    return t.startsWith("{") && parsePlanHead(t) ? { body: "", planJson: t } : { body: s.rest, planJson: null };
   }
   if (isJsonKind(kind)) {
     const s = splitJsonFence(text);
     return { body: s.json ?? text.trim(), planJson: null };
   }
   return { body: text.trim(), planJson: null };
+}
+
+/**
+ * Every ```json block in an answer that is a lesson plan (has plan_type), chapter plans first,
+ * so a chapter plan and its session plans delivered in one answer become one draft each and
+ * the session plans are checked against the chapter plan saved just before them.
+ */
+export function planFencesFromAnswer(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/```json\s*\n([\s\S]*?)\n```/gi)) {
+    const j = m[1].trim();
+    const h = parsePlanHead(j);
+    if (h && typeof h.plan_type === "string") out.push(j);
+  }
+  return out.sort((a, b) => Number(parsePlanHead(b)?.plan_type === "chapter_plan") - Number(parsePlanHead(a)?.plan_type === "chapter_plan"));
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +265,13 @@ async function addVersion(
   draft: IAiDraft,
   input: { body: string; planJson: string | null; note?: string | null; source: IAiDraftVersion["source"]; createdBy?: string | null; origin?: "app" | "claude"; policyHash?: string | null; costUsd?: number | null },
 ): Promise<IAiDraftVersion> {
+  // A lesson plan's Markdown is always rendered from its JSON, and the version is checked.
+  let planCheck: PlanCheck | null = null;
+  if (draft.kind === "lesson_plan" && input.planJson) {
+    const p = await preparePlanContent(draft.projectId, draft._id, input.planJson);
+    input = { ...input, body: p.body };
+    planCheck = p.planCheck;
+  }
   for (let tries = 0; tries < 3; tries++) {
     const latest = await AiDraftVersion.findOne({ draftId: draft._id }).sort({ version: -1 }).select("version body planJson").lean();
     if (latest && latest.body === input.body && (latest.planJson ?? null) === input.planJson) throw new AiWorkspaceError(BN.same);
@@ -235,6 +289,7 @@ async function addVersion(
         costUsd: input.costUsd ?? null,
         createdBy: input.createdBy && Types.ObjectId.isValid(input.createdBy) ? new Types.ObjectId(input.createdBy) : null,
         origin: input.origin ?? "app",
+        planCheck: planCheck ? { ...planCheck, chapterDraftId: planCheck.chapterDraftId ? new Types.ObjectId(planCheck.chapterDraftId) : null } : null,
         at: new Date(),
       });
       await AiDraft.updateOne({ _id: draft._id }, { $set: { currentVersion: version } });
@@ -287,9 +342,22 @@ export async function saveDraftFromMessage(authIn: AuthPayload | null, messageId
   const m = Types.ObjectId.isValid(messageId) ? await AiAssistMessage.findById(messageId).lean() : null;
   if (!m || !m.projectId || m.role !== "assistant" || (m.status ?? "done") !== "done") throw new AiWorkspaceError("শুধু শেষ হওয়া এআই উত্তর খসড়া করা যায়");
   const kind = checkKind(input.kind);
+  const link = { $set: { sourceSessionId: m.sessionId, sourceMessageId: m._id } };
+  // A chapter plan and its session plans in one answer: one draft per plan.
+  const plans = kind === "lesson_plan" ? planFencesFromAnswer(m.text) : [];
+  if (plans.length > 1) {
+    const title = cleanTitle(input.title);
+    const views: DraftView[] = [];
+    for (const planJson of plans) {
+      const v = await createDraft(authIn, m.projectId.toString(), { title: `${title} — ${planLabel(planJson)}`, kind, body: "", planJson, source: "chat", policyHash: m.policyHash ?? null, costUsd: null });
+      await AiDraft.updateOne({ _id: v.id }, link);
+      views.push(v);
+    }
+    return { ...views[0], savedTogether: views.length };
+  }
   const content = contentFromAnswer(kind, m.text);
   const view = await createDraft(authIn, m.projectId.toString(), { title: input.title, kind, ...content, source: "chat", policyHash: m.policyHash ?? null, costUsd: m.costUsd ?? null });
-  await AiDraft.updateOne({ _id: view.id }, { $set: { sourceSessionId: m.sessionId, sourceMessageId: m._id } });
+  await AiDraft.updateOne({ _id: view.id }, link);
   return view;
 }
 
@@ -338,6 +406,14 @@ export async function saveDraftVersion(authIn: AuthPayload | null, draftId: stri
 /** Owner (or the Principal): locks the current version. */
 export async function approveDraft(authIn: AuthPayload | null, draftId: string): Promise<DraftView> {
   const { auth, draft: d } = await loadDraft(authIn, draftId, "owner");
+  if (d.kind === "lesson_plan") {
+    // Checked again now: the chapter plan a session plan follows may have changed since.
+    const v = await AiDraftVersion.findOne({ draftId: d._id, version: d.currentVersion });
+    if (!v?.planJson) throw new AiWorkspaceError(BN.planJson);
+    const check = await checkPlanVersion(d.projectId, d._id, v.planJson);
+    await AiDraftVersion.updateOne({ _id: v._id }, { $set: { planCheck: { ...check, chapterDraftId: check.chapterDraftId ? new Types.ObjectId(check.chapterDraftId) : null } } });
+    if (check.verdict !== "PASS") throw new AiWorkspaceError(`${BN.planFailed}: ${check.fails.slice(0, 3).join(" · ")}`.slice(0, 600));
+  }
   await AiDraft.updateOne({ _id: d._id }, { $set: { approvedVersion: d.currentVersion, approvedBy: new Types.ObjectId(auth.userId), approvedAt: new Date() } });
   await writeAudit({ eventKind: "AI_DRAFT_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiDraft", targetId: draftId, meta: { action: "approve", version: d.currentVersion } });
   return (await draft(auth, draftId)).draft;
@@ -423,8 +499,11 @@ export async function runRevision(draftId: Types.ObjectId, deps: DraftDeps = {},
     const requester = await User.findById(d.revise.requestedBy).select("role").lean();
     if (!project || !current) return void (await fail(BN.notFound));
     const prefix = await projectPrefix(project);
-    const draftText = current.planJson ? `\`\`\`json\n${current.planJson}\n\`\`\`\n\n${current.body}` : isJsonKind(d.kind) ? `\`\`\`json\n${current.body}\n\`\`\`` : current.body;
-    let parts = [prefix.stablePrefix, `# CURRENT DRAFT (${d.kind}, version ${current.version})\n\n${draftText}`, REVISE_INSTRUCTIONS + d.revise.notes];
+    // A lesson plan sends only its JSON (the Markdown is rendered from it) plus the validator's findings.
+    const isPlan = d.kind === "lesson_plan";
+    const findings = isPlan && current.planCheck && current.planCheck.verdict !== "PASS" ? `\n\nTHE VALIDATOR'S FINDINGS ON THIS VERSION:\n- ${current.planCheck.fails.slice(0, 30).join("\n- ")}` : "";
+    const draftText = isPlan ? `\`\`\`json\n${current.planJson ?? ""}\n\`\`\`${findings}` : isJsonKind(d.kind) ? `\`\`\`json\n${current.body}\n\`\`\`` : current.body;
+    let parts = [prefix.stablePrefix, `# CURRENT ${isPlan ? "PLAN" : "DRAFT"} (${d.kind}, version ${current.version})\n\n${draftText}`, (isPlan ? REVISE_PLAN_INSTRUCTIONS : REVISE_INSTRUCTIONS) + d.revise.notes];
     let map: Record<string, string> = {};
     if (project.nameProtection) {
       try {

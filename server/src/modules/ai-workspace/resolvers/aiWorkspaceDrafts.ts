@@ -23,6 +23,7 @@ import {
   setDraftArchived,
   type DraftVersionView,
   type DraftView,
+  type PlanCheckView,
   type PipelinePreview,
   type SendResult,
 } from "../services/DraftService";
@@ -85,9 +86,22 @@ const DraftRef = builder.objectRef<DraftView>("AiDraft").implement({
     canSend: t.boolean({ description: "Approved, unchanged since, and of a kind with a pipeline.", resolve: (d) => d.canSend }),
     review: t.field({ type: ReviewRef, nullable: true, description: "W-6 pilot score by the owner.", resolve: (d) => d.review }),
     updatedAt: t.string({ resolve: (d) => iso(d.updatedAt)! }),
+    savedTogether: t.int({ description: "Save-as-draft from an answer with several lesson plans: how many drafts were made (this is the first).", resolve: (d) => d.savedTogether }),
   }),
 });
 const DraftPageRef = pageRef("AiDraftPage", DraftRef);
+
+const PlanCheckRef = builder.objectRef<PlanCheckView>("AiPlanCheck").implement({
+  description: "validate_plan.py's verdict on a lesson-plan version (P09 plan tools).",
+  fields: (t) => ({
+    verdict: t.string({ description: "PASS | FAIL | ERROR (the validator could not run)", resolve: (c) => c.verdict }),
+    fails: t.stringList({ resolve: (c) => c.fails }),
+    warns: t.stringList({ resolve: (c) => c.warns }),
+    chapterDraftId: t.string({ nullable: true, description: "The chapter-plan draft a multi-period session plan was checked against.", resolve: (c) => c.chapterDraftId }),
+    chapterVersion: t.int({ nullable: true, resolve: (c) => c.chapterVersion }),
+    at: t.string({ resolve: (c) => iso(c.at)! }),
+  }),
+});
 
 const VersionRef = builder.objectRef<DraftVersionView>("AiDraftVersion").implement({
   fields: (t) => ({
@@ -101,6 +115,7 @@ const VersionRef = builder.objectRef<DraftVersionView>("AiDraftVersion").impleme
     costUsd: t.float({ nullable: true, resolve: (v) => v.costUsd }),
     createdByName: t.string({ nullable: true, resolve: (v) => v.createdByName }),
     origin: t.string({ resolve: (v) => v.origin }),
+    planCheck: t.field({ type: PlanCheckRef, nullable: true, description: "lesson_plan: the validator's verdict on this version.", resolve: (v) => v.planCheck }),
     at: t.string({ resolve: (v) => iso(v.at)! }),
   }),
 });

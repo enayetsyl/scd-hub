@@ -6,7 +6,8 @@ import { Schema, model, Document, Types } from "mongoose";
  * current version (`approvedVersion`). A later change adds a version and the draft is a
  * draft again until it is approved again — the approved version stays on record.
  *
- *   kind   free | lesson_plan (Markdown + the plan JSON, D-#1229) | question_bank (bank JSON)
+ *   kind   free | lesson_plan (the plan JSON + the Markdown rendered from it, D-#1229; P09
+ *          plan tools, planTools.ts) | question_bank (bank JSON)
  *          | book_chapter (support-book patch JSON) | storybook | paper
  *   revise W-3 "Revise with notes": an AI call that writes the next version; it can wait for
  *          off-peak like a chat turn (status queued with runAfter).
@@ -152,6 +153,19 @@ export interface IAiDraftVersion extends Document {
   costUsd?: number | null;
   createdBy?: Types.ObjectId | null;
   origin: "app" | "claude";
+  /**
+   * lesson_plan: validate_plan.py's verdict on this version (P09 plan tools, planTools.ts).
+   * `body` is then the Markdown rendered from `planJson`. Re-run (and replaced) at approval,
+   * because the chapter plan a session plan is checked against may have changed.
+   */
+  planCheck?: {
+    verdict: "PASS" | "FAIL" | "ERROR";
+    fails: string[];
+    warns: string[];
+    chapterDraftId?: Types.ObjectId | null;
+    chapterVersion?: number | null;
+    at: Date;
+  } | null;
   at: Date;
 }
 
@@ -168,6 +182,20 @@ const AiDraftVersionSchema = new Schema<IAiDraftVersion>(
     costUsd: { type: Number, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     origin: { type: String, required: true, enum: ["app", "claude"], default: "app" },
+    planCheck: {
+      type: new Schema(
+        {
+          verdict: { type: String, required: true, enum: ["PASS", "FAIL", "ERROR"] },
+          fails: { type: [String], default: [] },
+          warns: { type: [String], default: [] },
+          chapterDraftId: { type: Schema.Types.ObjectId, ref: "AiDraft", default: null },
+          chapterVersion: { type: Number, default: null },
+          at: { type: Date, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     at: { type: Date, required: true },
   },
   { versionKey: false },

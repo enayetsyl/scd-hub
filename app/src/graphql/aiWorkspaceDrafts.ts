@@ -24,6 +24,18 @@ export interface AiDraftT {
   canSend: boolean;
   review: { score: "usable" | "minor" | "rewrite"; note: string | null; byName: string | null; at: string; version: number } | null;
   updatedAt: string;
+  /** Save-as-draft from an answer with several lesson plans: how many drafts were made. */
+  savedTogether: number;
+}
+
+/** validate_plan.py on a lesson-plan version (P09 plan tools). */
+export interface AiPlanCheckT {
+  verdict: "PASS" | "FAIL" | "ERROR";
+  fails: string[];
+  warns: string[];
+  chapterDraftId: string | null;
+  chapterVersion: number | null;
+  at: string;
 }
 
 export interface AiDraftVersionT {
@@ -37,6 +49,7 @@ export interface AiDraftVersionT {
   costUsd: number | null;
   createdByName: string | null;
   origin: "app" | "claude";
+  planCheck: AiPlanCheckT | null;
   at: string;
 }
 
@@ -48,8 +61,8 @@ interface PageT<T> {
 }
 
 const DRAFT_FIELDS =
-  "id projectId title kind status currentVersion approvedVersion approvedByName approvedAt createdByName origin revise { status runAfter error notes } sends { pipeline version ok summary at } canSend review { score note byName at version } updatedAt";
-const VERSION_FIELDS = "id version body planJson note source policyHash costUsd createdByName origin at";
+  "id projectId title kind status currentVersion approvedVersion approvedByName approvedAt createdByName origin revise { status runAfter error notes } sends { pipeline version ok summary at } canSend review { score note byName at version } updatedAt savedTogether";
+const VERSION_FIELDS = "id version body planJson note source policyHash costUsd createdByName origin planCheck { verdict fails warns chapterDraftId chapterVersion at } at";
 
 export const AI_DRAFTS_PAGE = gql<{ aiDraftsPage: PageT<AiDraftT> }, { projectId: string; archived?: boolean; page: number; pageSize: number }>`
   query AiDraftsPage($projectId: String!, $archived: Boolean, $page: Int, $pageSize: Int) {
