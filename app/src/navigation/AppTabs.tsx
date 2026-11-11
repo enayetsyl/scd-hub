@@ -32,6 +32,7 @@ import type {
   PopupStackParamList,
   VocabStackParamList,
   ClassTestStackParamList,
+  ExamsStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
   FreeMixingStackParamList,
@@ -242,6 +243,11 @@ import ClassTestRecheckRulesScreen from "../screens/classtest/ClassTestRecheckRu
 import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
 import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
 import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
+import ExamHomeScreen from "../screens/exams/ExamHomeScreen";
+import ExamMarkGridScreen from "../screens/exams/ExamMarkGridScreen";
+import ExamRecheckScreen from "../screens/exams/ExamRecheckScreen";
+import ExamCustodyScreen from "../screens/exams/ExamCustodyScreen";
+import ExamReportCardScreen from "../screens/exams/ExamReportCardScreen";
 import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
 import ClassTestResultsViewScreen from "../screens/classtest/ClassTestResultsViewScreen";
 import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
@@ -1135,6 +1141,38 @@ function VocabNavigator(): React.ReactElement {
       />
       <VocabStack.Screen name="VocabAssignment" component={VocabAssignmentScreen} options={{ title: STR.vbAssignTitle }} />
     </VocabStack.Navigator>
+  );
+}
+
+const ExamsStack = createNativeStackNavigator<ExamsStackParamList>();
+function ExamsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ExamsStack.Navigator screenOptions={stackOptions}>
+      {/* ExamHome takes NO params and MUST stay first — the initial route of a stack
+          cannot require params or the tab crashes on mount (RN initial-route trap). */}
+      <ExamsStack.Screen name="ExamHome" component={ExamHomeScreen} options={{ title: STR.exHomeTitle }} />
+      <ExamsStack.Screen
+        name="ExamMarkGrid"
+        component={ExamMarkGridScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exMarkTitle })}
+      />
+      <ExamsStack.Screen
+        name="ExamRecheck"
+        component={ExamRecheckScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exRecheckTitle })}
+      />
+      <ExamsStack.Screen
+        name="ExamCustody"
+        component={ExamCustodyScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exCustodyTitle })}
+      />
+      <ExamsStack.Screen
+        name="ExamReportCard"
+        component={ExamReportCardScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exReportTitle })}
+      />
+    </ExamsStack.Navigator>
   );
 }
 
@@ -2122,6 +2160,8 @@ export function AppTabs(): React.ReactElement {
     "student_comments:create", "student_comments:view", "student_comments:review", "student_comments:read_status",
     "parents_meeting:view", "parents_meeting:write_notes",
   );
+  // Exams EX-1..EX-9 (D-#375–#382): marks/recheck/report cards, or the custody chain.
+  const canExams = any(...featureActions("exam_results"), ...featureActions("exam_custody"));
   const canObservation = any(...featureActions("classroom_observation"));
   // Free Mixing Observation: the assigner/board always; a reviewer only once something
   // is actually assigned to them (owner ruling 2026-07-20).
@@ -2287,6 +2327,8 @@ export function AppTabs(): React.ReactElement {
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
+        {/* Exams (D-#375) — staff who can read exams; the server re-gates every action. */}
+        {canExams ? <Drawer.Screen name="ExamsTab" component={ExamsNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
         {/* Free Mixing Observation (D-#341) — P/O always; a teacher only when assigned. */}

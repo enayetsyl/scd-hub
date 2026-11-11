@@ -398,6 +398,28 @@ export type AuditEventKind =
   | "EXAM_ROUTINE_SAVED"          // one class's exam routine saved (D-#883) — meta.classId/slots
   | "EXAM_ROUTINE_PUBLISHED"      // the exam routine published or withdrawn (D-#883) — meta.published
   | "GUARDIAN_FEATURE_SET"        // a guardian feature switched on/off for all or one guardian (D-#1011) — meta.feature/onForAll/guardianId/on
+  // Exams (docs/prd-exams.md, D-#375–#382). The custody rows are the point: the paper
+  // sheets carry names and signatures but no counts and no issue/return record, so
+  // "how many scripts went out, how many came back" was unanswerable (D-#382).
+  | "EXAM_PAPER_UPSERTED"         // a class×subject paper created/re-shaped — meta carries the component split (EX-1, D-#376)
+  | "EXAM_STATUS_CHANGED"         // exam lifecycle transition (EX-1)
+  | "EXAM_DUTY_ASSIGNED"          // invigilator/checker/rechecker/tabulator put on a paper (EX-2)
+  | "EXAM_DUTY_REVOKED"           // a duty row removed (EX-2)
+  | "EXAM_MARKS_ENTERED"          // a checker wrote/replaced marks on a paper (EX-3)
+  | "EXAM_CT_PULLED"              // CT component pulled from the class-test tracker (EX-3, D-#378)
+  | "EXAM_RECHECK_ENTERED"        // the rechecker wrote their INDEPENDENT figures (EX-4)
+  | "EXAM_DIVERGENCE_RESOLVED"    // a checker/rechecker disagreement settled by a named person (EX-4)
+  | "EXAM_PAPER_TABULATED"        // a paper locked after every divergence was settled (EX-4)
+  | "EXAM_PAPER_TABULATION_REOPENED" // a tabulated paper re-opened with a reason (EX-4, exam_results:reopen). NOT EXAM_PAPER_REOPENED — that is the paper bank (D-#1033)
+  | "EXAM_REPORT_COMMENT_SET"     // the "Comment from School" line written for a student (EX-5)
+  | "EXAM_CUSTODY_HANDED_OVER"    // giver recorded a physical handover with a count (EX-6, D-#382)
+  | "EXAM_CUSTODY_ACKNOWLEDGED"   // the named receiver confirmed the same count (EX-6)
+  | "EXAM_CUSTODY_DISPUTED"       // receiver counted DIFFERENTLY — both numbers kept, note required (EX-6)
+  | "EXAM_CUSTODY_CANCELLED"      // giver withdrew a still-unacknowledged handover (EX-6)
+  | "EXAM_RESULTS_SUBMITTED"       // the card set sent for approval; every paper tabulated (EX-9)
+  | "EXAM_RESULTS_PUBLISHED"       // approve+publish — the guardian-visible flip (EX-9)
+  | "EXAM_RESULTS_SENT_BACK"       // returned to marking with a reason (EX-9)
+  | "EXAM_RESULTS_UNPUBLISHED"     // pulled back out of guardian view (EX-9)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

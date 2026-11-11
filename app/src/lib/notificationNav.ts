@@ -338,6 +338,18 @@ export function notificationTarget(
     // Principal-addressed: the queue of syllabuses waiting on their signature.
     case "EXAM_SYLLABUS_AWAITING_PUBLISH":
       return { tab: "SyllabusTab", screen: "SyllabusApprovals" };
+    // Exam custody (EX-8, D-#382): the receiver acknowledges / the Office settles a dispute —
+    // both on that exam's custody screen.
+    case "EXAM_CUSTODY_HANDOVER":
+    case "EXAM_CUSTODY_DISPUTED":
+      return refs?.examId
+        ? { tab: "ExamsTab", screen: "ExamCustody", params: { examId: refs.examId } }
+        : { tab: "ExamsTab", screen: "ExamHome" };
+    // EX-9: a card set waiting on approval, or results published — the exam hub. A guardian
+    // has no exam-results screen (nothing here is shown to guardians beyond the published PDF).
+    case "EXAM_RESULT_SUBMITTED":
+    case "EXAM_RESULT_PUBLISHED":
+      return guardian ? null : { tab: "ExamsTab", screen: "ExamHome" };
 
     case "STAFF_LEAVE_SUBMITTED":
       // The notification exists to get someone to DECIDE. Without this case it fell to

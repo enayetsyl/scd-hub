@@ -293,6 +293,36 @@ export const FEATURE_CATALOGUE = {
       publish: { en: "Publish the exam routine", bn: "পরীক্ষার রুটিন প্রকাশ করা", desc: "Teachers and guardians see the routine", teacher: false, office: true, flags: [] },
     },
   },
+  // Exam cycle EX-1..EX-9 (docs/prd-exams.md, D-#375–#382; ported onto dev 2026-11-11):
+  // papers, duties, checker marks, independent recheck, tabulation, report cards and the
+  // submit → approve → publish loop. Creating the exam row itself stays exam_syllabus:settings.
+  exam_results: {
+    group: "assessment_and_exams",
+    en: "Exam marks & report cards",
+    bn: "পরীক্ষার নম্বর ও রিপোর্ট কার্ড",
+    actions: {
+      view: { en: "View exam marks & report cards", bn: "পরীক্ষার নম্বর ও রিপোর্ট কার্ড দেখা", desc: "Exam workspace, papers, duties, marks, report cards and their PDF", teacher: true, office: true, flags: [] },
+      settings: { en: "Set up exam papers", bn: "বিষয়পত্রের অংশ ও পূর্ণমান ঠিক করা", desc: "Per-paper CT/Adab/Final split, script full marks, exam stage", teacher: false, office: true, flags: [] },
+      assign: { en: "Assign exam duties", bn: "পরীক্ষার দায়িত্ব বণ্টন", desc: "Put an invigilator, checker, rechecker or tabulator on a paper; remove one", teacher: false, office: true, flags: [] },
+      enter_marks: { en: "Mark an assigned paper", bn: "দায়িত্বপ্রাপ্ত বিষয়পত্রে নম্বর দেওয়া", desc: "Checker marks and CT pull, independent recheck, settle a difference, tabulate — only on a paper the person is on duty for", teacher: true, office: false, flags: [] },
+      edit_all: { en: "Work on any paper", bn: "যেকোনো বিষয়পত্রের নম্বরে কাজ করা", desc: "Enter, recheck, settle or tabulate marks on a paper without a duty", teacher: false, office: true, flags: [] },
+      reopen: { en: "Re-open a tabulated paper", bn: "সংকলিত বিষয়পত্র আবার খোলা", desc: "Unlock a tabulated paper with a reason", teacher: false, office: true, flags: [] },
+      comment: { en: "Write the school comment", bn: "রিপোর্ট কার্ডে স্কুলের মন্তব্য লেখা", desc: "The Comment from School line on a student's card", teacher: false, office: true, flags: [] },
+      submit: { en: "Send results for approval", bn: "ফলাফল অনুমোদনে পাঠানো", desc: "Submit the card set once every paper is tabulated", teacher: true, office: true, flags: [] },
+      publish: { en: "Approve & publish results", bn: "ফলাফল অনুমোদন ও প্রকাশ", desc: "Approve and publish, send back with a reason, unpublish", teacher: false, office: true, flags: [] },
+    },
+  },
+  // The two-signature script custody chain (EX-6..EX-8, D-#382).
+  exam_custody: {
+    group: "assessment_and_exams",
+    en: "Exam script custody",
+    bn: "খাতা ও প্রশ্নের হস্তান্তর",
+    actions: {
+      view: { en: "View the custody chain", bn: "খাতা ও প্রশ্নের হস্তান্তর দেখা", desc: "Handover log, per-paper balance, exceptions", teacher: true, office: true, flags: [] },
+      hand_over: { en: "Record a handover", bn: "খাতা বা প্রশ্ন হস্তান্তর নথিভুক্ত করা", desc: "Record what was handed to whom with a count; cancel own unacknowledged handover", teacher: true, office: true, flags: [] },
+      acknowledge: { en: "Acknowledge a handover", bn: "হস্তান্তর গ্রহণ স্বীকার করা", desc: "Confirm or dispute the count of a handover addressed to me", teacher: true, office: true, flags: [] },
+    },
+  },
   // Exam paper bank (D-#1030–#1034, docs/prd-exam-paper-bank.md): another branch's past papers to
   // read, and this branch's draft papers reviewed item by item by an assigned reviewer.
   exam_papers: {
