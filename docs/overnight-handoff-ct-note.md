@@ -26,7 +26,7 @@ Branch `claude/dazzling-curie-pxsvx2` (started from `origin/dev` 8d9e5a2; `git m
 | `npm run build --workspace=shared` | exit 0 |
 | `npm run typecheck --workspace=shared` / `server` / `app` | exit 0 / 0 / 0 (server + app run with `NODE_OPTIONS=--max-old-space-size=6144`; the default 2 GB heap runs out on the server) |
 | `jest --runInBand` class-test suites + childClassTests + graphqlDocuments + permissionCatalogueGates + helpGuides (`NODE_OPTIONS=--max-old-space-size=4096`, as CI) | `Test Suites: 16 passed, 16 total · Tests: 363 passed, 363 total` |
-| Full server suite `jest --maxWorkers=2` (4 GB heap) | still running at the first commit — result added in the follow-up commit |
+| Full server suite `jest --maxWorkers=2` (4 GB heap) | `Test Suites: 410 passed, 410 total · Tests: 6755 passed, 6755 total` (exit 0) |
 | `npx expo export --platform web` (output to the scratchpad) | exit 0 — `App exported to: …/web-dist` |
 
 ## Not done
