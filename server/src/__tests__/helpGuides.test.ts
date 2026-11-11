@@ -11,6 +11,7 @@
  *   feedback   one answer per person per guide, changeable
  *   shots      only a listed picture of a visible guide; the route refuses no login
  *   feature    a guardian guide naming a released feature (D-#1011) shows only once it is on for them
+ *   read       a reading guide (kind "read", D-#1280): sections/blocks check, served with sections, no rows
  *
  * In-memory MongoDB, real services, a fixture help folder in the OS temp dir.
  */
@@ -60,6 +61,29 @@ const guide = (id: string, who: Partial<HelpGuideFile>, extra: Partial<HelpGuide
   ...extra,
 });
 
+/** A reading guide (D-#1280): text sections, no rows. */
+const readGuide = (id: string, extra: Partial<HelpGuideFile> = {}): HelpGuideFile => ({
+  id,
+  kind: "read",
+  category: "homework_assignment",
+  title: `পড়ার নির্দেশিকা ${id}`,
+  intro: "ভূমিকা",
+  keywords: ["নির্দেশিকা"],
+  perms: ["homework:declare"],
+  sections: [
+    {
+      heading: "১. উদ্দেশ্য",
+      blocks: [
+        { p: "একটি <b>অনুচ্ছেদ</b>।" },
+        { list: ["প্রথম", "<b>দ্বিতীয়</b>"] },
+        { table: { head: ["তথ্য", "কী দেখবেন"], rows: [["<b>সংখ্যা</b>", "উপস্থিতি"], ["সারাংশ", "খসড়া"]] } },
+        { check: ["যাচাই করা হয়েছে"] },
+      ],
+    },
+  ],
+  ...extra,
+});
+
 function writeFixture(): string {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), "help-"));
   fs.mkdirSync(path.join(d, "guides"));
@@ -83,9 +107,10 @@ function writeFixture(): string {
   ];
   for (const g of guides) {
     fs.writeFileSync(path.join(d, "guides", `${g.id}.json`), JSON.stringify(g));
-    if (g.rows[0].shot) {
+    const shot = g.rows?.[0]?.shot;
+    if (shot) {
       fs.mkdirSync(path.join(d, "shots", g.id), { recursive: true });
-      fs.writeFileSync(path.join(d, "shots", g.rows[0].shot), "png");
+      fs.writeFileSync(path.join(d, "shots", shot), "png");
     }
   }
   fs.writeFileSync(path.join(d, "shots", "t-declare", "2.png"), "not listed");
@@ -162,6 +187,91 @@ describe("checkHelpGuide (shared)", () => {
     expect(checkHelpGuide({ ...g, guardianFeature: "NOPE" }, env).join()).toMatch(/guardianFeature must be one of/);
     expect(checkHelpGuide({ ...ok, guardianFeature: "STORYBOOKS" }, env).join()).toMatch(/needs audience "GUARDIAN"/);
   });
+});
+
+describe("reading guides (D-#1280)", () => {
+  const env = {
+    fileId: "t-read",
+    categoryIds: new Set(["homework_assignment"]),
+    permissionKeys: helpPermissionKeys(),
+    shotExists: () => false,
+  };
+  const ok = readGuide("t-read");
+  const withBlocks = (blocks: unknown[]) => ({ ...ok, sections: [{ heading: "শিরোনাম", blocks }] });
+  const problems = (g: unknown) => checkHelpGuide(g, env).join("\n");
+
+  it("passes a well-formed reading guide (no shots needed) and an explicit steps kind", () => {
+    expect(checkHelpGuide(ok, env)).toEqual([]);
+    const steps = guide("t-1", { perms: ["homework:declare"] }, { kind: "steps" });
+    expect(checkHelpGuide(steps, { ...env, fileId: "t-1", shotExists: () => true })).toEqual([]);
+  });
+
+  it("refuses an unknown kind, rows on a reading guide, and sections on a steps guide", () => {
+    expect(problems({ ...ok, kind: "video" })).toMatch(/kind must be one of steps, read/);
+    expect(problems({ ...ok, rows: [] })).toMatch(/has no rows/);
+    const steps = guide("t-1", { perms: ["homework:declare"] }, { sections: ok.sections });
+    expect(checkHelpGuide(steps, { ...env, fileId: "t-1", shotExists: () => true }).join()).toMatch(/sections need kind "read"/);
+  });
+
+  it("needs 1–15 sections, each with a heading and at least one block", () => {
+    expect(problems({ ...ok, sections: undefined })).toMatch(/sections: 1–15 sections/);
+    expect(problems({ ...ok, sections: [] })).toMatch(/sections: 1–15 sections/);
+    expect(problems({ ...ok, sections: Array.from({ length: 16 }, () => ok.sections![0]) })).toMatch(/1–15 sections/);
+    expect(problems({ ...ok, sections: [{ heading: "", blocks: [{ p: "ক" }] }] })).toMatch(/sections\[0\]\.heading: text is required/);
+    expect(problems({ ...ok, sections: [{ heading: "ক", blocks: [] }] })).toMatch(/at least one block/);
+  });
+
+  it("each block is exactly one known type", () => {
+    expect(problems(withBlocks([{ p: "ক", list: ["খ"] }]))).toMatch(/exactly one of p, list, table, check/);
+    expect(problems(withBlocks([{ quote: "ক" }]))).toMatch(/exactly one of p, list, table, check/);
+    expect(problems(withBlocks([{ list: [] }]))).toMatch(/list: a non-empty list of text/);
+    expect(problems(withBlocks([{ check: ["ক", ""] }]))).toMatch(/check\[1\]: text is required/);
+  });
+
+  it("tables are rectangular and every string passes the <b>-only markup check", () => {
+    expect(problems(withBlocks([{ table: { head: ["ক", "খ"], rows: [["১"]] } }]))).toMatch(/1 cells; the head has 2/);
+    expect(problems(withBlocks([{ table: { head: ["ক"], rows: [] } }]))).toMatch(/at least one row/);
+    expect(problems(withBlocks([{ table: ["ক"] }]))).toMatch(/must be \{ head, rows \}/);
+    expect(problems(withBlocks([{ p: "<i>ক</i>" }]))).toMatch(/only <b> is allowed/);
+    expect(problems(withBlocks([{ list: ["<b>ক"] }]))).toMatch(/unclosed <b>/);
+    expect(problems(withBlocks([{ table: { head: ["<b><b>ক</b></b>"], rows: [["খ"]] } }]))).toMatch(/nested <b>/);
+    expect(problems({ ...ok, sections: [{ heading: "ক > খ", blocks: [{ p: "গ" }] }] })).toMatch(/stray < or >/);
+  });
+
+  it("is served with its sections and no rows; perms gate it like any guide", async () => {
+    // Its own folder (the shared fixture's exact lists stay as they are): the reading guide + one steps guide.
+    const d2 = fs.mkdtempSync(path.join(os.tmpdir(), "help-read-"));
+    fs.mkdirSync(path.join(d2, "guides"));
+    fs.mkdirSync(path.join(d2, "shots", "t-declare"), { recursive: true });
+    fs.writeFileSync(path.join(d2, "categories.json"), JSON.stringify([{ id: "homework_assignment", title: "বাড়ির কাজ" }]));
+    fs.writeFileSync(path.join(d2, "guides", "t-read.json"), JSON.stringify(ok));
+    fs.writeFileSync(path.join(d2, "guides", "t-declare.json"), JSON.stringify(guide("t-declare", { perms: ["homework:declare"] })));
+    fs.writeFileSync(path.join(d2, "shots", "t-declare", "1.png"), "png");
+    setHelpDirForTests(d2);
+    try {
+      await servedChecks();
+    } finally {
+      setHelpDirForTests(dir);
+      fs.rmSync(d2, { recursive: true, force: true });
+    }
+  });
+
+  async function servedChecks(): Promise<void> {
+    const h = await myHelpGuides(ctxOf(auth("TEACHER")));
+    const r = h.guides.find((g) => g.id === "t-read")!;
+    expect(r.kind).toBe("read");
+    expect(r.rows).toEqual([]);
+    expect(r.sections[0].heading).toBe("১. উদ্দেশ্য");
+    expect(r.sections[0].blocks).toEqual([
+      { p: "একটি <b>অনুচ্ছেদ</b>।", list: null, check: null, tableHead: null, tableRows: null },
+      { p: null, list: ["প্রথম", "<b>দ্বিতীয়</b>"], check: null, tableHead: null, tableRows: null },
+      { p: null, list: null, check: null, tableHead: ["তথ্য", "কী দেখবেন"], tableRows: [["<b>সংখ্যা</b>", "উপস্থিতি"], ["সারাংশ", "খসড়া"]] },
+      { p: null, list: null, check: ["যাচাই করা হয়েছে"], tableHead: null, tableRows: null },
+    ]);
+    expect(h.guides.find((g) => g.id === "t-declare")).toMatchObject({ kind: "steps", sections: [] });
+    expect(await ids(auth("TEACHER", { revokedPermissions: ["homework:declare"] } as Partial<AuthPayload>))).not.toContain("t-read");
+    expect(await shotPathFor(auth("TEACHER"), "t-read", "1.png")).toBeNull();
+  }
 });
 
 describe("who sees which guide (D-#969)", () => {

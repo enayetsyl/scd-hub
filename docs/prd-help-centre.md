@@ -78,6 +78,39 @@ Images are served by the server from `server/assets/help/shots/` (not bundled, s
 `GET /files/help/<guide>/<file>`. That sits under the existing `/files` prefix, so the VM Caddyfile `@api`
 matcher needs no change. Login is required, and a picture is served only when it belongs to a guide the caller may see.
 
+## 4b. Reading guides (`kind: "read"`, D-#1280)
+
+Some help is not a task on one screen but a way of thinking: a short training article, such as how to
+write a parents'-meeting final comment. A **reading guide** is text only, with no screenshots, red boxes
+or step numbers.
+
+```jsonc
+{
+  "id": "family-meeting-final-writing",
+  "kind": "read",                     // absent = "steps" (every guide in §4)
+  // category, title, intro, keywords, perms | audience, screens, goTo, order, draft: as in §4
+  "sections": [                       // 1–15; NO "rows"
+    { "heading": "১. এই মন্তব্যের উদ্দেশ্য",
+      "blocks": [                     // ≥1; each block is exactly ONE of:
+        { "p": "অনুচ্ছেদ" },
+        { "list": ["বুলেট", "…"] },
+        { "table": { "head": ["তথ্য", "কী দেখবেন"], "rows": [["…", "…"]] } },   // every row as long as head
+        { "check": ["জমা দেওয়ার আগে যাচাই", "…"] }
+      ] }
+  ]
+}
+```
+
+- Every string (headings, paragraphs, list items, table cells, checklist items) uses the same markup
+  as step text: `<b>…</b>` only. `checkHelpGuide` checks all of it; a steps guide may not carry
+  `sections`, a reading guide may not carry `rows`. R2 (who sees it) is unchanged.
+- **App:** the guide page shows each section as a card: paragraphs, bullet lists, a table, and a
+  checklist with empty boxes (reminders, not inputs). On a phone each table row becomes a small card
+  ("column → value"); from tablet width it is a grid. On the help home a reading guide shows 📖
+  instead of 📄. Search also matches the section text.
+- A screen's header ? may list a reading guide next to its step guide (it then opens the home filtered
+  to both, §2.5).
+
 ## 5. Capture script (HC-3) — prod screens, nobody's data
 
 `server/scripts/help/capture.cjs --spec <name>` (Playwright, run on a laptop, never in CI). A spec in

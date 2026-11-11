@@ -1,6 +1,7 @@
 /**
  * Pure helpers for the help centre (prd-help-centre §2, D-#968): search, the step-text
- * markup, and which guides belong to a screen's header ?.
+ * markup, and which guides belong to a screen's header ?. Reading guides (D-#1280) are
+ * searched by their section text too.
  */
 import type { HelpGuideT } from "../graphql/help";
 import { getActiveLang } from "./labels";
@@ -33,14 +34,45 @@ export function stepSegments(text: string, stepNo: string): StepSegment[] {
   return out;
 }
 
+/** Reading-guide text (D-#1280): `<b>…</b>` → bold runs, with no step number. */
+export function boldSegments(text: string): StepSegment[] {
+  const out: StepSegment[] = [];
+  for (const part of text.split(/(<b>[\s\S]*?<\/b>)/)) {
+    if (!part) continue;
+    const m = /^<b>([\s\S]*)<\/b>$/.exec(part);
+    out.push(m ? { text: m[1], bold: true } : { text: part, bold: false });
+  }
+  return out;
+}
+
+/** Every string of a reading guide's sections, for search. */
+function sectionText(g: HelpGuideT): string[] {
+  return (g.sections ?? []).flatMap((s) => [
+    s.heading,
+    ...s.blocks.flatMap((b) => [
+      b.p ?? "",
+      ...(b.list ?? []),
+      ...(b.check ?? []),
+      ...(b.tableHead ?? []),
+      ...(b.tableRows ?? []).flatMap((r) => r.cells),
+    ]),
+  ]);
+}
+
 const plain = (s: string): string => s.replace(/<\/?b>/g, "").toLowerCase();
 
-/** Guides whose title, keywords or step text contain every word of the query. */
+/** Guides whose title, keywords, step text or reading-guide text contain every word of the query. */
 export function searchGuides(guides: HelpGuideT[], query: string): HelpGuideT[] {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return guides;
   return guides.filter((g) => {
-    const hay = [g.title, g.intro, ...g.keywords, ...g.rows.flatMap((r) => [r.heading, ...r.steps.map((s) => s.text)])]
+    const hay = [
+      g.title,
+      g.intro,
+      ...g.keywords,
+      ...g.rows.flatMap((r) => [r.heading, ...r.steps.map((s) => s.text)]),
+      ...sectionText(g),
+    ]
       .map(plain)
       .join(" ");
     return words.every((w) => hay.includes(w));
