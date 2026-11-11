@@ -10,6 +10,8 @@ export interface CommentCheckIssueT {
   type: string;
   quote: string;
   suggestion: string;
+  /** A tone note only: the tone the text fits better (CONCERN | POSITIVE). */
+  pick?: string | null;
 }
 
 export interface CommentCheckResultT {
@@ -44,7 +46,7 @@ export const CHECK_COMMENT = gql<
   ) {
     checkComment(kind: $kind, studentId: $studentId, fields: $fields, markPct: $markPct, commentType: $commentType, sentiment: $sentiment) {
       status reason message policyHash model token
-      issues { field type quote suggestion }
+      issues { field type quote suggestion pick }
       corrected { field text }
     }
   }
