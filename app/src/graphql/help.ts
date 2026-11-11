@@ -16,8 +16,22 @@ export interface HelpRowT {
   height: number;
   steps: HelpStepT[];
 }
+/** One block of a reading guide (D-#1280): exactly one of p / list / check / table is set. */
+export interface HelpBlockT {
+  p: string | null;
+  list: string[] | null;
+  check: string[] | null;
+  tableHead: string[] | null;
+  tableRows: Array<{ cells: string[] }> | null;
+}
+export interface HelpSectionT {
+  heading: string;
+  blocks: HelpBlockT[];
+}
 export interface HelpGuideT {
   id: string;
+  /** "steps" (screenshot rows) or "read" (text sections, D-#1280). */
+  kind: string;
   category: string;
   title: string;
   intro: string;
@@ -27,7 +41,10 @@ export interface HelpGuideT {
   goToScreen: string | null;
   unlockedBy: string | null;
   isNew: boolean;
+  /** Empty on a reading guide. */
   rows: HelpRowT[];
+  /** Empty on a steps guide. */
+  sections: HelpSectionT[];
 }
 export interface MyHelpT {
   categories: Array<{ id: string; title: string }>;
@@ -41,8 +58,9 @@ export const MY_HELP_GUIDES = gql<{ myHelpGuides: MyHelpT }, Record<string, neve
       categories { id title }
       firstOpen
       guides {
-        id category title intro keywords screens goToRoute goToScreen unlockedBy isNew
+        id kind category title intro keywords screens goToRoute goToScreen unlockedBy isNew
         rows { heading shotUrl width height steps { text box } }
+        sections { heading blocks { p list check tableHead tableRows { cells } } }
       }
     }
   }
