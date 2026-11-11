@@ -11,6 +11,9 @@
  * Question sets (D-#1275–#1277): on a paper with sets, a child shows only their name until the
  * examiner taps it — that tap draws the child's set (evenly, final) and the set's questions
  * appear under the name with a set badge. Letter questions mark each letter on its own.
+ *
+ * Picture questions (D-#1282): numbered chips on the card; "ছবি দেখান" opens a full-screen
+ * viewer (VivaPictureViewer) — one big picture at a time, the answer hidden until tapped.
  */
 import React from "react";
 import { Pressable, View } from "react-native";
@@ -18,6 +21,7 @@ import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   VIVA_DRAW_SET,
+  VIVA_PICTURES,
   VIVA_SET_ABSENT,
   VIVA_SET_MARK,
   VIVA_SHEET,
@@ -28,8 +32,10 @@ import {
   vivaSteps,
   type VivaItemT,
   type VivaPaperT,
+  type VivaPictureT,
   type VivaRowT,
 } from "../../graphql/viva";
+import { PictureChips, PictureViewer } from "./VivaPictureViewer";
 import { Badge, Body, Button, Card, Chip, ChipRow, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { friendlyError } from "../../lib/errors";
@@ -160,6 +166,7 @@ function ChildCard({
   onMark,
   onAbsent,
   onDraw,
+  onOpenPictures,
 }: {
   row: VivaRowT;
   paper: VivaPaperT;
@@ -168,6 +175,7 @@ function ChildCard({
   onMark: (key: string, v: number | null) => void;
   onAbsent: (absent: boolean) => void;
   onDraw: () => void;
+  onOpenPictures: (item: VivaItemT, index: number) => void;
 }): React.ReactElement {
   const fullMarks = paper.fullMarks;
   const items = vivaItemsOf(paper, row);
@@ -229,7 +237,9 @@ function ChildCard({
                 {it.label}
                 {it.ref ? ` (${it.ref})` : ""} <Muted>· {vivaNum(it.marks)}</Muted>
               </Body>
-              {it.parts.length ? (
+              {it.pictureIds.length ? (
+                <PictureChips item={it} byKey={byKey} onOpen={(i) => onOpenPictures(it, i)} />
+              ) : it.parts.length ? (
                 <LetterPicker item={it} byKey={byKey} disabled={!row.canEdit} onMark={onMark} />
               ) : (
                 <MarkPicker max={it.marks} value={byKey.has(it.key) ? byKey.get(it.key)! : null} disabled={!row.canEdit} onPick={(v) => onMark(it.key, v)} />
@@ -254,6 +264,14 @@ export default function VivaSheetScreen({ route }: Props): React.ReactElement {
   const [, setAbsent] = useMutation(VIVA_SET_ABSENT);
   const [, drawSet] = useMutation(VIVA_DRAW_SET);
   const sheet = q.data?.vivaSheet;
+  // Picture questions (D-#1282): the pictures come once per sheet, only when the paper has some.
+  const hasPictures = !!sheet && [...sheet.paper.items, ...sheet.paper.sets.flatMap((x) => x.items)].some((i) => i.pictureIds.length > 0);
+  const [picQ] = useQuery({ query: VIVA_PICTURES, variables: { paperId }, pause: !hasPictures });
+  const pictures = React.useMemo(
+    () => new Map<string, VivaPictureT>((picQ.data?.vivaPictures ?? []).map((p) => [p.id, p])),
+    [picQ.data],
+  );
+  const [viewer, setViewer] = React.useState<{ studentId: string; item: VivaItemT; index: number } | null>(null);
 
   React.useEffect(() => {
     if (sheet) setRows(sheet.rows);
@@ -345,11 +363,31 @@ export default function VivaSheetScreen({ route }: Props): React.ReactElement {
                 onMark={(key, v) => void onMark(r, key, v)}
                 onAbsent={(a) => void onAbsent(r, a)}
                 onDraw={() => void onDraw(r)}
+                onOpenPictures={(item, index) => setViewer({ studentId: r.studentId, item, index })}
               />
             ))}
           </View>
         ) : null}
       </QueryGate>
+      {viewer
+        ? (() => {
+            const row = rows.find((x) => x.studentId === viewer.studentId);
+            if (!row) return null;
+            return (
+              <PictureViewer
+                visible
+                childName={row.name}
+                item={viewer.item}
+                pictures={pictures}
+                byKey={new Map(row.marks.map((m) => [m.key, m.value]))}
+                start={viewer.index}
+                disabled={!row.canEdit || row.absent}
+                onMark={(key, v) => void onMark(row, key, v)}
+                onClose={() => setViewer(null)}
+              />
+            );
+          })()
+        : null}
     </Screen>
   );
 }

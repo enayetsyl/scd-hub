@@ -12,6 +12,20 @@ export interface VivaItemT {
   /** Letter question (D-#1277): each letter marked 0 … partMarks, stored as `<key>:<i>`. */
   parts: string[];
   partMarks: number;
+  /** Picture question (D-#1282): one bank picture per part (parts = the answer words). */
+  pictureIds: string[];
+}
+
+/** A picture shown in a picture question (data: URI) — full size on the sheet, a thumbnail in the bank. */
+export interface VivaPictureT {
+  id: string;
+  word: string;
+  wordEn: string;
+  letter: string;
+  book: string;
+  page: number;
+  active: boolean;
+  uri: string;
 }
 
 /** One question set (D-#1275). `drawn` = present children given this set so far. */
@@ -81,8 +95,8 @@ export interface VivaOverviewT {
 
 const PAPER = `
   id examId examName classId classLevel classLabelBn subject subjectLabelBn dateKey fullMarks syllabusMarks
-  items { key label marks ref parts partMarks }
-  sets { key label drawn items { key label marks ref parts partMarks } }
+  items { key label marks ref parts partMarks pictureIds }
+  sets { key label drawn items { key label marks ref parts partMarks pictureIds } }
   examiners { userId name studentIds children done absent }
   frozen lockedAt
   progress { children done absent started }
@@ -119,7 +133,18 @@ export interface VivaItemInputT {
   ref?: string | null;
   parts?: string[] | null;
   partMarks?: number | null;
+  pictureIds?: string[] | null;
 }
+
+/** The pictures a paper's picture questions show (full size), fetched once per sheet (D-#1282). */
+export const VIVA_PICTURES = gql<{ vivaPictures: VivaPictureT[] }, { paperId: string }>`
+  query VivaPictures($paperId: String!) { vivaPictures(paperId: $paperId) { id word wordEn letter book page active uri } }
+`;
+
+/** Office: one book's worksheet pictures (thumbnails) to build a picture question from. */
+export const VIVA_PICTURE_BANK = gql<{ vivaPictureBank: VivaPictureT[] }, { book: string }>`
+  query VivaPictureBank($book: String!) { vivaPictureBank(book: $book) { id word wordEn letter book page active uri } }
+`;
 
 /** The examiner's tap on a child's name: draws their set (evenly, final — D-#1276). */
 export const VIVA_DRAW_SET = gql<{ drawVivaSet: VivaRowT }, { paperId: string; studentId: string }>`

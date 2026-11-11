@@ -8,12 +8,15 @@
  * to the same total. Each child is given one set when the examiner taps their name (D-#1276).
  * Letter questions (D-#1277): the letters (comma separated) and the marks per letter; the
  * question's marks are letters × per-letter, and the examiner marks each letter.
+ * Picture questions (D-#1282): "+ ছবির প্রশ্ন" picks pictures from the worksheet picture bank
+ * (VivaPicturePicker); marks = pictures × per-picture, the examiner marks each picture.
  */
 import React from "react";
-import { View } from "react-native";
+import { Image, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { VIVA_SAVE_PAPER, VIVA_SHEET, vivaNum, type VivaItemT, type VivaPaperT } from "../../graphql/viva";
+import { VIVA_PICTURES, VIVA_SAVE_PAPER, VIVA_SHEET, vivaNum, type VivaItemT, type VivaPaperT, type VivaPictureT } from "../../graphql/viva";
+import { PicturePicker, defaultPictureBook } from "./VivaPicturePicker";
 import { Body, Button, Card, Chip, ChipRow, Field, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { friendlyError } from "../../lib/errors";
@@ -22,7 +25,18 @@ import type { VivaStackParamList } from "../../navigation/types";
 import { space } from "../../theme";
 
 type Props = NativeStackScreenProps<VivaStackParamList, "VivaPaper">;
-type Draft = { key: string | null; label: string; marks: string; ref: string; letters: boolean; parts: string; partMarks: string };
+type Draft = {
+  key: string | null;
+  label: string;
+  marks: string;
+  ref: string;
+  letters: boolean;
+  parts: string;
+  partMarks: string;
+  /** Picture question (D-#1282): bank picture ids in order; [] with pics=false = not one. */
+  pics: boolean;
+  pictureIds: string[];
+};
 type DraftSet = { key: string | null; label: string; items: Draft[] };
 
 const toDraft = (i: VivaItemT): Draft => ({
@@ -30,9 +44,11 @@ const toDraft = (i: VivaItemT): Draft => ({
   label: i.label,
   marks: String(i.marks),
   ref: i.ref,
-  letters: i.parts.length > 0,
-  parts: i.parts.join(", "),
+  letters: i.parts.length > 0 && i.pictureIds.length === 0,
+  parts: i.pictureIds.length ? "" : i.parts.join(", "),
   partMarks: i.parts.length ? String(i.partMarks) : "0.5",
+  pics: i.pictureIds.length > 0,
+  pictureIds: [...i.pictureIds],
 });
 const toDraftSets = (p: VivaPaperT): DraftSet[] =>
   (p.sets.length ? p.sets : [{ key: "s1", label: "", items: p.items, drawn: 0 }]).map((s) => ({ key: s.key, label: s.label, items: s.items.map(toDraft) }));
@@ -46,6 +62,7 @@ function readMarks(t: string): number {
 const readParts = (t: string): string[] => t.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
 /** A draft question's marks: letters × per-letter, or the typed marks. */
 function draftMarks(x: Draft): number {
+  if (x.pics) return x.pictureIds.length * readMarks(x.partMarks);
   if (x.letters) return readParts(x.parts).length * readMarks(x.partMarks);
   return readMarks(x.marks);
 }
@@ -62,6 +79,12 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
   const [cur, setCur] = React.useState(0);
   const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
   const [st, save] = useMutation(VIVA_SAVE_PAPER);
+  // Picture questions: thumbnails of the saved pictures, plus any the picker has shown.
+  const [savedPics] = useQuery({ query: VIVA_PICTURES, variables: { paperId } });
+  const [seen, setSeen] = React.useState<Map<string, VivaPictureT>>(new Map());
+  const picOf = (id: string) => seen.get(id) ?? savedPics.data?.vivaPictures.find((p) => p.id === id);
+  const onSeen = React.useCallback((ps: VivaPictureT[]) => setSeen((m) => new Map([...m, ...ps.map((p) => [p.id, p] as const)])), []);
+  const [picking, setPicking] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (paper) {
@@ -98,7 +121,9 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
   const onSave = async () => {
     setMsg(null);
     for (const [si, s] of sets.entries()) {
-      const bad = s.items.findIndex((x) => !x.label.trim() || !Number.isFinite(draftMarks(x)) || (x.letters && !readParts(x.parts).length));
+      const bad = s.items.findIndex(
+        (x) => !x.label.trim() || !Number.isFinite(draftMarks(x)) || (x.letters && !readParts(x.parts).length) || (x.pics && !x.pictureIds.length),
+      );
       if (bad >= 0) {
         setCur(si);
         return setMsg({ tone: "danger", text: `${setName(s, si, many) ? `${setName(s, si, many)} · ` : ""}${STR.vivaQLabel.replace("{n}", bnNum(bad + 1))}: ${STR.vivaQMarks}?` });
@@ -111,7 +136,9 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
         key: s.key,
         label: setName(s, si, many) || null,
         items: s.items.map((x) =>
-          x.letters
+          x.pics
+            ? { key: x.key, label: x.label.trim(), marks: draftMarks(x), ref: x.ref.trim() || null, pictureIds: x.pictureIds, partMarks: readMarks(x.partMarks) }
+            : x.letters
             ? { key: x.key, label: x.label.trim(), marks: draftMarks(x), ref: x.ref.trim() || null, parts: readParts(x.parts), partMarks: readMarks(x.partMarks) }
             : { key: x.key, label: x.label.trim(), marks: readMarks(x.marks), ref: x.ref.trim() || null },
         ),
@@ -158,7 +185,33 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
             {items.map((x, i) => (
               <Card key={x.key ?? `new-${cur}-${i}`}>
                 <Field label={STR.vivaQLabel.replace("{n}", bnNum(i + 1))} value={x.label} editable={!ro} multiline onChangeText={(t) => set(i, { label: t })} />
-                {x.letters ? (
+                {x.pics ? (
+                  <View style={{ gap: space(2) }}>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                      {x.pictureIds.map((id, n) => {
+                        const p = picOf(id);
+                        return (
+                          <View key={id} style={{ width: 64, alignItems: "center" }}>
+                            <View style={{ width: 64, height: 56, borderRadius: 8, borderWidth: 1, borderColor: "#dddddd", backgroundColor: "#ffffff", overflow: "hidden" }}>
+                              {p?.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%" }} resizeMode="contain" /> : null}
+                            </View>
+                            <Muted>{`${bnNum(n + 1)}. ${p?.word ?? ""}`}</Muted>
+                          </View>
+                        );
+                      })}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: space(2), alignItems: "flex-end" }}>
+                      {fixed ? null : (
+                        <View style={{ flex: 1 }}>
+                          <Button title={STR.vivaPickPictures} variant="secondary" onPress={() => setPicking(i)} />
+                        </View>
+                      )}
+                      <View style={{ width: 120 }}>
+                        <Field label={STR.vivaQPerPicture} value={x.partMarks} editable={!fixed} keyboardType="decimal-pad" onChangeText={(t) => set(i, { partMarks: t })} />
+                      </View>
+                    </View>
+                  </View>
+                ) : x.letters ? (
                   <View style={{ flexDirection: "row", gap: space(2) }}>
                     <View style={{ flex: 1 }}>
                       <Field label={STR.vivaQLetters} value={x.parts} editable={!ro} onChangeText={(t) => set(i, { parts: t })} />
@@ -177,6 +230,13 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
                     </View>
                   </View>
                 )}
+                {x.pics ? (
+                  <Muted>
+                    {STR.vivaQPictureSum
+                      .replace("{n}", bnNum(x.pictureIds.length))
+                      .replace("{m}", Number.isFinite(draftMarks(x)) ? vivaNum(draftMarks(x)) : "?")}
+                  </Muted>
+                ) : null}
                 {x.letters ? (
                   <Muted>
                     {STR.vivaQLetterSum
@@ -203,12 +263,20 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
                 <Button
                   title={STR.vivaAddQ}
                   variant="secondary"
-                  onPress={() => setItems((xs) => [...xs, { key: null, label: "", marks: "1", ref: "", letters: false, parts: "", partMarks: "0.5" }])}
+                  onPress={() => setItems((xs) => [...xs, { key: null, label: "", marks: "1", ref: "", letters: false, parts: "", partMarks: "0.5", pics: false, pictureIds: [] }])}
                 />
                 <Button
                   title={STR.vivaAddLetterQ}
                   variant="secondary"
-                  onPress={() => setItems((xs) => [...xs, { key: null, label: "", marks: "0", ref: "", letters: true, parts: "", partMarks: "0.5" }])}
+                  onPress={() => setItems((xs) => [...xs, { key: null, label: "", marks: "0", ref: "", letters: true, parts: "", partMarks: "0.5", pics: false, pictureIds: [] }])}
+                />
+                <Button
+                  title={STR.vivaAddPictureQ}
+                  variant="secondary"
+                  onPress={() => {
+                    setItems((xs) => [...xs, { key: null, label: STR.vivaPictureQDefault, marks: "0", ref: "", letters: false, parts: "", partMarks: "1", pics: true, pictureIds: [] }]);
+                    setPicking(items.length);
+                  }}
                 />
               </View>
             )}
@@ -230,6 +298,20 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
           </View>
         ) : null}
       </QueryGate>
+      {paper && picking != null && items[picking] ? (
+        <PicturePicker
+          visible
+          initialBook={defaultPictureBook(paper.subject, paper.classLevel)}
+          selected={items[picking]!.pictureIds}
+          onSeen={onSeen}
+          onToggle={(id) =>
+            set(picking, {
+              pictureIds: items[picking]!.pictureIds.includes(id) ? items[picking]!.pictureIds.filter((x) => x !== id) : [...items[picking]!.pictureIds, id],
+            })
+          }
+          onClose={() => setPicking(null)}
+        />
+      ) : null}
     </Screen>
   );
 }

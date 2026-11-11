@@ -26,6 +26,9 @@ export interface IVivaItem {
    *  the sum, so `marks` = parts.length × partMarks. Empty = an ordinary question. */
   parts?: string[];
   partMarks?: number;
+  /** A picture question (D-#1282): one worksheet-bank picture per part, shown big to the
+   *  child one at a time; `parts` then holds each picture's answer word. Empty = no pictures. */
+  pictureIds?: Types.ObjectId[];
 }
 
 /** One question set (D-#1275). Every set of a paper adds up to the same full marks; item keys
@@ -77,6 +80,7 @@ const ItemSchema = new Schema<IVivaItem>(
     ref: { type: String, default: "", trim: true },
     parts: { type: [String], default: [] },
     partMarks: { type: Number, default: 0 },
+    pictureIds: { type: [{ type: Schema.Types.ObjectId, ref: "WorksheetPicture" }], default: [] },
   },
   { _id: false },
 );

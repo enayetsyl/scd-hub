@@ -1,0 +1,147 @@
+{
+  "_about": "Proposed 2026 Nursery আরবি oral picture sets (D-#1282/#1283, docs/prd-viva.md §9.6): 4 sets × 10 pictures from the worksheet picture bank, book ARABIC (Nursery book 1), 1 mark each. pictures = bank sourceKeys (book:page:imageIndex); words are for reading only — the app takes them from the bank. Loaded by server/scripts/load-viva-sets-2026.cjs FILE=nursery-arabic-2026.json.",
+  "papers": [
+    {
+      "subject": "ARABIC",
+      "fullMarks": 10,
+      "sets": [
+        {
+          "label": "সেট ১",
+          "items": [
+            {
+              "label": "ছবি দেখে শব্দ বলা",
+              "marks": 0,
+              "partMarks": 1,
+              "pictures": [
+                "ARABIC:7:1",
+                "ARABIC:10:1",
+                "ARABIC:11:1",
+                "ARABIC:16:1",
+                "ARABIC:17:1",
+                "ARABIC:26:1",
+                "ARABIC:36:1",
+                "ARABIC:46:1",
+                "ARABIC:58:1",
+                "ARABIC:68:1"
+              ],
+              "words": [
+                "بَيْتٌ",
+                "تِلْمِيذٌ",
+                "ثَمَرٌ",
+                "جَمَلٌ",
+                "حِمَارٌ",
+                "رَجُلٌ",
+                "صُورَةٌ",
+                "عَيْنٌ",
+                "لَحْمٌ",
+                "هِرَّةٌ"
+              ]
+            }
+          ]
+        },
+        {
+          "label": "সেট ২",
+          "items": [
+            {
+              "label": "ছবি দেখে শব্দ বলা",
+              "marks": 0,
+              "partMarks": 1,
+              "pictures": [
+                "ARABIC:7:1",
+                "ARABIC:10:1",
+                "ARABIC:18:1",
+                "ARABIC:20:1",
+                "ARABIC:21:1",
+                "ARABIC:27:1",
+                "ARABIC:37:1",
+                "ARABIC:51:1",
+                "ARABIC:61:1",
+                "ARABIC:71:1"
+              ],
+              "words": [
+                "بَيْتٌ",
+                "تِلْمِيذٌ",
+                "خَيْلٌ",
+                "دِيكٌ",
+                "ذِئْبٌ",
+                "زَنْبَقٌ",
+                "ضِفْدَعٌ",
+                "فِيلٌ",
+                "مَوْزٌ",
+                "أَرْنَبٌ"
+              ]
+            }
+          ]
+        },
+        {
+          "label": "সেট ৩",
+          "items": [
+            {
+              "label": "ছবি দেখে শব্দ বলা",
+              "marks": 0,
+              "partMarks": 1,
+              "pictures": [
+                "ARABIC:11:1",
+                "ARABIC:17:1",
+                "ARABIC:18:1",
+                "ARABIC:20:1",
+                "ARABIC:30:1",
+                "ARABIC:31:1",
+                "ARABIC:40:1",
+                "ARABIC:52:1",
+                "ARABIC:62:1",
+                "ARABIC:72:1"
+              ],
+              "words": [
+                "ثَمَرٌ",
+                "حِمَارٌ",
+                "خَيْلٌ",
+                "دِيكٌ",
+                "سَيْفٌ",
+                "شَمْسٌ",
+                "طَيْرٌ",
+                "قُفْلٌ",
+                "نَجْمٌ",
+                "يَدٌ"
+              ]
+            }
+          ]
+        },
+        {
+          "label": "সেট ৪",
+          "items": [
+            {
+              "label": "ছবি দেখে শব্দ বলা",
+              "marks": 0,
+              "partMarks": 1,
+              "pictures": [
+                "ARABIC:16:1",
+                "ARABIC:21:1",
+                "ARABIC:26:1",
+                "ARABIC:27:1",
+                "ARABIC:30:1",
+                "ARABIC:31:1",
+                "ARABIC:36:1",
+                "ARABIC:41:1",
+                "ARABIC:57:1",
+                "ARABIC:67:1"
+              ],
+              "words": [
+                "جَمَلٌ",
+                "ذِئْبٌ",
+                "رَجُلٌ",
+                "زَنْبَقٌ",
+                "سَيْفٌ",
+                "شَمْسٌ",
+                "صُورَةٌ",
+                "ظَرْفٌ",
+                "كَعْبَةٌ",
+                "وِسَادَةٌ"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
