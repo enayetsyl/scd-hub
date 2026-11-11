@@ -12,6 +12,7 @@ import { useQuery } from "urql";
 import { CLASS_TEST_QUERY, CLASS_TEST_RESULTS_QUERY, CLASS_TEST_ROSTER_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Badge, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { CtWeakObjectivesShown } from "../../components/CtWeakObjectivePicker";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -89,6 +90,7 @@ export default function ClassTestResultsViewScreen({ route }: Props): React.Reac
                 {r ? (
                   <View style={{ marginTop: space(2), gap: 2 }}>
                     {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
+                    <CtWeakObjectivesShown items={r.weakObjectives} />
                     {r.teacherAction ? <Muted>{STR.ctTeacherAction}: {r.teacherAction}</Muted> : null}
                     {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
                     <View style={{ marginTop: space(1) }}>

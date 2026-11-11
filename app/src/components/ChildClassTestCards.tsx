@@ -112,6 +112,11 @@ export function ClassTestResultRow({
         </View>
       </View>
       {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
+      {/* D-#1360 / D-#925: objective labels only — no code, no sub-objective; the level word
+          comes from the server (masteryLevelLabels), not from a literal. */}
+      {r.weakObjectives?.length && r.weakObjectivesWordBn ? (
+        <Muted>{`${STR.ctWeakLoGuardian.replace("{w}", r.weakObjectivesWordBn)}: ${r.weakObjectives.join("; ")}`}</Muted>
+      ) : null}
       {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
       {/* CS-3 (D-#716): the scanned script, once the office has published it —
           one button per page; a "being scanned" line while it is at the office. */}

@@ -32,6 +32,7 @@ import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 import { AiCheckPanel, gateMessage, useAiCommentCheck } from "../../components/AiCommentCheck";
+import { CtWeakObjectivePicker, CtWeakObjectivesShown, useCtWeakLoAvailable } from "../../components/CtWeakObjectivePicker";
 
 type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestResults">;
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
@@ -152,6 +153,9 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const [weakness, setWeakness] = useState("");
   const [teacherAction, setTeacherAction] = useState("");
   const [guardianAction, setGuardianAction] = useState("");
+  // D-#1360: weak objectives — only where the class × subject has a LOCKED catalogue.
+  const [weakLoCodes, setWeakLoCodes] = useState<string[]>([]);
+  const weakLoOn = useCtWeakLoAvailable(testId, !test || !!test.subjectGroupId);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // AI-5 (D-#1095): the class-test comment check (weakness / teacher / guardian action).
@@ -167,6 +171,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     setWeakness(existing?.weakness ?? "");
     setTeacherAction(existing?.teacherAction ?? "");
     setGuardianAction(existing?.guardianAction ?? "");
+    setWeakLoCodes(existing?.weakLoCodes ?? []);
     // D-#1175: comments loaded from an earlier save may be re-saved unchanged without a check.
     ai.settle([
       { field: "weakness", text: existing?.weakness ?? "" },
@@ -206,6 +211,8 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       weakness: status === "PRESENT" ? weakness.trim() || null : null,
       teacherAction: status === "PRESENT" ? teacherAction.trim() || null : null,
       guardianAction: status === "PRESENT" ? guardianAction.trim() || null : null,
+      // D-#1360: sent only where the picker shows; null keeps what is stored.
+      weakLoCodes: status === "PRESENT" && weakLoOn ? weakLoCodes : null,
     });
     setBusy(false);
     if (res.error) {
@@ -459,7 +466,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                   ) : null}
                 </View>
 
-                {isAdmin && !isOpen && existing && existing.status !== "ABSENT" && (existing.weakness || existing.teacherAction || existing.guardianAction) ? (
+                {isAdmin && !isOpen && existing && existing.status !== "ABSENT" && (existing.weakness || existing.teacherAction || existing.guardianAction || existing.weakObjectives?.length) ? (
                   // Admin read-only view of the teacher's comments (owner ask 2026-07-21).
                   // Teacher entry behavior below is unchanged — this block is display-only.
                   <View style={{ marginTop: space(2) }}>
@@ -467,6 +474,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                     {existing.weakness ? (
                       <Muted>{`${STR.ctWeakness}: ${existing.weakness}`}</Muted>
                     ) : null}
+                    <CtWeakObjectivesShown items={existing.weakObjectives} />
                     {existing.teacherAction ? (
                       <Muted>{`${STR.ctTeacherAction}: ${existing.teacherAction}`}</Muted>
                     ) : null}
@@ -502,6 +510,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                       <>
                         <Field label={`${STR.ctMarks} (0–${bnNum(test.totalMarks)})`} value={marks} onChangeText={setMarks} keyboardType="number-pad" />
                         <Field label={STR.ctWeakness} value={weakness} onChangeText={setWeakness} />
+                        {weakLoOn ? <CtWeakObjectivePicker testId={testId} value={weakLoCodes} onChange={setWeakLoCodes} disabled={busy} /> : null}
                         <Field label={STR.ctTeacherAction} value={teacherAction} onChangeText={setTeacherAction} helper={STR.ctTeacherActionHint} />
                         <Field label={STR.ctGuardianAction} value={guardianAction} onChangeText={setGuardianAction} />
                         <AiCheckPanel
