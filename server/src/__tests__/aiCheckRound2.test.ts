@@ -73,10 +73,11 @@ describe("suggestions are cleaned before the writer sees them (D-#1176)", () => 
         { field: "text", type: "structure", quote: "আজ টিফিনের সময় [S] খাতা আনেননি।", suggestion: "আসসালামু আলাইকুম। আজ টিফিনের সময় [S] খাতা আনেননি।" },
         { field: "text", type: "spelling", quote: "খাতা আনেননি", suggestion: "খাতা আনেন নি" },
         { field: "text", type: "standard", quote: "বাসায়", suggestion: "বাসায়" },
-        { field: "text", type: "tone", quote: "", suggestion: "মন্তব্যটি উদ্বেগের — 'উদ্বেগ' বাছাই করুন" },
+        { field: "text", type: "tone", quote: "", pick: "CONCERN", suggestion: "মন্তব্যটি উদ্বেগের — 'উদ্বেগ' বাছাই করুন" },
       ],
       text,
       {},
+      { kind: "DAILY", sentiment: "POSITIVE" },
     );
     expect(out.map((i) => i.type)).toEqual(["structure", "tone"]);
   });

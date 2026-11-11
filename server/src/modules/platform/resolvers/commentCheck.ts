@@ -11,6 +11,7 @@ const IssueRef = builder.objectRef<CheckIssue>("CommentCheckIssue").implement({
     type: t.string({ description: "punctuation | tone | honorific | structure | standard | marks | spelling", resolve: (i) => i.type }),
     quote: t.string({ resolve: (i) => i.quote }),
     suggestion: t.string({ resolve: (i) => i.suggestion }),
+    pick: t.string({ nullable: true, description: "A tone note only: the tone the text fits better (CONCERN | POSITIVE).", resolve: (i) => i.pick ?? null }),
   }),
 });
 
