@@ -36,6 +36,7 @@ import {
   type RoutineSlotT,
 } from "../../graphql/operations";
 import { LessonPlanBlock, deliverySummary, lessonPlanError } from "../../components/LessonPlanBlock";
+import { HomeworkFromLessonLink } from "../../components/HomeworkFromLessonLink";
 import {
   Screen,
   Body,
@@ -350,6 +351,13 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
           {note.lessonDelivery ? (
             <Muted style={{ marginTop: 2 }}>📘 {deliverySummary(note.lessonDelivery)}</Muted>
           ) : null}
+          {/* PR-D: build this lesson's homework (mastery on only). */}
+          <HomeworkFromLessonLink
+            sectionId={slot.groupType === "section" ? slot.groupId : null}
+            subject={slot.subject}
+            date={date}
+            hasLesson={(note.lessonDelivery?.sessions.length ?? 0) > 0}
+          />
           {note.homeworkItemId ? (
             <Muted style={{ marginTop: 2 }}>
               {STR.rtHomeworkId}: {dayItems.find((it) => it.itemId === note.homeworkItemId)?.hwId ?? "✓"}
