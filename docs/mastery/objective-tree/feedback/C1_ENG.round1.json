@@ -1,0 +1,4196 @@
+{
+  "format": "scd-objective-review-export/1",
+  "classToken": "C1",
+  "subject": "ENG",
+  "round": 1,
+  "state": "LOCKED",
+  "book": "C1_ENG_Book_v5_Student_Print (= C1_ENG_Book_v5 content)",
+  "importedAt": "2026-11-05T02:49:44.637Z",
+  "submittedAt": "2026-11-11T15:50:43.919Z",
+  "lockedAt": "2026-11-11T16:34:47.844Z",
+  "exportedAt": "2026-11-11T16:35:50.748Z",
+  "reviewers": [
+    "Mahzabin Yasmin"
+  ],
+  "decisions": {
+    "proposed": 0,
+    "accepted": 44,
+    "edited": 11,
+    "added": 10,
+    "rejected": 0,
+    "merged": 2,
+    "moved": 0,
+    "splits": 6,
+    "merges": 1
+  },
+  "unmapped": [],
+  "events": [
+    {
+      "seq": 1,
+      "id": "6aebeec9a6e10a8fa41ce21c",
+      "at": "2026-11-05T02:49:44.637Z",
+      "action": "IMPORT",
+      "code": null,
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": null,
+      "before": null,
+      "after": {
+        "roundAction": "OPEN_NEW",
+        "added": 55,
+        "backToProposed": 0,
+        "removedInRedraft": 0,
+        "kept": 0,
+        "book": "C1_ENG_Book_v5_Student_Print (= C1_ENG_Book_v5 content)"
+      }
+    },
+    {
+      "seq": 2,
+      "id": "6af122f0e5a42a850594f2ec",
+      "at": "2026-11-09T01:33:36.882Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": false,
+        "labelBn": "The alphabet: letter order and the five vowels",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "খাতায় a থেকে z বড় ও ছোট হাতের অক্ষরে লিখতে দিন; পাঁচটি vowel (a e i o u) মুখে বলান ও শব্দে খুঁজে দাগ দিতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": false,
+        "labelBn": "The alphabet: letter order and the five vowels",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "খাতায় a থেকে z বড় ও ছোট হাতের অক্ষরে লিখতে দিন; পাঁচটি vowel (a e i o u) মুখে বলান ও শব্দে খুঁজে দাগ দিতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 3,
+      "id": "6af122f0e5a42a850594f2ed",
+      "at": "2026-11-09T01:33:36.883Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-01",
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": true,
+        "labelBn": "Write the alphabet in order — missing letters, letter before and after",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L1/A",
+          "1/L1/C",
+          "1/L1/E"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-01",
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": true,
+        "labelBn": "Write the alphabet in order — missing letters, letter before and after",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L1/A",
+          "1/L1/C",
+          "1/L1/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 4,
+      "id": "6af122f0e5a42a850594f2ee",
+      "at": "2026-11-09T01:33:36.884Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-01",
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": true,
+        "labelBn": "Name the five vowels and find them in words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L1/B",
+          "1/L1/D"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-01",
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": true,
+        "labelBn": "Name the five vowels and find them in words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L1/B",
+          "1/L1/D"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 5,
+      "id": "6af1238ee5a42a850594f51e",
+      "at": "2026-11-09T01:36:14.514Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-01-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Words for each letter (two words a–t, one word u–z)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LETTERWORDS"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "একটি অক্ষর বলুন; শিশু ওই অক্ষর দিয়ে দুটি ইংরেজি শব্দ ও তার অর্থ বলবে, তারপর খাতায় লিখবে।",
+        "exercises": [
+          "1/L2/A",
+          "1/L2/B",
+          "1/L2/C",
+          "1/L3/A",
+          "1/L3/B",
+          "1/L3/C",
+          "1/L3/H",
+          "1/L4/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Words for each letter (two words a–t, one word u–z)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LETTERWORDS"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "একটি অক্ষর বলুন; শিশু ওই অক্ষর দিয়ে দুটি ইংরেজি শব্দ ও তার অর্থ বলবে, তারপর খাতায় লিখবে।",
+        "exercises": [
+          "1/L2/A",
+          "1/L2/B",
+          "1/L2/C",
+          "1/L3/A",
+          "1/L3/B",
+          "1/L3/C",
+          "1/L3/H",
+          "1/L4/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 6,
+      "id": "6af124bce5a42a850594fb71",
+      "at": "2026-11-09T01:41:16.474Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-01-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": true,
+        "labelBn": "Number words one to ten",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-NUMWORDS"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "চামচ বা বোতাম গুনে one থেকে ten বানান করে খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/L3/F",
+          "1/L3/G",
+          "11/L1/B"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": true,
+        "labelBn": "Number words one to ten",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-NUMWORDS"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "চামচ বা বোতাম গুনে one থেকে ten বানান করে খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/L3/F",
+          "1/L3/G",
+          "11/L1/B"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 7,
+      "id": "6af12553e5a42a850594ff3a",
+      "at": "2026-11-09T01:43:47.503Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": false,
+        "labelBn": "Days of the week and the twelve months",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "ক্যালেন্ডার দেখে আজকের বার ও মাসের নাম ইংরেজিতে বানান করে বলান; সাত বার ও বারো মাস ক্রমমতো খাতায় লিখতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": false,
+        "labelBn": "Days of the week and the twelve months",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "ক্যালেন্ডার দেখে আজকের বার ও মাসের নাম ইংরেজিতে বানান করে বলান; সাত বার ও বারো মাস ক্রমমতো খাতায় লিখতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 8,
+      "id": "6af12553e5a42a850594ff3b",
+      "at": "2026-11-09T01:43:47.504Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-04.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-04",
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": true,
+        "labelBn": "Write the seven days of the week in order",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L6/B",
+          "1/L6/D",
+          "1/L6/F"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-04",
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": true,
+        "labelBn": "Write the seven days of the week in order",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L6/B",
+          "1/L6/D",
+          "1/L6/F"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 9,
+      "id": "6af12553e5a42a850594ff3c",
+      "at": "2026-11-09T01:43:47.505Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-04.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-04.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-04",
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": true,
+        "labelBn": "Write the twelve months in order",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L6/C",
+          "1/L6/E",
+          "1/L6/F"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-04.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-04",
+        "domainCode": "DOM-ENG-NUM",
+        "tagged": true,
+        "labelBn": "Write the twelve months in order",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L6/C",
+          "1/L6/E",
+          "1/L6/F"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 10,
+      "id": "6af125d3e5a42a8505950445",
+      "at": "2026-11-09T01:45:55.844Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-05",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": false,
+        "labelBn": "KG words: fruits, vegetables, colours, animals, birds and opposites",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-OPPOSITE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বাজারে ফল-সবজির ইংরেজি নাম জিজ্ঞেস করুন; big বললে শিশু small বলবে।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": false,
+        "labelBn": "KG words: fruits, vegetables, colours, animals, birds and opposites",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-OPPOSITE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বাজারে ফল-সবজির ইংরেজি নাম জিজ্ঞেস করুন; big বললে শিশু small বলবে।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 11,
+      "id": "6af125d3e5a42a8505950446",
+      "at": "2026-11-09T01:45:55.845Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-05.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-05",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name and sort KG topic words (fruits, vegetables, colours, animals, birds)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L4/B",
+          "1/L4/C",
+          "1/L4/D",
+          "1/L4/F",
+          "1/L4/G",
+          "1/L5/A",
+          "1/L5/B",
+          "1/L5/E"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-05",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name and sort KG topic words (fruits, vegetables, colours, animals, birds)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L4/B",
+          "1/L4/C",
+          "1/L4/D",
+          "1/L4/F",
+          "1/L4/G",
+          "1/L5/A",
+          "1/L5/B",
+          "1/L5/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 12,
+      "id": "6af125d3e5a42a8505950447",
+      "at": "2026-11-09T01:45:55.846Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-01-05.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-05",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Say and write the opposite (twelve KG pairs)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-OPPOSITE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L5/C",
+          "1/L5/D",
+          "1/L5/F",
+          "1/L6/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-01-05",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Say and write the opposite (twelve KG pairs)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-OPPOSITE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "1/L5/C",
+          "1/L5/D",
+          "1/L5/F",
+          "1/L6/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 13,
+      "id": "6af12765e5a42a8505951cee",
+      "at": "2026-11-09T01:52:37.837Z",
+      "action": "COMMENT",
+      "code": "LO-C1-ENG-01-06",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "The reading chart has no written exercises and is not included in the exam, but it gives students important reading practice. This LO is kept to cover that skill.",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 14,
+      "id": "6af12768e5a42a8505951d20",
+      "at": "2026-11-09T01:52:40.205Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-01-06",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-01-06",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": true,
+        "labelBn": "Read the reading chart: sounds into words",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.2"
+        ],
+        "homeTipBn": "চার্টের ba, be, bi… ও cat, pen-এর মতো শব্দ প্রতিদিন পাঁচ মিনিট শিশুর সঙ্গে পড়ুন; আঙুল রেখে ধ্বনি মিলিয়ে পড়তে দিন।",
+        "exercises": [
+          "1/Chart/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-01-06",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PHON",
+        "tagged": true,
+        "labelBn": "Read the reading chart: sounds into words",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.2"
+        ],
+        "homeTipBn": "চার্টের ba, be, bi… ও cat, pen-এর মতো শব্দ প্রতিদিন পাঁচ মিনিট শিশুর সঙ্গে পড়ুন; আঙুল রেখে ধ্বনি মিলিয়ে পড়তে দিন।",
+        "exercises": [
+          "1/Chart/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 15,
+      "id": "6af12c48e5a42a8505954c81",
+      "at": "2026-11-09T02:13:28.377Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-02-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": false,
+        "labelBn": "Salam and polite greetings",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORAL",
+          "QT-FILL",
+          "QT-DIALOGUE",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দেখা হলে ও বিদায়ের সময় সালাম, How are you?, Allah Hafiz বলার অভ্যাস করান; ছেলেকে JazakAllahu, মেয়েকে JazakiLlahu Khairan।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": false,
+        "labelBn": "Salam and polite greetings",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORAL",
+          "QT-FILL",
+          "QT-DIALOGUE",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দেখা হলে ও বিদায়ের সময় সালাম, How are you?, Allah Hafiz বলার অভ্যাস করান; ছেলেকে JazakAllahu, মেয়েকে JazakiLlahu Khairan।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 16,
+      "id": "6af12c48e5a42a8505954c82",
+      "at": "2026-11-09T02:13:28.378Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-02-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-02-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-02-01",
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Say Salam and the greetings with a partner",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "2/L1/A",
+          "2/L1/B",
+          "2/L1/E",
+          "2/L1/F",
+          "2/L1/H",
+          "2/L1/I",
+          "2/L2/B",
+          "2/L2/F"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-02-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-02-01",
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Say Salam and the greetings with a partner",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "2/L1/A",
+          "2/L1/B",
+          "2/L1/E",
+          "2/L1/F",
+          "2/L1/H",
+          "2/L1/I",
+          "2/L2/B",
+          "2/L2/F"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 17,
+      "id": "6af12c48e5a42a8505954c83",
+      "at": "2026-11-09T02:13:28.379Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-02-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-02-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-02-01",
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Write the reply to a greeting and complete a greeting dialogue",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-DIALOGUE",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-02-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "2/L1/C",
+          "2/L1/D",
+          "2/L1/G",
+          "2/L1/J",
+          "2/L2/G",
+          "2/L2/H"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-02-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-02-01",
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Write the reply to a greeting and complete a greeting dialogue",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-DIALOGUE",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-02-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "2/L1/C",
+          "2/L1/D",
+          "2/L1/G",
+          "2/L1/J",
+          "2/L2/G",
+          "2/L2/H"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 18,
+      "id": "6af1305be5a42a850595780e",
+      "at": "2026-11-09T02:30:51.096Z",
+      "action": "COMMENT",
+      "code": "LO-C1-ENG-02-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "Following instructions and giving instructions are two different skills. I would have preferred to split this LO into two sub-objectives. The dialogue drills (Ex B and F) provide some practice in giving instructions, but students only repeat the given lines rather than giving instructions independently. I have kept the LO combined for now because the textbook does not provide a separate exercise to assess this skill independently.",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 19,
+      "id": "6af1305ee5a42a8505957846",
+      "at": "2026-11-09T02:30:54.244Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-02-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-02-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Follow and give classroom instructions",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "\"Stand up\", \"Sit down\" নির্দেশ খেলার ছলে দিন; পরে শিশুও আপনাকে নির্দেশ দিক।",
+        "exercises": [
+          "2/L2/A",
+          "2/L2/C",
+          "2/L2/D",
+          "2/L2/E"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-02-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Follow and give classroom instructions",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "\"Stand up\", \"Sit down\" নির্দেশ খেলার ছলে দিন; পরে শিশুও আপনাকে নির্দেশ দিক।",
+        "exercises": [
+          "2/L2/A",
+          "2/L2/C",
+          "2/L2/D",
+          "2/L2/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 20,
+      "id": "6af13165e5a42a8505958df9",
+      "at": "2026-11-09T02:35:17.714Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-02-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-02-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Answer simple questions in a short full sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ANSWER"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "নাম, বয়স, শ্রেণি ইংরেজিতে জিজ্ঞেস করুন; শিশু ছোট পূর্ণ বাক্যে উত্তর দেবে (\"My name is …\")।",
+        "exercises": [
+          "2/L3/A",
+          "2/L3/B",
+          "2/L3/C",
+          "2/L3/D",
+          "5/L3/A",
+          "10/L6/A",
+          "10/L6/D"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-02-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Answer simple questions in a short full sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ANSWER"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "নাম, বয়স, শ্রেণি ইংরেজিতে জিজ্ঞেস করুন; শিশু ছোট পূর্ণ বাক্যে উত্তর দেবে (\"My name is …\")।",
+        "exercises": [
+          "2/L3/A",
+          "2/L3/B",
+          "2/L3/C",
+          "2/L3/D",
+          "5/L3/A",
+          "10/L6/A",
+          "10/L6/D"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 21,
+      "id": "6af13443e5a42a850595a1fd",
+      "at": "2026-11-09T02:47:31.114Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-03-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-03-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Ask and answer \"What's this?\"",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-02-03"
+        ],
+        "homeTipBn": "কোনো জিনিস দেখিয়ে \"What's this?\" জিজ্ঞেস করুন; শিশু \"It's a …\" বলবে, তারপর শিশুও আপনাকে জিজ্ঞেস করুক।",
+        "exercises": [
+          "3/L1/B",
+          "3/L2/B",
+          "4/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-03-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Ask and answer \"What's this?\"",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-02-03"
+        ],
+        "homeTipBn": "কোনো জিনিস দেখিয়ে \"What's this?\" জিজ্ঞেস করুন; শিশু \"It's a …\" বলবে, তারপর শিশুও আপনাকে জিজ্ঞেস করুক।",
+        "exercises": [
+          "3/L2/B",
+          "4/L1/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 22,
+      "id": "6af134a9e5a42a850595a48b",
+      "at": "2026-11-09T02:49:13.010Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-03-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-03-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts and things at home, in the village, city and classroom",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ঘরের জিনিস ও শরীরের অঙ্গ ছুঁয়ে ইংরেজি নাম বলান, পরে খাতায় লেখান।",
+        "exercises": [
+          "3/L1/A",
+          "3/L2/A",
+          "3/L2/E",
+          "11/L1/E"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-03-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts and things at home, in the village, city and classroom",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ঘরের জিনিস ও শরীরের অঙ্গ ছুঁয়ে ইংরেজি নাম বলান, পরে খাতায় লেখান।",
+        "exercises": [
+          "3/L1/A",
+          "3/L2/A",
+          "3/L2/E",
+          "11/L1/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 23,
+      "id": "6af13591e5a42a850595b3fe",
+      "at": "2026-11-09T02:53:05.472Z",
+      "action": "SPLIT",
+      "code": "LO-C1-ENG-03-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-03-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts and things at home, in the village, city and classroom",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ঘরের জিনিস ও শরীরের অঙ্গ ছুঁয়ে ইংরেজি নাম বলান, পরে খাতায় লেখান।",
+        "exercises": [
+          "3/L1/A",
+          "3/L2/A",
+          "3/L2/E",
+          "11/L1/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-03-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": false,
+        "labelBn": "Name body parts and things at home, in the village, city and classroom",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ঘরের জিনিস ও শরীরের অঙ্গ ছুঁয়ে ইংরেজি নাম বলান, পরে খাতায় লেখান।",
+        "exercises": [
+          "3/L1/A",
+          "3/L2/A",
+          "3/L2/E",
+          "11/L1/E"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-ENG-03-01.1",
+            "labelBn": "Name body parts",
+            "exercises": [
+              "3/L1/A",
+              "11/L1/E"
+            ]
+          },
+          {
+            "code": "LO-C1-ENG-03-01.2",
+            "labelBn": "Name objects found in the village, city, home and classroom",
+            "exercises": [
+              "3/L2/A",
+              "3/L2/E"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 24,
+      "id": "6af135dce5a42a850595b999",
+      "at": "2026-11-09T02:54:20.083Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-03-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-03-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-03-01",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT",
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/L1/A",
+          "11/L1/E"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-03-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-03-01",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/L1/A",
+          "11/L1/E"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 25,
+      "id": "6af13762e5a42a850595c808",
+      "at": "2026-11-09T03:00:50.739Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-04-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-01",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Circle the naming words in a sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L1/E",
+          "4/L2/A",
+          "4/L2/B",
+          "4/L2/C",
+          "4/L2/D",
+          "4/L2/E"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-01",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Identify naming words in words and sentences",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L1/E",
+          "4/L2/A",
+          "4/L2/B",
+          "4/L2/C",
+          "4/L2/D",
+          "4/L2/E"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 26,
+      "id": "6af13776e5a42a850595cf1f",
+      "at": "2026-11-09T03:01:10.117Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-04-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": false,
+        "labelBn": "Naming words: find them and sort them",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE",
+          "QT-SORT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বই থেকে একটি বাক্য পড়ে শিশুকে naming word খুঁজে আঙুল রাখতে বলুন; ঘরের জিনিসটি person, animal, bird, place না thing — শিশুকে বলতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": false,
+        "labelBn": "Naming words: find them and sort them",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE",
+          "QT-SORT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বই থেকে একটি বাক্য পড়ে শিশুকে naming word খুঁজে আঙুল রাখতে বলুন; ঘরের জিনিসটি person, animal, bird, place না thing — শিশুকে বলতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 27,
+      "id": "6af13779e5a42a850595cf48",
+      "at": "2026-11-09T03:01:13.400Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-04-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-01",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Sort naming words: person, animal, bird, place, thing",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L1/B",
+          "4/L1/C",
+          "4/L1/D",
+          "4/L1/F",
+          "4/L3/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-01",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Sort naming words: person, animal, bird, place, thing",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SORT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L1/B",
+          "4/L1/C",
+          "4/L1/D",
+          "4/L1/F",
+          "4/L3/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 28,
+      "id": "6af137d3e5a42a850595d77f",
+      "at": "2026-11-09T03:02:43.426Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-04-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-DET",
+        "tagged": true,
+        "labelBn": "Use a and an",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.2",
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "egg, book, umbrella, pen বলে জিজ্ঞেস করুন — a বসবে না an? শব্দটি vowel দিয়ে শুরু হলে an।",
+        "exercises": [
+          "4/L3/B",
+          "4/L3/C",
+          "4/L3/D",
+          "4/L3/E",
+          "4/L4/A",
+          "5/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-DET",
+        "tagged": true,
+        "labelBn": "Use a and an",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.2",
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "egg, book, umbrella, pen বলে জিজ্ঞেস করুন — a বসবে না an? শব্দটি vowel দিয়ে শুরু হলে an।",
+        "exercises": [
+          "4/L3/B",
+          "4/L3/C",
+          "4/L3/D",
+          "4/L3/E",
+          "4/L4/A",
+          "5/L1/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 29,
+      "id": "6af13831e5a42a850595d9d6",
+      "at": "2026-11-09T03:04:17.716Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-04-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": false,
+        "labelBn": "One and many: add s",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FORM",
+          "QT-CHOOSE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "একটা কলম, দুটো কলম দেখিয়ে pen → pens বলান ও লেখান; তারপর \"two ___ (pen / pens)\" ধরনের বাক্যে ঠিক শব্দ বেছে নিতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": false,
+        "labelBn": "One and many: add s",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FORM",
+          "QT-CHOOSE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "একটা কলম, দুটো কলম দেখিয়ে pen → pens বলান ও লেখান; তারপর \"two ___ (pen / pens)\" ধরনের বাক্যে ঠিক শব্দ বেছে নিতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 30,
+      "id": "6af13831e5a42a850595d9d7",
+      "at": "2026-11-09T03:04:17.717Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-04-03.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-03",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Write the plural (add s) and the singular",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FORM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L4/B",
+          "4/L4/C"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-03",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Write the plural (add s) and the singular",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FORM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L4/B",
+          "4/L4/C"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 31,
+      "id": "6af13831e5a42a850595d9d8",
+      "at": "2026-11-09T03:04:17.718Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-04-03.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-04-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-03",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Choose one or many in a sentence and write the sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CHOOSE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L4/D"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-04-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-04-03",
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Choose one or many in a sentence and write the sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CHOOSE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "4/L4/D"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 32,
+      "id": "6af1396ae5a42a850595e404",
+      "at": "2026-11-09T03:09:30.839Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-05-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-05-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Family members from the family tree",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "কাগজে নাম দিয়ে পরিবারের বংশতালিকা এঁকে প্রত্যেকের ইংরেজি সম্পর্ক-শব্দ (father, grandmother…) বলান।",
+        "exercises": [
+          "5/L1/B",
+          "5/L1/C",
+          "5/L1/D",
+          "5/L1/E"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-05-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Family members from the family tree",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "কাগজে নাম দিয়ে পরিবারের বংশতালিকা এঁকে প্রত্যেকের ইংরেজি সম্পর্ক-শব্দ (father, grandmother…) বলান।",
+        "exercises": [
+          "5/L1/B",
+          "5/L1/C",
+          "5/L1/D",
+          "5/L1/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 33,
+      "id": "6af13993e5a42a850595e504",
+      "at": "2026-11-09T03:10:11.001Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-05-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-05-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Masculine and feminine pairs",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FORM",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-05-01"
+        ],
+        "homeTipBn": "father বললে শিশু mother বলবে — বইয়ের তালিকার জোড়া শব্দ খেলার ছলে জিজ্ঞেস করুন।",
+        "exercises": [
+          "5/L2/B",
+          "5/L2/C",
+          "5/L2/D",
+          "5/L2/E",
+          "5/L2/F",
+          "5/L2/G",
+          "6/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-05-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-NOUN",
+        "tagged": true,
+        "labelBn": "Masculine and feminine pairs",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FORM",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-05-01"
+        ],
+        "homeTipBn": "father বললে শিশু mother বলবে — বইয়ের তালিকার জোড়া শব্দ খেলার ছলে জিজ্ঞেস করুন।",
+        "exercises": [
+          "5/L2/B",
+          "5/L2/C",
+          "5/L2/D",
+          "5/L2/E",
+          "5/L2/F",
+          "5/L2/G",
+          "6/L1/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 34,
+      "id": "6af15b08e5a42a8505984083",
+      "at": "2026-11-09T05:32:56.066Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-06-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-06-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Find and name doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE",
+          "QT-SORT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "run, eat, read বলুন; শিশু কাজটি করে দেখাবে ও ইংরেজি নাম বলবে; বাক্য পড়ে doing word খুঁজে দাগ দিতে দিন।",
+        "exercises": [
+          "6/L1/B",
+          "6/L1/C",
+          "6/L1/D",
+          "6/L2/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-06-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Find and name doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CIRCLE",
+          "QT-SORT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "run, eat, read বলুন; শিশু কাজটি করে দেখাবে ও ইংরেজি নাম বলবে; বাক্য পড়ে doing word খুঁজে দাগ দিতে দিন।",
+        "exercises": [
+          "6/L1/B",
+          "6/L1/C",
+          "6/L1/D",
+          "6/L2/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 35,
+      "id": "6af15bdde5a42a8505984d08",
+      "at": "2026-11-09T05:36:29.790Z",
+      "action": "SPLIT",
+      "code": "LO-C1-ENG-06-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-06-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Use doing words in short sentences",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH",
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-06-01"
+        ],
+        "homeTipBn": "দৈনন্দিন কাজ নিয়ে \"I eat rice.\" ধরনের ছোট বাক্য বলান ও লেখান।",
+        "exercises": [
+          "6/L2/B",
+          "6/L2/C",
+          "6/L2/D",
+          "6/L2/E",
+          "6/L3/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-06-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": false,
+        "labelBn": "Use doing words in short sentences",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH",
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-06-01"
+        ],
+        "homeTipBn": "দৈনন্দিন কাজ নিয়ে \"I eat rice.\" ধরনের ছোট বাক্য বলান ও লেখান।",
+        "exercises": [
+          "6/L2/B",
+          "6/L2/C",
+          "6/L2/D",
+          "6/L2/E",
+          "6/L3/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-ENG-06-02.1",
+            "labelBn": "Complete sentences using suitable doing words",
+            "exercises": [
+              "6/L2/B",
+              "6/L2/C",
+              "6/L3/A"
+            ]
+          },
+          {
+            "code": "LO-C1-ENG-06-02.2",
+            "labelBn": "Make short sentences using given doing words",
+            "exercises": [
+              "6/L2/E"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 36,
+      "id": "6af15c03e5a42a8505984dbd",
+      "at": "2026-11-09T05:37:07.739Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-06-02.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-06-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-06-02",
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Complete sentences using suitable doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH",
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/L2/B",
+          "6/L2/C",
+          "6/L3/A"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-06-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-06-02",
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Complete sentences using suitable doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/L2/B",
+          "6/L2/C",
+          "6/L3/A"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 37,
+      "id": "6af15c0ee5a42a8505984e3b",
+      "at": "2026-11-09T05:37:18.501Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-06-02.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-06-02.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-06-02",
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Make short sentences using given doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH",
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/L2/E"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-06-02.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-06-02",
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Make short sentences using given doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/L2/E"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 38,
+      "id": "6af15d2aa33ae2ec3d90fd48",
+      "at": "2026-11-09T05:42:02.225Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-06-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-06-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "One or more than one: runs or run",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CHOOSE",
+          "QT-FORM"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-06-02",
+          "LO-C1-ENG-04-03.1"
+        ],
+        "homeTipBn": "\"The boy runs. The boys run.\" — একজন হলে s বসে; মুখে অনুশীলন করান।",
+        "exercises": [
+          "6/L3/B",
+          "6/L3/C",
+          "7/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-06-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "One or more than one, I/we: choosing runs or run",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CHOOSE",
+          "QT-FORM"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-06-02",
+          "LO-C1-ENG-04-03.1"
+        ],
+        "homeTipBn": "\"The boy runs. The boys run.\" — একজন হলে s বসে; মুখে অনুশীলন করান।",
+        "exercises": [
+          "6/L3/B",
+          "6/L3/C",
+          "7/L1/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 39,
+      "id": "6af15fd1a33ae2ec3d910f5b",
+      "at": "2026-11-09T05:53:21.194Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-07-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-07-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-07-01",
+        "domainCode": "DOM-ENG-PRON",
+        "tagged": true,
+        "labelBn": "Rewrite the second sentence with he, she, it or they",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-REWRITE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/L1/G",
+          "7/L2/D"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-07-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-07-01",
+        "domainCode": "DOM-ENG-PRON",
+        "tagged": true,
+        "labelBn": "Rewrite sentences using he, she, it or they in place of names and naming words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-REWRITE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/L1/G",
+          "7/L2/D"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 40,
+      "id": "6af15fd8a33ae2ec3d910fa2",
+      "at": "2026-11-09T05:53:28.364Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-07-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-07-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-07-01",
+        "domainCode": "DOM-ENG-PRON",
+        "tagged": true,
+        "labelBn": "Choose he, she, it or they for a name or naming word",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "7/L1/B",
+          "7/L1/D",
+          "7/L1/E",
+          "7/L1/F",
+          "7/L2/A",
+          "7/L2/B",
+          "7/L2/C",
+          "7/L2/E",
+          "8/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-07-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-07-01",
+        "domainCode": "DOM-ENG-PRON",
+        "tagged": true,
+        "labelBn": "Choose he, she, it or they for a name or naming word",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "7/L1/B",
+          "7/L1/D",
+          "7/L1/E",
+          "7/L1/F",
+          "7/L2/A",
+          "7/L2/B",
+          "7/L2/C",
+          "7/L2/E",
+          "8/L1/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 41,
+      "id": "6af15fdda33ae2ec3d910fec",
+      "at": "2026-11-09T05:53:33.776Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-07-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-07-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PRON",
+        "tagged": false,
+        "labelBn": "He, she, it, they in place of names",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE",
+          "QT-REWRITE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "পরিবারের কারও নাম বলুন; শিশু বলবে he, she, it না they হবে। \"Ali is a boy. Ali is happy.\" — দ্বিতীয় বাক্যে Ali-র বদলে He লিখতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-07-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PRON",
+        "tagged": false,
+        "labelBn": "He, she, it, they in place of names",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE",
+          "QT-REWRITE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "পরিবারের কারও নাম বলুন; শিশু বলবে he, she, it না they হবে। \"Ali is a boy. Ali is happy.\" — দ্বিতীয় বাক্যে Ali-র বদলে He লিখতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 42,
+      "id": "6af16171a33ae2ec3d9124df",
+      "at": "2026-11-09T06:00:17.422Z",
+      "action": "SPLIT",
+      "code": "LO-C1-ENG-08-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-08-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-ADJ",
+        "tagged": true,
+        "labelBn": "Describing words: \"The ___ is ___.\"",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CHOOSE",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে \"The pencil is red.\" ধরনের বাক্য বলান; কোন শব্দটি জিনিসটির বর্ণনা দিচ্ছে জিজ্ঞেস করুন।",
+        "exercises": [
+          "8/L1/B",
+          "8/L1/C",
+          "8/L1/D",
+          "8/L1/E",
+          "8/L1/F",
+          "8/L2/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-08-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-ADJ",
+        "tagged": false,
+        "labelBn": "Describing words: \"The ___ is ___.\"",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CHOOSE",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-01.1"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে \"The pencil is red.\" ধরনের বাক্য বলান; কোন শব্দটি জিনিসটির বর্ণনা দিচ্ছে জিজ্ঞেস করুন।",
+        "exercises": [
+          "8/L1/B",
+          "8/L1/C",
+          "8/L1/D",
+          "8/L1/E",
+          "8/L1/F",
+          "8/L2/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-ENG-08-01.1",
+            "labelBn": "Identify describing words in sentences",
+            "exercises": [
+              "8/L1/B",
+              "8/L1/D",
+              "8/L2/A"
+            ]
+          },
+          {
+            "code": "LO-C1-ENG-08-01.2",
+            "labelBn": "Use describing words in the pattern “The ___ is ___.”",
+            "exercises": [
+              "8/L1/C",
+              "8/L1/E",
+              "8/L1/F"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 43,
+      "id": "6af161b4a33ae2ec3d912f70",
+      "at": "2026-11-09T06:01:24.954Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-08-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-08-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Am, is, are",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-07-01.1",
+          "LO-C1-ENG-04-03.1"
+        ],
+        "homeTipBn": "I-এর পরে am, একজন বা একটি হলে is, অনেকে হলে are — মুখে বাক্য বানিয়ে অনুশীলন করান।",
+        "exercises": [
+          "8/L2/B",
+          "8/L2/C",
+          "8/L2/D",
+          "8/L2/E",
+          "8/L2/F",
+          "9/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-08-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Am, is, are",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-07-01.1",
+          "LO-C1-ENG-04-03.1"
+        ],
+        "homeTipBn": "I-এর পরে am, একজন বা একটি হলে is, অনেকে হলে are — মুখে বাক্য বানিয়ে অনুশীলন করান।",
+        "exercises": [
+          "8/L2/B",
+          "8/L2/C",
+          "8/L2/D",
+          "8/L2/E",
+          "8/L2/F",
+          "9/L1/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 44,
+      "id": "6af27baed350b214e0d07519",
+      "at": "2026-11-10T02:04:30.521Z",
+      "action": "SPLIT",
+      "code": "LO-C1-ENG-09-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-09-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-DET",
+        "tagged": true,
+        "labelBn": "This, that, these, those",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-03.1",
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": "কাছের ও দূরের জিনিস দেখিয়ে this / that, একাধিক হলে these / those বলান।",
+        "exercises": [
+          "9/L1/B",
+          "9/L1/C",
+          "9/L1/D",
+          "9/L1/E",
+          "9/L2/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-09-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-DET",
+        "tagged": false,
+        "labelBn": "This, that, these, those",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-04-03.1",
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": "কাছের ও দূরের জিনিস দেখিয়ে this / that, একাধিক হলে these / those বলান।",
+        "exercises": [
+          "9/L1/B",
+          "9/L1/C",
+          "9/L1/D",
+          "9/L1/E",
+          "9/L2/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-ENG-09-01.1",
+            "labelBn": "Choose this or that for one person or thing",
+            "exercises": [
+              "9/L1/B",
+              "9/L1/C",
+              "9/L1/D",
+              "9/L1/E",
+              "9/L2/A"
+            ]
+          },
+          {
+            "code": "LO-C1-ENG-09-01.2",
+            "labelBn": "Choose these or those for more than one person or thing",
+            "exercises": [
+              "9/L1/B",
+              "9/L1/C",
+              "9/L1/D",
+              "9/L1/E",
+              "9/L2/A"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 45,
+      "id": "6af27be8d350b214e0d07663",
+      "at": "2026-11-10T02:05:28.983Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-09-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-09-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PREP",
+        "tagged": true,
+        "labelBn": "Where is it? In, on, under",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": "বল টেবিলের ওপরে-নিচে রেখে \"Where is the ball?\" জিজ্ঞেস করুন; শিশু পূর্ণ বাক্যে উত্তর দেবে (\"The ball is under the table.\")।",
+        "exercises": [
+          "9/L2/B",
+          "9/L2/C",
+          "9/L2/D",
+          "9/L2/E",
+          "10/L1/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-09-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PREP",
+        "tagged": true,
+        "labelBn": "Where is it? In, on, under",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-CIRCLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": "বল টেবিলের ওপরে-নিচে রেখে \"Where is the ball?\" জিজ্ঞেস করুন; শিশু পূর্ণ বাক্যে উত্তর দেবে (\"The ball is under the table.\")।",
+        "exercises": [
+          "9/L2/B",
+          "9/L2/C",
+          "9/L2/D",
+          "9/L2/E",
+          "10/L1/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 46,
+      "id": "6af27ddfd350b214e0d08e4e",
+      "at": "2026-11-10T02:13:51.852Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-10-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PREP",
+        "tagged": true,
+        "labelBn": "Join with and or but",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": "দুটি ছোট বাক্য বলুন; শিশু and বা but দিয়ে জুড়ে একটি বাক্য বলবে।",
+        "exercises": [
+          "10/L1/B",
+          "10/L1/C",
+          "10/L1/D",
+          "10/L2/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PREP",
+        "tagged": true,
+        "labelBn": "Join with and or but",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": "দুটি ছোট বাক্য বলুন; শিশু and বা but দিয়ে জুড়ে একটি বাক্য বলবে।",
+        "exercises": [
+          "10/L1/B",
+          "10/L1/C",
+          "10/L1/D",
+          "10/L2/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 47,
+      "id": "6af27e80d350b214e0d09b28",
+      "at": "2026-11-10T02:16:32.415Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-10-02.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-02",
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": true,
+        "labelBn": "Begin with a capital letter and end with a full stop",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L2/B",
+          "10/L2/C",
+          "10/L2/F",
+          "10/L3/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-02",
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": true,
+        "labelBn": "Use capital letters at the beginning of sentences, in names and for “I”, and end statements with a full stop",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L2/B",
+          "10/L2/C",
+          "10/L2/F",
+          "10/L3/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 48,
+      "id": "6af27e85d350b214e0d09b9b",
+      "at": "2026-11-10T02:16:37.111Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-10-02.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-02.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-02",
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": true,
+        "labelBn": "End a question with a question mark",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L2/D",
+          "10/L2/F",
+          "10/L3/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-02.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-02",
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": true,
+        "labelBn": "End a question with a question mark",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L2/D",
+          "10/L2/F",
+          "10/L3/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 49,
+      "id": "6af27e86d350b214e0d09bcd",
+      "at": "2026-11-10T02:16:38.133Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-10-02.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-02.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-02",
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": true,
+        "labelBn": "Put commas between words in a list",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L2/E",
+          "10/L2/F"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-02.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-02",
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": true,
+        "labelBn": "Put commas between words in a list",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L2/E",
+          "10/L2/F"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 50,
+      "id": "6af27e8cd350b214e0d09bf4",
+      "at": "2026-11-10T02:16:44.057Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-10-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": false,
+        "labelBn": "Capital letter, full stop, question mark and comma",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ছোট হাতে লেখা বাক্য দিন; বড় হাতের অক্ষর ও যতিচিহ্ন বসিয়ে আবার লিখতে বলুন। প্রশ্ন হলে শেষে ?।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-PUNC",
+        "tagged": false,
+        "labelBn": "Capital letter, full stop, question mark and comma",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PUNCTUATE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ছোট হাতে লেখা বাক্য দিন; বড় হাতের অক্ষর ও যতিচিহ্ন বসিয়ে আবার লিখতে বলুন। প্রশ্ন হলে শেষে ?।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 51,
+      "id": "6af27f4ad350b214e0d0a719",
+      "at": "2026-11-10T02:19:54.693Z",
+      "action": "SPLIT",
+      "code": "LO-C1-ENG-10-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "Make a sentence from a given word",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": "happy বা book-এর মতো একটি শব্দ বলুন; শিশু তা দিয়ে একটি বাক্য বলবে ও লিখবে।",
+        "exercises": [
+          "10/L3/B",
+          "10/L3/C",
+          "10/L3/D",
+          "10/L4/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": false,
+        "labelBn": "Make a sentence from a given word",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": "happy বা book-এর মতো একটি শব্দ বলুন; শিশু তা দিয়ে একটি বাক্য বলবে ও লিখবে।",
+        "exercises": [
+          "10/L3/B",
+          "10/L3/C",
+          "10/L3/D",
+          "10/L4/A"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-ENG-10-03.1",
+            "labelBn": "Make a sentence using a given word",
+            "exercises": [
+              "10/L3/B",
+              "10/L3/C",
+              "10/L3/D"
+            ]
+          },
+          {
+            "code": "LO-C1-ENG-10-03.2",
+            "labelBn": "Rearrange given words to make a sentence",
+            "exercises": [
+              "10/L4/A"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 52,
+      "id": "6af27f6fd350b214e0d0a82a",
+      "at": "2026-11-10T02:20:31.667Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-10-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "Put jumbled words in order to make a sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-REARRANGE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": "শব্দকার্ড এলোমেলো করে দিন; শিশু সাজিয়ে সঠিক বাক্য বানাবে — বড় হাতের অক্ষর প্রথম শব্দে, শেষে দাঁড়ি।",
+        "exercises": [
+          "10/L4/B",
+          "10/L4/C",
+          "10/L4/D",
+          "10/L5/A"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "Put jumbled words in order to make a sentence",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-REARRANGE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": "শব্দকার্ড এলোমেলো করে দিন; শিশু সাজিয়ে সঠিক বাক্য বানাবে — বড় হাতের অক্ষর প্রথম শব্দে, শেষে দাঁড়ি।",
+        "exercises": [
+          "10/L4/B",
+          "10/L4/C",
+          "10/L4/D",
+          "10/L5/A"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 53,
+      "id": "6af281f8d350b214e0d0bda6",
+      "at": "2026-11-10T02:31:20.188Z",
+      "action": "COMMENT",
+      "code": "LO-C1-ENG-10-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "This LO was split by mistake. The sub-objective “Rearrange given words to make a sentence” is already covered separately under LO-C1-ENG-10-04. Therefore, LO-C1-ENG-10-03 should remain a single objective. The extra sub-objective could not be removed because the app requires at least two sub-objectives under a split parent LO. Please review and correct the structure.",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 54,
+      "id": "6af2824ad350b214e0d0c072",
+      "at": "2026-11-10T02:32:42.897Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-10-05",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": false,
+        "labelBn": "Translate short sentences (English ↔ Bengali)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TRANSLATE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বইয়ের ইউনিট ৭–৯ এর ছোট বাক্য বাংলায় বলতে দিন, পরে বাংলা থেকে ইংরেজিতে।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": false,
+        "labelBn": "Translate short sentences (English ↔ Bengali)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TRANSLATE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বইয়ের ইউনিট ৭–৯ এর ছোট বাক্য বাংলায় বলতে দিন, পরে বাংলা থেকে ইংরেজিতে।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 55,
+      "id": "6af2824ad350b214e0d0c073",
+      "at": "2026-11-10T02:32:42.898Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-10-05.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-05",
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "English to Bengali",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TRANSLATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-07-01.1",
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L5/B",
+          "10/L5/C"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-05",
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "English to Bengali",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TRANSLATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-07-01.1",
+          "LO-C1-ENG-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L5/B",
+          "10/L5/C"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 56,
+      "id": "6af2824ad350b214e0d0c074",
+      "at": "2026-11-10T02:32:42.899Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-ENG-10-05.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-10-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-05",
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "Bengali to English",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TRANSLATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-05.1",
+          "LO-C1-ENG-09-01",
+          "LO-C1-ENG-09-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L5/D"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-10-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-05",
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "Bengali to English",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TRANSLATE"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-10-05.1",
+          "LO-C1-ENG-09-01",
+          "LO-C1-ENG-09-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L5/D"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 57,
+      "id": "6af283a4d350b214e0d0ce49",
+      "at": "2026-11-10T02:38:28.311Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-11-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-11-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-READ",
+        "tagged": true,
+        "labelBn": "Read the poems and stories aloud",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-06"
+        ],
+        "homeTipBn": "প্রতিদিন একটি কবিতা বা গল্প শিশুর সঙ্গে জোরে পড়ুন; মুখস্থ করানোর দরকার নেই।",
+        "exercises": [
+          "11/L1/A",
+          "11/L1/D",
+          "11/L1/G",
+          "11/L1/I",
+          "11/L2/A",
+          "11/L2/C",
+          "11/L3/A",
+          "11/L3/C"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-11-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-READ",
+        "tagged": true,
+        "labelBn": "Read the poems and stories aloud",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-06"
+        ],
+        "homeTipBn": "প্রতিদিন একটি কবিতা বা গল্প শিশুর সঙ্গে জোরে পড়ুন; মুখস্থ করানোর দরকার নেই।",
+        "exercises": [
+          "11/L1/A",
+          "11/L1/D",
+          "11/L1/G",
+          "11/L1/I",
+          "11/L2/A",
+          "11/L2/C",
+          "11/L3/A",
+          "11/L3/C"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 58,
+      "id": "6af283d4d350b214e0d0cf4e",
+      "at": "2026-11-10T02:39:16.175Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-11-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-11-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-READ",
+        "tagged": true,
+        "labelBn": "Answer written questions on a poem",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ANSWER"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-11-01",
+          "LO-C1-ENG-02-03"
+        ],
+        "homeTipBn": "কবিতা পড়ে \"What colour is the sky?\" ধরনের প্রশ্ন করুন; শিশু পূর্ণ বাক্যে উত্তর লিখবে।",
+        "exercises": [
+          "11/L1/C",
+          "11/L1/F",
+          "11/L1/H",
+          "11/L1/J"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-11-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-READ",
+        "tagged": true,
+        "labelBn": "Answer written questions on a poem",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ANSWER"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-11-01",
+          "LO-C1-ENG-02-03"
+        ],
+        "homeTipBn": "কবিতা পড়ে \"What colour is the sky?\" ধরনের প্রশ্ন করুন; শিশু পূর্ণ বাক্যে উত্তর লিখবে।",
+        "exercises": [
+          "11/L1/C",
+          "11/L1/F",
+          "11/L1/H",
+          "11/L1/J"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 59,
+      "id": "6af283efd350b214e0d0d00f",
+      "at": "2026-11-10T02:39:43.494Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-11-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-11-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-READ",
+        "tagged": true,
+        "labelBn": "Answer questions on a story aloud",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-11-01"
+        ],
+        "homeTipBn": "গল্প পড়ার পর Who / What প্রশ্ন করুন; শিশু মুখে এক শব্দে বা ছোট বাক্যে বলবে।",
+        "exercises": [
+          "11/L2/B",
+          "11/L2/D",
+          "11/L3/B",
+          "11/L3/D"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-11-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-READ",
+        "tagged": true,
+        "labelBn": "Answer questions on a story aloud",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-11-01"
+        ],
+        "homeTipBn": "গল্প পড়ার পর Who / What প্রশ্ন করুন; শিশু মুখে এক শব্দে বা ছোট বাক্যে বলবে।",
+        "exercises": [
+          "11/L2/B",
+          "11/L2/D",
+          "11/L3/B",
+          "11/L3/D"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 60,
+      "id": "6af28459d350b214e0d0d248",
+      "at": "2026-11-10T02:41:29.915Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-SK-VOC-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-SK-VOC-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Give the Bengali meaning of an English word (Words to Know)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MEANING"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-02"
+        ],
+        "homeTipBn": "প্রতি ইউনিটের Words to Know থেকে পাঁচটি শব্দ বলুন; শিশু বাংলা অর্থ বলবে ও লিখবে।",
+        "exercises": [
+          "2/L3/G",
+          "3/L1/C",
+          "3/L2/C",
+          "3/L2/F",
+          "4/L4/E",
+          "5/L2/A",
+          "5/L3/D",
+          "6/L3/D",
+          "7/L1/C",
+          "7/L2/F",
+          "8/L2/G",
+          "9/L2/F",
+          "10/L6/G",
+          "11/L3/E",
+          "2/L3 Words to Know/—",
+          "3/L2 Words to Know/—",
+          "4/L4 Words to Know/—",
+          "5/L3 Words to Know/—",
+          "6/L3 Words to Know/—",
+          "7/L2 Words to Know/—",
+          "8/L2 Words to Know/—",
+          "9/L2 Words to Know/—",
+          "10/L6 Words to Know/—",
+          "11/L3 Words to Know/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-SK-VOC-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Give the Bengali meaning of an English word (Words to Know)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MEANING"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-02"
+        ],
+        "homeTipBn": "প্রতি ইউনিটের Words to Know থেকে পাঁচটি শব্দ বলুন; শিশু বাংলা অর্থ বলবে ও লিখবে।",
+        "exercises": [
+          "2/L3/G",
+          "3/L1/C",
+          "3/L2/C",
+          "3/L2/F",
+          "4/L4/E",
+          "5/L2/A",
+          "5/L3/D",
+          "6/L3/D",
+          "7/L1/C",
+          "7/L2/F",
+          "8/L2/G",
+          "9/L2/F",
+          "10/L6/G",
+          "11/L3/E",
+          "2/L3 Words to Know/—",
+          "3/L2 Words to Know/—",
+          "4/L4 Words to Know/—",
+          "5/L3 Words to Know/—",
+          "6/L3 Words to Know/—",
+          "7/L2 Words to Know/—",
+          "8/L2 Words to Know/—",
+          "9/L2 Words to Know/—",
+          "10/L6 Words to Know/—",
+          "11/L3 Words to Know/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 61,
+      "id": "6af28472d350b214e0d0d325",
+      "at": "2026-11-10T02:41:54.192Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-SK-VOC-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-SK-VOC-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Write the English word for a Bengali meaning",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ENGWORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-SK-VOC-01"
+        ],
+        "homeTipBn": "বাংলায় \"আম\", \"বই\" বলুন; শিশু ইংরেজি শব্দটি বলবে ও বানান করে লিখবে।",
+        "exercises": [
+          "1/L2/E",
+          "1/L3/E",
+          "1/L4/E",
+          "3/L1/D",
+          "3/L2/D",
+          "5/L1/F"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-SK-VOC-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Write the English word for a Bengali meaning",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ENGWORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-SK-VOC-01"
+        ],
+        "homeTipBn": "বাংলায় \"আম\", \"বই\" বলুন; শিশু ইংরেজি শব্দটি বলবে ও বানান করে লিখবে।",
+        "exercises": [
+          "1/L2/E",
+          "1/L3/E",
+          "1/L4/E",
+          "3/L1/D",
+          "3/L2/D",
+          "5/L1/F"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 62,
+      "id": "6af284a6d350b214e0d0da0c",
+      "at": "2026-11-10T02:42:46.724Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-SK-SPELL-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-SK-SPELL-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPELL",
+        "tagged": true,
+        "labelBn": "Spell the unit words (spelling test)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SPELL",
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "ইউনিটের শব্দ থেকে পাঁচটি শব্দ বলুন; শিশু না দেখে খাতায় লিখবে। ভুল অক্ষরটি দেখিয়ে আবার লিখতে দিন।",
+        "exercises": [
+          "1/L1/F",
+          "1/L2/D",
+          "1/L3/D",
+          "3/L1/E",
+          "1/L2 Spelling test/—",
+          "1/L3 Spelling test/—",
+          "1/L6 Spelling test/—",
+          "2/L3 Spelling test/—",
+          "3/L2 Spelling test/—",
+          "4/L4 Spelling test/—",
+          "5/L3 Spelling test/—",
+          "6/L3 Spelling test/—",
+          "7/L2 Spelling test/—",
+          "8/L2 Spelling test/—",
+          "9/L2 Spelling test/—",
+          "10/L6 Spelling test/—",
+          "11/L3 Spelling test/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-SK-SPELL-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPELL",
+        "tagged": true,
+        "labelBn": "Spell the unit words (spelling test)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SPELL",
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-01-01.1"
+        ],
+        "homeTipBn": "ইউনিটের শব্দ থেকে পাঁচটি শব্দ বলুন; শিশু না দেখে খাতায় লিখবে। ভুল অক্ষরটি দেখিয়ে আবার লিখতে দিন।",
+        "exercises": [
+          "1/L1/F",
+          "1/L2/D",
+          "1/L3/D",
+          "3/L1/E",
+          "1/L2 Spelling test/—",
+          "1/L3 Spelling test/—",
+          "1/L6 Spelling test/—",
+          "2/L3 Spelling test/—",
+          "3/L2 Spelling test/—",
+          "4/L4 Spelling test/—",
+          "5/L3 Spelling test/—",
+          "6/L3 Spelling test/—",
+          "7/L2 Spelling test/—",
+          "8/L2 Spelling test/—",
+          "9/L2 Spelling test/—",
+          "10/L6 Spelling test/—",
+          "11/L3 Spelling test/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 63,
+      "id": "6af284c9d350b214e0d0db14",
+      "at": "2026-11-10T02:43:21.626Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-ENG-SK-WRITE-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-ENG-SK-WRITE-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-COMP",
+        "tagged": true,
+        "labelBn": "Write a 3–5 sentence paragraph by answering a chain of questions",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PARA"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-02-03",
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": "নিজের, পরিবার বা স্কুল নিয়ে চার-পাঁচটি প্রশ্ন করুন; উত্তরগুলো পরপর লিখে অনুচ্ছেদ বানাতে দিন। মুখস্থ নয়, নিজের বাক্য।",
+        "exercises": [
+          "2/L3/E",
+          "2/L3/F",
+          "5/L3/B",
+          "5/L3/C",
+          "10/L6/B",
+          "10/L6/C",
+          "10/L6/E",
+          "10/L6/F"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-SK-WRITE-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-COMP",
+        "tagged": true,
+        "labelBn": "Write a 3–5 sentence paragraph by answering a chain of questions",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PARA"
+        ],
+        "prereqCodes": [
+          "LO-C1-ENG-02-03",
+          "LO-C1-ENG-10-02.1"
+        ],
+        "homeTipBn": "নিজের, পরিবার বা স্কুল নিয়ে চার-পাঁচটি প্রশ্ন করুন; উত্তরগুলো পরপর লিখে অনুচ্ছেদ বানাতে দিন। মুখস্থ নয়, নিজের বাক্য।",
+        "exercises": [
+          "2/L3/E",
+          "2/L3/F",
+          "5/L3/B",
+          "5/L3/C",
+          "10/L6/B",
+          "10/L6/C",
+          "10/L6/E",
+          "10/L6/F"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 64,
+      "id": "6af48ed30659c43f554dbb17",
+      "at": "2026-11-11T15:50:43.782Z",
+      "action": "REOPEN",
+      "code": null,
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "Owner decisions on Mahzabin's three comments + two exercises left out of every row.",
+      "before": {
+        "state": "SUBMITTED"
+      },
+      "after": {
+        "state": "OPEN"
+      }
+    },
+    {
+      "seq": 65,
+      "id": "6af48ed30659c43f554dbb26",
+      "at": "2026-11-11T15:50:43.824Z",
+      "action": "MERGE",
+      "code": "LO-C1-ENG-10-03.1",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "Split by mistake (Mahzabin's comment) — undone.",
+      "before": {
+        "code": "LO-C1-ENG-10-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-10-03",
+        "domainCode": "DOM-ENG-SENT",
+        "tagged": true,
+        "labelBn": "Make a sentence using a given word",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MAKESENT"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "10/L3/B",
+          "10/L3/C",
+          "10/L3/D"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "survivor": {
+          "code": "LO-C1-ENG-10-03",
+          "level": "OBJECTIVE",
+          "parentCode": null,
+          "domainCode": "DOM-ENG-SENT",
+          "tagged": false,
+          "labelBn": "Make a sentence from a given word",
+          "labelEn": null,
+          "assess": "QUESTION",
+          "questionTypeCodes": [
+            "QT-MAKESENT"
+          ],
+          "prereqCodes": [
+            "LO-C1-ENG-10-02.1"
+          ],
+          "homeTipBn": "happy বা book-এর মতো একটি শব্দ বলুন; শিশু তা দিয়ে একটি বাক্য বলবে ও লিখবে।",
+          "exercises": [
+            "10/L3/B",
+            "10/L3/C",
+            "10/L3/D",
+            "10/L4/A"
+          ],
+          "reviewState": "EDITED",
+          "rejectReason": null,
+          "mergedInto": null
+        }
+      },
+      "after": {
+        "mergedInto": "LO-C1-ENG-10-03",
+        "merged": [
+          "LO-C1-ENG-10-03.1",
+          "LO-C1-ENG-10-03.2"
+        ],
+        "survivor": {
+          "code": "LO-C1-ENG-10-03",
+          "level": "OBJECTIVE",
+          "parentCode": null,
+          "domainCode": "DOM-ENG-SENT",
+          "tagged": true,
+          "labelBn": "Make a sentence from a given word",
+          "labelEn": null,
+          "assess": "QUESTION",
+          "questionTypeCodes": [
+            "QT-MAKESENT"
+          ],
+          "prereqCodes": [
+            "LO-C1-ENG-10-02.1"
+          ],
+          "homeTipBn": "happy বা book-এর মতো একটি শব্দ বলুন; শিশু তা দিয়ে একটি বাক্য বলবে ও লিখবে।",
+          "exercises": [
+            "10/L3/B",
+            "10/L3/C",
+            "10/L3/D",
+            "10/L4/A"
+          ],
+          "reviewState": "EDITED",
+          "rejectReason": null,
+          "mergedInto": null
+        },
+        "prereqRewritten": []
+      }
+    },
+    {
+      "seq": 66,
+      "id": "6af48ed30659c43f554dbb33",
+      "at": "2026-11-11T15:50:43.850Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-06-02.1",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "6/L2/D (match the doing word) was left out when 06-02 was split.",
+      "before": {
+        "code": "LO-C1-ENG-06-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-06-02",
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Complete sentences using suitable doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/L2/B",
+          "6/L2/C",
+          "6/L3/A"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-06-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-06-02",
+        "domainCode": "DOM-ENG-VERB",
+        "tagged": true,
+        "labelBn": "Complete sentences using suitable doing words",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL",
+          "QT-MATCH"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/L2/B",
+          "6/L2/C",
+          "6/L3/A",
+          "6/L2/D"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 67,
+      "id": "6af48ed30659c43f554dbb40",
+      "at": "2026-11-11T15:50:43.872Z",
+      "action": "EDIT",
+      "code": "LO-C1-ENG-03-01.1",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "3/L1/B (touch and say — body parts) left 03-02 and had no row.",
+      "before": {
+        "code": "LO-C1-ENG-03-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-03-01",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/L1/A",
+          "11/L1/E"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-03-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-ENG-03-01",
+        "domainCode": "DOM-ENG-VOCAB",
+        "tagged": true,
+        "labelBn": "Name body parts",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-LIST"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/L1/A",
+          "11/L1/E",
+          "3/L1/B"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 68,
+      "id": "6af48ed30659c43f554dbb51",
+      "at": "2026-11-11T15:50:43.912Z",
+      "action": "SPLIT",
+      "code": "LO-C1-ENG-02-02",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "Owner: following and giving instructions are two skills — split now.",
+      "before": {
+        "code": "LO-C1-ENG-02-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": true,
+        "labelBn": "Follow and give classroom instructions",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "\"Stand up\", \"Sit down\" নির্দেশ খেলার ছলে দিন; পরে শিশুও আপনাকে নির্দেশ দিক।",
+        "exercises": [
+          "2/L2/A",
+          "2/L2/C",
+          "2/L2/D",
+          "2/L2/E"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-ENG-02-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-ENG-SPEAK",
+        "tagged": false,
+        "labelBn": "Follow and give classroom instructions",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "\"Stand up\", \"Sit down\" নির্দেশ খেলার ছলে দিন; পরে শিশুও আপনাকে নির্দেশ দিক।",
+        "exercises": [
+          "2/L2/A",
+          "2/L2/C",
+          "2/L2/D",
+          "2/L2/E"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-ENG-02-02.1",
+            "labelBn": "Follow classroom instructions",
+            "exercises": [
+              "2/L2/A",
+              "2/L2/E"
+            ]
+          },
+          {
+            "code": "LO-C1-ENG-02-02.2",
+            "labelBn": "Give classroom instructions",
+            "exercises": [
+              "2/L2/C",
+              "2/L2/D"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 69,
+      "id": "6af48ed30659c43f554dbb5f",
+      "at": "2026-11-11T15:50:43.936Z",
+      "action": "REPLY",
+      "code": "LO-C1-ENG-01-06",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6af12765e5a42a8505951cee",
+      "comment": "Agreed — kept. The chart has no written exercise, so the teacher records it by listening to the child read the chart.",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 70,
+      "id": "6af48ed30659c43f554dbb6c",
+      "at": "2026-11-11T15:50:43.964Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-ENG-01-06",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6af12765e5a42a8505951cee",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 71,
+      "id": "6af48ed30659c43f554dbb74",
+      "at": "2026-11-11T15:50:43.977Z",
+      "action": "REPLY",
+      "code": "LO-C1-ENG-02-02",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6af1305be5a42a850595780e",
+      "comment": "Agreed that these are two skills — split now (owner's decision). 02-02.1 Follow classroom instructions: A (read and do), E (Sufyan says — Yes/No). 02-02.2 Give classroom instructions: C (write the instruction words), D (Sufyan says game — one child gives the instruction). Please check the split.",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 72,
+      "id": "6af48ed30659c43f554dbb81",
+      "at": "2026-11-11T15:50:43.996Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-ENG-02-02",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6af1305be5a42a850595780e",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 73,
+      "id": "6af48ed40659c43f554dbb89",
+      "at": "2026-11-11T15:50:44.007Z",
+      "action": "REPLY",
+      "code": "LO-C1-ENG-10-03",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6af281f8d350b214e0d0bda6",
+      "comment": "Correct — the split is undone; 10-03 is one objective again with all four exercises. Lesson 4 A (\"Make a sentence with happy\") stays here because it is a make-a-sentence exercise; rearranging stays in 10-04. Also fixed: 6/L2/D (match the doing word) is now under 06-02.1, and 3/L1/B (touch and say) under 03-01.1 — both had been left out of every row.",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 74,
+      "id": "6af48ed40659c43f554dbb96",
+      "at": "2026-11-11T15:50:44.029Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-ENG-10-03",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6af281f8d350b214e0d0bda6",
+      "comment": null,
+      "before": null,
+      "after": null
+    }
+  ]
+}
