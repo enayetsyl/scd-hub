@@ -77,6 +77,16 @@ const PerMillionRef = builder.objectRef<PerMillion>("AiPerMillionPrice").impleme
   }),
 });
 
+const ClaudePriceRef = builder.objectRef<PerMillion & { model: string }>("AiClaudeModelPrice").implement({
+  description: "A Claude model's USD per 1M tokens — the same at any hour.",
+  fields: (t) => ({
+    model: t.string({ resolve: (p) => p.model }),
+    hit: t.float({ resolve: (p) => p.hit }),
+    miss: t.float({ resolve: (p) => p.miss }),
+    output: t.float({ resolve: (p) => p.output }),
+  }),
+});
+
 const ClockRef = builder.objectRef<ReturnType<typeof workspacePriceClock>>("AiPriceClock").implement({
   fields: (t) => ({
     peak: t.boolean({ resolve: (c) => c.peak }),
@@ -84,6 +94,7 @@ const ClockRef = builder.objectRef<ReturnType<typeof workspacePriceClock>>("AiPr
     factor: t.float({ description: "1 at peak, 0.5 off-peak.", resolve: (c) => c.factor }),
     flashPerMillion: t.field({ type: PerMillionRef, description: "USD per 1M tokens right now.", resolve: (c) => c.flashPerMillion }),
     proPerMillion: t.field({ type: PerMillionRef, resolve: (c) => c.proPerMillion }),
+    claudePerMillion: t.field({ type: [ClaudePriceRef], description: "Claude models (the school's Claude API credit); no off-peak.", resolve: (c) => c.claudePerMillion }),
   }),
 });
 

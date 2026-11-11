@@ -24,7 +24,9 @@ import { createJob, estimateJob, job } from "../services/JobService";
 import { draft, draftVersion, reviseDraft } from "../services/DraftService";
 
 const MAX_SLICE = 50_000;
-const MODEL = z.enum(["deepseek-flash", "deepseek-v4-pro"]).describe("DeepSeek model. Ask the Principal; there is no default.");
+const MODEL = z
+  .enum(["deepseek-flash", "deepseek-v4-pro", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"])
+  .describe("Model: DeepSeek (cheap, half price off-peak) or Claude (the school's Claude API credit; the same price at any hour, so 'offpeak' runs now). Ask the Principal; there is no default.");
 const THINKING = z.enum(["off", "low", "high"]).describe("Thinking level. Ask the Principal; there is no default.");
 const RUN_AT = z
   .enum(["now", "offpeak"])

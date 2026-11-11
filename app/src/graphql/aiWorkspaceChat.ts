@@ -47,6 +47,8 @@ export interface AiPriceClockT {
   factor: number;
   flashPerMillion: { hit: number; miss: number; output: number };
   proPerMillion: { hit: number; miss: number; output: number };
+  /** Claude models: the same price at any hour. */
+  claudePerMillion: Array<{ model: string; hit: number; miss: number; output: number }>;
 }
 
 interface PageT<T> {
@@ -58,7 +60,7 @@ interface PageT<T> {
 
 const CHAT_FIELDS = "id projectId title startedByName turns lastAt model thinking runAt contextTokens windowTokens contextUsed suggestNewChat";
 export const MESSAGE_FIELDS = "id sessionId role text at status modelName thinking runAt runAfter error warning authorName tokens costUsd";
-export const CLOCK_FIELDS = "peak changesAt factor flashPerMillion { hit miss output } proPerMillion { hit miss output }";
+export const CLOCK_FIELDS = "peak changesAt factor flashPerMillion { hit miss output } proPerMillion { hit miss output } claudePerMillion { model hit miss output }";
 
 export const AI_PROJECT_CHATS_PAGE = gql<{ aiProjectChatsPage: PageT<AiProjectChatT> }, { projectId: string; page: number; pageSize: number }>`
   query AiProjectChatsPage($projectId: String!, $page: Int, $pageSize: Int) {

@@ -28,7 +28,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { aiSend, AiFeatureOffError, AiModelOverrideError } from "../../platform/ai/aiRouter";
 import { AiProviderError } from "../../platform/ai/provider";
 import { isPeak, nextOffPeak } from "../../platform/ai/aiPrices";
-import { DEEPSEEK_MODELS } from "../../platform/ai/deepseekProvider";
+import { hasOffPeak, WORKSPACE_MODELS } from "../../platform/ai/models";
 import { reidentify, DeidentifyError, type DeidScope } from "../../platform/ai/deidentify";
 import { AiCapError } from "../../platform/services/AiUsageService";
 import { AiUsage } from "../../platform/models/AiUsage";
@@ -461,11 +461,12 @@ export async function reviseDraft(
   if (d.revise && (d.revise.status === "running" || d.revise.status === "queued")) throw new AiWorkspaceError(BN.busy);
   const notes = (input.notes ?? "").trim();
   if (notes.length < 2) throw new AiWorkspaceError(BN.notes);
-  if (!(DEEPSEEK_MODELS as readonly string[]).includes(input.model)) throw new AiWorkspaceError(BN.model);
+  if (!WORKSPACE_MODELS.includes(input.model)) throw new AiWorkspaceError(BN.model);
   if (!["off", "low", "high"].includes(input.thinking)) throw new AiWorkspaceError("চিন্তার মাত্রা সঠিক নয়");
   if (input.runAt !== "now" && input.runAt !== "offpeak") throw new AiWorkspaceError(BN.run);
   const now = deps.now?.() ?? new Date();
-  const wait = input.runAt === "offpeak" && isPeak("deepseek", now);
+  // Claude has no cheaper hours: "off-peak" on a Claude model runs now.
+  const wait = input.runAt === "offpeak" && hasOffPeak(input.model) && isPeak("deepseek", now);
   await AiDraft.updateOne(
     { _id: d._id },
     {
