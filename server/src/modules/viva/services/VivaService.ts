@@ -28,6 +28,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { VivaPaper, type IVivaPaper, type IVivaItem, type IVivaSet } from "../models/VivaPaper";
 import { VivaMark, type IVivaMark } from "../models/VivaMark";
+import { WorksheetPicture } from "../../worksheets/models/WorksheetPicture";
 
 export class VivaError extends Error {}
 
@@ -68,6 +69,8 @@ export interface VivaItemShape {
   /** Letter question (D-#1277): the letters, each marked 0 … partMarks; [] = ordinary. */
   parts: string[];
   partMarks: number;
+  /** Picture question (D-#1282): a bank picture per part; [] = none. */
+  pictureIds: string[];
 }
 
 export interface VivaSetShape {
@@ -225,6 +228,7 @@ const shapeItem = (i: IVivaItem): VivaItemShape => ({
   ref: i.ref ?? "",
   parts: [...(i.parts ?? [])],
   partMarks: i.partMarks ?? 0,
+  pictureIds: (i.pictureIds ?? []).map(String),
 });
 
 // ── Default examiner (D-#1083) ────────────────────────────────────────────────
@@ -536,6 +540,9 @@ export interface VivaItemInput {
   /** Letter question (D-#1277): the letters, each marked 0 … partMarks. */
   parts?: string[] | null;
   partMarks?: number | null;
+  /** Picture question (D-#1282): worksheet-bank picture ids; the answer words come from the
+   *  bank, so `parts` is ignored. Each picture is marked 0 … partMarks (default 1). */
+  pictureIds?: string[] | null;
 }
 
 export interface VivaSetInput {
@@ -546,8 +553,48 @@ export interface VivaSetInput {
 
 const MAX_SETS = 8;
 
+const WORDING_ONLY =
+  "এই প্রশ্নপত্রে নম্বর দেওয়া বা সেট আনা শুরু হয়েছে — এখন শুধু প্রশ্নের লেখা, বর্ণ, বইয়ের পৃষ্ঠা আর সেটের নাম ঠিক করা যায়; প্রশ্ন যোগ-বাদ, ক্রম বা নম্বর বদলানো যাবে না।";
+
+/** Same sets, same questions in the same order, same marks and the same number of letters. */
+function sameShape(a: IVivaSet[], b: IVivaSet[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((s, i) => {
+    const t = b[i]!;
+    if (s.key !== t.key || s.items.length !== t.items.length) return false;
+    return s.items.every((x, j) => {
+      const y = t.items[j]!;
+      return (
+        x.key === y.key &&
+        x.marks === y.marks &&
+        (x.parts ?? []).length === (y.parts ?? []).length &&
+        (x.pictureIds ?? []).length === (y.pictureIds ?? []).length &&
+        ((x.parts ?? []).length === 0 || (x.partMarks ?? 0) === (y.partMarks ?? 0))
+      );
+    });
+  });
+}
+
+/** How many questions / set names a wording fix touched (audit only — no text kept). */
+function wordingChanges(a: IVivaSet[], b: IVivaSet[]): number {
+  let n = 0;
+  a.forEach((s, i) => {
+    const t = b[i]!;
+    if ((s.label ?? "") !== (t.label ?? "")) n += 1;
+    s.items.forEach((x, j) => {
+      const y = t.items[j]!;
+      if (x.label !== y.label || (x.ref ?? "") !== (y.ref ?? "") || (x.parts ?? []).join("|") !== (y.parts ?? []).join("|") ||
+        (x.pictureIds ?? []).map(String).join("|") !== (y.pictureIds ?? []).map(String).join("|")
+      ) {
+        n += 1;
+      }
+    });
+  });
+  return n;
+}
+
 /** Office: the questions and their marks — one list (`items`) or two or more sets (`sets`,
- *  D-#1275). Refused once any mark is entered or any set drawn (D-#1081). */
+ *  D-#1275). Once any mark is entered or any set drawn (D-#1081) only the wording may change (D-#1281). */
 export async function saveVivaPaper(
   ctx: AppContext,
   paperId: string,
@@ -556,11 +603,18 @@ export async function saveVivaPaper(
 ): Promise<VivaPaperShape> {
   const p = await mustPaper(paperId);
   if (p.lockedAt) throw new VivaError("নম্বর লক করা হয়েছে — প্রশ্নপত্র বদলানো যাবে না।");
-  if (await VivaMark.exists({ paperId: p._id, $or: [{ "marks.0": { $exists: true } }, { setKey: { $ne: null } }] })) {
-    throw new VivaError("এই প্রশ্নপত্রে নম্বর দেওয়া বা সেট আনা শুরু হয়েছে — প্রশ্ন আর বদলানো যাবে না।");
-  }
+  // Once marking or drawing has started only the WORDING may change (D-#1281): question text,
+  // letters, book page and set names. Questions, their order and their marks stay as they were,
+  // so every child is still marked out of the same paper.
+  const started = !!(await VivaMark.exists({ paperId: p._id, $or: [{ "marks.0": { $exists: true } }, { setKey: { $ne: null } }] }));
   const raw: VivaSetInput[] = setsInput?.length ? setsInput : [{ items: input ?? [] }];
   if (raw.length > MAX_SETS) throw new VivaError(`একটি প্রশ্নপত্রে সর্বোচ্চ ${bn(MAX_SETS)}টি সেট।`);
+  // Picture questions (D-#1282): every picture must be in the worksheet picture bank.
+  const wantPics = [...new Set(raw.flatMap((s) => s.items.flatMap((it) => it.pictureIds ?? [])))];
+  if (wantPics.some((id) => !Types.ObjectId.isValid(id))) throw new VivaError("ছবিটি ছবির ভাণ্ডারে নেই।");
+  const bank = new Map(
+    (await WorksheetPicture.find({ _id: { $in: wantPics.map(oid) } }, { word: 1, wordEn: 1 }).lean()).map((x) => [String(x._id), x]),
+  );
   const oldSets = setsOf(p);
   const usedItems = new Set<string>();
   const existingItems = new Set(oldSets.flatMap((s) => s.items.map((i) => i.key)));
@@ -579,13 +633,19 @@ export async function saveVivaPaper(
       const label = (it.label ?? "").trim();
       if (!label) throw new VivaError(`${where}প্রতিটি প্রশ্নের লেখা দিন।`);
       if (label.length > 300) throw new VivaError("প্রশ্নের লেখা ৩০০ অক্ষরের মধ্যে রাখুন।");
-      const parts = (it.parts ?? []).map((x) => x.trim()).filter(Boolean);
+      const pictureIds = (it.pictureIds ?? []).filter(Boolean);
+      if (pictureIds.length > 20) throw new VivaError(`"${label}": একটি প্রশ্নে সর্বোচ্চ ২০টি ছবি।`);
+      if (new Set(pictureIds).size !== pictureIds.length) throw new VivaError(`"${label}": একই ছবি দুবার দেওয়া হয়েছে।`);
+      if (pictureIds.some((id) => !bank.has(id))) throw new VivaError(`"${label}": একটি ছবি ছবির ভাণ্ডারে নেই।`);
+      const parts = pictureIds.length
+        ? pictureIds.map((id, n) => (bank.get(id)!.word ?? bank.get(id)!.wordEn ?? "").trim() || `ছবি ${bn(n + 1)}`)
+        : (it.parts ?? []).map((x) => x.trim()).filter(Boolean);
       let marks = it.marks;
       let partMarks = 0;
       if (parts.length) {
-        if (parts.length > 12) throw new VivaError(`"${label}": একটি প্রশ্নে সর্বোচ্চ ১২টি বর্ণ।`);
-        if (parts.some((x) => x.length > 12)) throw new VivaError(`"${label}": প্রতিটি বর্ণ ছোট রাখুন।`);
-        partMarks = it.partMarks ?? 0;
+        if (!pictureIds.length && parts.length > 12) throw new VivaError(`"${label}": একটি প্রশ্নে সর্বোচ্চ ১২টি বর্ণ।`);
+        if (!pictureIds.length && parts.some((x) => x.length > 12)) throw new VivaError(`"${label}": প্রতিটি বর্ণ ছোট রাখুন।`);
+        partMarks = it.partMarks ?? (pictureIds.length ? 1 : 0);
         if (!isValidItemMarks(partMarks)) throw new VivaError(`"${label}"-এর প্রতি বর্ণের নম্বর ০-এর বেশি পূর্ণ বা আধা সংখ্যা হতে হবে।`);
         marks = Math.round(parts.length * partMarks * 2) / 2;
       }
@@ -597,7 +657,7 @@ export async function saveVivaPaper(
         next += 1;
       }
       usedItems.add(key);
-      return { key, label, marks, ref: (it.ref ?? "").trim().slice(0, 60), parts, partMarks };
+      return { key, label, marks, ref: (it.ref ?? "").trim().slice(0, 60), parts, partMarks, pictureIds: pictureIds.map(oid) };
     });
     let key = s.key && existingSets.has(s.key) && !usedSets.has(s.key) ? s.key : "";
     if (!key) {
@@ -609,6 +669,7 @@ export async function saveVivaPaper(
     return { key, label: setName, items };
   });
 
+  if (started && !sameShape(oldSets, sets)) throw new VivaError(WORDING_ONLY);
   const totals = sets.map((s) => sumMarks(s.items));
   if (totals.some((t) => t !== totals[0])) {
     throw new VivaError(`সব সেটের মোট নম্বর সমান হতে হবে (${sets.map((s, i) => `${s.label}: ${bn(totals[i]!)}`).join(", ")})।`);
@@ -625,7 +686,11 @@ export async function saveVivaPaper(
     actorRole: ctx.auth!.role,
     targetId: p._id,
     targetKind: "VivaPaper",
-    meta: { before, after: { fullMarks: p.fullMarks, sets: sets.length, items: sets.reduce((a, s) => a + s.items.length, 0) } },
+    meta: {
+      before,
+      after: { fullMarks: p.fullMarks, sets: sets.length, items: sets.reduce((a, s) => a + s.items.length, 0) },
+      ...(started ? { wordingOnly: true, changed: wordingChanges(oldSets, sets) } : {}),
+    },
   });
   return (await vivaSheet(ctx, paperId)).paper;
 }
@@ -707,7 +772,9 @@ export async function setVivaMark(ctx: AppContext, paperId: string, studentId: s
   if (item.parts?.length) {
     const i = Number(idx);
     if (idx === undefined) throw new VivaError("এই প্রশ্নের প্রতিটি বর্ণে আলাদা নম্বর দিন।");
-    if (!Number.isInteger(i) || i < 0 || i >= item.parts.length) throw new VivaError("বর্ণটি এই প্রশ্নে নেই।");
+    if (!Number.isInteger(i) || i < 0 || i >= item.parts.length) {
+      throw new VivaError(item.pictureIds?.length ? "ছবিটি এই প্রশ্নে নেই।" : "বর্ণটি এই প্রশ্নে নেই।");
+    }
     max = item.partMarks ?? 0;
   } else if (idx !== undefined) {
     throw new VivaError("প্রশ্নটি এই শিশুর প্রশ্নপত্রে নেই।");
@@ -800,3 +867,65 @@ export async function lockVivaPaper(ctx: AppContext, paperId: string, lock: bool
 
 /** Today's key in Dhaka (the app's Today card filters by it). */
 export const vivaTodayKey = (now: Date = new Date()): string => dhakaDayKey(now);
+
+// ── Pictures (D-#1282) ────────────────────────────────────────────────────────
+
+export interface VivaPictureShape {
+  id: string;
+  word: string;
+  wordEn: string;
+  letter: string;
+  book: string;
+  page: number;
+  active: boolean;
+  /** data: URI — the full picture (sheet) or the thumbnail (bank). */
+  uri: string;
+}
+
+/** A lean() Buffer may come back as a BSON Binary — normalise (as WorksheetService does). */
+function dataUri(mime: string | undefined, b: unknown): string {
+  if (!b) return "";
+  const inner = Buffer.isBuffer(b) ? b : (b as { buffer?: unknown }).buffer;
+  const buf = Buffer.isBuffer(inner) ? inner : Buffer.from(inner as ArrayBuffer);
+  return `data:${mime || "image/jpeg"};base64,${buf.toString("base64")}`;
+}
+
+type PicDoc = {
+  _id: Types.ObjectId;
+  word?: string | null;
+  wordEn?: string | null;
+  letter?: string | null;
+  book: string;
+  page: number;
+  active: boolean;
+  mime?: string;
+  image?: unknown;
+  thumb?: unknown;
+};
+const shapePicture = (x: PicDoc, full: boolean): VivaPictureShape => ({
+  id: String(x._id),
+  word: x.word ?? "",
+  wordEn: x.wordEn ?? "",
+  letter: x.letter ?? "",
+  book: x.book,
+  page: x.page,
+  active: !!x.active,
+  uri: dataUri(x.mime, full ? x.image : x.thumb),
+});
+
+/** Every picture a paper's questions show, full size, for whoever may open its sheet. */
+export async function vivaPictures(ctx: AppContext, paperId: string): Promise<VivaPictureShape[]> {
+  // vivaSheet enforces who may see this paper (an examiner only with children on it).
+  await vivaSheet(ctx, paperId);
+  const p = await mustPaper(paperId);
+  const ids = [...new Set(setsOf(p).flatMap((s) => s.items.flatMap((i) => (i.pictureIds ?? []).map(String))))];
+  if (!ids.length) return [];
+  const docs = (await WorksheetPicture.find({ _id: { $in: ids.map(oid) } }, { thumb: 0 }).lean()) as unknown as PicDoc[];
+  return docs.map((d) => shapePicture(d, true));
+}
+
+/** Office: the worksheet picture bank of one book (thumbnails) to pick a picture question from. */
+export async function vivaPictureBank(book: string): Promise<VivaPictureShape[]> {
+  const docs = (await WorksheetPicture.find({ book }, { image: 0 }).sort({ page: 1, imageIndex: 1 }).lean()) as unknown as PicDoc[];
+  return docs.map((d) => shapePicture(d, false));
+}

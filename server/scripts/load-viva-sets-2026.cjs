@@ -8,6 +8,11 @@
  * the routine; anything missing, ambiguous, already marked or already drawn stops the run.
  * saveVivaPaper itself checks that every set adds up to the same total.
  *
+ * FILE=<name> picks another data file in server/assets/viva (default nursery-sets-2026.json), e.g.
+ * nursery-arabic-2026.json — the আরবি picture sets (D-#1282/#1283). A picture item lists bank
+ * sourceKeys under `pictures` ("ARABIC:7:1"); the loader turns them into worksheet-picture ids and
+ * stops if any is missing.
+ *
  * Read-only by default: prints each paper as it is now and what would be written. APPLY=1 writes.
  * Re-running after a successful APPLY is refused only once a set has been drawn or a mark entered.
  *
@@ -35,7 +40,9 @@ function readUri() {
 (async () => {
   if (new Date().getTimezoneOffset() !== -360) throw new Error("run with TZ=Asia/Dhaka");
   const APPLY = process.env.APPLY === "1";
-  const data = JSON.parse(fs.readFileSync(path.join(ROOT, "server", "assets", "viva", "nursery-sets-2026.json"), "utf8"));
+  const FILE = process.env.FILE || "nursery-sets-2026.json";
+  if (!/^[\w.-]+\.json$/.test(FILE)) throw new Error("FILE must be a file name in server/assets/viva");
+  const data = JSON.parse(fs.readFileSync(path.join(ROOT, "server", "assets", "viva", FILE), "utf8"));
   await mongoose.connect(readUri());
   console.log(`DB ${mongoose.connection.db.databaseName} · ${APPLY ? "APPLY" : "dry run"}`);
 
@@ -45,6 +52,7 @@ function readUri() {
   const { VivaPaper } = dist("modules/viva/models/VivaPaper.js");
   const { VivaMark } = dist("modules/viva/models/VivaMark.js");
   const svc = dist("modules/viva/services/VivaService.js");
+  const { WorksheetPicture } = dist("modules/worksheets/models/WorksheetPicture.js");
   if (typeof svc.drawVivaSet !== "function") throw new Error("server/dist predates question sets (D-#1275) — deploy first");
 
   const actorId = process.env.ACTOR_ID
@@ -57,6 +65,22 @@ function readUri() {
   const nursery = (await Class.find({ level: -1 }, { _id: 1 }).lean()).map((c) => c._id);
   const problems = [];
   const plan = [];
+  // Picture items: bank sourceKeys → ids (D-#1282).
+  const keys = [...new Set(data.papers.flatMap((p) => p.sets.flatMap((s) => s.items.flatMap((i) => i.pictures || []))))];
+  if (keys.length && typeof svc.vivaPictures !== "function") throw new Error("server/dist predates picture questions (D-#1282) — deploy first");
+  const bank = new Map((await WorksheetPicture.find({ sourceKey: { $in: keys } }, { sourceKey: 1, word: 1 }).lean()).map((x) => [x.sourceKey, x]));
+  for (const k of keys) if (!bank.has(k)) problems.push(`picture ${k} is not in the worksheet picture bank`);
+  for (const p of data.papers) {
+    for (const st of p.sets) {
+      for (const it of st.items) {
+        if (!it.pictures) continue;
+        it.pictureIds = it.pictures.filter((k) => bank.has(k)).map((k) => String(bank.get(k)._id));
+        it.parts = it.pictures.map((k) => (bank.get(k) || {}).word || "?");
+        delete it.pictures;
+        delete it.words;
+      }
+    }
+  }
   for (const want of data.papers) {
     const papers = await VivaPaper.find({ classId: { $in: nursery }, subject: want.subject, inRoutine: true }).lean();
     if (papers.length !== 1) {
@@ -74,7 +98,7 @@ function readUri() {
     const totals = want.sets.map((s) => s.items.reduce((a, i) => a + (i.parts && i.parts.length ? i.parts.length * i.partMarks : i.marks), 0));
     if (totals.some((t) => t !== want.fullMarks)) problems.push(`${want.subject}: set totals ${totals.join("/")} ≠ ${want.fullMarks}`);
     for (const s of want.sets) {
-      console.log(`  new ${s.label}: ${s.items.map((i) => (i.parts && i.parts.length ? `${i.label} [${i.parts.join(" ")}] ×${i.partMarks}` : `${i.label} (${i.marks})`)).join(" | ")}`);
+      console.log(`  new ${s.label}: ${s.items.map((i) => (i.parts && i.parts.length ? `${i.label} [${i.parts.join(" ")}] ×${i.partMarks}${i.pictureIds ? " (pictures)" : ""}` : `${i.label} (${i.marks})`)).join(" | ")}`);
     }
     plan.push({ id: String(p._id), subject: want.subject, sets: want.sets });
   }

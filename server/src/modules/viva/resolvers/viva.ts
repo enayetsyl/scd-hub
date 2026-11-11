@@ -13,6 +13,8 @@
  *   saveVivaExaminers       — manage: who hears which child.
  *   setVivaMark / setVivaAbsent — examine (own child) | edit_all: one tap, saved at once.
  *   lockVivaPaper           — lock.
+ *   vivaPictures            — whoever may open the sheet: the paper's pictures (D-#1282).
+ *   vivaPictureBank         — manage: one book's worksheet pictures to choose from.
  */
 import { builder } from "../../../schema";
 import {
@@ -26,7 +28,10 @@ import {
   vivaExaminerCandidates,
   vivaOverview,
   vivaSheet,
+  vivaPictureBank,
+  vivaPictures,
   type VivaExaminerShape,
+  type VivaPictureShape,
   type VivaItemShape,
   type VivaOverviewShape,
   type VivaPaperShape,
@@ -45,6 +50,21 @@ ItemRef.implement({
     ref: t.exposeString("ref"),
     parts: t.exposeStringList("parts"),
     partMarks: t.exposeFloat("partMarks"),
+    pictureIds: t.exposeStringList("pictureIds"),
+  }),
+});
+
+const PictureRef = builder.objectRef<VivaPictureShape>("VivaPicture");
+PictureRef.implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    word: t.exposeString("word"),
+    wordEn: t.exposeString("wordEn"),
+    letter: t.exposeString("letter"),
+    book: t.exposeString("book"),
+    page: t.exposeInt("page"),
+    active: t.exposeBoolean("active"),
+    uri: t.exposeString("uri"),
   }),
 });
 
@@ -153,6 +173,7 @@ const ItemInput = builder.inputType("VivaItemInput", {
     ref: t.string({ required: false }),
     parts: t.stringList({ required: false }),
     partMarks: t.float({ required: false }),
+    pictureIds: t.stringList({ required: false }),
   }),
 });
 
@@ -204,6 +225,25 @@ builder.queryField("vivaExaminerCandidates", (t) =>
     type: [CandidateRef],
     authScopes: { hasPermission: "viva:manage" },
     resolve: () => vivaExaminerCandidates(),
+  }),
+);
+
+builder.queryField("vivaPictures", (t) =>
+  t.field({
+    type: [PictureRef],
+    // Same gate as vivaSheet; the service narrows an examiner to papers with their children.
+    authScopes: { hasAnyPermission: ["viva:view", "viva:manage", "viva:edit_all", "viva:lock", "viva:examine"] },
+    args: { paperId: t.arg.string({ required: true }) },
+    resolve: (_r, args, ctx) => vivaPictures(ctx, args.paperId),
+  }),
+);
+
+builder.queryField("vivaPictureBank", (t) =>
+  t.field({
+    type: [PictureRef],
+    authScopes: { hasPermission: "viva:manage" },
+    args: { book: t.arg.string({ required: true }) },
+    resolve: (_r, args) => vivaPictureBank(args.book),
   }),
 );
 

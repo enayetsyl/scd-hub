@@ -12,9 +12,16 @@
  * examiners. Both papers are loaded with the owner's 2026 sets
  * (server/assets/viva/nursery-sets-2026.json) through the real saveVivaPaper — the same data
  * the prod loader writes. No set is drawn and no mark entered.
+ *
+ * Picture question (D-#1282): আরবি ORAL TOMORROW, taught (so examined) by teacher@help.test, loaded
+ * with the proposed picture sets (server/assets/viva/nursery-arabic-2026.json). The worksheet
+ * picture bank gets 27 example emoji cards under the real bank keys (fixtures/viva-pictures.cjs,
+ * needs PLAYWRIGHT_CORE); nothing comes from the real book.
  */
 import fs from "fs";
+import os from "os";
 import path from "path";
+import { execFileSync } from "child_process";
 import mongoose, { Types } from "mongoose";
 import { seedBaseSchool } from "../fixture";
 import { Class } from "../../../src/modules/foundation/models/Class";
@@ -25,6 +32,7 @@ import { ExamRoutine } from "../../../src/modules/exams/models/ExamRoutine";
 import { ExamSyllabus } from "../../../src/modules/exams/models/ExamSyllabus";
 import { RoutineSlot } from "../../../src/modules/routine/models/RoutineSlot";
 import { VivaPaper } from "../../../src/modules/viva/models/VivaPaper";
+import { WorksheetPicture } from "../../../src/modules/worksheets/models/WorksheetPicture";
 import { saveVivaPaper, syncVivaPapers, type VivaSetInput } from "../../../src/modules/viva/services/VivaService";
 import { dhakaDayKey } from "../../../src/lib/dhakaDay";
 import type { AppContext } from "../../../src/context";
@@ -56,9 +64,9 @@ export async function seedViva() {
     const r = await Student.collection.insertOne({ schoolId: `HN-${i + 1}`, name, rollNumber: String(i + 1), classId, sectionId: sec.insertedId, active: true });
     kids.push(r.insertedId);
   }
-  for (const [subject, teacher] of [["BAN", U.teacher], ["ENG", U.teacher2]] as const) {
+  for (const [subject, teacher] of [["BAN", U.teacher], ["ENG", U.teacher2], ["ARABIC", U.teacher]] as const) {
     await RoutineSlot.collection.insertOne({
-      groupType: "section", groupId: sec.insertedId, classId, dayOfWeek: "SUN", periodNumber: subject === "BAN" ? 1 : 2, subject,
+      groupType: "section", groupId: sec.insertedId, classId, dayOfWeek: "SUN", periodNumber: { BAN: 1, ENG: 2, ARABIC: 3 }[subject], subject,
       track: "general", isBreak: false, teacherId: teacher, effectiveFrom: new Date("2026-01-01"), active: true, createdBy: by,
     });
   }
@@ -66,13 +74,14 @@ export async function seedViva() {
   const exam = await Exam.collection.insertOne({ academicYearId: base.yearId, term: "ANNUAL", name: "বার্ষিক পরীক্ষা ২০২৬", createdBy: by });
   const examId = exam.insertedId;
   const oral = (label: string, total: number) => [{ seq: 1, label, itemType: "oral", count: 1, marksEach: total, total }];
-  for (const [subject, rows] of [["BAN", oral("মৌখিক", 10)], ["ENG", oral("Oral", 15)]] as const) {
+  for (const [subject, rows] of [["BAN", oral("মৌখিক", 10)], ["ENG", oral("Oral", 15)], ["ARABIC", oral("ছবি দেখে শব্দ বলা (মৌখিক)", 10)]] as const) {
     await ExamSyllabus.collection.insertOne({ examId, classId, subject, fullMarks: 100, bodyMd: "", marks: rows, questionTypes: [], status: "PUBLISHED", teacherBypass: false, createdBy: by, updatedBy: by });
   }
   const today = dhakaDayKey(new Date());
   const later = dhakaDayKey(new Date(Date.now() + 3 * 86_400_000));
+  const tomorrow = dhakaDayKey(new Date(Date.now() + 86_400_000));
   const slot = (dateKey: string, subject: string) => ({ classId, dateKey, subject, kind: "ORAL", start: "", end: "", note: "" });
-  await ExamRoutine.collection.insertOne({ examId, slots: [slot(today, "BAN"), slot(later, "ENG")], noteBn: "", publishedAt: new Date(), updatedBy: by });
+  await ExamRoutine.collection.insertOne({ examId, slots: [slot(today, "BAN"), slot(tomorrow, "ARABIC"), slot(later, "ENG")], noteBn: "", publishedAt: new Date(), updatedBy: by });
 
   await syncVivaPapers(P);
   const ctx = { auth: { userId: P, role: "PRINCIPAL", grantedPermissions: [], revokedPermissions: [], additionalTemplates: [] } } as unknown as AppContext;
@@ -86,6 +95,35 @@ export async function seedViva() {
     await saveVivaPaper(ctx, String(paper._id), null, p.sets);
     papers[p.subject] = String(paper._id);
   }
+
+  // ── আরবি picture question (D-#1282): example pictures under the real bank keys ──
+  const picDir = path.join(os.tmpdir(), "help-viva-pictures");
+  execFileSync(process.execPath, [path.join(__dirname, "viva-pictures.cjs"), picDir], { stdio: "inherit" });
+  const manifest = JSON.parse(fs.readFileSync(path.join(picDir, "manifest.json"), "utf8")) as {
+    pictures: { sourceKey: string; page: number; word: string; wordEn: string; image: string; thumb: string }[];
+  };
+  const idOf = new Map<string, string>();
+  for (const pic of manifest.pictures) {
+    const d = await WorksheetPicture.create({
+      book: "ARABIC", page: pic.page, imageIndex: 1, sourceKey: pic.sourceKey, word: pic.word, wordEn: pic.wordEn, letter: pic.word.slice(0, 1),
+      uses: ["FIRST_LETTER", "MATCH", "WORD"], active: true, image: fs.readFileSync(pic.image), thumb: fs.readFileSync(pic.thumb),
+      mime: "image/jpeg", width: 600, height: 520,
+    });
+    idOf.set(pic.sourceKey, String(d._id));
+  }
+  const arabic = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../assets/viva/nursery-arabic-2026.json"), "utf8")) as {
+    papers: { subject: string; sets: { label: string; items: { label: string; marks: number; partMarks: number; pictures: string[] }[] }[] }[];
+  };
+  for (const p of arabic.papers) {
+    const paper = await VivaPaper.findOne({ classId, subject: p.subject }).lean();
+    if (!paper) throw new Error(`no ${p.subject} oral paper`);
+    const sets: VivaSetInput[] = p.sets.map((st) => ({
+      label: st.label,
+      items: st.items.map((it) => ({ label: it.label, marks: it.marks, partMarks: it.partMarks, pictureIds: it.pictures.map((k) => idOf.get(k)!) })),
+    }));
+    await saveVivaPaper(ctx, String(paper._id), null, sets);
+    papers[p.subject] = String(paper._id);
+  }
   return { ...base, nursery: classId, nurserySection: sec.insertedId, kids, examId, papers };
 }
 
@@ -95,7 +133,7 @@ if (require.main === module) {
     if (process.argv.includes("--reset")) await mongoose.connection.dropDatabase();
     await Promise.all(Object.values(mongoose.models).map((m) => m.init()));
     const ids = await seedViva();
-    console.log("fixture: viva (নার্সারি, 22 children, বাংলা oral today + ইংরেজি in 3 days, 4 sets each)");
+    console.log("fixture: viva (নার্সারি, 22 children, বাংলা oral today + আরবি pictures tomorrow + ইংরেজি in 3 days, 4 sets each)");
     console.log(JSON.stringify(ids));
     await mongoose.disconnect();
   })().catch((e) => {
