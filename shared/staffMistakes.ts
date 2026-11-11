@@ -58,6 +58,8 @@ export const STAFF_MISTAKE_KINDS = [
   "SALARY_ENTERED_TWICE",
   "GUARDIAN_LINK_UNDONE",
   "ABSENT_AT_DELIVERY",
+  // CT-RC (docs/prd-ct-mark-recheck.md): an unusual mark the approver held was wrong on the paper.
+  "CT_RECHECK_WRONG",
 ] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
@@ -112,6 +114,7 @@ export const STAFF_MISTAKE_KIND_TITLE_BN: Record<StaffMistakeKind, string> = {
   SALARY_ENTERED_TWICE: "একই মাসের বেতন আবার এন্ট্রি হয়েছে",
   GUARDIAN_LINK_UNDONE: "অভিভাবকের সংযোগ অল্প দিনেই খুলে ফেলা হয়েছে",
   ABSENT_AT_DELIVERY: "খাতায় উপস্থিত শিক্ষার্থীকে কাজ দেওয়ার সময় অনুপস্থিত দেখানো হয়েছে",
+  CT_RECHECK_WRONG: "খাতা দেখে অস্বাভাবিক নম্বর সংশোধন করতে হয়েছে",
 };
 
 export const STAFF_MISTAKE_STATUSES = ["EXPLANATION_DUE", "PENDING_REVIEW", "COUNTED", "EXCUSED", "MOVED"] as const;
@@ -333,6 +336,12 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     OTHER_REASON,
   ],
   CT_MARKS_OVERDUE: DUTY_REASONS,
+  CT_RECHECK_WRONG: [
+    MINE_REASON,
+    { code: "ADDITION", bn: "যোগে / নম্বরে ভুল ছিল", en: "A marks mistake", hintBn: "খাতা দেখে ধরা পড়েছে", selfCounts: true },
+    { code: "MISSED_ERRORS", bn: "খাতার ভুলগুলো চোখ এড়িয়ে গেছে", en: "Missed mistakes in the script", hintBn: "", selfCounts: true },
+    OTHER_REASON,
+  ],
   QUESTION_RESTORED: [
     MINE_REASON,
     { code: "WRONG_QUESTION", bn: "ভুল প্রশ্ন বাতিল করেছিলাম", en: "Retired the wrong question", hintBn: "", selfCounts: true },

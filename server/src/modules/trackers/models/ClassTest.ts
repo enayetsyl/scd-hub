@@ -98,6 +98,10 @@ export interface IClassTest extends Document {
    *  docs/prd-ct-scripts.md §5, D-#715–#719). Absent = not in the script flow yet.
    *  Stamps only — the stage is DERIVED on read (`ClassTestScriptService.deriveStage`). */
   scripts?: IClassTestScripts | null;
+  /** CT-RC rule R4: the teacher re-checked every script after the WHOLE CLASS scored
+   *  unusually high. `marksKey` fingerprints the marks it was given for — any mark
+   *  change voids it (derived at read time). */
+  classRecheck?: { marksKey: string; confirmedBy: Types.ObjectId; confirmedAt: Date; note?: string | null } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -179,6 +183,18 @@ const ClassTestSchema = new Schema<IClassTest>(
     cancelReason: { type: String, trim: true },
     notes: { type: String, trim: true },
     scripts: { type: ClassTestScriptsSchema, default: undefined },
+    classRecheck: {
+      type: new Schema(
+        {
+          marksKey: { type: String, required: true },
+          confirmedBy: { type: Schema.Types.ObjectId, required: true },
+          confirmedAt: { type: Date, required: true },
+          note: { type: String, trim: true, maxlength: 300, default: null },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
   },
   { timestamps: true },
 );

@@ -62,6 +62,13 @@ export interface IClassTestResult extends Document {
   scriptTaggedAt?: Date | null;
   /** What guardians were last shown (D-#945): a re-publish that differs is a recorded correction. */
   publishedSnapshot?: { marks: number | null; status: string; enteredBy: Types.ObjectId } | null;
+  /** CT-RC (unusual-mark recheck): the teacher looked at the paper a second time and
+   *  confirmed THIS mark. Valid only while `marks` still equals the confirmed mark —
+   *  a changed mark silently voids it (derived at read time, never cleared). */
+  recheck?: { marks: number; confirmedBy: Types.ObjectId; confirmedAt: Date; note?: string | null } | null;
+  /** CT-RC Option B: an approver held this row back at approval to see the paper.
+   *  publishExam skips a held row; publishResult (the release) clears it. */
+  recheckHold?: { by: Types.ObjectId; at: Date } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -96,6 +103,22 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
       ),
       default: null,
     },
+    recheck: {
+      type: new Schema(
+        {
+          marks: { type: Number, required: true },
+          confirmedBy: { type: Schema.Types.ObjectId, required: true },
+          confirmedAt: { type: Date, required: true },
+          note: { type: String, trim: true, maxlength: 300, default: null },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
+    recheckHold: {
+      type: new Schema({ by: { type: Schema.Types.ObjectId, required: true }, at: { type: Date, required: true } }, { _id: false }),
+      default: null,
+    },
   },
   { timestamps: true },
 );
@@ -106,5 +129,7 @@ ClassTestResultSchema.index({ testId: 1, studentId: 1 }, { unique: true });
 ClassTestResultSchema.index({ scriptFileIds: 1 }, { sparse: true });
 // D-#751: the admin dashboard's "submitted, awaiting approval" read (unpublished + submitted).
 ClassTestResultSchema.index({ publishedAt: 1, submittedAt: 1 });
+// CT-RC: the Principal's Today card lists every held, still-unpublished row.
+ClassTestResultSchema.index({ "recheckHold.at": 1 }, { sparse: true });
 
 export const ClassTestResult = model<IClassTestResult>("ClassTestResult", ClassTestResultSchema);

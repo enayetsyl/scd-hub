@@ -485,6 +485,8 @@ export type ClassTestStackParamList = {
   ArchiveBox: { boxId: string };
   /** CS-2 (D-#716): the Office's scan & tag screen for one test's scripts. */
   CtScriptUpload: { testId: string; title?: string };
+  /** CT-RC: the unusual-mark % thresholds (class_test:publish edits; never first). */
+  ClassTestRecheckRules: undefined;
 };
 
 /** Student Comments + Parents-Meeting (CM-6) — staff stack

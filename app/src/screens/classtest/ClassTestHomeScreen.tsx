@@ -174,6 +174,10 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                 onPress={() => nav.navigate("ClassTestDashboard")}
               />
             ) : null}
+            {/* CT-RC: the approvers set the unusual-mark % thresholds. */}
+            {can("class_test:publish") ? (
+              <Button title={STR.ctrcRulesLink} variant="secondary" onPress={() => nav.navigate("ClassTestRecheckRules")} />
+            ) : null}
           </View>
         </Card>
 

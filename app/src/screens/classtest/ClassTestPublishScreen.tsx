@@ -25,6 +25,9 @@ import {
   type ClassTestPublishOutcomeT,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
+import { CT_RECHECK_QUERY } from "../../graphql/classTestRecheck";
+import { CtRecheckPanel, ctrcFill } from "../../components/CtRecheckPanel";
+import { CtScriptReminderSheet } from "../../components/CtScriptReminderSheet";
 import { STR, hwSubjectLabel, ctUnitLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionNames } from "../../lib/useSectionNames";
@@ -64,6 +67,14 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   const sectionName = useSectionNames();
   const [resultsQ, refetch] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId }, requestPolicy: "cache-and-network" });
   const results = resultsQ.data?.classTestResults ?? [];
+  // CT-RC: the unusual marks — the teacher must tick each before Submit; the approver
+  // ticks "I have looked at them" before Approve (both enforced by the server too).
+  const [recheckQ, refetchRecheck] = useQuery({ query: CT_RECHECK_QUERY, variables: { testId }, requestPolicy: "cache-and-network" });
+  const recheck = recheckQ.data?.classTestRecheck ?? null;
+  const unconfirmed = recheck?.rules.enabled ? recheck.unconfirmedCount : 0;
+  const flagsAwaiting = recheck?.rules.enabled ? recheck.awaitingApprovalCount : 0;
+  const [reviewed, setReviewed] = useState(false);
+  const [scriptPopup, setScriptPopup] = useState(false);
 
   const [, publishExam] = useMutation(PUBLISH_CLASS_TEST_EXAM);
   const [, unpublishOne] = useMutation(UNPUBLISH_CLASS_TEST_RESULT);
@@ -79,7 +90,10 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   const [sendBackOpen, setSendBackOpen] = useState(false);
   const [sendBackReason, setSendBackReason] = useState("");
 
-  const refresh = (): void => refetch({ requestPolicy: "network-only" });
+  const refresh = (): void => {
+    refetch({ requestPolicy: "network-only" });
+    refetchRecheck({ requestPolicy: "network-only" });
+  };
 
   async function run(fn: () => Promise<{ error?: CombinedError; data?: unknown }>, okMsg: string): Promise<unknown> {
     setError(null);
@@ -97,7 +111,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   }
 
   async function onApprove(): Promise<void> {
-    const data = (await run(() => publishExam({ testId }), STR.ctPublishedSummary)) as
+    const data = (await run(() => publishExam({ testId, flagsReviewed: reviewed || null }), STR.ctPublishedSummary)) as
       | { publishClassTestExam: ClassTestPublishOutcomeT }
       | null;
     if (data) setOutcome(data.publishClassTestExam);
@@ -130,6 +144,14 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   // leaves this false so the rest can still be sent.
   const allSubmitted = hasResults && results.every((r) => !!r.submittedAt || !!r.publishedAt);
   const sentBackReason = results.find((r) => r.sendBackReason)?.sendBackReason ?? null;
+  // The teacher ticks while their rows are still open; the approver reviews a submission.
+  const recheckMode: "teacher" | "approver" = showTeacherLeg && (!isAdmin || !allSubmitted) ? "teacher" : "approver";
+
+  async function onScriptAck(): Promise<void> {
+    // Close either way: a refusal shows its reason on the screen behind the pop-up.
+    await run(() => submitExam({ testId, scriptReminderAck: true }), STR.ctSubmittedForApproval);
+    setScriptPopup(false);
+  }
 
   return (
     <Screen padded={false}>
@@ -152,16 +174,21 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
               <Button
                 title={allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitForRelease}
-                onPress={() => void run(() => submitExam({ testId }), STR.ctSubmittedForApproval)}
+                onPress={() => setScriptPopup(true)}
                 loading={busy}
-                disabled={busy || blockEmpty || allSubmitted}
+                disabled={busy || blockEmpty || allSubmitted || unconfirmed > 0}
               />
               <Button title={STR.ctRecall} variant="ghost" onPress={() => void run(() => recallExam({ testId }), STR.ctRecall)} disabled={busy} />
             </View>
           ) : null}
           {isAdmin ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.ctApproveRelease} onPress={onApprove} loading={busy} disabled={busy || blockEmpty} />
+              <Button
+                title={STR.ctApproveRelease}
+                onPress={onApprove}
+                loading={busy}
+                disabled={busy || blockEmpty || (flagsAwaiting > 0 && !reviewed)}
+              />
               <Button title={STR.ctSendBack} variant="secondary" onPress={() => setSendBackOpen((v) => !v)} disabled={busy} />
               {canRevoke ? (
                 <Button title={STR.ctUnpublishAll} variant="ghost" onPress={() => void run(() => unpublishExam({ testId }), STR.ctUnpublishedBadge)} disabled={busy} />
@@ -172,6 +199,10 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
           {/* Say WHY the action is unavailable — a disabled button with no reason is
               its own support ticket. */}
           {blockEmpty ? <Muted style={{ marginTop: space(2) }}>{STR.ctNoResultsYet}</Muted> : null}
+          {showTeacherLeg && !allSubmitted && unconfirmed > 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{ctrcFill(STR.ctrcRemaining, { n: bnNum(unconfirmed) })}</Muted>
+          ) : null}
+          {isAdmin && flagsAwaiting > 0 && !reviewed ? <Muted style={{ marginTop: space(2) }}>{STR.ctrcReviewFirst}</Muted> : null}
           {/* Same rule for the teacher's own disabled submit: say that it is already in,
               and name the way back (recall) rather than leaving a dead button. */}
           {showTeacherLeg && allSubmitted && !blockEmpty ? (
@@ -197,6 +228,15 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
 
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
+
+        <CtRecheckPanel
+          testId={testId}
+          data={recheck}
+          mode={recheckMode}
+          onChanged={refresh}
+          reviewed={reviewed}
+          onReviewedChange={isAdmin ? setReviewed : undefined}
+        />
 
         {outcome ? (
           <Card>
@@ -257,6 +297,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
           })
         )}
       </ScrollView>
+      <CtScriptReminderSheet visible={scriptPopup} busy={busy} onBack={() => setScriptPopup(false)} onConfirm={() => void onScriptAck()} />
     </Screen>
   );
 }

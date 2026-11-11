@@ -297,7 +297,7 @@ ClassTestMessageRecipientRef.implement({
   }),
 });
 
-const PublishResultOutcomeRef = builder.objectRef<PublishResultOutcome>("ClassTestPublishOutcome");
+export const PublishResultOutcomeRef = builder.objectRef<PublishResultOutcome>("ClassTestPublishOutcome");
 PublishResultOutcomeRef.implement({
   description: "The result of publishing a student / a whole exam (CT-3, J4) — per-recipient delivery + unreachable count.",
   fields: (t) => ({
@@ -334,10 +334,14 @@ builder.mutationField("submitClassTestExam", (t) =>
       "CT-8: teacher submits an exam's results for Office/Principal approval. Marks rows SUBMITTED " +
       "(guardians do NOT see yet) and clears any prior send-back. Requires class_test:enter_results on the section.",
     authScopes: { hasPermission: "class_test:enter_results" },
-    args: { testId: t.arg.string({ required: true }) },
+    args: {
+      testId: t.arg.string({ required: true }),
+      // CT-RC: the teacher tapped "বুঝেছি" on the script hand-in pop-up (audited only).
+      scriptReminderAck: t.arg.boolean({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
       await assertWriteTest(ctx, args.testId);
-      return submitExam(args.testId, ctx.auth!.userId as string);
+      return submitExam(args.testId, ctx.auth!.userId as string, { scriptReminderAck: args.scriptReminderAck ?? null });
     },
   }),
 );
@@ -364,12 +368,16 @@ builder.mutationField("publishClassTestExam", (t) =>
     type: PublishResultOutcomeRef,
     description:
       "CT-8 APPROVE: Office/Principal releases a SUBMITTED exam's results → guardian delivery (wa.me + " +
-      "in-app). Requires the teacher to have submitted first. class_test:publish.",
+      "in-app). Requires the teacher to have submitted first. CT-RC: when the submission carries unusual marks, " +
+      "`flagsReviewed: true` is required (the approver's own tick). Held rows are skipped. class_test:publish.",
     authScopes: { hasPermission: "class_test:publish" },
-    args: { testId: t.arg.string({ required: true }) },
+    args: {
+      testId: t.arg.string({ required: true }),
+      flagsReviewed: t.arg.boolean({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
       await assertReadTest(ctx, args.testId);
-      return approveExam(args.testId, ctx.auth!.userId as string);
+      return approveExam(args.testId, ctx.auth!.userId as string, { flagsReviewed: args.flagsReviewed ?? null });
     },
   }),
 );
