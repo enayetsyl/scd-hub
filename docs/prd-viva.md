@@ -40,6 +40,7 @@ marks must add up to the paper's full marks.
   may carry a short reference such as "পৃ. ৩৪".
 - **Deferred (owner, 2026-11-06):** a question not asked to a particular child, and
   changing questions for one child. Every child is marked on the whole paper for now.
+  *Superseded 2026-11-11 by question sets (§9): each child is marked on their own set.*
 
 ## 3. Examiners (D-#1083)
 - Default: the teacher who teaches that subject to that class in the live routine (most
@@ -87,4 +88,76 @@ The Principal holds all.
   progress), paper editor, examiners, results.
 - **VV-3** — help guides with screenshots; load the real question texts for the 2026
   papers on prod (owner go-ahead).
+- **VV-4** — server: question sets, the draw at the tap, letter questions (§9), tests.
+- **VV-5** — app: set tabs + letter questions in the paper editor, tap-to-draw sheet with set
+  badges and per-letter marking, per-set counts and averages on results; help guides.
+- **VV-6** — load the 8 owner-approved sets (§9.4) into the Nursery বাংলা and ইংরেজি papers
+  on prod (owner go-ahead).
 Target: live before Thu 26 Nov (first oral).
+
+## 9. Question sets (owner, 2026-11-11 — D-#1275–#1277)
+The owner handed over the handwritten Nursery oral papers: 4 sets for বাংলা and 4 for ইংরেজি.
+Plan + mockup (owner-reviewed, v4): https://claude.ai/artifact/SrGEEtYbbqonX1AUHZy5XH
+
+### 9.1 Sets (D-#1275)
+- A paper holds one question list (the VV-1 shape) or **two or more sets**. Each set has its
+  own questions; **every set adds up to the same full marks** (save refused otherwise).
+- Question keys are unique across the whole paper, so a stored mark always names one
+  question. Set 1's questions are also kept in `items`, so an app from before sets still
+  reads a sensible paper.
+- The paper freezes at the first mark **or the first draw** (it cannot change once a child
+  holds a set). Office edits it until then; "+ সেট" copies the open set.
+- Arabic and Quran orals stay one-set papers and behave exactly as before.
+
+### 9.2 Draw at the tap (D-#1276)
+- On a paper with sets, the sheet shows a child's name only. When the child comes up, the
+  examiner **taps the name**; the app then draws the child's set and shows its questions with a
+  set badge. The teacher sees the set only at that moment.
+- The draw is **random among the sets given to the fewest present children so far**, across
+  every examiner of the paper, so the class splits evenly (22 → 6·6·5·5, 21 → 6·5·5·5).
+  A child marked absent does not count; their drawn set stays recorded.
+- **Final:** nobody changes a drawn set — not the examiner, not Office (owner: children wait
+  in a separate room, so overhearing is not a reason to redraw).
+- No marks can be entered for a child before their set is drawn.
+- Concurrency: each draw writes the child's set, then bumps the paper's `drawSeq` from the
+  value it counted at; the loser of a race undoes its write and counts again.
+- Audited as `VIVA_SET_DRAWN` (child, set, the counts it saw).
+
+### 9.3 Letter questions (D-#1277)
+- A question may list **letters** with **marks per letter**; its marks are letters × per-letter.
+  The examiner marks each letter on its own (stored as `<key>:<index>`); the question's mark
+  is the sum, and it counts as marked once every letter is.
+- Sheet: ½-mark letters are one chip each — tap = ✓ (½), again = ✗ (০), again = clear.
+  Bigger letters get a ০ … max row beside the letter.
+
+### 9.4 The 2026 Nursery sets (owner-approved)
+বাংলা (10): Q1 = "নিচের বর্ণগুলো দিয়ে ১টি করে শব্দ বল", 4 letters × ½ = 2.
+| সেট | Q1 বর্ণ | বাকি প্রশ্ন (২ করে, সেট ৪-এ ১২ মাস = ৪) |
+|---|---|---|
+| ১ | য, ধ, ড়, ঐ | ৪ দিকের নাম · ৪টি ফুলের নাম · ৪টি মাছের নাম · ৭ দিনের নাম |
+| ২ | ট, ষ, ঈ, ব | ৬ ঋতুর নাম · ৪টি ফলের নাম · ৪টি পশুর নাম · ৪টি রংয়ের নাম |
+| ৩ | ক, ম, প, শ | ৪টি সবজির নাম · ৭ দিনের নাম · ৪টি পাখির নাম · ৪ দিকের নাম |
+| ৪ | ণ, ভ, ল, য | বাংলা ১২ মাসের নাম (৪) · ৪টি মাছের নাম · ৪টি পশুর নাম |
+Set 3's ব্যঞ্জনবর্ণ (ক – ঁ) question was replaced by the letter question (owner).
+
+English (15): Q1 = "2 words with each letter", 5 letters × 2 words × ½ = 1 per letter = 5.
+| Set | Q1 letters | Other questions |
+|---|---|---|
+| 1 | E, O, W, Q, J | 7 days (3) · 4 flowers (2) · 6 animals (3) · 4 family members (2) |
+| 2 | B, G, K, T, Z | 12 months (4) · 6 body parts (2) · 4 birds (2) · 4 colours (2) |
+| 3 | Y, U, P, A, H | 6 fruits (3) · 7 days (3) · 4 animals (2) · 4 birds (2) |
+| 4 | V, L, D, X, R | 12 months (4) · 4 family members (2) · 4 flowers (2) · 6 body parts (2) |
+English Set 1's crossed-out questions (6 body parts, 4 birds) are left out.
+
+### 9.5 Fixing the wording after the start (D-#1281)
+- Once any child has drawn a set or has a mark, Office (`viva:manage`) can still correct the
+  **wording**: a question's text, its letters, its book page and set names — e.g. a spelling mistake.
+- The **shape** stays: the same sets, the same questions in the same order, the same marks, the
+  same number of letters and marks per letter. So every child is still marked out of the same paper
+  and marks already given stay on the same question/letter.
+- Paper editor after the start: text fields editable, marks fields greyed, no add / remove / reorder /
+  add-set / remove-set; the notice says what can still change. A locked paper changes nothing.
+- Each such save is audited (`VIVA_PAPER_SAVED`, `meta.wordingOnly`, `changed` = how many questions
+  or set names changed; no text kept).
+- Teachers do not get this by default; the Principal can give one teacher `viva:manage` in the
+  permission matrix (that also lets them change examiners).

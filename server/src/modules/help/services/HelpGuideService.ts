@@ -25,8 +25,10 @@ import {
   helpPermissionKeys,
   isPermissionActive,
   type CataloguePermission,
+  type HelpBlockFile,
   type HelpCategoryFile,
   type HelpGuideFile,
+  type HelpGuideKind,
 } from "@scd/shared";
 import type { AppContext, AuthPayload } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -149,7 +151,7 @@ export async function visibleGuide(auth: AuthPayload, id: string): Promise<HelpG
 export async function shotPathFor(auth: AuthPayload, guideId: string, file: string): Promise<string | null> {
   const guide = await visibleGuide(auth, guideId);
   const rel = `${guideId}/${file}`;
-  if (!guide || !guide.rows.some((r) => r.shot === rel)) return null;
+  if (!guide || !(guide.rows ?? []).some((r) => r.shot === rel)) return null;
   const shots = path.join(loadRegistry().dir, "shots");
   const abs = path.resolve(shots, rel);
   return abs.startsWith(shots + path.sep) && fs.existsSync(abs) ? abs : null;
@@ -168,8 +170,22 @@ export interface HelpRowView {
   height: number;
   steps: HelpStepView[];
 }
+/** One reading-guide block (D-#1280): exactly one field is set. */
+export interface HelpBlockView {
+  p: string | null;
+  list: string[] | null;
+  check: string[] | null;
+  tableHead: string[] | null;
+  tableRows: string[][] | null;
+}
+export interface HelpSectionView {
+  heading: string;
+  blocks: HelpBlockView[];
+}
 export interface HelpGuideView {
   id: string;
+  /** "steps" (screenshot rows) or "read" (text sections, D-#1280). */
+  kind: HelpGuideKind;
   category: string;
   title: string;
   intro: string;
@@ -180,7 +196,10 @@ export interface HelpGuideView {
   /** Bangla name of the permission that unlocks it (the "why you see this" line); null for audience guides. */
   unlockedBy: string | null;
   isNew: boolean;
+  /** Empty on a reading guide. */
   rows: HelpRowView[];
+  /** Empty on a steps guide. */
+  sections: HelpSectionView[];
 }
 export interface MyHelpView {
   /** Only categories with at least one guide for this person, in display order. */
@@ -200,6 +219,7 @@ function toView(v: Visible, seen: Set<string> | null): HelpGuideView {
   const g = v.guide;
   return {
     id: g.id,
+    kind: g.kind ?? "steps",
     category: g.category,
     title: g.title,
     intro: g.intro,
@@ -209,13 +229,24 @@ function toView(v: Visible, seen: Set<string> | null): HelpGuideView {
     goToScreen: g.goTo?.screen ?? null,
     unlockedBy: v.unlockedBy ? catalogueAction(v.unlockedBy as CataloguePermission).bn : null,
     isNew: seen !== null && !seen.has(g.id),
-    rows: g.rows.map((r) => ({
+    rows: (g.rows ?? []).map((r) => ({
       heading: r.heading,
       shotUrl: HELP_SHOT_URL_PREFIX + r.shot!,
       width: r.size![0],
       height: r.size![1],
       steps: r.steps.map((s) => ({ text: s.text, box: s.box! })),
     })),
+    sections: (g.sections ?? []).map((s) => ({ heading: s.heading, blocks: s.blocks.map(blockView) })),
+  };
+}
+
+function blockView(b: HelpBlockFile): HelpBlockView {
+  return {
+    p: "p" in b ? b.p : null,
+    list: "list" in b ? b.list : null,
+    check: "check" in b ? b.check : null,
+    tableHead: "table" in b ? b.table.head : null,
+    tableRows: "table" in b ? b.table.rows : null,
   };
 }
 

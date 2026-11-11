@@ -392,6 +392,12 @@ describe("Class-test tracker firewall (ADR-005 / CT-1, D-#119)", () => {
     "../modules/trackers/resolvers/classTestResult.ts",
     "../modules/trackers/resolvers/classTestGuardian.ts",
     "../modules/trackers/resolvers/classTestSummary.ts",
+    // CT-RC unusual-mark recheck (names students; identity plane).
+    "../modules/trackers/models/ClassTestRecheckSettings.ts",
+    "../modules/trackers/classTestRecheck.ts",
+    "../modules/trackers/services/ClassTestRecheckService.ts",
+    "../modules/trackers/services/ClassTestRecheckHoldService.ts",
+    "../modules/trackers/resolvers/classTestRecheck.ts",
   ].map((p) => path.resolve(__dirname, p));
 
   test("corpus module has NO import of any class-test model", () => {

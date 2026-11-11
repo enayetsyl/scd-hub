@@ -4,6 +4,8 @@
  * a step (or a box) lights that box and fades the rest; tapping again shows all.
  * Footer: keywords, কাজে লেগেছে? হ্যাঁ / না, and এই পাতায় যান (opens the real screen).
  *
+ * A reading guide (kind "read", D-#1280) shows its text sections instead of the screen cards.
+ *
  * Opening the guide clears its নতুন badge (D-#972). The guide comes from the same cached
  * myHelpGuides list, so a guide the person may not see is simply not found.
  */
@@ -14,6 +16,7 @@ import { useMutation, useQuery } from "urql";
 import { HELP_GUIDE_FEEDBACK, MARK_HELP_GUIDE_READ, MY_HELP_GUIDES } from "../../graphql/help";
 import { Body, Button, Card, EmptyState, H1, H2, Muted, Screen } from "../../components/ui";
 import { HelpShot } from "../../components/HelpShot";
+import { HelpReadSections } from "../../components/HelpReadSections";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { bnDigits, stepSegments } from "../../lib/helpGuides";
@@ -37,6 +40,8 @@ export default function HelpGuideScreen({ navigation, route }: Props): React.Rea
   const data = q.data?.myHelpGuides;
   const guide = data?.guides.find((g) => g.id === guideId) ?? null;
   const category = data?.categories.find((c) => c.id === guide?.category)?.title ?? "";
+  // D-#1280: a reading guide is text sections instead of screenshot rows.
+  const isRead = guide?.kind === "read";
 
   useEffect(() => {
     if (guide) void markRead({ guideId: guide.id });
@@ -100,8 +105,10 @@ export default function HelpGuideScreen({ navigation, route }: Props): React.Rea
               <Text style={{ color: colors.textSecondary, fontFamily: fonts.regular, fontStyle: "italic", fontSize: 16, lineHeight: 24 }}>
                 {guide.intro}
               </Text>
-              <Muted>{STR.hcTapStepHint}</Muted>
+              {isRead ? null : <Muted>{STR.hcTapStepHint}</Muted>}
             </View>
+
+            {isRead ? <HelpReadSections sections={guide.sections ?? []} /> : null}
 
             {guide.rows.map((r, ri) => {
               const litHere = active?.startsWith(`${ri}:`) ? Number(active.split(":")[1]) : null;

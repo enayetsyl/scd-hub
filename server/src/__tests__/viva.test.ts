@@ -12,9 +12,15 @@
  *              absent blocks marks and counts 0; DONE when every question has a mark
  *   sheet      an examiner sees only their children; office sees all, with progress
  *   lock       a locked paper refuses marks, papers and examiners; unlock reopens
+ *   sets       (D-#1275–#1277) sets add up equally; letter questions mark each letter; a set
+ *              is drawn at the tap, final, evenly (22 → 6·6·5·5 with two examiners at once),
+ *              absent children left out; one-set papers need no draw
  */
 import mongoose, { Types } from "mongoose";
+import { graphql } from "graphql";
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { builder } from "../schema";
+import "../modules/viva/resolvers/viva";
 import type { AppContext } from "../context";
 import { Exam } from "../modules/exams/models/Exam";
 import { ExamRoutine } from "../modules/exams/models/ExamRoutine";
@@ -26,7 +32,9 @@ import { Student } from "../modules/foundation/models/Student";
 import { RoutineSlot } from "../modules/routine/models/RoutineSlot";
 import { VivaPaper } from "../modules/viva/models/VivaPaper";
 import { VivaMark } from "../modules/viva/models/VivaMark";
+import { Audit } from "../modules/platform/models/Audit";
 import {
+  drawVivaSet,
   isValidMark,
   lockVivaPaper,
   myVivaPapers,
@@ -201,7 +209,36 @@ describe("viva: paper", () => {
     const id = await t.paper("QURAN");
     const sheet = await vivaSheet(t.office, id);
     await setVivaMark(t.office, id, t.kids[0]!, sheet.paper.items[0]!.key, 10);
-    await expect(saveVivaPaper(t.office, id, [{ label: "x", marks: 50 }])).rejects.toThrow(/নম্বর দেওয়া শুরু হয়েছে/);
+    await expect(saveVivaPaper(t.office, id, [{ label: "x", marks: 50 }])).rejects.toThrow(/নম্বর দেওয়া বা সেট আনা শুরু হয়েছে/);
+  });
+
+  it("after marking starts only the wording may change (D-#1281)", async () => {
+    const t = await setup();
+    const id = await t.paper("QURAN");
+    const saved = await saveVivaPaper(t.office, id, [
+      { label: "সূরা ফাতিহা", marks: 2, ref: "পৃ. ৩" },
+      { label: "দুআ", marks: 1 },
+    ]);
+    const [a, b] = saved.items;
+    await setVivaMark(t.office, id, t.kids[0]!, a!.key, 2);
+    const fixed = await saveVivaPaper(t.office, id, [
+      { key: a!.key, label: "সূরা আল-ফাতিহা", marks: 2, ref: "পৃ. ৪" },
+      { key: b!.key, label: "খাওয়ার দুআ", marks: 1 },
+    ]);
+    expect(fixed.items.map((i) => [i.key, i.label, i.ref])).toEqual([
+      [a!.key, "সূরা আল-ফাতিহা", "পৃ. ৪"],
+      [b!.key, "খাওয়ার দুআ", ""],
+    ]);
+    const row = (await vivaSheet(t.office, id)).rows.find((r) => r.studentId === t.kids[0]!)!;
+    expect(row.total).toBe(2);
+    const audit = await Audit.findOne({ eventKind: "VIVA_PAPER_SAVED", targetId: new Types.ObjectId(id) }).sort({ _id: -1 }).lean();
+    expect(audit?.meta).toMatchObject({ wordingOnly: true, changed: 2 });
+    // Marks, order, a new or a removed question: refused.
+    const keep = (x: typeof a) => ({ key: x!.key, label: x!.label, marks: x!.marks });
+    await expect(saveVivaPaper(t.office, id, [{ ...keep(a), marks: 3 }, keep(b)])).rejects.toThrow(/শুধু প্রশ্নের লেখা/);
+    await expect(saveVivaPaper(t.office, id, [keep(b), keep(a)])).rejects.toThrow(/শুধু প্রশ্নের লেখা/);
+    await expect(saveVivaPaper(t.office, id, [keep(a)])).rejects.toThrow(/শুধু প্রশ্নের লেখা/);
+    await expect(saveVivaPaper(t.office, id, [keep(a), keep(b), { label: "নতুন", marks: 1 }])).rejects.toThrow(/শুধু প্রশ্নের লেখা/);
   });
 });
 
@@ -267,6 +304,190 @@ describe("viva: examiners + marks", () => {
     expect(row.total).toBe(8);
     await setVivaAbsent(t.office, id, t.kids[2]!, true);
     expect((await vivaSheet(t.office, id)).paper.progress.absent).toBe(1);
+  });
+});
+
+describe("viva: question sets + draw at the tap (D-#1275–#1277)", () => {
+  // Bangla-style: a 4-letter question (½ per letter = 2) + 4 two-mark questions = 10.
+  const banSet = (label: string, letters: string[], rest: string[]) => ({
+    label,
+    items: [
+      { label: "নিচের বর্ণ দিয়ে ১টি করে শব্দ বল", marks: 0, parts: letters, partMarks: 0.5 },
+      ...rest.map((r) => ({ label: r, marks: 2 })),
+    ],
+  });
+  const FOUR_SETS = [
+    banSet("সেট ১", ["য", "ধ", "ড়", "ঐ"], ["৪ দিকের নাম", "৪টি ফুলের নাম", "৪টি মাছের নাম", "৭ দিনের নাম"]),
+    banSet("সেট ২", ["ট", "ষ", "ঈ", "ব"], ["৬ ঋতুর নাম", "৪টি ফলের নাম", "৪টি পশুর নাম", "৪টি রংয়ের নাম"]),
+    banSet("সেট ৩", ["ক", "ম", "প", "শ"], ["৪টি সবজির নাম", "৭ দিনের নাম", "৪টি পাখির নাম", "৪ দিকের নাম"]),
+    { label: "সেট ৪", items: [{ label: "বর্ণ দিয়ে শব্দ", marks: 0, parts: ["ণ", "ভ", "ল", "য"], partMarks: 0.5 }, { label: "১২ মাসের নাম", marks: 4 }, { label: "৪টি মাছের নাম", marks: 2 }, { label: "৪টি পশুর নাম", marks: 2 }] },
+  ];
+
+  async function moreKids(classId: Types.ObjectId, n: number): Promise<string[]> {
+    const out: string[] = [];
+    for (let i = 0; i < n; i++) {
+      seq += 1;
+      const r = await Student.collection.insertOne({ schoolId: `N-${seq}`, name: `Kid ${i}`, rollNumber: String(10 + i), classId, active: true });
+      out.push(r.insertedId.toString());
+    }
+    return out;
+  }
+
+  it("sets: letter marks = letters × per-letter; keys unique across sets; unequal totals refused", async () => {
+    const t = await setup();
+    const id = await t.paper("BAN");
+    const p = await saveVivaPaper(t.office, id, null, FOUR_SETS);
+    expect(p.fullMarks).toBe(10);
+    expect(p.sets.map((s) => s.label)).toEqual(["সেট ১", "সেট ২", "সেট ৩", "সেট ৪"]);
+    // A one-list paper turned into sets numbers them from s1.
+    expect(p.sets.map((s) => s.key)).toEqual(["s1", "s2", "s3", "s4"]);
+    expect(p.sets[0]!.items[0]).toMatchObject({ marks: 2, parts: ["য", "ধ", "ড়", "ঐ"], partMarks: 0.5 });
+    const keys = p.sets.flatMap((s) => s.items.map((i) => i.key));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(p.items.map((i) => i.key)).toEqual(p.sets[0]!.items.map((i) => i.key));
+    // English-style letter question: 5 letters × 2 words × ½ = 1 per letter = 5.
+    const eng = await saveVivaPaper(t.office, await t.paper("ENG"), null, [
+      { label: "Set 1", items: [{ label: "2 words with each letter", marks: 0, parts: ["E", "O", "W", "Q", "J"], partMarks: 1 }, { label: "7 days", marks: 10 }] },
+      { label: "Set 2", items: [{ label: "2 words with each letter", marks: 0, parts: ["B", "G", "K", "T", "Z"], partMarks: 1 }, { label: "12 months", marks: 10 }] },
+    ]);
+    expect(eng.fullMarks).toBe(15);
+    await expect(
+      saveVivaPaper(t.office, id, null, [FOUR_SETS[0]!, { label: "সেট ২", items: [{ label: "x", marks: 9 }] }]),
+    ).rejects.toThrow(/সমান/);
+    // One set given as `sets` is stored as a plain one-set paper.
+    const one = await saveVivaPaper(t.office, id, null, [FOUR_SETS[0]!]);
+    expect(one.sets).toHaveLength(1);
+    expect((await VivaPaper.findById(id).lean())!.sets).toHaveLength(0);
+  });
+
+  it("no marks before the draw; the draw is final; marks only on the child's own set", async () => {
+    const t = await setup();
+    const id = await t.paper("BAN");
+    const p = await saveVivaPaper(t.office, id, null, FOUR_SETS);
+    const me = t.teacher(t.bangla);
+    const kid = t.kids[0]!;
+    let row = (await vivaSheet(me, id)).rows.find((r) => r.studentId === kid)!;
+    expect(row).toMatchObject({ setKey: null, needsDraw: true });
+    await expect(setVivaMark(me, id, kid, p.sets[0]!.items[1]!.key, 2)).rejects.toThrow(/সেট আনুন/);
+    row = await drawVivaSet(me, id, kid);
+    expect(row.needsDraw).toBe(false);
+    const set = p.sets.find((s) => s.key === row.setKey)!;
+    expect(set).toBeDefined();
+    // Final: tapping again (or the office) returns the same set.
+    expect((await drawVivaSet(me, id, kid)).setKey).toBe(row.setKey);
+    expect((await drawVivaSet(t.office, id, kid)).setKey).toBe(row.setKey);
+    // A question from another set is refused.
+    const otherSet = p.sets.find((s) => s.key !== row.setKey)!;
+    await expect(setVivaMark(me, id, kid, otherSet.items[1]!.key, 1)).rejects.toThrow(/প্রশ্নপত্রে নেই/);
+    // Letter question: each letter on its own (✓ = ½, ✗ = 0); whole-key tap refused.
+    const letters = set.items[0]!;
+    await expect(setVivaMark(me, id, kid, letters.key, 2)).rejects.toThrow(/প্রতিটি বর্ণে/);
+    await expect(setVivaMark(me, id, kid, `${letters.key}:9`, 0.5)).rejects.toThrow(/বর্ণটি/);
+    await expect(setVivaMark(me, id, kid, `${letters.key}:0`, 1)).rejects.toThrow(/০ থেকে/);
+    for (const [i, v] of [0.5, 0.5, 0, 0.5].entries()) row = await setVivaMark(me, id, kid, `${letters.key}:${i}`, v);
+    for (const it of set.items.slice(1)) row = await setVivaMark(me, id, kid, it.key, it.marks);
+    expect(row).toMatchObject({ done: true, total: 9.5 });
+    // A paper with a drawn set can no longer change its questions or marks…
+    await expect(saveVivaPaper(t.office, id, null, FOUR_SETS)).rejects.toThrow(/সেট আনা শুরু/);
+    // …but a letter or a question's wording can be corrected (D-#1281); marks already given stay.
+    const asIs = (await vivaSheet(t.office, id)).paper.sets.map((s) => ({
+      key: s.key,
+      label: s.label,
+      items: s.items.map((i) => ({ key: i.key, label: i.label, marks: i.marks, ref: i.ref || null, parts: i.parts, partMarks: i.partMarks })),
+    }));
+    const si = asIs.findIndex((s) => s.key === row.setKey);
+    asIs[si]!.items[0]!.parts = [...asIs[si]!.items[0]!.parts.slice(0, 3), "অ"];
+    asIs[si]!.items[1]!.label = "ঠিক করা লেখা";
+    const fixed = await saveVivaPaper(t.office, id, null, asIs);
+    expect(fixed.sets[si]!.items[0]!.parts[3]).toBe("অ");
+    expect(fixed.sets[si]!.items[1]!.label).toBe("ঠিক করা লেখা");
+    expect((await vivaSheet(me, id)).rows.find((r) => r.studentId === kid)).toMatchObject({ setKey: row.setKey, total: 9.5, done: true });
+    // One letter more or less changes the marks: refused.
+    asIs[si]!.items[0]!.parts = [...asIs[si]!.items[0]!.parts, "আ"];
+    await expect(saveVivaPaper(t.office, id, null, asIs)).rejects.toThrow(/শুধু প্রশ্নের লেখা/);
+  });
+
+  it("the split stays even: 22 children → 6·6·5·5, two examiners tapping at once", async () => {
+    const t = await setup();
+    const extra = await moreKids(t.classId as unknown as Types.ObjectId, 18);
+    const all = [...t.kids, ...extra];
+    const id = await t.paper("BAN");
+    await saveVivaPaper(t.office, id, null, FOUR_SETS);
+    await saveVivaExaminers(t.office, id, [
+      { userId: t.bangla, studentIds: all.slice(0, 11) },
+      { userId: t.other, studentIds: all.slice(11) },
+    ]);
+    // Both examiners draw their children concurrently, pair by pair.
+    for (let i = 0; i < 11; i++) {
+      await Promise.all([drawVivaSet(t.teacher(t.bangla), id, all[i]!), drawVivaSet(t.teacher(t.other), id, all[11 + i]!)]);
+    }
+    const sheet = await vivaSheet(t.office, id);
+    expect(sheet.rows.every((r) => r.setKey)).toBe(true);
+    expect(sheet.paper.sets.map((s) => s.drawn).sort()).toEqual([5, 5, 6, 6]);
+  });
+
+  it("graphql: the app's save-sets, sheet, draw and per-letter mark operations round-trip", async () => {
+    const t = await setup();
+    const id = await t.paper("BAN");
+    const schema = builder.toSchema();
+    const run = async (source: string, variableValues: Record<string, unknown>, ctx: AppContext) => {
+      const res = await graphql({ schema, source, variableValues, contextValue: ctx });
+      expect(res.errors).toBeUndefined();
+      return res.data as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    };
+    // Same selections as app/src/graphql/viva.ts (PAPER / ROW).
+    const PAPER = `id fullMarks frozen items { key label marks ref parts partMarks }
+      sets { key label drawn items { key label marks ref parts partMarks } }`;
+    const ROW = `studentId absent setKey needsDraw marks { key value } total done canEdit`;
+    const saved = await run(
+      `mutation SaveVivaPaper($paperId: String!, $sets: [VivaSetInput!]!) { saveVivaPaper(paperId: $paperId, sets: $sets) { ${PAPER} } }`,
+      { paperId: id, sets: FOUR_SETS.map((s) => ({ key: null, ...s, items: s.items.map((i) => ({ key: null, ref: null, ...i })) })) },
+      t.office,
+    );
+    expect(saved.saveVivaPaper.sets).toHaveLength(4);
+    expect(saved.saveVivaPaper.fullMarks).toBe(10);
+    const me = t.teacher(t.bangla);
+    const sheet = await run(`query VivaSheet($paperId: String!) { vivaSheet(paperId: $paperId) { paper { ${PAPER} } rows { ${ROW} } seesAll } }`, { paperId: id }, me);
+    expect(sheet.vivaSheet.rows[0]).toMatchObject({ needsDraw: true, setKey: null });
+    const drawn = await run(
+      `mutation DrawVivaSet($paperId: String!, $studentId: String!) { drawVivaSet(paperId: $paperId, studentId: $studentId) { ${ROW} } }`,
+      { paperId: id, studentId: t.kids[0] },
+      me,
+    );
+    const setKey = drawn.drawVivaSet.setKey as string;
+    const letters = saved.saveVivaPaper.sets.find((s: { key: string }) => s.key === setKey).items[0];
+    const marked = await run(
+      `mutation SetVivaMark($paperId: String!, $studentId: String!, $key: String!, $value: Float) { setVivaMark(paperId: $paperId, studentId: $studentId, key: $key, value: $value) { ${ROW} } }`,
+      { paperId: id, studentId: t.kids[0], key: `${letters.key}:0`, value: 0.5 },
+      me,
+    );
+    expect(marked.setVivaMark.marks).toEqual([{ key: `${letters.key}:0`, value: 0.5 }]);
+    // The VV-1 single-list save still works for an app that predates sets.
+    const old = await run(
+      `mutation SaveVivaPaper($paperId: String!, $items: [VivaItemInput!]!) { saveVivaPaper(paperId: $paperId, items: $items) { ${PAPER} } }`,
+      { paperId: await t.paper("ENG"), items: [{ label: "Oral", marks: 15 }] },
+      t.office,
+    );
+    expect(old.saveVivaPaper.sets).toHaveLength(1);
+  });
+
+  it("an absent child is left out of the split; a one-set paper needs no draw", async () => {
+    const t = await setup();
+    const id = await t.paper("BAN");
+    await saveVivaPaper(t.office, id, null, [FOUR_SETS[0]!, FOUR_SETS[1]!]);
+    const me = t.teacher(t.bangla);
+    const first = await drawVivaSet(me, id, t.kids[0]!);
+    await setVivaAbsent(me, id, t.kids[0]!, true);
+    await expect(drawVivaSet(me, id, t.kids[1]!).then(() => drawVivaSet(me, id, t.kids[2]!))).resolves.toBeDefined();
+    const p = (await vivaSheet(t.office, id)).paper;
+    // kids[0] (absent) doesn't count, so kids[1] and kids[2] took one set each.
+    expect(p.sets.map((s) => s.drawn).sort()).toEqual([1, 1]);
+    expect(first.setKey).not.toBeNull();
+    await expect(drawVivaSet(me, id, t.kids[0]!)).resolves.toMatchObject({ setKey: first.setKey });
+    // One-set paper (Quran): every child already "has" the only set; marks need no draw.
+    const qid = await t.paper("QURAN");
+    const row = (await vivaSheet(t.office, qid)).rows[0]!;
+    expect(row).toMatchObject({ setKey: "s1", needsDraw: false });
   });
 });
 

@@ -21,6 +21,8 @@ import {
   UPDATE_CLASS_TEST_DETAILS,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
+import { CT_RECHECK_QUERY } from "../../graphql/classTestRecheck";
+import { ctrcFill } from "../../components/CtRecheckPanel";
 import { DateField } from "../../components/DateField";
 import { STR, hwSubjectLabel, ctUnitLabel, bnNum, isoDateLabel, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -58,6 +60,9 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const sectionName = useSectionNames();
   const students = studentsQ.data?.classTestRoster ?? [];
   const [resultsQ, refetch] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId } });
+  // CT-RC: say on the marks screen that some marks need a second look before Submit.
+  const [recheckQ] = useQuery({ query: CT_RECHECK_QUERY, variables: { testId }, pause: !test, requestPolicy: "cache-and-network" });
+  const ctrcOpen = recheckQ.data?.classTestRecheck?.rules.enabled ? recheckQ.data.classTestRecheck.unconfirmedCount : 0;
   const results = resultsQ.data?.classTestResults ?? [];
   const byStudent = useMemo(() => {
     const m = new Map<string, (typeof results)[number]>();
@@ -322,6 +327,9 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
           </View>
+          {ctrcOpen > 0 && !allSubmitted ? (
+            <Notice message={ctrcFill(STR.ctrcBannerTeacher, { n: bnNum(ctrcOpen) })} tone="warn" />
+          ) : null}
 
           {/* Correct a mis-typed total / pass mark / date (owner ask 2026-08-03 — a
               32-mark paper had been recorded as 42, and there was no update path at all,

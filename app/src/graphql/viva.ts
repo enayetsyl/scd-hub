@@ -9,6 +9,17 @@ export interface VivaItemT {
   label: string;
   marks: number;
   ref: string;
+  /** Letter question (D-#1277): each letter marked 0 … partMarks, stored as `<key>:<i>`. */
+  parts: string[];
+  partMarks: number;
+}
+
+/** One question set (D-#1275). `drawn` = present children given this set so far. */
+export interface VivaSetT {
+  key: string;
+  label: string;
+  items: VivaItemT[];
+  drawn: number;
 }
 
 export interface VivaExaminerT {
@@ -33,6 +44,7 @@ export interface VivaPaperT {
   fullMarks: number;
   syllabusMarks: number | null;
   items: VivaItemT[];
+  sets: VivaSetT[];
   examiners: VivaExaminerT[];
   frozen: boolean;
   lockedAt: string | null;
@@ -46,6 +58,9 @@ export interface VivaRowT {
   examinerId: string | null;
   examinerName: string;
   absent: boolean;
+  /** The child's set; null until the examiner taps the name (D-#1276). */
+  setKey: string | null;
+  needsDraw: boolean;
   marks: { key: string; value: number }[];
   total: number;
   done: boolean;
@@ -66,12 +81,13 @@ export interface VivaOverviewT {
 
 const PAPER = `
   id examId examName classId classLevel classLabelBn subject subjectLabelBn dateKey fullMarks syllabusMarks
-  items { key label marks ref }
+  items { key label marks ref parts partMarks }
+  sets { key label drawn items { key label marks ref parts partMarks } }
   examiners { userId name studentIds children done absent }
   frozen lockedAt
   progress { children done absent started }
 `;
-const ROW = `studentId name roll examinerId examinerName absent marks { key value } total done canEdit`;
+const ROW = `studentId name roll examinerId examinerName absent setKey needsDraw marks { key value } total done canEdit`;
 
 export const VIVA_OVERVIEW = gql<{ vivaOverview: VivaOverviewT[] }>`
   query VivaOverview { vivaOverview { examId examName papers { ${PAPER} } } }
@@ -91,9 +107,23 @@ export const VIVA_CANDIDATES = gql<{ vivaExaminerCandidates: { userId: string; n
 
 export const VIVA_SAVE_PAPER = gql<
   { saveVivaPaper: VivaPaperT },
-  { paperId: string; items: { key?: string | null; label: string; marks: number; ref?: string | null }[] }
+  { paperId: string; sets: { key?: string | null; label?: string | null; items: VivaItemInputT[] }[] }
 >`
-  mutation SaveVivaPaper($paperId: String!, $items: [VivaItemInput!]!) { saveVivaPaper(paperId: $paperId, items: $items) { ${PAPER} } }
+  mutation SaveVivaPaper($paperId: String!, $sets: [VivaSetInput!]!) { saveVivaPaper(paperId: $paperId, sets: $sets) { ${PAPER} } }
+`;
+
+export interface VivaItemInputT {
+  key?: string | null;
+  label: string;
+  marks: number;
+  ref?: string | null;
+  parts?: string[] | null;
+  partMarks?: number | null;
+}
+
+/** The examiner's tap on a child's name: draws their set (evenly, final — D-#1276). */
+export const VIVA_DRAW_SET = gql<{ drawVivaSet: VivaRowT }, { paperId: string; studentId: string }>`
+  mutation DrawVivaSet($paperId: String!, $studentId: String!) { drawVivaSet(paperId: $paperId, studentId: $studentId) { ${ROW} } }
 `;
 
 export const VIVA_SAVE_EXAMINERS = gql<
@@ -138,4 +168,29 @@ export function vivaSteps(max: number): number[] {
   const out: number[] = [];
   for (let x = 0; x <= max + 1e-9; x += 0.5) out.push(Math.round(x * 2) / 2);
   return out;
+}
+
+/** The questions a row is marked on: its set's, or [] before the draw. */
+export function vivaItemsOf(paper: VivaPaperT, row: Pick<VivaRowT, "setKey">): VivaItemT[] {
+  if (paper.sets.length <= 1) return paper.sets[0]?.items ?? paper.items;
+  return paper.sets.find((s) => s.key === row.setKey)?.items ?? [];
+}
+
+/** "সেট ২" for a row on a paper with sets; "" on a one-set paper or before the draw. */
+export function vivaSetLabel(paper: VivaPaperT, setKey: string | null): string {
+  if (paper.sets.length <= 1 || !setKey) return "";
+  return paper.sets.find((s) => s.key === setKey)?.label ?? "";
+}
+
+/** A question's mark from the row's taps (letter questions sum their letters); null until
+ *  fully marked. */
+export function vivaItemValue(it: VivaItemT, byKey: Map<string, number>): number | null {
+  if (!it.parts.length) return byKey.has(it.key) ? byKey.get(it.key)! : null;
+  let sum = 0;
+  for (let i = 0; i < it.parts.length; i++) {
+    const v = byKey.get(`${it.key}:${i}`);
+    if (v == null) return null;
+    sum += v;
+  }
+  return sum;
 }
