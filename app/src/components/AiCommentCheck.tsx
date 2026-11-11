@@ -25,7 +25,7 @@ import { ACTIVE_AI_POLICY } from "../graphql/aiPolicies";
 import { useAuth } from "../auth/AuthContext";
 import { Body, Muted, Button, Notice, Badge } from "./ui";
 import Markdown from "./Markdown";
-import { STR } from "../lib/labels";
+import { STR, commentSentimentLabel } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { space } from "../theme/tokens";
 
@@ -193,6 +193,7 @@ export function AiCheckPanel({
   extra,
   onChange,
   onKeepMine,
+  onPickTone,
   disabled,
 }: {
   ai: AiCommentCheck;
@@ -205,6 +206,8 @@ export function AiCheckPanel({
   onChange: (field: string, text: string) => void;
   /** "Keep my text and save" — the screen saves right away. */
   onKeepMine: () => void;
+  /** Daily only: switch the tone chip to the one a tone note suggests (round 3). */
+  onPickTone?: (sentiment: string) => void;
   disabled?: boolean;
 }): React.ReactElement | null {
   const [showStandard, setShowStandard] = React.useState(false);
@@ -263,6 +266,14 @@ export function AiCheckPanel({
           {ai.open.map((issue, i) => {
             const isNote = !issue.quote;
             const placeable = isNote || textOf(issue.field).includes(issue.quote);
+            // A tone note names the chip as the screen shows it (round 3), with a button to switch.
+            const tone = isNote && issue.pick ? commentSentimentLabel(issue.pick as never) : null;
+            const noteText = tone ? STR.aicPickTone.replace("{tone}", tone) : issue.suggestion;
+            const noteButton = tone && onPickTone ? STR.aicPickToneButton.replace("{tone}", tone) : STR.aicNoted;
+            const onNote = () => {
+              if (tone && onPickTone && issue.pick) onPickTone(issue.pick);
+              acceptOne(issue);
+            };
             return (
               <View key={`${issue.field}-${i}-${issue.quote}`} style={{ gap: space(1) }}>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
@@ -270,10 +281,10 @@ export function AiCheckPanel({
                   {fieldLabels && fields.length > 1 ? <Badge text={fieldLabels[issue.field] ?? issue.field} tone="muted" /> : null}
                 </View>
                 {issue.quote ? <Muted>{`${STR.aicWritten}: ${issue.quote}`}</Muted> : null}
-                <Body>{isNote ? issue.suggestion : `${STR.aicBetter}: ${issue.suggestion}`}</Body>
+                <Body>{isNote ? noteText : `${STR.aicBetter}: ${issue.suggestion}`}</Body>
                 {placeable ? (
                   <View style={{ flexDirection: "row" }}>
-                    <Button title={isNote ? STR.aicNoted : STR.aicAccept} variant="secondary" onPress={() => acceptOne(issue)} disabled={disabled} />
+                    <Button title={isNote ? noteButton : STR.aicAccept} variant="secondary" onPress={isNote ? onNote : () => acceptOne(issue)} disabled={disabled} />
                   </View>
                 ) : (
                   <Muted>{STR.aicCantPlace}</Muted>
