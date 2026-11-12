@@ -38,6 +38,10 @@ export interface IYearChangeRun extends Document {
   grantExpiries: Array<{ grantId: string; previous: string | null }>;
   /** YC-6: source (old-year) slot ids already copied - a copy that vanished from this list's rows was deleted by the Principal and is not recreated. */
   copiedSources: string[];
+  /** YC-6: cells ("level:code|day|period") already copied - a cell whose copy is gone was deleted by the Principal and is not recreated. */
+  copiedCells: string[];
+  /** YC-6: SECTION chat groups the cut-over created (undo-cutover archives them). */
+  chatGroupsCreated: string[];
   /** YC-6: hash of what the run wrote to the new year's AssignmentSchedule (a mismatch later = edited). */
   assignmentHash?: string;
   /** YC-6: the copy options this run was prepared with (the cut-over reuses them). */
@@ -64,6 +68,8 @@ const YearChangeRunSchema = new Schema<IYearChangeRun>(
     routineEnds: { type: Schema.Types.Mixed, default: [] },
     grantExpiries: { type: Schema.Types.Mixed, default: [] },
     copiedSources: { type: [String], default: [] },
+    copiedCells: { type: [String], default: [] },
+    chatGroupsCreated: { type: [String], default: [] },
     assignmentHash: { type: String },
     copyOptions: { type: Schema.Types.Mixed },
     grantReactivated: { type: [String], default: [] },

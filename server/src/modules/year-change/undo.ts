@@ -29,12 +29,13 @@ import { ScheduleWindow } from "../routine/models/ScheduleWindow";
 import { AssignmentSchedule } from "../trackers/models/AssignmentSchedule";
 import { MasteryEnablement } from "../mastery/models/MasteryEnablement";
 import { ScopeGrant } from "../foundation/models/ScopeGrant";
+import { Conversation } from "../chat/models/Conversation";
 import { ImprovementAction } from "../improvement/models/ImprovementAction";
 import { dayBefore } from "../foundation/services/EnrolmentService";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import { writeAudit } from "../platform/services/AuditService";
 import { assertYearChangeRight } from "./authz";
-import { releaseRunGrants, yearChangeStamps } from "./copy";
+import { releaseRunGrants, slotCopyHash, yearChangeStamps } from "./copy";
 import { improvementStopReason } from "./cutover";
 import { YearChangeRun, type StudentBefore } from "./models/YearChangeRun";
 import { YearChangeRefusal, type YearChangeActor } from "./types";
@@ -56,6 +57,11 @@ export interface UndoResult {
 }
 
 const oid = (id: string): Types.ObjectId => new Types.ObjectId(id);
+
+async function sectionIdsOfYear(yearId: Types.ObjectId): Promise<Types.ObjectId[]> {
+  const classes = await Class.find({ academicYearId: yearId }).select("_id").lean();
+  return (await Section.find({ classId: { $in: classes.map((c) => c._id) } }).select("_id").lean()).map((s) => s._id);
+}
 
 // ---------------------------------------------------------------------------------------------
 // undo prepare
@@ -89,11 +95,23 @@ async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; section
   const restore: RestoreSet = { ends: [], grants: [] };
   const toYear = run ? await AcademicYear.findById(run.toYearId).select("startDate").lean() : null;
   const stamps = toYear ? yearChangeStamps(toYear.startDate) : null;
+  let endsSkipped = 0;
   for (const e of run?.routineEnds ?? []) {
-    const slot = await RoutineSlot.findById(e.slotId).select("effectiveTo dayOfWeek periodNumber subject").lean();
+    const slot = await RoutineSlot.findById(e.slotId).select("effectiveTo dayOfWeek periodNumber subject groupId").lean();
     if (!slot) continue;
+    if (sectionIds.some((x) => x.equals(slot.groupId))) continue; // goes with its section below
     if (stamps && slot.effectiveTo && new Date(slot.effectiveTo).getTime() === stamps.endDate.getTime()) restore.ends.push(e);
-    else notes.push(`রুটিন ${slot.dayOfWeek} পিরিয়ড ${slot.periodNumber} (${slot.subject}): প্রস্তুতির পরে বদলেছে — যেমন আছে তেমন রাখা হলো`);
+    else {
+      endsSkipped++;
+      notes.push(`রুটিন ${slot.dayOfWeek} পিরিয়ড ${slot.periodNumber} (${slot.subject}): প্রস্তুতির পরে বদলেছে — যেমন আছে তেমন রাখা হলো`);
+    }
+  }
+  // Every routine row on a section the run created goes with the section - the copies, the Principal's edited
+  // copies and anything hand-made (Class 6 rows, kept cells). They are listed so nothing is deleted unseen.
+  const sectionRows = sectionIds.length ? await RoutineSlot.find({ groupId: { $in: sectionIds } }).select("dayOfWeek periodNumber subject track isBreak teacherId roomId groupId runId copyHash").lean() : [];
+  for (const r of sectionRows) {
+    if (!r.runId) notes.push(`রুটিন ${r.dayOfWeek} পিরিয়ড ${r.periodNumber} (${r.subject}): হাতে বানানো — শাখার সাথে মুছে যাবে (will be deleted)`);
+    else if (r.copyHash && r.copyHash !== slotCopyHash(r as never)) notes.push(`রুটিন ${r.dayOfWeek} পিরিয়ড ${r.periodNumber} (${r.subject}): আপনার বদলানো কপি — শাখার সাথে মুছে যাবে (will be deleted)`);
   }
   let grantSkipped = 0;
   for (const e of run?.grantExpiries ?? []) {
@@ -105,12 +123,11 @@ async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; section
       notes.push(`অনুমতি ${e.grantId}: প্রস্তুতির পরে শেষ-তারিখ বদলেছে — যেমন আছে তেমন রাখা হলো`);
     }
   }
-  const endsSkipped = (run?.routineEnds?.length ?? 0) - restore.ends.length;
   // YC-6: the routine + schedule copy
   const copyCounts = {
-    routineSlots: await RoutineSlot.countDocuments({ runId }),
+    routineSlots: await RoutineSlot.countDocuments(sectionIds.length ? { $or: [{ runId }, { groupId: { $in: sectionIds } }] } : { runId }),
     routineEndsCleared: restore.ends.length,
-    routineEndsSkipped: Math.max(0, endsSkipped),
+    routineEndsSkipped: endsSkipped,
     scheduleWindows: await ScheduleWindow.countDocuments({ runId }),
     assignmentSchedules: await AssignmentSchedule.countDocuments({ runId }),
     masteryEnablements: await MasteryEnablement.countDocuments({ runId }),
@@ -162,7 +179,7 @@ export async function undoPrepare(runId: string, actor: YearChangeActor, opts: {
     total++;
   }
   // YC-6: delete the copies, put the stamped ends back
-  total += (await RoutineSlot.deleteMany({ runId })).deletedCount ?? 0;
+  total += (await RoutineSlot.deleteMany(sectionIds.length ? { $or: [{ runId }, { groupId: { $in: sectionIds } }] } : { runId })).deletedCount ?? 0;
   for (const e of restore.ends) {
     const r = await RoutineSlot.updateOne({ _id: oid(e.slotId) }, e.previous ? { $set: { effectiveTo: new Date(e.previous) } } : { $unset: { effectiveTo: 1 } });
     total += r.modifiedCount;
@@ -238,6 +255,9 @@ async function planCutoverUndo(runId: string) {
   }
   const stopped = run ? await ImprovementAction.countDocuments({ stopReason: improvementStopReason(runId) }) : 0;
   const grantsMade = run ? await ScopeGrant.countDocuments({ runId }) : 0;
+  const newSecIds = toYear ? await sectionIdsOfYear(toYear._id) : [];
+  const grantsBound = newSecIds.length ? await ScopeGrant.countDocuments({ kind: "teaching", source: "routine", active: true, sectionId: { $in: newSecIds }, runId: { $exists: false } }) : 0;
+  const groupsToArchive = run?.chatGroupsCreated?.length ?? 0;
   // (a) pointer / active changed after the cut-over; (b) created on next-year sections after it
   const changedAfter: string[] = [];
   const createdAfter: string[] = [];
@@ -274,6 +294,8 @@ async function planCutoverUndo(runId: string) {
       newEnrolmentsToPlanned: newRows.length,
       improvementRestarted: stopped,
       grantsRemoved: grantsMade,
+      grantsBoundAfterCutover: grantsBound,
+      chatGroupsArchived: groupsToArchive,
       homeworkOnNewSections: homework,
       assignmentsOnNewSections: assignments,
       attendanceDaysOnNewSections: attendance,
@@ -344,6 +366,11 @@ export async function undoCutover(runId: string, actor: YearChangeActor, opts: {
   ).modifiedCount;
   // 5b. the 2027 grants the cut-over made go away (decision A); the prepare's stamps on the 2026 rows stay
   total += await releaseRunGrants(runId, run.grantReactivated ?? []);
+  // ... and so do the routine grants bound on the new year's sections AFTER the cut-over (the year is not current again)
+  const newSecIds = await sectionIdsOfYear(toYear._id);
+  if (newSecIds.length) total += (await ScopeGrant.updateMany({ kind: "teaching", source: "routine", active: true, sectionId: { $in: newSecIds } }, { $set: { active: false } })).modifiedCount;
+  // ... and the section chat groups the cut-over created are archived (it re-activates them if run again)
+  if (run.chatGroupsCreated?.length) total += (await Conversation.updateMany({ _id: { $in: run.chatGroupsCreated.map(oid) } }, { $set: { active: false } })).modifiedCount;
   // 6. the run is a prepared run again (a new cut-over captures a fresh before-state)
   await YearChangeRun.updateOne({ _id: run._id }, { $set: { status: "PREPARED", improvementEndedIds: [], grantReactivated: [] }, $unset: { before: 1, cutOverBy: 1, cutOverAt: 1 } });
   total++;

@@ -29,6 +29,7 @@ import { AssignmentItem } from "../trackers/models/AssignmentItem";
 import { ImprovementAction } from "../improvement/models/ImprovementAction";
 import { checkInvariant, closeEnrolment, dayBefore, type InvariantViolation } from "../foundation/services/EnrolmentService";
 import { onSectionTeachersChangedSync } from "../chat/services/ChatGroupService";
+import { Conversation } from "../chat/models/Conversation";
 import { applyCutoverCopy, planCopyDrift, ScheduleCopyRefusal, type CopyDrift } from "./copy";
 import { Audit } from "../platform/models/Audit";
 import { dhakaDayKey } from "../../lib/dhakaDay";
@@ -418,7 +419,13 @@ export async function applyCutover(runId: string, actor: YearChangeActor, opts: 
     // section of the new year follows its class + subject teachers (never blocks).
     const newClasses = await Class.find({ academicYearId: ctx.toYear._id }).select("_id").lean();
     const newSecs = await Section.find({ classId: { $in: newClasses.map((x) => x._id) }, active: true }).select("_id").lean();
+    const refIds = newSecs.map((sec) => sid(sec._id));
+    const before = new Set((await Conversation.find({ kind: "SECTION", refId: { $in: refIds } }).select("_id").lean()).map((x) => sid(x._id)));
+    // groups this run created earlier (a re-cut-over after an undo) are switched back on
+    if (run.chatGroupsCreated?.length) await Conversation.updateMany({ _id: { $in: run.chatGroupsCreated.map(oid) } }, { $set: { active: true } });
     for (const sec of newSecs) await onSectionTeachersChangedSync(sid(sec._id));
+    const made = (await Conversation.find({ kind: "SECTION", refId: { $in: refIds } }).select("_id").lean()).map((x) => sid(x._id)).filter((x) => !before.has(x));
+    if (made.length) await YearChangeRun.updateOne({ _id: run._id }, { $addToSet: { chatGroupsCreated: { $each: made } } });
   }
   invariantAfter = await checkInvariant();
   return done();

@@ -129,6 +129,8 @@ const UNDO_LABELS_BN: Record<string, string> = {
   grantExpiriesCleared: "ফিরবে: পুরোনো অনুমতির শেষ তারিখ",
   grantExpiriesSkipped: "যেমন আছে তেমন থাকবে (প্রস্তুতির পরে বদলেছে): অনুমতি",
   grantsRemoved: "মুছবে: কাট-ওভারে তৈরি অনুমতি (গ্রান্ট)",
+  grantsBoundAfterCutover: "বন্ধ হবে: কাট-ওভারের পরে বাঁধা রুটিন-অনুমতি",
+  chatGroupsArchived: "আর্কাইভ হবে: কাট-ওভারে তৈরি শাখার চ্যাট গ্রুপ",
   studentsRestored: "ফিরবে: শিক্ষার্থীর আগের অবস্থা",
   pastEnrolmentsReopened: "আবার চালু হবে: পুরোনো বছরের তালিকাভুক্তি",
   newEnrolmentsToPlanned: "আবার প্ল্যান করা হবে: নতুন বছরের তালিকাভুক্তি",

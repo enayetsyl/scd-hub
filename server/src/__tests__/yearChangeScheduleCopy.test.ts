@@ -35,8 +35,9 @@ import { AssignmentSchedule } from "../modules/trackers/models/AssignmentSchedul
 import { MasteryEnablement } from "../modules/mastery/models/MasteryEnablement";
 import { MasteryOutcome } from "../modules/mastery/models/MasteryOutcome";
 import { composeTeacherScope } from "../modules/foundation/services/ScopeGrantService";
-import { createRoutineSlot, deleteRoutineSlot, slotsForDate, slotsForTeacherOnDate, updateRoutineSlot } from "../modules/routine/services/RoutineSlotService";
+import { createRoutineSlot, deleteRoutineSlot, reassignRoutineSubjectTeacher, slotsForDate, slotsForTeacherOnDate, updateRoutineSlot } from "../modules/routine/services/RoutineSlotService";
 import { Conversation } from "../modules/chat/models/Conversation";
+import { StaffMistakeNote } from "../modules/staff-mistakes/models/StaffMistakeNote";
 import { handoutBoard } from "../modules/trackers/services/AssignmentHandoutService";
 import {
   YearChangeRefusal,
@@ -45,6 +46,7 @@ import {
   applyPrepare,
   planCutover,
   planYearChange,
+  planUndoCutover,
   planUndoPrepare,
   printCutover,
   printPlan,
@@ -702,6 +704,119 @@ describe("YC-6 fixes: the December draft", () => {
     await deleteRoutineSlot((await cell(w.c4Boys.sectionId, "SUN", 1))._id.toString(), w.teacher4.toString());
     await deleteRoutineSlot((await cell(w.c4Boys.sectionId, "THU", 1))._id.toString(), w.teacher4.toString());
     expect((await ScopeGrant.findById(w.grants.routine).lean())!.active).toBe(true); // the MON row starting 20 Dec still justifies it
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Fix round 2 (nine reviewer gaps)
+// ---------------------------------------------------------------------------------------------
+
+describe("YC-6 fix round 2", () => {
+  const jan3 = new Date("2027-01-03T00:30:00+06:00");
+  const newTeacher = async (n: string, phone: string): Promise<Types.ObjectId> => (await User.create({ name: n, phone, passwordHash: "x", role: "TEACHER" }))._id;
+  const cell = async (sectionId: Types.ObjectId, day: string, period: number) => (await RoutineSlot.findOne({ groupId: sectionId, groupType: "section", dayOfWeek: day, periodNumber: period }))!;
+  const edit = async (slotId: Types.ObjectId, teacher: Types.ObjectId, from: Date) =>
+    updateRoutineSlot({ slotId: slotId.toString(), subject: (await RoutineSlot.findById(slotId))!.subject as "MATH", track: "general", teacherId: teacher.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: from });
+
+  it("1. a 2026 cell changed on 15 Dec to a teacher who is already booked in the 2027 draft does not block the cut-over (only a real 2027 clash does)", async () => {
+    const tU = await newTeacher("New T", "01700000431");
+    await prepare();
+    // the 2027 draft: U takes C4 Boys SUN P1
+    await edit((await cell(await sec2027(4, "Boys"), "SUN", 1))._id, tU, new Date());
+    // 15 Dec: the 2026 C5 Boys SUN P1 (BAN, Ban T) goes to U - the copy would clash with U in the draft
+    await edit((await cell(w.c5Boys.sectionId, "SUN", 1))._id, tU, new Date("2026-12-15T10:00:00+06:00"));
+    const dry = await planCutover(RUN, undefined, { allowEarly: true });
+    expect(dry.refusals).toEqual([]);
+    expect(dry.copy.lines.some((l) => l.includes("প্রস্তুতি আবার চালালে"))).toBe(true); // drift is a report line
+    await expect(applyCutover(RUN, w.principal, { allowEarly: true })).resolves.toBeDefined();
+    // ... while a REAL clash among the 2027 rows still refuses: hand-make one on the live DB
+    await undoCutover(RUN, w.principal);
+    const c2m27 = await sec2027(2, "Main");
+    const c5b27 = await sec2027(5, "Boys");
+    await RoutineSlot.create({ groupType: "section", groupId: c2m27, classId: (await Section.findById(c2m27))!.classId, dayOfWeek: "SUN", periodNumber: 3, subject: "BAN", track: "general", isBreak: false, teacherId: w.tBan, effectiveFrom: new Date("2027-01-03"), createdBy: w.teacher4 });
+    await RoutineSlot.create({ groupType: "section", groupId: c5b27, classId: (await Section.findById(c5b27))!.classId, dayOfWeek: "SUN", periodNumber: 3, subject: "BAN", track: "general", isBreak: false, teacherId: w.tBan, effectiveFrom: new Date("2027-01-03"), createdBy: w.teacher4 });
+    await expect(applyCutover(RUN, w.principal, { allowEarly: true })).rejects.toBeInstanceOf(YearChangeRefusal);
+  });
+
+  it("2. a re-bind after a future-dated unbind restores the run's 3 Jan lapse", async () => {
+    await prepare();
+    const lapse = "2027-01-02T18:00:00.000Z";
+    // 10 Dec: Math T is taken off C4 Boys from 15 Dec -> the unbind stamps 15 Dec on the grant
+    await deleteRoutineSlot((await cell(w.c4Boys.sectionId, "SUN", 1))._id.toString(), w.teacher4.toString(), new Date("2026-12-15T10:00:00+06:00"));
+    await deleteRoutineSlot((await cell(w.c4Boys.sectionId, "THU", 1))._id.toString(), w.teacher4.toString(), new Date("2026-12-15T10:00:00+06:00"));
+    const moved = new Date((await ScopeGrant.findById(w.grants.routine).lean() as unknown as { expiresAt: Date }).expiresAt);
+    expect(moved.toISOString()).not.toBe(lapse);
+    // 12 Dec: a new period binds the grant again
+    await createRoutineSlot({ groupType: "section", groupId: w.c4Boys.sectionId.toString(), dayOfWeek: "MON", periodNumber: 3, subject: "MATH", track: "general", isBreak: false, teacherId: w.tMath.toString(), effectiveFrom: new Date("2026-12-12T10:00:00+06:00"), createdBy: w.teacher4.toString() });
+    expect(new Date((await ScopeGrant.findById(w.grants.routine).lean() as unknown as { expiresAt: Date }).expiresAt).toISOString()).toBe(lapse);
+  });
+
+  it("3. undo-prepare deletes every routine row on the sections it deletes (hand-made Class 6 rows, edited copies) and lists them", async () => {
+    const tU = await newTeacher("New T", "01700000432");
+    await prepare();
+    const c6 = await sec2027(6, "Boys");
+    for (const [day, p] of [["MON", 2], ["TUE", 2]] as const) {
+      await createRoutineSlot({ groupType: "section", groupId: c6.toString(), dayOfWeek: day, periodNumber: p, subject: "MATH", track: "general", isBreak: false, teacherId: w.tEng.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    }
+    await edit((await cell(await sec2027(4, "Boys"), "SUN", 1))._id, tU, new Date());
+    const dry = await planUndoPrepare(RUN);
+    expect(dry.notes.filter((n) => n.includes("will be deleted")).length).toBe(3); // 2 hand-made + 1 edited copy
+    await undoPrepare(RUN, w.principal);
+    expect(await RoutineSlot.countDocuments({ groupId: c6 })).toBe(0);
+    const sectionIds = new Set((await Section.find({}).select("_id").lean()).map((s) => String(s._id)));
+    const orphans = (await RoutineSlot.find({ groupType: "section" }).select("groupId").lean()).filter((r) => !sectionIds.has(String(r.groupId)));
+    expect(orphans).toHaveLength(0);
+  });
+
+  it("4. a Class 6 slot created on 1 Jan with today's date starts 3 Jan and does not clash", async () => {
+    await prepare();
+    jest.setSystemTime(new Date("2027-01-01T10:00:00+06:00"));
+    const c6 = await sec2027(6, "Boys");
+    const made = await createRoutineSlot({ groupType: "section", groupId: c6.toString(), dayOfWeek: "MON", periodNumber: 2, subject: "MATH", track: "general", isBreak: false, teacherId: w.tEng.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    expect(dayKey(made.slot.effectiveFrom)).toBe("2027-01-03");
+  });
+
+  it("5. a deleted copy stays deleted after its 2026 source is edited", async () => {
+    const tU = await newTeacher("New T", "01700000433");
+    await prepare();
+    const c5g27 = await sec2027(5, "Girls");
+    await deleteRoutineSlot((await cell(c5g27, "THU", 3))._id.toString(), w.teacher4.toString());
+    // December: the 2026 source is edited (a new row id replaces it)
+    await edit((await cell(w.c5Girls.sectionId, "THU", 3))._id, tU, new Date());
+    const plan = await planYearChange(input());
+    expect(plan.scheduleCopy.routine.notes.some((n) => n.includes("you deleted it"))).toBe(true);
+    await prepare();
+    expect(await RoutineSlot.countDocuments({ groupId: c5g27, dayOfWeek: "THU" })).toBe(0);
+  });
+
+  it("7. a December reassign of a subject's teacher works on a 2027 section", async () => {
+    const tU = await newTeacher("New T", "01700000434");
+    await prepare();
+    const c4b27 = await sec2027(4, "Boys");
+    const r = await reassignRoutineSubjectTeacher(c4b27.toString(), "MATH", tU.toString(), w.teacher4.toString());
+    expect(r.updatedSlots).toBe(2);
+    const rows = await RoutineSlot.find({ groupId: c4b27, subject: "MATH" }).lean();
+    expect(rows).toHaveLength(2);
+    expect(rows.every((x) => String(x.teacherId) === tU.toString() && !x.effectiveTo && dayKey(x.effectiveFrom) === "2027-01-03")).toBe(true);
+    // the draft edit is not a "mistake" note (the row never applied)
+    expect(await StaffMistakeNote.countDocuments({ refKey: { $in: rows.map((x) => String(x._id)) } })).toBe(0);
+  });
+
+  it("9. undo-cutover leaves no active 2027 routine grant (also ones bound after the cut-over) and archives the 2027 section groups", async () => {
+    await prepare();
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    const run = (await YearChangeRun.findOne({ runId: RUN }).lean())!;
+    expect(run.chatGroupsCreated.length).toBeGreaterThan(0);
+    // after the cut-over the 2027 year is current: a new period binds a grant (no run id on it)
+    const c6 = await sec2027(6, "Boys");
+    await createRoutineSlot({ groupType: "section", groupId: c6.toString(), dayOfWeek: "MON", periodNumber: 2, subject: "MATH", track: "general", isBreak: false, teacherId: w.tEng.toString(), effectiveFrom: new Date("2027-01-04"), createdBy: w.teacher4.toString() });
+    const secs2027 = (await Section.find({ classId: { $in: (await Class.find({ academicYearId: w.years.y2027 }).select("_id").lean()).map((x) => x._id) } }).select("_id").lean()).map((x) => x._id);
+    expect(await ScopeGrant.countDocuments({ sectionId: { $in: secs2027 }, kind: "teaching", active: true })).toBeGreaterThan(6);
+    const dry = await planUndoCutover(RUN);
+    expect(dry.counts.grantsBoundAfterCutover).toBe(1);
+    await undoCutover(RUN, w.principal);
+    expect(await ScopeGrant.countDocuments({ sectionId: { $in: secs2027 }, kind: "teaching", active: true })).toBe(0);
+    expect(await Conversation.countDocuments({ _id: { $in: run.chatGroupsCreated.map((x) => new Types.ObjectId(x)) }, active: true })).toBe(0);
   });
 });
 

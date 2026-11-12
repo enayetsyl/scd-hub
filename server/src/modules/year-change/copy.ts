@@ -117,7 +117,7 @@ type CopyState = "create" | "update" | "same" | "kept" | "deleted" | "foreign";
 interface Computed {
   mode: "prepare" | "cutover";
   opts: Required<CopyOptions>;
-  run: { copiedSources: string[]; assignmentHash?: string } | null;
+  run: { copiedSources: string[]; copiedCells: string[]; assignmentHash?: string } | null;
   fromKey: string;
   endKey: string;
   /** Instant a 2026 grant lapses: the first routine day at Dhaka midnight. */
@@ -166,6 +166,7 @@ interface Computed {
 }
 
 const dayName = (d: string): string => d;
+const cellKeyOf = (d: { level: number; code: string; src: { dayOfWeek: string; periodNumber: number } }): string => `${d.level}:${d.code}|${d.src.dayOfWeek}|${d.src.periodNumber}`;
 
 /** Order-independent signature of an AssignmentSchedule's content (entries + term anchors). */
 function scheduleSig(s: {
@@ -199,7 +200,7 @@ async function compute(
   const summary = emptyScheduleCopy(optsIn);
   summary.fromKey = fromKey;
   summary.endKey = endKey;
-  const runDoc = runId ? ((await YearChangeRun.findOne({ runId }).select("copiedSources assignmentHash").lean()) as { copiedSources?: string[]; assignmentHash?: string } | null) : null;
+  const runDoc = runId ? ((await YearChangeRun.findOne({ runId }).select("copiedSources copiedCells assignmentHash").lean()) as { copiedSources?: string[]; copiedCells?: string[]; assignmentHash?: string } | null) : null;
 
   const fromClasses = (await Class.find({ academicYearId: fromYear._id }).select("level").lean()) as Array<{ _id: Types.ObjectId; level: number }>;
   const fromLevelOf = new Map(fromClasses.map((c) => [sid(c._id), c.level]));
@@ -217,7 +218,7 @@ async function compute(
   const c: Computed = {
     mode,
     opts,
-    run: runDoc ? { copiedSources: runDoc.copiedSources ?? [], assignmentHash: runDoc.assignmentHash } : null,
+    run: runDoc ? { copiedSources: runDoc.copiedSources ?? [], copiedCells: runDoc.copiedCells ?? [], assignmentHash: runDoc.assignmentHash } : null,
     fromKey,
     endKey,
     expiryAt,
@@ -324,7 +325,10 @@ async function compute(
       sid(o.roomId ?? "") === sid(d.src.roomId ?? "") &&
       new Date(o.effectiveFrom).getTime() === fromDate.getTime() &&
       !o.effectiveTo;
+    // Deleted copies are tracked by CELL ("level:code|day|period"), so a December edit of the 2026 source (a new
+    // row id) does not bring a deleted copy back. The old by-source field is still read for stored runs.
     const copiedBefore = new Set(c.run?.copiedSources ?? []);
+    const copiedCells = new Set(c.run?.copiedCells ?? []);
     const wanted = new Set<string>();
     const notes = summary.routine.notes;
     for (const d of c.desired) {
@@ -335,7 +339,7 @@ async function compute(
         if (foreign.has(d.key)) {
           d.state = "foreign";
           notes.push(`${at}: আপনার হাতে বানানো পিরিয়ড আছে — আপনার ঘরই রাখা হলো (kept your cell)`);
-        } else if (copiedBefore.has(sid(d.src._id))) {
+        } else if (copiedCells.has(cellKeyOf(d)) || copiedBefore.has(sid(d.src._id))) {
           d.state = "deleted";
           notes.push(`${at}: আপনি এটি মুছেছেন — আবার বানানো হবে না (you deleted it)`);
         } else {
@@ -370,7 +374,10 @@ async function compute(
 
     // ---- the conflict engine over the copied set (every 2026 row modelled as ended on endKey) ----
     const ending = new Set(srcs.map((x) => sid(x._id)));
-    const replaced = new Set([...c.removeOwn, ...c.desired.filter((d) => d.state === "update").map((d) => c.ownCopies.get(d.key) as IRoutineSlot)].map((o) => sid(o._id)));
+    // At the cut-over nothing is written to the copies, so no create/update candidates exist: the REAL 2027
+    // rows are checked against each other (2026 rows modelled as ended), and drift is only reported.
+    const atCutover = mode === "cutover";
+    const replaced = atCutover ? new Set<string>() : new Set([...c.removeOwn, ...c.desired.filter((d) => d.state === "update").map((d) => c.ownCopies.get(d.key) as IRoutineSlot)].map((o) => sid(o._id)));
     const others = (await RoutineSlot.find({
       active: true,
       $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: startOfDay(fromDate) } }],
@@ -397,7 +404,25 @@ async function compute(
       });
     }
     const cands: Array<SlotLite & { label: string }> = [];
-    for (const d of c.desired) {
+    if (atCutover) {
+      for (const o of others) {
+        const info = toSectionInfo.get(sid(o.groupId));
+        if (!info || ending.has(sid(o._id))) continue;
+        cands.push({
+          id: sid(o._id),
+          dayOfWeek: o.dayOfWeek,
+          periodNumber: o.periodNumber,
+          groupType: o.groupType,
+          groupId: sid(o.groupId),
+          teacherId: o.teacherId ? sid(o.teacherId) : null,
+          roomId: o.roomId ? sid(o.roomId) : null,
+          effectiveFrom: new Date(o.effectiveFrom),
+          effectiveTo: o.effectiveTo ? new Date(o.effectiveTo) : null,
+          label: labelOf(info.level, info.code),
+        });
+      }
+    }
+    for (const d of atCutover ? [] : c.desired) {
       if (d.state !== "create" && d.state !== "update") continue;
       cands.push({
         id: `copy:${cands.length}`,
@@ -412,7 +437,7 @@ async function compute(
         label: labelOf(d.level, d.code),
       });
     }
-    for (const x of cands) push(x);
+    if (!atCutover) for (const x of cands) push(x);
     const teacherIds = new Set<string>();
     const found: Array<{ day: string; period: number; what: "teacher" | "group" | "room"; label: string; teacherId: string | null; otherId: string }> = [];
     const pairSeen = new Set<string>();
@@ -739,9 +764,8 @@ async function stampEnds(c: Computed, run: RunDoc, w: ScheduleCopyWrites): Promi
   const known = new Set(run.routineEnds.map((e) => e.slotId));
   const add = c.toEnd.filter((s) => !known.has(sid(s._id))).map((s) => ({ slotId: sid(s._id), previous: s.effectiveTo ? new Date(s.effectiveTo).toISOString() : null }));
   if (add.length) {
+    await YearChangeRun.updateOne({ _id: run._id }, { $push: { routineEnds: { $each: add } } });
     run.routineEnds = [...run.routineEnds, ...add];
-    run.markModified("routineEnds");
-    await run.save();
   }
   for (const s of c.toEnd) {
     await RoutineSlot.updateOne({ _id: s._id }, { $set: { effectiveTo: c.endDate } });
@@ -757,11 +781,7 @@ async function stampLapses(c: Computed, runId: string, w: ScheduleCopyWrites): P
   if (fresh) {
     const known = new Set(fresh.grantExpiries.map((e) => e.grantId));
     const add = stamp.filter((g) => !known.has(sid(g._id))).map((g) => ({ grantId: sid(g._id), previous: g.previous ? g.previous.toISOString() : null }));
-    if (add.length) {
-      fresh.grantExpiries = [...fresh.grantExpiries, ...add];
-      fresh.markModified("grantExpiries");
-      await fresh.save();
-    }
+    if (add.length) await YearChangeRun.updateOne({ _id: fresh._id }, { $push: { grantExpiries: { $each: add } } });
   }
   for (const g of stamp) {
     await ScopeGrant.updateOne({ _id: g._id }, { $set: { expiresAt: c.expiryAt } });
@@ -779,8 +799,7 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
   if (!run) throw new ScheduleCopyRefusal([`রান ${runId} পাওয়া যায়নি।`]);
   if (JSON.stringify(run.copyOptions ?? null) !== JSON.stringify(c.opts)) {
     run.copyOptions = { ...c.opts };
-    run.markModified("copyOptions");
-    await run.save();
+    await YearChangeRun.updateOne({ _id: run._id }, { $set: { copyOptions: { ...c.opts } } });
   }
 
   // ---- routine ---------------------------------------------------------------------------------
@@ -826,12 +845,15 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
       w.routineSlots++;
     }
     // remember which sources were copied: a copy that is gone later was deleted by the Principal
-    const copied = new Set(run.copiedSources);
-    for (const d of c.desired) if (d.state === "create" || d.state === "update" || d.state === "same" || d.state === "kept") copied.add(sid(d.src._id));
-    if (copied.size !== run.copiedSources.length) {
-      run.copiedSources = [...copied];
-      await run.save();
+    const copied: string[] = [];
+    const cells: string[] = [];
+    for (const d of c.desired) {
+      if (d.state === "create" || d.state === "update" || d.state === "same" || d.state === "kept") {
+        copied.push(sid(d.src._id));
+        cells.push(cellKeyOf(d));
+      }
     }
+    if (copied.length) await YearChangeRun.updateOne({ _id: run._id }, { $addToSet: { copiedSources: { $each: copied }, copiedCells: { $each: cells } } });
     await stampEnds(c, run, w);
   }
 
@@ -870,7 +892,7 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
     }
     if (run.assignmentHash !== wantedSig) {
       run.assignmentHash = wantedSig;
-      await run.save();
+      await YearChangeRun.updateOne({ _id: run._id }, { $set: { assignmentHash: wantedSig } });
     }
   }
 
@@ -947,10 +969,11 @@ export async function applyCutoverCopy(runId: string, actorId: Types.ObjectId): 
     } else await ScopeGrant.deleteOne({ _id: old._id, runId });
     out.grants++;
   }
-  if (reactivated.size !== run.grantReactivated.length) {
-    run.grantReactivated = [...reactivated];
-    await run.save();
-  }
+  const nowReactivated = [...reactivated];
+  const addReact = nowReactivated.filter((x) => !run.grantReactivated.includes(x));
+  const dropReact = run.grantReactivated.filter((x) => !reactivated.has(x));
+  if (addReact.length) await YearChangeRun.updateOne({ _id: run._id }, { $addToSet: { grantReactivated: { $each: addReact } } });
+  if (dropReact.length) await YearChangeRun.updateOne({ _id: run._id }, { $pull: { grantReactivated: { $in: dropReact } } });
 
   // the 2027 copies of re-pointed supervisory / delegation grants
   const keep = new Set<string>();
