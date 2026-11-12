@@ -412,6 +412,7 @@ import GroupMembersScreen from "../screens/admin/GroupMembersScreen";
 import AcademicYearScreen from "../screens/admin/AcademicYearScreen";
 import SectionConfigScreen from "../screens/admin/SectionConfigScreen";
 import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
+import YearChangeScreen from "../screens/admin/YearChangeScreen";
 import MessageTemplatesScreen from "../screens/admin/MessageTemplatesScreen";
 import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScreen";
 import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen";
@@ -1721,6 +1722,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="GroupMembers" component={GroupMembersScreen} options={{ title: STR.gmTitle }} />
       <AdminStack.Screen name="AcademicYear" component={AcademicYearScreen} options={{ title: STR.ayManage }} />
       <AdminStack.Screen name="SectionConfig" component={SectionConfigScreen} options={{ title: STR.sectionConfig }} />
+      <AdminStack.Screen name="YearChange" component={YearChangeScreen} options={{ title: STR.ycTitle }} />
       <AdminStack.Screen name="GuardianCredentials" component={GuardianCredentialsScreen} options={{ title: STR.guardianCredentials }} />
       <AdminStack.Screen name="MessageTemplates" component={MessageTemplatesScreen} options={{ title: STR.mtTitle }} />
       <AdminStack.Screen

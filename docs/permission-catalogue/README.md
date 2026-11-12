@@ -873,6 +873,9 @@ Guardians read the books of their own children's classes through `guardian:read_
 | `classes_sections:create` | Open a class | নতুন শ্রেণি খোলা | Create a class (+ default শাখা) | — | on | | roster:manage |
 | `classes_sections:merge_split` | Merge / split শাখা | শাখা একত্র করা / আলাদা করা | Combine or reverse; active merges | — | on | | roster:manage |
 | `classes_sections:settings` | Academic years | শিক্ষাবর্ষ যোগ করা | Add a year (switching the current year is `year_change:cut_over`, Principal only) | — | on | | roster:manage |
+| `year_change:view` | See the year change | বছর পরিবর্তনের পরিকল্পনা দেখা | Open the year-change screen and its dry runs (Principal only; YC-5) | — | — | LOCKED | — |
+| `year_change:prepare` | Prepare the year change | বছর পরিবর্তনের প্রস্তুতি | Write next year's classes, sections, planned enrolments, admissions and class teachers (YC-5) | — | — | LOCKED | — |
+| `year_change:undo` | Undo the year change | বছর পরিবর্তন ফিরিয়ে নেওয়া | Cancel the preparation or reverse the cut-over (YC-5) | — | — | LOCKED | — |
 | `year_change:cut_over` | Switch the current year | চালু শিক্ষাবর্ষ বদলানো | Flip the current academic year at the cut-over (D-#1451) | — | — | LOCKED | classes_sections:settings (flip half) |
 | `teaching_assignments:assign_class_teacher` | Assign শ্রেণি শিক্ষক | শ্রেণি শিক্ষক ও সহকারী শিক্ষক বরাদ্দ | Set/clear a শাখা's শ্রেণি শিক্ষক; support teachers; history | — | on | | roster:manage |
 | `teaching_assignments:assign_homework_checker` | Assign homework confirmers | বাড়ির কাজ চূড়ান্ত করার দায়িত্ব বরাদ্দ | Confirm delegate per শাখা; school-wide supervisor flag | — | on | | roster:manage |

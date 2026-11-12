@@ -39,6 +39,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // A refused enrolment write (YC-1, D-#1464): bad date key, a move into another year or
   // into the same section. A plain sentence back to the caller, never a fault.
   "EnrolmentError",
+  // The year-change engine refused (YC-4/YC-6, YC-5): every reason is a Bangla sentence the
+  // Principal reads on the dry run - a refusal, never a fault.
+  "YearChangeRefusal",
+  "ScheduleCopyRefusal",
   // The de-identification gate refused to send (AI-4, D-#1130): a known name was still in
   // the text. A Bangla sentence; the caller marks the comment "not checked" (fail-open).
   "DeidentifyError",
