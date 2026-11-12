@@ -7693,6 +7693,14 @@ const STR_BN = {
   // --- Mastery M-2: work sheets + exceptions-only entry ---
   msWork: "প্রশ্নভিত্তিক নম্বর",
   msNewSheet: "নতুন কাজ",
+  // PR-B (D-#1314/#1315): earlier-class steps on a sheet and on the heat-map.
+  msEarlierTitle: "আগের শ্রেণির ধাপ",
+  msEarlierIntro: "আগের শ্রেণির যেসব {objective} এই শাখায় যাচাই হয়েছে (প্রতিটি সেই শ্রেণির নিয়মে বিচার করা)।",
+  msEarlierAssessed: "যাচাই: {n} জন",
+  msEarlierWeak: "দুর্বল: {n} জন",
+  msEarlierAdd: "আগের শ্রেণির {objective} যোগ করুন",
+  msEarlierPickClass: "কোন শ্রেণি?",
+  msEarlierOnlyTitle: "ভিত্তি যাচাই",
   msSourceHW: "বাড়ির কাজ",
   msSourceCT: "ক্লাস টেস্ট",
   msSourceRubric: "রুব্রিক",
@@ -15757,6 +15765,13 @@ const STR_EN: StrTable = {
   // --- Mastery M-2: work sheets + exceptions-only entry ---
   msWork: "Per-question marks",
   msNewSheet: "New sheet",
+  msEarlierTitle: "Earlier-class steps",
+  msEarlierIntro: "Earlier-class {objective} rows assessed in this section (each judged by that class's rules).",
+  msEarlierAssessed: "Assessed: {n}",
+  msEarlierWeak: "Weak: {n}",
+  msEarlierAdd: "Add an earlier class's {objective}",
+  msEarlierPickClass: "Which class?",
+  msEarlierOnlyTitle: "Baseline check",
   msSourceHW: "Homework",
   msSourceCT: "Class test",
   msSourceRubric: "Rubric",

@@ -26,7 +26,7 @@ import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { writeAudit } from "../../platform/services/AuditService";
-import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { pageOf, queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { personName } from "../../../lib/personName";
 import { getPolicy } from "./MasteryCatalogueService";
 import {
@@ -34,6 +34,8 @@ import {
   assertMayWork,
   loadPaperFor,
   paperView,
+  classIndex,
+  classTokenForLevel,
   rosterOf,
   sectionContext,
   type Auth,
@@ -68,10 +70,30 @@ const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : nul
 
 type LiveRow = EvidenceLike & { studentId: string };
 
-/** The live rows (not superseded, not excluded) of one section × subject. */
-export async function liveSectionRows(sectionId: Types.ObjectId, subject: MasterySubject, loCode?: string): Promise<LiveRow[]> {
+/** The class token of a section's class (null when it has none), for the own-class filter below. */
+async function sectionClassToken(sectionId: Types.ObjectId): Promise<MasteryClassToken | null> {
+  const sec = await Section.findById(sectionId).select("classId").lean();
+  const cls = sec ? await Class.findById(sec.classId).select("level").lean() : null;
+  return cls ? classTokenForLevel(cls.level as number) : null;
+}
+
+/**
+ * The live rows (not superseded, not excluded) of one section × subject.
+ *
+ * PR-B (D-#1314): a sheet may carry an EARLIER class's codes (a baseline test). Those rows are kept
+ * out of every section read of the section's own tree — heat-map, student view, assignment builder,
+ * trigger — unless `includeEarlierClasses` is set or one `loCode` is asked for by name.
+ */
+export async function liveSectionRows(
+  sectionId: Types.ObjectId,
+  subject: MasterySubject,
+  loCode?: string,
+  opts: { includeEarlierClasses?: boolean } = {},
+): Promise<LiveRow[]> {
+  const own = loCode || opts.includeEarlierClasses ? null : await sectionClassToken(sectionId);
+  const codeFilter = loCode ? { loCode } : own ? { loCode: { $regex: `^LO-${own}-` } } : {};
   const rows = await MasteryEvidence.find({
-    sectionId, subject, supersededAt: null, excludedAt: null, ...(loCode ? { loCode } : {}),
+    sectionId, subject, supersededAt: null, excludedAt: null, ...codeFilter,
   })
     .select("studentId paperId itemNo qid loCode earned available rubricStep rework signal routed at week")
     .lean(); // bounded: one section × subject's evidence for the year
@@ -301,6 +323,73 @@ export function studentRollup(
     };
   });
   return { objectives, domains };
+}
+
+// ---------------------------------------------------------------------------
+// PR-B — earlier-class steps this section has evidence on (D-#1315)
+// ---------------------------------------------------------------------------
+
+export interface EarlierClassRow {
+  code: string;
+  labelBn: string;
+  classToken: string;
+  /** Students of this section with a verdict-bearing state on the code (anything but NOT_ASSESSED). */
+  assessed: number;
+  weak: number;
+  weakStudents: { studentId: string; name: string; rollNumber: string | null }[];
+}
+
+/**
+ * For each EARLIER-class code this section has live evidence on (a baseline sheet, PR-B): its label,
+ * class, how many students were assessed, how many are weak and who. Each code is judged by its own
+ * class's policy. Ordered by class then code; paged (D-#761).
+ */
+export async function earlierClassSummary(
+  sectionId: string,
+  subject: MasterySubject,
+  args: PageArgs,
+  auth: Auth,
+): Promise<Page<EarlierClassRow>> {
+  const ctx = await sectionContext(sectionId);
+  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  const all = await liveSectionRows(ctx.sectionId, subject, undefined, { includeEarlierClasses: true });
+  const rows = all.filter((r) => {
+    const t = parseMasteryLoCode(r.loCode)?.classToken;
+    return Boolean(t) && t !== ctx.classToken;
+  });
+  if (rows.length === 0) return pageOf([], args);
+  const roster = await rosterOf(ctx.sectionId);
+  const onRoster = new Map(roster.map((s) => [String(s._id), s]));
+  const byClass = new Map<MasteryClassToken, LiveRow[]>();
+  for (const r of rows) {
+    const t = parseMasteryLoCode(r.loCode)!.classToken;
+    byClass.set(t, [...(byClass.get(t) ?? []), r]);
+  }
+  const codes = [...new Set(rows.map((r) => r.loCode))];
+  const labels = new Map(
+    (await MasteryOutcome.find({ code: { $in: codes } }).select("code labelBn").lean()).map((o) => [o.code, o.labelBn]),
+  );
+  const out: EarlierClassRow[] = [];
+  const now = new Date();
+  for (const [token, list] of byClass) {
+    const sec = computeSection(list, await diagnosisPolicy(token, subject), now);
+    for (const [code, per] of sec.states) {
+      const weakIds = [...per.entries()].filter(([sid, st]) => st.state === "WEAK" && onRoster.has(sid)).map(([sid]) => sid);
+      out.push({
+        code,
+        labelBn: labels.get(code) ?? code,
+        classToken: token,
+        assessed: [...per.entries()].filter(([sid, st]) => st.state !== "NOT_ASSESSED" && onRoster.has(sid)).length,
+        weak: weakIds.length,
+        weakStudents: weakIds
+          .map((sid) => onRoster.get(sid)!)
+          .sort((a, b) => String(a.rollNumber ?? "").localeCompare(String(b.rollNumber ?? ""), undefined, { numeric: true }))
+          .map((s) => ({ studentId: String(s._id), name: personName(s), rollNumber: s.rollNumber ?? null })),
+      });
+    }
+  }
+  out.sort((a, b) => classIndex(a.classToken) - classIndex(b.classToken) || a.code.localeCompare(b.code, undefined, { numeric: true }));
+  return pageOf(out, args);
 }
 
 export async function sectionLabel(sectionId: Types.ObjectId): Promise<{ sectionName: string; className: string }> {
