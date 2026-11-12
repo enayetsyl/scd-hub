@@ -36,6 +36,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // An AI call refused by a cap (AI-2, D-#1092): a person's daily limit, a session's turns,
   // a feature's or the school's monthly budget. A Bangla sentence; callers fail open.
   "AiCapError",
+  // A refused enrolment write (YC-1, D-#1464): bad date key, a move into another year or
+  // into the same section. A plain sentence back to the caller, never a fault.
+  "EnrolmentError",
   // The de-identification gate refused to send (AI-4, D-#1130): a known name was still in
   // the text. A Bangla sentence; the caller marks the comment "not checked" (fail-open).
   "DeidentifyError",
