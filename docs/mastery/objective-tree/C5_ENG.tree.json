@@ -1,0 +1,2500 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C5",
+ "subject": "ENG",
+ "status": "DRAFT",
+ "source": {
+  "book": "C5_ENG_Print_v4.2 (= C5_ENG_Book_v4.2 content; the final print)",
+  "files": [
+   "Book Review Material/Print File/C5_ENG_Print_v4.2.zip (IDML — the final print, built from C5_ENG_Book_v4.2_Student.docx, 9 Nov 2026)",
+   "Book Review Material/Class 5 Eng/C5_ENG_Book_v4.2_Writer-Reviewer.md (+ .docx — Teacher Note: Learning outcomes (শিখনফল), \"In the exam\"; Appendix — Examinations and Mark Distribution; Decision Log; compared exercise by exercise with the print)",
+   "Book Review Material/LOCKED_ENG_Grammar_Ladder_C3-5_v1.md (grammar scope, exam frame, unit placement for Class 5)",
+   "docs/scholarship-eng-paper-structure.md (owner-approved scholarship paper structure: 14 items → 24 topic rows; read-only reference)",
+   "docs/mastery/objective-tree/C4_ENG.tree.json (earlier-class codes)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "At the Library"
+  },
+  {
+   "number": 2,
+   "titleBn": "Our School Garden"
+  },
+  {
+   "number": 3,
+   "titleBn": "Be Quiet, Please"
+  },
+  {
+   "number": 4,
+   "titleBn": "My Home District"
+  },
+  {
+   "number": 5,
+   "titleBn": "Student Council"
+  },
+  {
+   "number": 6,
+   "titleBn": "An Email from Indonesia"
+  },
+  {
+   "number": 7,
+   "titleBn": "The Sundarbans"
+  },
+  {
+   "number": 8,
+   "titleBn": "A Field Trip to Remember"
+  },
+  {
+   "number": 9,
+   "titleBn": "Get Ready to Listen"
+  },
+  {
+   "number": 10,
+   "titleBn": "Poem: The Swing"
+  },
+  {
+   "number": 11,
+   "titleBn": "Making Requests"
+  },
+  {
+   "number": 12,
+   "titleBn": "Eating Healthy"
+  },
+  {
+   "number": 13,
+   "titleBn": "Quality Time Together"
+  },
+  {
+   "number": 14,
+   "titleBn": "The Champion Girl"
+  },
+  {
+   "number": 15,
+   "titleBn": "Poem: The Secret Song"
+  },
+  {
+   "number": 16,
+   "titleBn": "The Giving Tree"
+  },
+  {
+   "number": 17,
+   "titleBn": "The Air We Share"
+  },
+  {
+   "number": 18,
+   "titleBn": "Nakshi Kantha"
+  },
+  {
+   "number": 19,
+   "titleBn": "The Wind and the Sun"
+  },
+  {
+   "number": 20,
+   "titleBn": "Writing a Story"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-TF",
+   "labelBn": "True or false — seen text",
+   "marksBn": "১",
+   "examUse": "Q1 (1 × 5 = 5) — one of the two Q1 forms; \"True\" or \"False\" alone gets the mark"
+  },
+  {
+   "code": "QT-MATCHMEAN",
+   "labelBn": "Match words with their meanings — seen text",
+   "marksBn": "১",
+   "examUse": "Q1 (1 × 5 = 5) — the other Q1 form; one mark for each correct pair"
+  },
+  {
+   "code": "QT-MAKESENT",
+   "labelBn": "Make meaningful sentences with the given words",
+   "marksBn": "১",
+   "examUse": "Q2 (1 × 5 = 5) — words of the seen text / Words to Know"
+  },
+  {
+   "code": "QT-PASSANS",
+   "labelBn": "Answer questions in sentences — seen text",
+   "marksBn": "৩",
+   "examUse": "Q3 (3 × 6 = 18) — 3 full correct answer; 2 with a language mistake; 1 word or phrase only"
+  },
+  {
+   "code": "QT-UNSEENFILL",
+   "labelBn": "Unseen text: fill in the blanks from a box",
+   "marksBn": "১",
+   "examUse": "Q4 (1 × 5 = 5) — two extra words in the box; the word must be spelt correctly"
+  },
+  {
+   "code": "QT-UNSEENANS",
+   "labelBn": "Unseen text: answer questions in sentences",
+   "marksBn": "৩",
+   "examUse": "Q5 (3 × 3 = 9)"
+  },
+  {
+   "code": "QT-POS",
+   "labelBn": "Identify the parts of speech of the underlined words",
+   "marksBn": "১",
+   "examUse": "Q6 (1 × 5 = 5) — one of the two Q6 forms; half-yearly Units 2–3 step, annual all eight"
+  },
+  {
+   "code": "QT-TENSE",
+   "labelBn": "Change the tense as directed (six forms)",
+   "marksBn": "১",
+   "examUse": "Q6 (1 × 5 = 5) — the other Q6 form; one mark for each sentence written in full, half if one word is wrong"
+  },
+  {
+   "code": "QT-ARTICLE",
+   "labelBn": "Fill in the gaps with a, an or the",
+   "marksBn": "১",
+   "examUse": "Q7 (1 × 6 = 6) — half-yearly; annual: this or prefixes and suffixes"
+  },
+  {
+   "code": "QT-AFFIX",
+   "labelBn": "Fill in the gaps by adding a prefix or a suffix",
+   "marksBn": "১",
+   "examUse": "Q7 (1 × 6 = 6) — annual only (Unit 13), the other Q7 form"
+  },
+  {
+   "code": "QT-WHQ",
+   "labelBn": "Make WH questions from the given statements (underlined words)",
+   "marksBn": "১",
+   "examUse": "Q8 (1 × 5 = 5) — half if one word is wrong"
+  },
+  {
+   "code": "QT-REARRANGE",
+   "labelBn": "Rearrange words into meaningful sentences",
+   "marksBn": "১",
+   "examUse": "Q9 (1 × 7 = 7) — one of the two Q9 forms; any correct word order is accepted"
+  },
+  {
+   "code": "QT-STORYORDER",
+   "labelBn": "Rearrange sentences to make a story",
+   "marksBn": "১",
+   "examUse": "Q9 (1 × 7 = 7) — the other Q9 form; one mark for each sentence in its right place"
+  },
+  {
+   "code": "QT-PUNCTUATE",
+   "labelBn": "Rewrite using correct capital letters and punctuation marks",
+   "marksBn": "০.৫",
+   "examUse": "Q10 (0.5 × 10 = 5) — ten corrections; a pair of quotation marks counts as one"
+  },
+  {
+   "code": "QT-NUMBERS",
+   "labelBn": "Time, cardinal and ordinal numbers, dates — in words",
+   "marksBn": "১",
+   "examUse": "Q11 (1 × 5 = 5) — one of the Q11 forms"
+  },
+  {
+   "code": "QT-FORM",
+   "labelBn": "Read the information and fill in the form",
+   "marksBn": "১",
+   "examUse": "Q11 (1 × 5 = 5) — the other Q11 form"
+  },
+  {
+   "code": "QT-VERBFORM",
+   "labelBn": "Complete the text using the correct forms of the verbs in brackets",
+   "marksBn": "১",
+   "examUse": "Q12 (1 × 5 = 5) — half-yearly six forms; annual all nine (three with clue words)"
+  },
+  {
+   "code": "QT-APPLICATION",
+   "labelBn": "Write an application",
+   "marksBn": "১০",
+   "examUse": "Q13 (10 = 2 + 6 + 2) — the paper sets a letter, an application or an email, one of the practised topics"
+  },
+  {
+   "code": "QT-LETTER",
+   "labelBn": "Write a letter",
+   "marksBn": "১০",
+   "examUse": "Q13 (10 = 2 + 6 + 2)"
+  },
+  {
+   "code": "QT-EMAIL",
+   "labelBn": "Write an email",
+   "marksBn": "১০",
+   "examUse": "Q13 (10 = 2 + 6 + 2)"
+  },
+  {
+   "code": "QT-COMPOSITION",
+   "labelBn": "Write a short composition (about twelve sentences) or a story from word cues",
+   "marksBn": "১০",
+   "examUse": "Q14 (10 = 8 + 1 + 1) — half-yearly from guiding questions; annual from the topic alone"
+  },
+  {
+   "code": "QT-MEANING",
+   "labelBn": "Meaning test (English → Bengali)",
+   "marksBn": "১",
+   "examUse": "Class test only (10 × 1) — any correct Bengali meaning is accepted"
+  },
+  {
+   "code": "QT-SPELL",
+   "labelBn": "Spelling test and dictation",
+   "marksBn": "১",
+   "examUse": "Class test only (10 × 1) — no mark for a word with a wrong letter"
+  },
+  {
+   "code": "QT-TRANSLATE",
+   "labelBn": "Translation and retranslation",
+   "marksBn": "১",
+   "examUse": "Class test only (10 × 1) — half a mark if one word is wrong; never in the paper (decision 73)"
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "Class-test or class-work item (not in the paper)",
+   "marksBn": "১",
+   "examUse": "Class tests and class work: commands, kinds of sentence, opposites, negatives and questions, should / must, how much / how many, comparison, prepositions, rhyming words, poem questions"
+  },
+  {
+   "code": "QT-ORAL",
+   "labelBn": "Oral / observed in class (4-step rubric)",
+   "marksBn": null,
+   "examUse": "Not in the written paper — stress and voice, listening, requests, \"want to be\", reading aloud, neat writing; rubric: 1 cannot · 2 with help · 3 almost · 4 well"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C5-ENG-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Understand a text read in class (Q1, Q3)",
+   "sourceText": "Read a dialogue about the library and answer questions on it in full sentences. (Unit 1; the same outcome opens every unit: \"Read a text … and answer questions on it.\")",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF",
+    "QT-MATCHMEAN",
+    "QT-PASSANS",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "সন্তান যে পাঠটি পড়ছে তা একবার জোরে পড়তে বলুন; তারপর দুটি প্রশ্ন করুন — কে, কোথায়, কেন — এবং পূর্ণ বাক্যে উত্তর দিতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-03-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "The seen-text questions of the paper (Q1 and Q3) are set on any Lesson 1 text of the term, so this objective lives in Unit 1 and cites every unit — the Class Four tree does the same (C4·03-01)."
+  },
+  {
+   "code": "LO-C5-ENG-01-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "True or false — from the text (Q1)",
+   "sourceText": "Appendix §2: Q1 True / false, or match words with meanings — seen text, printed [ভাগ: true / false]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/SP/1",
+     "3/SP/1",
+     "5/SP/1",
+     "7/SP/1",
+     "8/SP/1",
+     "10/SP/1",
+     "12/SP/1",
+     "13/SP/1",
+     "15/SP/1",
+     "18/SP/1",
+     "4/L2/B",
+     "14/L1/B",
+     "16/L1/B",
+     "17/L1/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-03-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-01-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Match words from the text with their meanings (Q1)",
+   "sourceText": "Appendix §2: Q1 True / false, or match words with meanings — seen text, printed [ভাগ: matching]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/SP/1",
+     "4/SP/1",
+     "6/SP/1",
+     "9/SP/1",
+     "11/SP/1",
+     "14/SP/1",
+     "16/SP/1",
+     "17/SP/1",
+     "19/SP/1",
+     "20/SP/1",
+     "13/L1/B",
+     "18/L1/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCHMEAN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-03-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The paper prints ONE of the two Q1 forms; they are different abilities (reading for facts against word meaning), so two rows — as in the scholarship catalogue (TRUE-FALSE, MATCH-MEANING)."
+  },
+  {
+   "code": "LO-C5-ENG-01-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Answer questions on the text in full sentences (Q3)",
+   "sourceText": "… answer questions on it in full sentences. · Appendix §1: Q3 — 3 marks an answer (3 full correct sentence; 2 with a language mistake; 1 a correct word or phrase only)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/SP/3",
+     "2/SP/3",
+     "3/SP/3",
+     "4/SP/3",
+     "5/SP/3",
+     "6/SP/3",
+     "7/SP/3",
+     "8/SP/3",
+     "9/SP/3",
+     "10/SP/3",
+     "11/SP/3",
+     "12/SP/3",
+     "13/SP/3",
+     "14/SP/3",
+     "15/SP/3",
+     "16/SP/3",
+     "17/SP/3",
+     "18/SP/3",
+     "19/SP/3",
+     "20/SP/3",
+     "1/L1/B",
+     "4/L1/B",
+     "4/L2/C",
+     "5/L1/B",
+     "6/L1/C",
+     "7/L1/B",
+     "8/L1/B",
+     "9/L1/B",
+     "9/L2/B",
+     "9/L3/B",
+     "11/L1/B",
+     "12/L1/B",
+     "13/L1/D",
+     "14/L1/C",
+     "16/L1/C",
+     "17/L1/C",
+     "18/L1/C",
+     "19/L1/C",
+     "20/L1/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSANS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-03-01.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "18 of the 100 marks. The sixth question of each Scholarship Practice Q3 asks for an answer in the child's own words."
+  },
+  {
+   "code": "LO-C5-ENG-01-01.4",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Find information in the text: fill in from a box, match, complete a table",
+   "sourceText": "[class work on the Lesson 1 texts — not a question form of the paper]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/L1/B",
+     "6/L1/B",
+     "8/L1/C",
+     "12/L1/C",
+     "13/L1/C",
+     "19/L1/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-03-01.4"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Six lesson exercises that the paper does not use on a seen text (Q4 uses the gap-fill form on the unseen text)."
+  },
+  {
+   "code": "LO-C5-ENG-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Make a meaningful sentence with a given word (Q2)",
+   "sourceText": "Appendix §2: Q2 Make sentences with the given words — the same text; Words to Know · Unit 15: Make sentences with words from the poem.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/SP/2",
+     "2/SP/2",
+     "3/SP/2",
+     "4/SP/2",
+     "5/SP/2",
+     "6/SP/2",
+     "7/SP/2",
+     "8/SP/2",
+     "9/SP/2",
+     "10/SP/2",
+     "11/SP/2",
+     "12/SP/2",
+     "13/SP/2",
+     "14/SP/2",
+     "15/SP/2",
+     "16/SP/2",
+     "17/SP/2",
+     "18/SP/2",
+     "19/SP/2",
+     "20/SP/2",
+     "15/L1/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MAKESENT"
+   ],
+   "homeTipBn": "Words to Know থেকে পাঁচটি শব্দ বেছে দিন; প্রতিটি দিয়ে সন্তানকে নিজের একটি সঠিক বাক্য বলতে ও লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-01-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Say words with the right stress; let the voice go up or down",
+   "sourceText": "Say words with the right stress and let the voice go up or down at the end of a sentence.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2 oral/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "সন্তানকে প্রশ্ন ও উত্তর জোরে পড়তে দিন — হ্যাঁ/না প্রশ্নে গলা ওপরে ওঠে, উত্তরে ও WH প্রশ্নে নিচে নামে কি না শুনুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-06-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Oral only — \"Nothing in Lesson 2 is examined\" (Teacher Note, Unit 1; ladder level O). No lettered exercise; the row cites the lesson itself."
+  },
+  {
+   "code": "LO-C5-ENG-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write an application to the headteacher (Q13)",
+   "sourceText": "Know the seven parts of an application and write one to the headteacher. · Unit 5: Write an application for leave in advance.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-APPLICATION"
+   ],
+   "homeTipBn": "সন্তানকে প্রধান শিক্ষকের কাছে ছুটির একটি দরখাস্ত লিখতে দিন; তারিখ, ঠিকানা, বিষয়, সম্বোধন, তিন অনুচ্ছেদ, সমাপ্তি ও নাম — সাতটি অংশ ঠিক জায়গায় আছে কি না মিলিয়ে দেখুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-10-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-01-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-04",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "The seven parts of an application, in order",
+   "sourceText": "Know the seven parts of an application … [ভাগ: the parts]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L3/A",
+     "1/L3/B",
+     "1/L3/C",
+     "1/L3/D",
+     "5/L4/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-APPLICATION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "2 of the 10 marks are for the parts at the top in their places and 2 for the closing and name (Appendix §1, Q13: 2 + 6 + 2)."
+  },
+  {
+   "code": "LO-C5-ENG-01-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-04",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write an application on a given topic",
+   "sourceText": "… and write one to the headteacher. [ভাগ: writing] · Syllabus declaration: Q13 topics — the paper sets one",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "5/L4/B",
+     "1/SP/13",
+     "4/SP/13",
+     "5/SP/13",
+     "8/SP/13",
+     "11/SP/13",
+     "14/SP/13",
+     "17/SP/13",
+     "20/SP/13"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-APPLICATION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-01-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Eight practised topics (library books, study tour, leave in advance, leave of absence, water filter, quiz competition, tree-planting day, story-writing competition)."
+  },
+  {
+   "code": "LO-C5-ENG-01-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Read an unseen passage (Q4, Q5)",
+   "sourceText": "Appendix §2: Q4 Unseen text: fill in the blanks from a box; Q5 Unseen text: answer three questions — Unseen Passages 1–20 (one in every unit's Scholarship Practice)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNSEENFILL",
+    "QT-UNSEENANS"
+   ],
+   "homeTipBn": "পাঠ্যবইয়ের বাইরের একটি ছোটো ইংরেজি অনুচ্ছেদ (সাহাবিদের গল্প বা শিশুদের পত্রিকা) সন্তানকে পড়তে দিন এবং তিনটি প্রশ্নের উত্তর পূর্ণ বাক্যে লিখতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-02-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "No unit teaches this as a lesson; it is practised in all twenty units (ladder rule 5: an unseen passage in every unit in Class 5). Placed in Unit 1 where the first passage stands."
+  },
+  {
+   "code": "LO-C5-ENG-01-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-05",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Fill gaps in an unseen passage with words from a box (two extra words)",
+   "sourceText": "Q4 Unseen text: fill in the blanks from a box (1 × 5 = 5; the word must be spelt correctly)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/SP/4",
+     "2/SP/4",
+     "3/SP/4",
+     "4/SP/4",
+     "5/SP/4",
+     "6/SP/4",
+     "7/SP/4",
+     "8/SP/4",
+     "9/SP/4",
+     "10/SP/4",
+     "11/SP/4",
+     "12/SP/4",
+     "13/SP/4",
+     "14/SP/4",
+     "15/SP/4",
+     "16/SP/4",
+     "17/SP/4",
+     "18/SP/4",
+     "19/SP/4",
+     "20/SP/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNSEENFILL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-02-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-01-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-01-05",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Answer questions on an unseen passage in sentences",
+   "sourceText": "Q5 Unseen text: answer three questions (3 × 3 = 9)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/SP/5",
+     "2/SP/5",
+     "3/SP/5",
+     "4/SP/5",
+     "5/SP/5",
+     "6/SP/5",
+     "7/SP/5",
+     "8/SP/5",
+     "9/SP/5",
+     "10/SP/5",
+     "11/SP/5",
+     "12/SP/5",
+     "13/SP/5",
+     "14/SP/5",
+     "15/SP/5",
+     "16/SP/5",
+     "17/SP/5",
+     "18/SP/5",
+     "19/SP/5",
+     "20/SP/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNSEENANS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-02-02.2",
+    "LO-C5-ENG-01-01.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NOUN",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Common and collective nouns",
+   "sourceText": "Tell a common noun from a collective noun … [ভাগ: nouns]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L2/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন — a class of students, a flock of birds, a bunch of flowers: এখানে কোন শব্দটি দলের নাম (collective noun)?",
+   "prereqCodes": [
+    "LO-C4-ENG-08-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One lettered exercise; in the paper this is examined only inside Q6 (parts of speech — \"noun\"), so the row is class work. Ladder: nouns in Class 5 = \"revision inside the eight parts\"."
+  },
+  {
+   "code": "LO-C5-ENG-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-POS",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Name the part of speech of an underlined word — all eight (Q6)",
+   "sourceText": "… and name the part of speech of a word in a sentence. · Unit 3: Name an interjection and the part of speech of any underlined word. · Unit 12: … name them as parts of speech.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L2/B",
+     "2/L2/C",
+     "3/L3/A",
+     "12/L2/D",
+     "1/SP/6",
+     "2/SP/6",
+     "3/SP/6",
+     "4/SP/6",
+     "6/SP/6",
+     "8/SP/6",
+     "11/SP/6",
+     "13/SP/6",
+     "15/SP/6",
+     "17/SP/6",
+     "19/SP/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS"
+   ],
+   "homeTipBn": "একটি বাক্যের একটি শব্দের নিচে দাগ দিন; সন্তানকে জিজ্ঞেস করুন — এটি noun, pronoun, verb, adjective, adverb, preposition, conjunction না interjection?",
+   "prereqCodes": [
+    "LO-C4-ENG-03-03.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One row for all eight parts: the item is always \"identify the underlined word\" and the paper mixes the eight. Interjections (Unit 3), prepositions (Unit 11) and adjectives / adverbs (Unit 12) add words to the same skill; their own lesson exercises sit in 11-02 and 12-01."
+  },
+  {
+   "code": "LO-C5-ENG-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Rearrange words into a meaningful sentence (Q9)",
+   "sourceText": "Rearrange words into a meaningful sentence.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L2/D",
+     "1/SP/9",
+     "2/SP/9",
+     "3/SP/9",
+     "4/SP/9",
+     "5/SP/9",
+     "6/SP/9",
+     "9/SP/9",
+     "10/SP/9",
+     "12/SP/9",
+     "14/SP/9",
+     "16/SP/9",
+     "17/SP/9",
+     "19/SP/9",
+     "20/SP/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-REARRANGE"
+   ],
+   "homeTipBn": "এলোমেলো শব্দ লিখে দিন (library / goes / to / Aisha / the); সন্তানকে বড়ো হাতের অক্ষর ও দাঁড়িসহ সঠিক বাক্য লিখতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-13-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write a personal letter (Q13)",
+   "sourceText": "Know the parts of a personal letter and write one to a friend.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER"
+   ],
+   "homeTipBn": "সন্তানকে বন্ধু বা দাদির কাছে একটি চিঠি লিখতে দিন — ঠিকানা-তারিখ, সম্বোধন, তিন অনুচ্ছেদ, সমাপ্তি ও নাম ঠিক জায়গায় আছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-10-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-02-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-02-04",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "The parts of a personal letter, in order",
+   "sourceText": "Know the parts of a personal letter … [ভাগ: the parts]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L3/A",
+     "2/L3/B",
+     "2/L3/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-ENG-10-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-02-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-02-04",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write a letter on a given topic",
+   "sourceText": "… and write one to a friend. [ভাগ: writing] · Units 7, 10, 12, 15, 18: write a letter …",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/SP/13",
+     "7/SP/13",
+     "10/SP/13",
+     "12/SP/13",
+     "15/SP/13",
+     "18/SP/13"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-02-04.1",
+    "LO-C4-ENG-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Six practised topics (school garden, a visit to the Sundarbans, favourite game, healthy food, the beauty of a village, thanks to a grandparent)."
+  },
+  {
+   "code": "LO-C5-ENG-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Give and follow polite commands and requests (class test)",
+   "sourceText": "Give and follow polite commands and requests; … (class test) [ভাগ: commands and requests]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2 oral/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "বাড়িতে ইংরেজিতে ছোটো নির্দেশ দিন — \"Please open the door\", \"Don't make a noise\" — এবং সন্তানকেও ভদ্রভাবে অনুরোধ করতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-05-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class test only (ladder level CT). The print has a \"read with your teacher\" box (Box 1) and no lettered exercise — the row cites the lesson. See the flag on class-test topics without written practice."
+  },
+  {
+   "code": "LO-C5-ENG-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "The five kinds of sentence (class test)",
+   "sourceText": "… know the five kinds of sentence (class test). [ভাগ: kinds of sentence]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2 oral/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "পাঁচটি বাক্য বলুন (একটি প্রশ্ন, একটি আদেশ, একটি দোয়া, একটি বিস্ময়, একটি সাধারণ কথা); সন্তানকে প্রতিটির ধরন বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-17-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Revision from Class Four (Box 2); class test only; no lettered exercise."
+  },
+  {
+   "code": "LO-C5-ENG-03-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Opposite words (class test)",
+   "sourceText": "[Lesson 2 title: \"Commands and Requests; Kinds of Sentence; Opposites\" — Examined: class tests: commands, kinds of sentence, opposites]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2 oral/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "দশটি শব্দ বলুন (noisy, low, open, early …); সন্তানকে প্রতিটির বিপরীত শব্দ বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-09-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Not in the unit's learning outcomes, only in the lesson title and the \"Examined\" line (flag). Class test only; no lettered exercise."
+  },
+  {
+   "code": "LO-C5-ENG-03-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Write an email (Q13)",
+   "sourceText": "Know the parts of an email and write one to a friend. · Unit 6: Name the nine parts of an email. Write an email to a friend about a festival and about Bangladesh.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-EMAIL"
+   ],
+   "homeTipBn": "সন্তানকে বন্ধুর কাছে একটি ইমেইল লিখতে দিন — To, Subject, সম্বোধন ও সালাম, মূল কথা, সমাপ্তি ও নাম; কাগজে লিখলেও চলবে।",
+   "prereqCodes": [
+    "LO-C5-ENG-02-04"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-03-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-03-04",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "The parts of an email, in order",
+   "sourceText": "Know the parts of an email … · Name the nine parts of an email. [ভাগ: the parts]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L4/A",
+     "3/L4/B",
+     "3/L4/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-EMAIL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Unit 6 Lesson 2 names the nine parts again on Sumayya's email, with no lettered exercise of its own."
+  },
+  {
+   "code": "LO-C5-ENG-03-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-03-04",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Write an email on a given topic",
+   "sourceText": "… and write one to a friend. [ভাগ: writing] · Units 6, 9, 13, 16, 19: write an email …",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "6/L2/A",
+     "3/SP/13",
+     "6/SP/13",
+     "9/SP/13",
+     "13/SP/13",
+     "16/SP/13",
+     "19/SP/13"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-EMAIL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-03-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Six practised topics (good manners at home, our country, inviting a cousin to sports day, free time, a tree you planted, a stormy day). Letter, application and email are three different forms, so three objectives — as in the scholarship catalogue (LETTER, APPLICATION, EMAIL)."
+  },
+  {
+   "code": "LO-C5-ENG-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PUNC",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Capital letters and all the punctuation marks, with quotation marks (Q10)",
+   "sourceText": "Use capital letters and all the punctuation marks, including quotation marks.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L3/A",
+     "1/SP/10",
+     "2/SP/10",
+     "3/SP/10",
+     "4/SP/10",
+     "5/SP/10",
+     "6/SP/10",
+     "7/SP/10",
+     "8/SP/10",
+     "9/SP/10",
+     "10/SP/10",
+     "11/SP/10",
+     "12/SP/10",
+     "13/SP/10",
+     "14/SP/10",
+     "15/SP/10",
+     "16/SP/10",
+     "17/SP/10",
+     "18/SP/10",
+     "19/SP/10",
+     "20/SP/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PUNCTUATE"
+   ],
+   "homeTipBn": "বড়ো হাতের অক্ষর ও যতিচিহ্ন ছাড়া তিনটি বাক্য লিখে দিন (একটি উক্তিসহ); সন্তানকে শুদ্ধ করে লিখতে বলুন — দশটি সংশোধন খুঁজে পায় কি না।",
+   "prereqCodes": [
+    "LO-C4-ENG-04-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Half a mark for each of ten corrections; a pair of quotation marks counts as one. Until Unit 4 the Scholarship Practice Q10 uses the Class Four marks (capitals, full stop, question mark, apostrophe). Not split: every item mixes the marks."
+  },
+  {
+   "code": "LO-C5-ENG-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "A, an and the — the Class Five rules (Q7)",
+   "sourceText": "Use a, an and the by the Class Five rules.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L4/A",
+     "4/L4/B",
+     "1/SP/7",
+     "2/SP/7",
+     "3/SP/7",
+     "4/SP/7",
+     "5/SP/7",
+     "6/SP/7",
+     "7/SP/7",
+     "8/SP/7",
+     "9/SP/7",
+     "10/SP/7",
+     "11/SP/7",
+     "12/SP/7",
+     "15/SP/7",
+     "17/SP/7",
+     "20/SP/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ARTICLE"
+   ],
+   "homeTipBn": "একটি ছোটো অনুচ্ছেদে a, an, the-এর জায়গা ফাঁকা রেখে দিন; সন্তানকে পূরণ করতে ও কারণ বলতে দিন (an hour, the sun)।",
+   "prereqCodes": [
+    "LO-C4-ENG-05-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write a short composition (Q14)",
+   "sourceText": "Know the four parts of a composition and write twelve sentences on a topic.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": "একটি বিষয় দিন (My Home District); সন্তানকে শিরোনাম, শুরু, মূল কথা ও শেষ — চার অংশে প্রায় বারোটি বাক্য লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-SK-WRITE-01",
+    "LO-C4-ENG-17-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-04-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-04-03",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "The four parts of a composition",
+   "sourceText": "Know the four parts of a composition … [ভাগ: the parts]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L5/A",
+     "4/L5/B",
+     "4/L5/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-04-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-04-03",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write a composition from guiding questions (half-yearly form)",
+   "sourceText": "… and write twelve sentences on a topic. [ভাগ: from guiding questions] · Appendix §2: Q14 Composition from guiding questions — one of the topics of Units 1–9",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "1/SP/14",
+     "2/SP/14",
+     "3/SP/14",
+     "4/SP/14",
+     "5/SP/14",
+     "6/SP/14",
+     "7/SP/14",
+     "8/SP/14",
+     "9/SP/14"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-04-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-04-03.3",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-04-03",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write a composition from the topic alone (annual form)",
+   "sourceText": "… and write twelve sentences on a topic. [ভাগ: from the topic alone] · Appendix §3: Q14 Composition from the topic alone",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "18/L1/D",
+     "10/SP/14",
+     "11/SP/14",
+     "12/SP/14",
+     "13/SP/14",
+     "14/SP/14",
+     "15/SP/14",
+     "16/SP/14",
+     "17/SP/14",
+     "18/SP/14",
+     "19/SP/14"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-04-03.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Guided and free composition are different abilities (the scholarship catalogue keeps COMPOSITION-GUIDED and COMPOSITION apart): with questions the child only answers; without them the child must plan. 8 marks for about twelve sentences, 1 for the title, 1 for neat writing."
+  },
+  {
+   "code": "LO-C5-ENG-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "The simple future with will",
+   "sourceText": "Use will for the future … [ভাগ: will]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L2/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন — What will you do tomorrow? সন্তানকে will দিয়ে তিনটি বাক্য বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-13-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One lettered exercise; in the paper \"will\" is one of the six forms of Q6 and Q12 (05-02, 05-03)."
+  },
+  {
+   "code": "LO-C5-ENG-05-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Change the tense as directed — six forms (Q6)",
+   "sourceText": "… and change a sentence into six tense forms.",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L3/A",
+     "5/SP/6",
+     "7/SP/6",
+     "9/SP/6",
+     "10/SP/6",
+     "12/SP/6",
+     "14/SP/6",
+     "16/SP/6",
+     "18/SP/6",
+     "20/SP/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TENSE"
+   ],
+   "homeTipBn": "একটি বাক্য দিন (The students vote for their leaders); সন্তানকে simple past, present continuous, will, present perfect — নির্দেশমতো বদলাতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-05-01",
+    "LO-C4-ENG-03-04",
+    "LO-C4-ENG-09-04.3",
+    "LO-C4-ENG-11-01.2",
+    "LO-C4-ENG-18-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Six forms only: simple present, present continuous, simple past, past continuous, present perfect, future with will (Principal's ruling, ladder A4.2). The paper prints either this or parts of speech as Q6 — different abilities, two rows (catalogue: TENSE, PARTS-OF-SPEECH)."
+  },
+  {
+   "code": "LO-C5-ENG-05-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Right form of verbs in a text — six forms (Q12)",
+   "sourceText": "Appendix §2: Q12 Right form of verbs (six forms) — U5 L2–L3",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L3/B",
+     "1/SP/12",
+     "2/SP/12",
+     "3/SP/12",
+     "4/SP/12",
+     "5/SP/12",
+     "6/SP/12",
+     "7/SP/12",
+     "8/SP/12",
+     "9/SP/12",
+     "10/SP/12",
+     "11/SP/12",
+     "12/SP/12",
+     "13/SP/12",
+     "14/SP/12",
+     "15/SP/12",
+     "16/SP/12",
+     "17/SP/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": "ব্র্যাকেটে verb দিয়ে একটি ছোটো অনুচ্ছেদ লিখে দিন (Yesterday we ___ (go) …); সন্তানকে সঠিক রূপ বসাতে বলুন — কোন শব্দ দেখে কাল বুঝল, জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-05-02",
+    "LO-C4-ENG-01-03",
+    "LO-C4-ENG-03-04.2",
+    "LO-C4-ENG-09-04.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Units 1–4 use the four Class Four forms, Units 5–17 the six forms. From Unit 18 the paper needs all nine forms — row 18-02."
+  },
+  {
+   "code": "LO-C5-ENG-05-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Make a sentence negative or a question (class test)",
+   "sourceText": "Make a sentence negative or a question (class test).",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L3 box 1/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বাক্য দিন (He helps); সন্তানকে না-বোধক (He does not help) ও প্রশ্ন (Does he help?) বানাতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-01-04.1",
+    "LO-C4-ENG-01-04.2",
+    "LO-C4-ENG-13-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class test only (ladder level CT); the print has a \"read with your teacher\" box and no lettered exercise."
+  },
+  {
+   "code": "LO-C5-ENG-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Put sentences in order to make a story (Q9)",
+   "sourceText": "Put sentences in order to make a story, using time words and clue words.",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/L2/A",
+     "7/L2/B",
+     "20/L1/C",
+     "7/SP/9",
+     "8/SP/9",
+     "11/SP/9",
+     "13/SP/9",
+     "15/SP/9",
+     "18/SP/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-STORYORDER"
+   ],
+   "homeTipBn": "একটি ছোটো গল্পের সাতটি বাক্য এলোমেলো করে দিন; সন্তানকে First, Then, After that, Finally-র মতো শব্দ দেখে ক্রম ঠিক করতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-13-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The paper prints either this or words-into-sentences as Q9 (catalogue: REARRANGE-SENTENCES, REARRANGE-WORDS). One mark for each sentence in its right place."
+  },
+  {
+   "code": "LO-C5-ENG-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Tell the time with a.m. and p.m., past and to (Q11)",
+   "sourceText": "Tell the time with a.m. and p.m., and with past and to.",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L2/A",
+     "8/L2/B",
+     "1/SP/11",
+     "2/SP/11",
+     "3/SP/11",
+     "4/SP/11",
+     "5/SP/11",
+     "6/SP/11",
+     "7/SP/11",
+     "9/SP/11",
+     "10/SP/11",
+     "11/SP/11",
+     "13/SP/11",
+     "15/SP/11",
+     "19/SP/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NUMBERS"
+   ],
+   "homeTipBn": "ঘড়ি দেখিয়ে জিজ্ঞেস করুন — What time is it? সন্তানকে half past seven, quarter to nine, 7:15 a.m. — কথায় লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-07-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Most Scholarship Practice Q11 items mix numbers and the time in one question (\"Write the numbers and the time in words\"), so they are cited here and in 08-02; in the bank each sentence (a)–(e) is tagged to one row."
+  },
+  {
+   "code": "LO-C5-ENG-08-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Write cardinal and ordinal numbers, years and dates in words (Q11)",
+   "sourceText": "Write cardinal and ordinal numbers, years and dates in words.",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L3/A",
+     "1/SP/11",
+     "2/SP/11",
+     "3/SP/11",
+     "4/SP/11",
+     "5/SP/11",
+     "6/SP/11",
+     "7/SP/11",
+     "10/SP/11",
+     "11/SP/11",
+     "13/SP/11",
+     "15/SP/11",
+     "16/SP/11",
+     "18/SP/11",
+     "19/SP/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NUMBERS"
+   ],
+   "homeTipBn": "ক্যালেন্ডারের একটি তারিখ ও সাল দেখান; সন্তানকে কথায় লিখতে দিন — the twenty-first of February, two thousand and twenty-six, 125 → one hundred and twenty-five।",
+   "prereqCodes": [
+    "LO-C4-ENG-06-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Cardinal and ordinal numbers are one row here because the book practises them in one exercise and mixes them in every item; the scholarship catalogue has two topic rows (CARDINAL-NUMBERS, ORDINAL-NUMBERS) — see the reviewer notes."
+  },
+  {
+   "code": "LO-C5-ENG-08-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Fill in a form from given information (Q11)",
+   "sourceText": "Fill in a form from given information.",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L4/A",
+     "8/L4/B",
+     "8/SP/11",
+     "12/SP/11",
+     "14/SP/11",
+     "17/SP/11",
+     "20/SP/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FORM"
+   ],
+   "homeTipBn": "একটি সহজ ফর্ম (নাম, শ্রেণি, রোল, তারিখ, সময়) এঁকে দিন ও তথ্যগুলো একটি অনুচ্ছেদে লিখে দিন; সন্তানকে ফর্মটি পূরণ করতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-13-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Listen to an announcement or a text and say what it tells",
+   "sourceText": "Listen to and read announcements, and answer questions on them. [ভাগ: listening]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L1/A",
+     "9/L2/A",
+     "9/L3/A",
+     "14/L1/A"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "রেলস্টেশন বা বিদ্যালয়ের মতো একটি ছোটো ঘোষণা ইংরেজিতে পড়ে শোনান; সন্তানকে জিজ্ঞেস করুন — কখন, কোথায়, কোন প্ল্যাটফর্ম?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"Listen and read\" — the teacher reads, the class listens first. Listening is not in the written paper; the written questions on the same texts are in 01-01.3."
+  },
+  {
+   "code": "LO-C5-ENG-09-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Make WH questions from underlined words (Q8)",
+   "sourceText": "Make WH questions from underlined words. · Unit 16: Use the nine WH words and make questions on underlined words.",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L4/A",
+     "16/L2/A",
+     "1/SP/8",
+     "2/SP/8",
+     "3/SP/8",
+     "4/SP/8",
+     "5/SP/8",
+     "6/SP/8",
+     "7/SP/8",
+     "8/SP/8",
+     "9/SP/8",
+     "10/SP/8",
+     "11/SP/8",
+     "12/SP/8",
+     "13/SP/8",
+     "14/SP/8",
+     "15/SP/8",
+     "16/SP/8",
+     "17/SP/8",
+     "18/SP/8",
+     "19/SP/8",
+     "20/SP/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WHQ"
+   ],
+   "homeTipBn": "একটি বাক্যের একটি অংশের নিচে দাগ দিন (The girls will meet tomorrow); সন্তানকে সেই অংশ নিয়ে প্রশ্ন বানাতে বলুন (When will the girls meet?)।",
+   "prereqCodes": [
+    "LO-C4-ENG-01-04.4"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Until Unit 9 the Scholarship Practice Q8 uses the Class Four step (a WH question for a given answer); Unit 16 adds whom, whose and which. One row: the item form is the same all year."
+  },
+  {
+   "code": "LO-C5-ENG-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Understand a poem and answer questions on it (class work)",
+   "sourceText": "Read a poem aloud and understand it. [ভাগ: understand] · Units 10 and 15",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/L1/B",
+     "15/L1/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "কবিতাটি সন্তানকে আবৃত্তি করতে দিন; তারপর জিজ্ঞেস করুন — কবিতাটি কী নিয়ে, কোন লাইনটি তোমার ভালো লাগে, কেন?",
+   "prereqCodes": [
+    "LO-C4-ENG-14-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"No question is set on the poem itself\" in the annual paper — class work. Reading the poem aloud is in SK-READ-01."
+  },
+  {
+   "code": "LO-C5-ENG-10-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Find and match rhyming words",
+   "sourceText": "Find rhyming words. · Unit 15: Match rhyming words.",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/L1/C",
+     "15/L1/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "কবিতা থেকে একটি শব্দ বলুন (swing); সন্তানকে একই রকম শেষ ধ্বনির আরেকটি শব্দ খুঁজতে দিন (thing, sing)।",
+   "prereqCodes": [
+    "LO-C4-ENG-14-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-11-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Make and answer requests politely (oral)",
+   "sourceText": "Make and answer requests politely (oral).",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/L2 oral/—",
+     "11/L2 box 1/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "বাড়িতে ইংরেজিতে অনুরোধ করার খেলা করুন — \"Could you pass me the salt, please?\" — সন্তান \"Sure, here you are\" বা \"Sorry, I can't\" বলে উত্তর দেবে।",
+   "prereqCodes": [
+    "LO-C4-ENG-05-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-11-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PREP",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Prepositions of place; giving directions",
+   "sourceText": "Use prepositions of place and give directions.",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/L3/A",
+     "11/L3/B",
+     "11/L3/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "ঘরের জিনিস দেখিয়ে জিজ্ঞেস করুন — Where is the bag? (next to, between, opposite, behind); বাড়ি থেকে মসজিদে যাওয়ার পথ ইংরেজিতে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-03-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Examined in the paper only as a part of speech in Q6 (\"preposition\" — row 02-02); the fill-in and the directions task are class work."
+  },
+  {
+   "code": "LO-C5-ENG-12-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-ADJ",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "Find and use adjectives and adverbs",
+   "sourceText": "Find and use adjectives and adverbs; name them as parts of speech. [ভাগ: find and use]",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/L2/A",
+     "12/L2/B",
+     "12/L2/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS",
+    "QT-MAKESENT"
+   ],
+   "homeTipBn": "খাবারের সময় জিজ্ঞেস করুন — এই খাবারটি কেমন? (sweet, sour, healthy) আর তুমি কীভাবে খাও? (slowly, quietly) — কোনটি adjective, কোনটি adverb?",
+   "prereqCodes": [
+    "LO-C4-ENG-16-01",
+    "LO-C4-ENG-15-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Naming the part of speech (12/L2/D) is in 02-02. Adjectives and adverbs share one row: the two box exercises are the same task, and the pair is examined only inside Q6."
+  },
+  {
+   "code": "LO-C5-ENG-12-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "Should, shouldn't and must (class test)",
+   "sourceText": "Use should, shouldn't and must; … (class test). [ভাগ: should / must]",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/L3/A",
+     "12/L3 box 1/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "স্বাস্থ্যের নিয়ম নিয়ে পাঁচটি বাক্য বলতে দিন — We should eat vegetables. We shouldn't eat too much junk food. We must wash our hands.",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class test only (ladder level CT)."
+  },
+  {
+   "code": "LO-C5-ENG-12-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "How much and how many (class test)",
+   "sourceText": "… how much and how many (class test). [ভাগ: how much / how many]",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/L3 box 2/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "বাজারের জিনিস নিয়ে প্রশ্ন বানাতে দিন — How many bananas …? How much water …? গোনা যায় আর যায় না — তফাত বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-09-02",
+    "LO-C4-ENG-09-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class test only; the print has a \"read with your teacher\" box and no lettered exercise."
+  },
+  {
+   "code": "LO-C5-ENG-13-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "Make new words with prefixes and suffixes (Q7)",
+   "sourceText": "Make new words with prefixes (un-, re-, dis-) and suffixes (-ful, -ly, -ness, -ment, -er).",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/L2/A",
+     "13/L2/B",
+     "13/SP/7",
+     "14/SP/7",
+     "16/SP/7",
+     "18/SP/7",
+     "19/SP/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-AFFIX"
+   ],
+   "homeTipBn": "happy, use, kind, write, teach — প্রতিটি শব্দে un-, re-, -ful, -ness বা -er জুড়ে নতুন শব্দ বানাতে দিন ও অর্থ জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "New in Class Five (no earlier step). In the annual paper Q7 is either this or a / an / the (catalogue: AFFIX, ARTICLE)."
+  },
+  {
+   "code": "LO-C5-ENG-14-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 14,
+   "strand": null,
+   "labelBn": "Say what you and others want to be (oral)",
+   "sourceText": "Talk about what they want to be, with \"want to be\" (oral).",
+   "bookRef": {
+    "chapter": 14,
+    "lesson": null,
+    "exercises": [
+     "14/L2/A",
+     "14/L2 box 1/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন — What do you want to be? সন্তান উত্তর দেবে I want to be a …; ভাই-বোনের কথা বলবে He / She wants to be a …",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"want to be\" is not examined (Teacher Note, Unit 14; ladder level O)."
+  },
+  {
+   "code": "LO-C5-ENG-17-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 17,
+   "strand": null,
+   "labelBn": "Build a paragraph: topic sentence, supporting sentences, details, closing sentence",
+   "sourceText": "Write a paragraph in steps: topic sentence, supporting sentences, details, closing sentence.",
+   "bookRef": {
+    "chapter": 17,
+    "lesson": null,
+    "exercises": [
+     "17/L2/A",
+     "17/L2/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বিষয় দিন (Air Pollution); সন্তানকে প্রথমে মূল বাক্য, তারপর তিনটি সহায়ক বাক্য ও শেষে একটি সমাপ্তি বাক্য লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C5-ENG-04-03.1",
+    "LO-C4-ENG-SK-WRITE-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The paper has no separate paragraph question in Class Five — the skill is examined inside Q14 (04-03). Two lesson exercises: assemble a paragraph, and put its sentences in order."
+  },
+  {
+   "code": "LO-C5-ENG-18-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 18,
+   "strand": null,
+   "labelBn": "The simple past of regular and irregular verbs",
+   "sourceText": "Use the simple past of regular and irregular verbs.",
+   "bookRef": {
+    "chapter": 18,
+    "lesson": null,
+    "exercises": [
+     "18/L2/A",
+     "18/L2/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-TENSE"
+   ],
+   "homeTipBn": "দশটি verb বলুন (go, make, buy, visit, stitch …); সন্তানকে past form বলতে দিন এবং গতকালের তিনটি কাজ simple past-এ লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-09-04.2",
+    "LO-C4-ENG-09-04.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-18-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 18,
+   "strand": null,
+   "labelBn": "Right form of verbs — all nine forms, three with clue words (Q12)",
+   "sourceText": "Use the past perfect, future perfect and present perfect continuous with their clue words. · Appendix §3: Q12 Right form of verbs — all nine forms (three with clue words)",
+   "bookRef": {
+    "chapter": 18,
+    "lesson": null,
+    "exercises": [
+     "18/L3/A",
+     "18/L3/B",
+     "18/SP/12",
+     "19/SP/12",
+     "20/SP/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": "before, since ও by দিয়ে তিনটি বাক্য দিন (She ___ (live) here since 2022); সন্তানকে সূত্র-শব্দ দেখে সঠিক রূপ বসাতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-05-03",
+    "LO-C5-ENG-18-01",
+    "LO-C4-ENG-11-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The three new forms (past perfect, future perfect, present perfect continuous) come only in Q12, each with a clue word (before, since, by) — never in Q6 (Principal's ruling, ladder A4.2)."
+  },
+  {
+   "code": "LO-C5-ENG-19-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-ADJ",
+   "chapterNumber": 19,
+   "strand": null,
+   "labelBn": "Compare with -er / -est and more / most (class test)",
+   "sourceText": "Compare two or more things with -er / -est and more / most (class test).",
+   "bookRef": {
+    "chapter": 19,
+    "lesson": null,
+    "exercises": [
+     "19/L2 box 1/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "পরিবারের তিনজনের উচ্চতা বা তিনটি ফলের দাম তুলনা করতে দিন — taller, the tallest; more expensive, the most expensive.",
+   "prereqCodes": [
+    "LO-C5-ENG-12-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class test only (ladder level CT); the print has a \"read with your teacher\" box and no lettered exercise in the lesson."
+  },
+  {
+   "code": "LO-C5-ENG-20-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 20,
+   "strand": null,
+   "labelBn": "Write a story (Q14)",
+   "sourceText": "Find the elements of a story: characters, setting, problem, solution, ending, title. · Plan and write a story in four parts from word cues.",
+   "bookRef": {
+    "chapter": 20,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS",
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": "একটি পরিচিত গল্প (কাক ও কলসি) নিয়ে জিজ্ঞেস করুন — চরিত্র কে, কোথায়, সমস্যা কী, সমাধান কী? তারপর শব্দ-সংকেত দিয়ে নিজের একটি গল্প লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C5-ENG-07-01",
+    "LO-C5-ENG-04-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-20-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-20-01",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 20,
+   "strand": null,
+   "labelBn": "Find the elements of a story: characters, setting, problem, solution, ending, title",
+   "sourceText": "Find the elements of a story: characters, setting, problem, solution, ending, title.",
+   "bookRef": {
+    "chapter": 20,
+    "lesson": null,
+    "exercises": [
+     "20/L2/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-20-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C5-ENG-20-01",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 20,
+   "strand": null,
+   "labelBn": "Plan and write a story of about twelve sentences from word cues",
+   "sourceText": "Plan and write a story in four parts from word cues.",
+   "bookRef": {
+    "chapter": 20,
+    "lesson": null,
+    "exercises": [
+     "20/L2/B",
+     "20/L3/A",
+     "20/SP/14"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-20-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"Q14 may be a story from word cues\" (Teacher Note, Unit 20) — marked as a composition (8 + 1 + 1)."
+  },
+  {
+   "code": "LO-C5-ENG-SK-READ-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "Read a text, dialogue, email, story or poem aloud",
+   "sourceText": "Read a dialogue … / Read a text … / Read a poem aloud … (the first outcome of every unit) · Class tests: … reading (Teacher Note \"In the exam\")",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L1/A",
+     "2/L1/A",
+     "3/L1/A",
+     "4/L1/A",
+     "4/L2/A",
+     "5/L1/A",
+     "6/L1/A",
+     "7/L1/A",
+     "8/L1/A",
+     "10/L1/A",
+     "11/L1/A",
+     "12/L1/A",
+     "13/L1/A",
+     "15/L1/A",
+     "16/L1/A",
+     "17/L1/A",
+     "18/L1/B",
+     "19/L1/A",
+     "20/L1/A"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "প্রতিদিন পাঁচ মিনিট সন্তানকে পাঠ্যবইয়ের একটি অংশ জোরে পড়তে দিন; কঠিন শব্দ ভেঙে পড়তে সাহায্য করুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-SK-READ-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Rubric (class test \"reading\"). Reading in pairs is \"dialogue practice\" — a teaching method; the tagged skill is the child reading aloud alone."
+  },
+  {
+   "code": "LO-C5-ENG-SK-VOC-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": null,
+   "strand": "VOC",
+   "labelBn": "Give the Bengali meaning of an English word (Words to Know)",
+   "sourceText": "Class tests: the meaning test … — any correct Bengali meaning is accepted (Appendix §1; decision 62) · Words to Know: ten words from the unit",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L3/E",
+     "1/L3/F",
+     "2/L3/D",
+     "2/L3/E",
+     "3/L4/D",
+     "3/L4/E",
+     "4/L5/D",
+     "4/L5/E",
+     "5/L4/C",
+     "5/L4/D",
+     "6/L2/B",
+     "6/L2/C",
+     "7/L2/C",
+     "7/L2/D",
+     "8/L4/C",
+     "8/L4/D",
+     "9/L4/B",
+     "9/L4/C",
+     "10/L1/D",
+     "10/L1/E",
+     "11/L3/D",
+     "11/L3/E",
+     "12/L3/B",
+     "12/L3/C",
+     "13/L2/C",
+     "13/L2/D",
+     "14/L2/B",
+     "14/L2/C",
+     "15/L1/E",
+     "15/L1/F",
+     "16/L2/B",
+     "16/L2/C",
+     "17/L2/C",
+     "17/L2/D",
+     "18/L3/C",
+     "18/L3/D",
+     "19/L2/A",
+     "19/L2/B",
+     "20/L3/B",
+     "20/L3/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING"
+   ],
+   "homeTipBn": "প্রতি ইউনিটের Words to Know-এর দশটি শব্দ থেকে পাঁচটি বলুন; সন্তানকে বাংলা অর্থ বলতে ও লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class test in every unit (20 word lists + 20 meaning tests). The same words come in the paper as Q2 (make sentences — 01-02) and Q1 matching (01-01.2)."
+  },
+  {
+   "code": "LO-C5-ENG-SK-SPELL-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPELL",
+   "chapterNumber": null,
+   "strand": "SPELL",
+   "labelBn": "Spelling test and dictation (Words to Know)",
+   "sourceText": "Class tests — spelling and dictation: no mark for a word with a wrong letter (Appendix §1; decision 62)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L3/G",
+     "2/L3/F",
+     "3/L4/F",
+     "4/L5/F",
+     "5/L4/E",
+     "6/L2/D",
+     "7/L2/E",
+     "8/L4/E",
+     "9/L4/D",
+     "10/L1/F",
+     "11/L3/F",
+     "12/L3/D",
+     "13/L2/E",
+     "14/L2/D",
+     "15/L1/G",
+     "16/L2/D",
+     "17/L2/E",
+     "18/L3/E",
+     "19/L2/C",
+     "20/L3/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SPELL"
+   ],
+   "homeTipBn": "Words to Know-এর শব্দগুলো মুখে বলুন; সন্তান না দেখে বানান লিখবে — একটি অক্ষর ভুল হলে শব্দটি আবার তিনবার লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-ENG-SK-SPELL-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C5-ENG-SK-TRANS-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": null,
+   "strand": "TRANS",
+   "labelBn": "Translation and retranslation: English into Bangla and Bangla into English (class test)",
+   "sourceText": "Class test — translation and retranslation: one mark for each sentence; half a mark if one word is wrong; any correct translation is accepted. (decision 73) · Translation and retranslation (end of Words to Know): class test only.",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L3/H",
+     "2/L3/G",
+     "3/L4/G",
+     "4/L5/G",
+     "5/L4/F",
+     "6/L2/E",
+     "7/L2/F",
+     "8/L4/F",
+     "9/L4/E",
+     "10/L1/G",
+     "11/L3/G",
+     "12/L3/E",
+     "13/L2/F",
+     "14/L2/E",
+     "15/L1/H",
+     "16/L2/E",
+     "17/L2/F",
+     "18/L3/F",
+     "19/L2/D",
+     "20/L3/E",
+     "1/L3 box 1/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TRANSLATE"
+   ],
+   "homeTipBn": "ইউনিটের পাঁচটি ইংরেজি বাক্য বাংলায় আর পাঁচটি বাংলা বাক্য ইংরেজিতে লিখতে দিন; আগে verb খুঁজে কাল ঠিক করতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-ENG-15-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "In Class Four translation was a paper question (Q15) taught in Unit 15; in Class Five it is a class test at the end of every unit and never in the paper (decision 73) — so a strand. One row for both directions because each exercise has five sentences each way and one mark each; the reviewer may split it as Class Four does (15-01.1 / 15-01.2)."
+  },
+  {
+   "code": "LO-C5-ENG-SK-HW-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-HAND",
+   "chapterNumber": null,
+   "strand": "HW",
+   "labelBn": "Neat handwriting in written work",
+   "sourceText": "Q13: … the closing, the name and neat writing (2) · Q14: … 1 for neat writing (Appendix §1; decisions 28, 29)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L3/D",
+     "2/L3/C",
+     "3/L4/C",
+     "4/L5/C"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "সন্তানের ইংরেজি খাতা দেখুন — অক্ষর লাইনের ওপর, শব্দের মাঝে ফাঁক, কাটাকুটি কম; চিঠি ও রচনার পরিষ্কার লেখায় নম্বর আছে।",
+   "prereqCodes": [
+    "LO-C4-ENG-SK-HW-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Rubric. The four \"How … is marked\" boxes are the only place the print names neat writing; they are cited here and in the parts rows."
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 477,
+  "mapped": 477,
+  "unmapped": [],
+  "note": "exercisesTotal = every lettered or numbered exercise of the print (477): the 197 lettered exercises of the lessons (A, B, C … inside each lesson; the Words to Know list and its meaning test, spelling test and translation are lettered exercises in this book) and the 280 questions of the twenty Scholarship Practice sections (questions 1–14 of each unit, ref '<unit>/SP/<q>'). Unlettered blocks are activities: three speaking / class-test lessons with no lettered exercise ('<unit>/L<n> oral/—') and seven \"Read with your teacher\" boxes ('<unit>/L<n> box <k>/—')."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "Source = the final print C5_ENG_Print_v4.2 (IDML, built from C5_ENG_Book_v4.2_Student.docx, 9 Nov 2026), compared with C5_ENG_Book_v4.2_Writer-Reviewer. All 197 lettered lesson exercises are the same in both, letter for letter. The only difference: the Writer-Reviewer copy labels the three Words to Know tests of every unit \"(class test)\" — \"Write the meaning in Bengali (class test)\", \"Spelling test (class test)\", \"Translation and retranslation (class test)\" — and the student print drops the label (60 headings). The print wins; the rows say \"class test\" in their own text. The 280 Scholarship Practice questions were read from the print (in the Writer-Reviewer markdown they sit inside tables and were not machine-compared)."
+  },
+  {
+   "code": "LO-C5-ENG-01-01.3",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "Scholarship Practice — Unit 1: Q8 (e) prints the statement \"Aisha could not borrow a book because she had no library card.\" while Q3 (c) of the same paper asks \"Why could Aisha not borrow any books?\" and Q1 (d) asks whether \"Aisha has borrowed two books today\". A skill item answers a passage item — the defect the owner ruled out for scholarship papers (\"No item may answer another item\", docs/scholarship-eng-paper-structure.md, D-#689). Only Unit 1 was checked line by line for this; the book team should check the Q6–Q12 sentences of all twenty Scholarship Practice sections against Q1 and Q3."
+  },
+  {
+   "code": "LO-C5-ENG-08-01",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "Q11 of the Scholarship Practice has seven different instructions over the twenty units: \"Fill in the blanks with words (time, cardinal and ordinal numbers)\" (U1); \"Write the numbers and the time in words\" (U2–7, 11, 13, 19); \"Read the information and fill in the form\" (U8, 12, 14, 17, 20); \"Read the announcements … Fill in the table\" (U9); \"Write the numbers, the dates and the time in words\" (U10); \"… the years and the time …\" (U15); \"… the years and the dates …\" (U16, 18). Appendix §7 says the paper uses \"only the kinds of item the book's exercises and Scholarship Practice sections practise, with the same instructions\"; the scholarship structure has four fixed Q11 forms (form; cardinal numbers; ordinal numbers; time). The book team may want to settle on those."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Class-test topics with no lettered exercise in the print — only a \"read with your teacher\" box: commands and requests, kinds of sentence, opposites (Unit 3 Lesson 2), negatives and questions (Unit 5), how much / how many (Unit 12), comparison of adjectives (Unit 19). Their rows (03-01, 03-02, 03-03, 05-04, 12-03, 19-01) cite the box, so the five-test rule \"the book practises it in a numbered exercise\" is not met; the teacher sets the class test from the box. The book team could add one short lettered exercise to each. Three rows (03-01, 03-02, 03-03) cite the same lesson."
+  },
+  {
+   "code": "LO-C5-ENG-03-03",
+   "kind": "OTHER",
+   "text": "\"Opposites\" is in the title of Unit 3 Lesson 2 and in the \"Examined\" line (class tests: commands, kinds of sentence, opposites) but not in the unit's learning outcomes. The row uses the lesson title as its source text. The book team should add the outcome or drop the word from the title."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Units 6, 15 and 16 have no objective of their own (codes 06-, 15-, 16- are not used): Unit 6 practises the email (03-04) and the seen text (01-01); Units 10 and 15 are poems (\"no question is set on the poem itself\") — Unit 10 holds the two poem rows; Unit 16 repeats WH questions (09-02). As in Class Four, a question type sits in the unit where its Class Five step is taught (Appendix §5) and cites the Scholarship Practice of all twenty units. No values rows (owner ruling 2026-11-05); the book's lesson counts are not used; there is no earlier flat draft for Class Five English, so legacyCodes are empty. The ENG domain ladder is unchanged (Class One is locked: nothing renamed or removed)."
+  },
+  {
+   "code": "LO-C5-ENG-08-02",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): 15 of the 20 Scholarship Practice Q11 questions are not form-filling; 12 of them mix the time with numbers in one question, so they are cited by both 08-01 (time) and 08-02 (numbers and dates). In the bank each sentence (a)–(e) gets one row. If the reviewer prefers the scholarship catalogue's four Q11 rows, 08-02 splits into cardinal numbers / ordinal numbers and dates — the print gives one lesson exercise (8/L3/A) for both."
+  },
+  {
+   "code": "LO-C5-ENG-04-03.3",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): the composition is split into \"from guiding questions\" (Units 1–9, the half-yearly form) and \"from the topic alone\" (Units 10–19, the annual form) because the print changes the form at Unit 10 and the two are separate scholarship topics. The story from word cues (Unit 20) is its own objective (20-01) but uses the same question type (Q14). The paragraph (17-01) is class work: the Class Five paper has no paragraph question."
+  },
+  {
+   "code": "LO-C5-ENG-SK-TRANS-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): translation is one strand row for both directions (each unit's exercise has five sentences into Bangla and five into English, one mark each). Class Four has two rows (15-01.1 into Bangla, 15-01.2 into English). A child can pass one direction and fail the other, so the reviewer may want the same split here; it was kept as one row because the print never separates the two halves into lettered exercises."
+  },
+  {
+   "code": "LO-C5-ENG-05-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): four grammar rows rest on one or two lesson exercises and are examined only inside a paper question that has its own row — 02-01 common and collective nouns (inside Q6), 05-01 will (inside Q6 / Q12), 18-01 simple past (inside Q12), 12-01 adjectives and adverbs (inside Q6). They are kept because each is a book outcome and can be retaught alone; the reviewer may merge 05-01 into 05-02 and 18-01 into 18-02."
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ চতুর্থ শ্রেণির ইংরেজির সারি দেখায় (যেমন C4·03-01.3)। সূত্র: \"৫/L3/A\" = Unit 5, Lesson 3, exercise A; \"৫/SP/৬\" = Unit 5-এর Scholarship Practice-এর ৬ নং প্রশ্ন।\n\n**এই বইটি ছাপা হয়েছে** (C5_ENG_Print_v4.2) — গাছ ছাপা থেকেই করা; লেখক-পর্যালোচক কপির সাথে একমাত্র অমিল \"(class test)\" লেবেল (ফ্ল্যাগ ১)।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **প্রশ্নপত্রের ১৪টি প্রশ্নই গাছের মেরুদণ্ড।** প্রতিটি প্রশ্নের ধরন যে ইউনিটে পঞ্চম শ্রেণির ধাপটি শেখানো হয় সেখানে একটি সারি (পরিশিষ্ট §৫), আর সেই সারি ২০টি ইউনিটের Scholarship Practice-এর ঐ প্রশ্ন উদ্ধৃত করে — চতুর্থ শ্রেণির গাছের রীতি। তাই ইউনিট ৬, ১৫ ও ১৬-এর নিজস্ব সারি নেই।\n2. **যেখানে প্রশ্নপত্র দুই রূপের একটি ছাপে, সেখানে দুই সারি** — কারণ দুটি আলাদা দক্ষতা (বৃত্তির টপিক-তালিকার মতো): Q1 true/false বনাম matching (01-01.1, .2); Q6 parts of speech বনাম change the tense (02-02, 05-02); Q7 a/an/the বনাম prefix-suffix (04-02, 13-01); Q9 words বনাম story (02-03, 07-01); Q11 time-numbers বনাম form (08-01/08-02, 08-03); Q13 application, letter, email (01-04, 02-04, 03-04); Q14 guided বনাম free composition (04-03.2, .3)।\n3. **চিঠি, দরখাস্ত, ইমেইল ও রচনা — প্রতিটিতে \"অংশগুলো জানা\" আর \"লেখা\" আলাদা সারি** (যেমন 01-04.1 / 01-04.2), চতুর্থ শ্রেণির চিঠির মতো; নম্বরও সেভাবে ভাগ (২ + ৬ + ২)।\n4. **Right form of verbs দুই সারি:** ছয় রূপ (05-03 — Unit 1–17) ও নয় রূপ, তিনটি clue word-সহ (18-02 — Unit 18–20)। Q6-এর tense বদল সবসময় ছয় রূপে (অধ্যক্ষের সিদ্ধান্ত, ladder A4.2)।\n5. **Parts of speech এক সারি (02-02)** — আটটি শ্রেণি একই প্রশ্নে মেশানো থাকে। Interjection, preposition, adjective-adverb-এর পাঠ-অনুশীলন নিজের সারিতে (11-02, 12-01), কিন্তু \"দাগ দেওয়া শব্দটি কী\" সবসময় 02-02।\n6. **ক্লাস টেস্টের ছয়টি বিষয়ের ছাপায় কোনো অক্ষরযুক্ত অনুশীলনী নেই** — শুধু \"read with your teacher\" বাক্স (commands, kinds of sentence, opposites, negatives-questions, how much / how many, comparison)। সারি আছে, বাক্স উদ্ধৃত; বই-দলের জন্য ফ্ল্যাগ।\n7. **মৌখিক চারটি সারি রুব্রিক:** stress ও voice (01-03), listening (09-01), requests (11-01), want to be (14-01); সঙ্গে ধারা SK-READ-01 (জোরে পড়া) ও SK-HW-01 (পরিষ্কার লেখা)। জোড়ায় পড়া / কোরাস পাঠদানের পদ্ধতি — সারি নয়।\n8. **অনুবাদ এখন ধারা (SK-TRANS-01)** — চতুর্থ শ্রেণিতে প্রশ্নপত্রের প্রশ্ন ছিল, পঞ্চমে প্রতি ইউনিটের শেষে ক্লাস টেস্ট, প্রশ্নপত্রে কখনো নয় (decision 73)। এক সারি না দুই (বাংলায় / ইংরেজিতে) — আপনার সিদ্ধান্ত।\n\n**বৃত্তি পরীক্ষার সাথে মিল-অমিল।** বইয়ের নম্বর বণ্টন (পরিশিষ্ট §২, §৩) হুবহু প্রাথমিক বৃত্তি পরীক্ষা ২০২৬-এর ইংরেজি প্রশ্নপত্র — ১৪টি প্রশ্ন, ১০০ নম্বর, কোনো বহুনির্বাচনি নেই। প্রশ্নের ধরন বইয়ের ছক থেকেই নেওয়া; নতুন কিছু বানানো হয়নি। পার্থক্য: (ক) বৃত্তির অনুমোদিত কাঠামোয় (docs/scholarship-eng-paper-structure.md) ১৪ প্রশ্ন → ২৪ টপিক; Q11-এর চারটি রূপ (form, cardinal numbers, ordinal numbers, time) — বইয়ে Q11 দুই ধরন (সময়-সংখ্যা-তারিখ কথায়; ফর্ম) এবং cardinal ও ordinal একই অনুশীলনীতে, তাই গাছে তিন সারি (08-01 time, 08-02 numbers and dates, 08-03 form), চার নয়; (খ) অর্ধ-বার্ষিকে Q7 শুধু a/an/the ও Q12 ছয় রূপ — prefix-suffix ও নয় রূপ বার্ষিক ও বৃত্তিতে; (গ) অর্ধ-বার্ষিকে Q14 guiding questions থেকে, বার্ষিকে শুধু topic থেকে; বৃত্তিতে দুটির যেকোনোটি; (ঘ) বইয়ে গল্প লেখা (Unit 20 — Q14-এর রূপ) ও paragraph (Unit 17 — শ্রেণির কাজ) আছে, বৃত্তির কাঠামোয় এদের আলাদা টপিক নেই; (ঙ) meaning test, spelling-dictation, translation, reading — ক্লাস টেস্ট; বৃত্তির প্রশ্নপত্রে নেই; (চ) বার্ষিকে Q1–Q3 শুধু Unit 11–20-এর পাঠ থেকে, বৃত্তিতে পুরো বই থেকে।\n\n**বইয়ের সমস্যা বই-দলের জন্য:** Unit 1-এর Scholarship Practice-এ Q8 (e) বাক্যটি Q3 (c)-র উত্তর দিয়ে দেয় (D-#689-এর নিয়ম); Q11-এর সাত রকম নির্দেশ; ছয়টি ক্লাস-টেস্ট বিষয়ে অক্ষরযুক্ত অনুশীলনী নেই; \"Opposites\" শিখনফলে নেই; ছাপায় \"(class test)\" লেবেল বাদ পড়েছে (ইচ্ছাকৃত হতে পারে)।\n"
+}
