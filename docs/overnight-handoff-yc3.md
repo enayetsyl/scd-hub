@@ -39,11 +39,32 @@ moved).
 **Tests:** new `server/src/__tests__/class6Onboarding.test.ts` (the §3 acceptance). Assertions that
 pinned the old range were moved to the new edge (7 instead of 6) or the widened list:
 `homework`, `assignmentSchedule`, `englishDrive` (×2), `vocabWord`, `observationRota`,
-`contentSubjects2027` (Subject list).
+`contentSubjects2027` (Subject list), `activityBanks` (a bank whose text says "Class 3 – 6" now
+maps to 3–6 instead of being capped at 5: true on the next import of such a bank; stored banks are
+unchanged until re-imported).
 
 ## Verified (commands + result tails)
 
-VERIFY_PLACEHOLDER
+Run in this session, from the repo root unless noted.
+
+| Check | Result (tail) |
+|---|---|
+| `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` | `RESULT: PASS — all checks green` (new check: Class 6 teaching side) |
+| `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes` | `RESULT: PASS — all 19 lo-codes cases gate as intended` |
+| `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/subjects-2027` | `RESULT: PASS — all 20 subjects-2027 cases gate as intended` |
+| `node skills/_tools/verify_descriptive_carriers.mjs` | `RESULT: PASS — all 11 descriptive cases gate as intended` |
+| `node skills/_tools/verify_objective_tree.mjs docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json` | `ALL CHECKS PASSED` |
+| `npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue` | `RESULT: PASS — 11 catalogue files valid` |
+| `python3 server/import/validate_import.py docs/examples/envelope_C5_ENG_U09_S01.json --envelope-schema docs/import-contract.schema.json` | `RESULT: PASS (0 warn, 0 advisory) — importable` |
+| `node skills/_tools/verify_help_guides.mjs` | `ALL CHECKS PASSED` (365 files) |
+| `npm run build --workspace=shared` | exit 0 |
+| `npm run typecheck --workspace=shared` | exit 0 |
+| server `tsc --noEmit` (`NODE_OPTIONS=--max-old-space-size=6144`; the default 2 GB heap runs out here) | 0 errors |
+| app `tsc --noEmit` (same heap flag) | 0 errors |
+| `npx jest --runInBand src/__tests__/class6Onboarding.test.ts` (server) | `Tests: 9 passed, 9 total` |
+| touched suites `--runInBand` (homework, assignmentSchedule, englishDrive, vocabWord, routineSlots, popupNotice, printRequest, examPapers, observationRota, aiAssist, homeworkSummary, examSyllabusRead, guardianPortal, marksDrivers ×2, classToken, contentSubjects2027, activityBanks, classTestWeakObjectives) | all PASS |
+| `npx expo export --platform web` (app) | `App exported to: …/web-export`, exit 0 |
+| full server suite `npx jest --maxWorkers=2` | FULLSUITE_PLACEHOLDER |
 
 ## Not done
 
