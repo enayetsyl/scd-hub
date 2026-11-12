@@ -23,6 +23,9 @@ import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
+/** Matches the server's EXAM_POOL_MAX_IDS. */
+const MAX = 5000;
+
 const fill = (tpl: string, vars: Record<string, string | number>): string =>
   tpl.replace(/\{(\w+)\}/g, (_m, k: string) => String(vars[k] ?? ""));
 
@@ -41,6 +44,9 @@ export function ExamPoolPanel({ filter, onChanged }: { filter: QuestionFilterVar
   const [result, setResult] = useState<ExamPoolBulkResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const count = data?.questionsCount ?? 0;
+  const needClass = !filter.subject || filter.classLevel == null;
+  const tooMany = count > MAX;
+  const filterBlocked = needClass || tooMany;
 
   function done(r: ExamPoolBulkResult): void {
     setResult(r);
@@ -82,9 +88,11 @@ export function ExamPoolPanel({ filter, onChanged }: { filter: QuestionFilterVar
       <Muted>{STR.qExamBulkHint}</Muted>
       <Muted>{fetching ? STR.loading : fill(STR.qExamFilterCount, { n: bnNum(count) })}</Muted>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
-        <Button title={fill(STR.qExamHoldAll, { n: bnNum(count) })} disabled={busy || count === 0} onPress={() => void applyFilter(true)} />
-        <Button title={fill(STR.qExamReleaseAll, { n: bnNum(count) })} variant="secondary" disabled={busy || count === 0} onPress={() => void applyFilter(false)} />
+        <Button title={fill(STR.qExamHoldAll, { n: bnNum(count) })} disabled={busy || count === 0 || filterBlocked} onPress={() => void applyFilter(true)} />
+        <Button title={fill(STR.qExamReleaseAll, { n: bnNum(count) })} variant="secondary" disabled={busy || count === 0 || filterBlocked} onPress={() => void applyFilter(false)} />
       </View>
+
+      {needClass ? <Muted>{STR.qExamNeedClass}</Muted> : tooMany ? <Muted>{fill(STR.qExamTooMany, { n: bnNum(count), max: bnNum(MAX) })}</Muted> : null}
 
       <Body style={{ fontWeight: "700", marginTop: space(2) }}>{STR.qExamPasteTitle}</Body>
       <Field label="" value={paste} onChangeText={setPaste} placeholder={STR.qExamPastePlaceholder} multiline autoCapitalize="characters" />
@@ -97,11 +105,11 @@ export function ExamPoolPanel({ filter, onChanged }: { filter: QuestionFilterVar
       {result ? (
         <>
           <Notice
-            tone={result.notFound.length > 0 ? "warn" : "ok"}
-            message={fill(STR.qExamResult, { marked: bnNum(result.marked), notFound: bnNum(result.notFound.length), unchanged: bnNum(result.unchanged.length) })}
+            tone={result.notFoundCount > 0 ? "warn" : "ok"}
+            message={fill(STR.qExamResult, { marked: bnNum(result.marked), notFound: bnNum(result.notFoundCount), unchanged: bnNum(result.unchangedCount) })}
           />
-          {result.notFound.length > 0 ? (
-            <Muted>{fill(STR.qExamNotFound, { ids: result.notFound.slice(0, 50).join(", ") + (result.notFound.length > 50 ? " …" : "") })}</Muted>
+          {result.notFoundCount > 0 ? (
+            <Muted>{fill(STR.qExamNotFound, { ids: result.notFound.slice(0, 50).join(", ") + (result.notFoundCount > 50 ? " …" : "") })}</Muted>
           ) : null}
         </>
       ) : null}

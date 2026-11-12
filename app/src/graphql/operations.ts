@@ -9776,7 +9776,7 @@ export const SET_QUESTION_EXAM_POOL = gql<
   }
 `;
 
-export interface ExamPoolBulkResult { marked: number; notFound: string[]; unchanged: string[] }
+export interface ExamPoolBulkResult { marked: number; notFound: string[]; notFoundCount: number; unchanged: string[]; unchangedCount: number }
 
 /** Hold / release many questions by a pasted list of ids (PR-I) — marked / not found / unchanged. */
 export const MARK_EXAM_POOL = gql<
@@ -9784,7 +9784,7 @@ export const MARK_EXAM_POOL = gql<
   { qids: string[]; on: boolean }
 >`
   mutation MarkExamPool($qids: [String!]!, $on: Boolean!) {
-    markExamPool(qids: $qids, on: $on) { marked notFound unchanged }
+    markExamPool(qids: $qids, on: $on) { marked notFound notFoundCount unchanged unchangedCount }
   }
 `;
 
@@ -9820,7 +9820,7 @@ export const MARK_EXAM_POOL_BY_FILTER = gql<
   { filter: QuestionFilterVars; expectedCount: number; on: boolean }
 >`
   mutation MarkExamPoolByFilter($filter: QuestionFilterInput!, $expectedCount: Int!, $on: Boolean!) {
-    markExamPoolByFilter(filter: $filter, expectedCount: $expectedCount, on: $on) { marked notFound unchanged }
+    markExamPoolByFilter(filter: $filter, expectedCount: $expectedCount, on: $on) { marked notFound notFoundCount unchanged unchangedCount }
   }
 `;
 

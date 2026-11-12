@@ -508,11 +508,17 @@ export interface ExamPoolResult {
 export interface ExamPoolBulkResult {
   /** Questions whose state changed. */
   marked: number;
-  /** qids that match no live (current, not retired) question. */
+  /** qids that match no live (current, not retired) question — the first EXAM_POOL_LIST_CAP only. */
   notFound: string[];
-  /** qids that already held the asked state. */
+  notFoundCount: number;
+  /** qids that already held the asked state — the first EXAM_POOL_LIST_CAP only. */
   unchanged: string[];
+  unchangedCount: number;
 }
+
+/** Id arrays in a response are capped here; the totals are in the *Count fields. */
+export const EXAM_POOL_LIST_CAP = 200;
+const capped = (l: string[]): string[] => l.slice(0, EXAM_POOL_LIST_CAP);
 
 function examPoolAudit(on: boolean, actorId: string, actorRole: string | undefined, id: string, qid: string | null, subject: string, classLevel: number, how: string) {
   return {
@@ -548,9 +554,14 @@ export async function setQuestionExamPool(input: {
   return { artifactId: doc._id.toString(), qid, examPool: input.on, changed: true };
 }
 
-/** One write batch holds up to this many ids; a pasted list of a few hundred is one call. */
+/** The most ids (or filter matches) one bulk call takes. */
 export const EXAM_POOL_MAX_IDS = 5000;
 const EXAM_POOL_CHUNK = 500;
+
+/** Pasted ids -> the bank's form: trimmed, Bangla digits to ASCII, upper case. */
+export function normaliseQid(q: string): string {
+  return q.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))).trim().toUpperCase();
+}
 
 /** Apply the mark to the given artifacts (already known to be live questions) and audit each change. */
 async function applyExamPool(
@@ -575,8 +586,9 @@ async function applyExamPool(
 
 /**
  * Hold or release many questions named by their ids (`QP-…`) — the Principal pastes the list the
- * question-bank run proposed. Reports marked / not found / unchanged; a duplicate id counts once.
- * Looks every id up in ONE query per chunk, so a few hundred ids is a single call.
+ * question-bank run proposed. Ids are normalised (trim, upper case, Bangla digits to ASCII) and
+ * de-duplicated. ONE `$in` read for the whole list (at most EXAM_POOL_MAX_IDS), then the writes.
+ * Reports marked / not found / unchanged.
  */
 export async function markExamPool(input: {
   qids: string[];
@@ -584,17 +596,17 @@ export async function markExamPool(input: {
   actorId: string;
   actorRole?: string;
 }): Promise<ExamPoolBulkResult> {
-  const wanted = [...new Set(input.qids.map((q) => q.trim()).filter(Boolean))];
+  const wanted = [...new Set(input.qids.map(normaliseQid).filter(Boolean))];
   if (wanted.length > EXAM_POOL_MAX_IDS) {
     throw new ReviewError(`Too many ids in one go (${wanted.length}) — the limit is ${EXAM_POOL_MAX_IDS}`);
   }
   const found = new Map<string, { _id: Types.ObjectId; subject: string; classLevel: number; qid: string; held: boolean }>();
-  for (let i = 0; i < wanted.length; i += EXAM_POOL_CHUNK) {
+  if (wanted.length > 0) {
     const rows = await ContentArtifact.find({
       docType: QUESTION_DOC_TYPE,
       current: true,
       retiredAt: null,
-      "envelopeJson.payload.qid": { $in: wanted.slice(i, i + EXAM_POOL_CHUNK) },
+      "envelopeJson.payload.qid": { $in: wanted },
     })
       .select("subject classLevel examPoolAt envelopeJson.payload.qid")
       .lean();
@@ -607,13 +619,15 @@ export async function markExamPool(input: {
   const unchanged = wanted.filter((q) => found.has(q) && found.get(q)!.held === input.on);
   const todo = wanted.filter((q) => found.has(q) && found.get(q)!.held !== input.on).map((q) => found.get(q)!);
   await applyExamPool(todo, input.on, input.actorId, input.actorRole, "id-list");
-  return { marked: todo.length, notFound, unchanged };
+  return { marked: todo.length, notFound: capped(notFound), notFoundCount: notFound.length, unchanged: capped(unchanged), unchangedCount: unchanged.length };
 }
 
 /**
- * Hold or release every question a filter matches (PR-I). The caller names the `expectedCount` it
- * showed the user; if the filter now matches a different number nothing is changed and the call is
- * refused, so a list that moved under the Principal's finger is never marked blind.
+ * Hold or release every question a filter matches (PR-I). Guard rails, all checked BEFORE any write:
+ *  - the filter must name a subject AND a class, so "everything" is never one tap away;
+ *  - it must match at most EXAM_POOL_MAX_IDS questions;
+ *  - the caller names the `expectedCount` it showed the user; a different number refuses the call.
+ * The response carries counts and at most EXAM_POOL_LIST_CAP ids.
  */
 export async function markExamPoolByFilter(input: {
   filter: Record<string, unknown>;
@@ -622,12 +636,18 @@ export async function markExamPoolByFilter(input: {
   actorId: string;
   actorRole?: string;
 }): Promise<ExamPoolBulkResult> {
-  const rows = await ContentArtifact.find({ ...input.filter, docType: QUESTION_DOC_TYPE, current: true, retiredAt: null })
-    .select("subject classLevel examPoolAt envelopeJson.payload.qid")
-    .lean();
-  if (rows.length !== input.expectedCount) {
-    throw new ReviewError(`The filter now matches ${rows.length} questions, not ${input.expectedCount} — look again before applying`);
+  if (!input.filter.subject || input.filter.classLevel == null) {
+    throw new ReviewError("Choose a subject and a class first — a bulk hold by filter needs both");
   }
+  const where = { ...input.filter, docType: QUESTION_DOC_TYPE, current: true, retiredAt: null };
+  const count = await ContentArtifact.countDocuments(where);
+  if (count > EXAM_POOL_MAX_IDS) {
+    throw new ReviewError(`The filter matches ${count} questions — narrow it to ${EXAM_POOL_MAX_IDS} or fewer`);
+  }
+  if (count !== input.expectedCount) {
+    throw new ReviewError(`The filter now matches ${count} questions, not ${input.expectedCount} — look again before applying`);
+  }
+  const rows = await ContentArtifact.find(where).select("subject classLevel examPoolAt envelopeJson.payload.qid").lean();
   const qidOf = (r: (typeof rows)[number]) => {
     const q = ((r.envelopeJson as Record<string, unknown>)?.payload as Record<string, unknown> | undefined)?.qid;
     return typeof q === "string" ? q : null;
@@ -637,7 +657,7 @@ export async function markExamPoolByFilter(input: {
     .map((r) => ({ _id: r._id as Types.ObjectId, subject: r.subject, classLevel: r.classLevel, qid: qidOf(r) }));
   const unchanged = rows.filter((r) => (r.examPoolAt != null) === input.on).map(qidOf).filter((q): q is string => q !== null);
   await applyExamPool(todo, input.on, input.actorId, input.actorRole, "filter");
-  return { marked: todo.length, notFound: [], unchanged };
+  return { marked: todo.length, notFound: [], notFoundCount: 0, unchanged: capped(unchanged), unchangedCount: rows.length - todo.length };
 }
 
 /** Retired questions are hidden everywhere a question is CHOSEN — the bank, the assign

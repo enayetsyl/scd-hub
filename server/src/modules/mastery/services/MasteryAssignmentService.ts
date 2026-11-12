@@ -54,7 +54,7 @@ import { masteryLevelLabels } from "./MasteryReviewService";
 import { objectiveGrain } from "./MasteryGuardianService";
 import type { MasteryLevelLabels } from "@scd/shared";
 
-import { examPoolClause, type ExamPoolLens } from "../examHold";
+import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -83,11 +83,18 @@ export async function goldBank(codes: string[], examPool: ExamPoolLens = "exclud
   })
     .select("envelopeJson.tags envelopeJson.payload")
     .lean(); // bounded: one class × subject's gold questions
+  // PR-I: the other parts of a passage with a held part stay out too (same stimulus_ref).
+  let sibling = new Set<string>();
+  if (examPool === "exclude") {
+    sibling = await heldStimulusRefs(arts.map((a) => stimulusRefOf((a.envelopeJson as Record<string, unknown> | undefined)?.payload as Record<string, unknown> | undefined)).filter((x): x is string => Boolean(x)));
+  }
   return arts.flatMap((a) => {
     const env = (a.envelopeJson ?? {}) as Record<string, unknown>;
     const payload = env.payload as Record<string, unknown> | undefined;
     const qid = payload?.qid as string | undefined;
     if (!qid) return [];
+    const ref = stimulusRefOf(payload);
+    if (ref && sibling.has(ref)) return [];
     const text = payload?.question_text;
     return [{
       artifactId: String(a._id),

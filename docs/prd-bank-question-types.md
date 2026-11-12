@@ -42,3 +42,51 @@ REF-19 optional (PR-H), exam pool (PR-I).
 
 Tests: `server/src/__tests__/masteryBankQt.test.ts` (includes items copied from the produced
 `C1_MATH_U07_bank_v1.json`, `fixtures/c1math_u07_qt_items.json`).
+
+---
+
+# PR-I — questions held for the exam papers (D-#1408)
+
+## Why
+The school uses the bank all year for homework, assignments, re-tests and class tests. Questions set
+aside for the half-yearly and annual papers must never be given out before the exam.
+
+## What
+- `ContentArtifact.examPoolAt / examPoolBy` on a question (same shape and re-import rule as the
+  important mark, D-#550: the new version of the same qid inherits the hold).
+- Set and cleared by `question:manage` (`question_bank:edit` / `question_bank:delete`: Principal, Office):
+  - one at a time from the question preview;
+  - in bulk by the current filter: the filter must name a subject AND a class, may match at most 5000
+    questions, and the count shown first is sent back (`expectedCount`) so a moved list is refused;
+  - in bulk by a pasted list of qids (max 5000, one read): ids are trimmed, upper-cased and Bangla
+    digits made ASCII; the result is marked / not found / unchanged with counts, and at most 200 ids
+    per list.
+  Every real change writes a `QUESTION_EXAM_HELD` / `QUESTION_EXAM_RELEASED` audit row; repeating a
+  state writes nothing.
+- Badge and filter "পরীক্ষার জন্য রাখা" in the bank list (teachers see both). Server arg
+  `examPool: only | exclude | any`: `any` for the bank list, `exclude` for pickers (the new-paper picker
+  passes it explicitly).
+- Held questions are left out of every picker (`goldBank`: assignment Part A/B and swap, homework
+  draft, extra homework, re-test) and refused by name in `createPaper` (HW, CT), the extra-homework
+  create, the homework top-up, and the question-bank sets (`addQuestionToSet`, `createSetWithQuestions`).
+- Passages: when a part of a stimulus is held, its sibling parts (same `stimulus_ref`) are left out and
+  refused too ("same passage as a held question").
+- Coverage: `goldCount` = usable gold, `heldCount` = held gold, per row and per cell; the type CSV has a
+  `held` column.
+
+## Not in this slice
+- Drafts and papers made before a hold are not re-checked (documented in D-#1408); `assembleSet` does
+  not re-check the basket either.
+- The exam-paper builder, the only future reader that asks for `any` / `only`.
+
+## Acceptance
+1. A held question is never offered by the assignment builder, the homework draft, the extra homework
+   or the re-test; `createPaper` and the bank sets refuse it for every source, with the reason.
+2. Bulk marking by id list reports marked / not found / unchanged (lower-case and Bangla-digit ids
+   match); by filter it refuses a filter without subject and class, over 5000 matches, or a stale count.
+   Re-import keeps the mark.
+3. A teacher without `question:manage` cannot set or clear it.
+4. Holding one part of a passage keeps its sibling parts out of every picker and set.
+
+Tests: `server/src/__tests__/examPool.test.ts`, `questions.test.ts` (re-import), `masteryBankQt.test.ts`
+(CSV header).

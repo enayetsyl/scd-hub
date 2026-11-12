@@ -15,6 +15,7 @@ import { setExamMinutes, setDurationMinutes } from "@scd/shared";
 import type { Types } from "mongoose";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
+import { heldRefusal } from "../../mastery/examHold";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
 import { TrackerRecord } from "../../trackers/models/TrackerRecord";
 import type { SetType } from "@scd/shared";
@@ -115,6 +116,17 @@ function assertPublished(artifact: {
   }
 }
 
+/**
+ * PR-I (D-#1408): another part (same `stimulus_ref`) of a passage that has a held part is refused as well.
+ * Only questions that carry a stimulus_ref cost a query.
+ */
+async function assertNotSiblingOfHeld(artifact: { _id: unknown; envelopeJson?: unknown }): Promise<void> {
+  const ref = ((artifact.envelopeJson as Record<string, unknown> | undefined)?.payload as Record<string, unknown> | undefined)?.stimulus_ref;
+  if (typeof ref !== "string" || !ref.trim()) return;
+  const why = await heldRefusal([String(artifact._id)]);
+  if (why) throw new Error(why);
+}
+
 /** Add a question artifact to the basket. Write-scope enforced by the resolver.
  *  Emits a de-identified questions_selected CorpusEvent (J3.1, ADR-005). */
 export async function addQuestionToSet(
@@ -131,6 +143,7 @@ export async function addQuestionToSet(
   if (!artifact) throw new Error("Question artifact not found");
   if (artifact.docType !== "question") throw new Error("Artifact is not a question");
   assertPublished(artifact);
+  await assertNotSiblingOfHeld(artifact);
 
   const env = artifact.envelopeJson as Record<string, unknown>;
   const payload = (env.payload ?? {}) as Record<string, unknown>;
@@ -198,6 +211,13 @@ export async function createSetWithQuestions(
   const artifacts = await ContentArtifact.find({ _id: { $in: ids } }).lean();
   const byId = new Map(artifacts.map((a) => [a._id.toString(), a]));
 
+  for (const artifactId of ids) {
+    const artifact = byId.get(artifactId);
+    if (artifact && artifact.docType === "question") {
+      assertPublished(artifact);
+      await assertNotSiblingOfHeld(artifact);
+    }
+  }
   const items = ids.map((artifactId) => {
     const artifact = byId.get(artifactId);
     if (!artifact) throw new Error("Question artifact not found");

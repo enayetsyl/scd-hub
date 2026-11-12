@@ -35,11 +35,13 @@ import { importCatalogue, savePolicy, setEnablement } from "../modules/mastery/s
 import { confirmPaper, createPaper, saveResults } from "../modules/mastery/services/MasteryWorkService";
 import { createExtraHomework, extraHomeworkPreview, homeworkDraft } from "../modules/mastery/services/MasteryHomeworkService";
 import { buildRetest, decideAction, recordHeld } from "../modules/mastery/services/MasteryActionService";
-import { buildAssignment, deleteAssignment, goldBank, sheetDetail } from "../modules/mastery/services/MasteryAssignmentService";
+import { buildAssignment, deleteAssignment, editSheet, goldBank, sheetDetail } from "../modules/mastery/services/MasteryAssignmentService";
 import { AssessmentSet } from "../modules/assessment/models/AssessmentSet";
 import { addQuestionToSet, createSetWithQuestions } from "../modules/assessment/services/AssessmentService";
 import { bankCoverage } from "../modules/mastery/services/MasteryBankCoverageService";
-import { markExamPool, markExamPoolByFilter, setQuestionExamPool } from "../modules/questions/services/QuestionEditService";
+import { assertTopupSelectedFromPool } from "../modules/trackers/services/HomeworkResubmissionService";
+import { MasteryAssignment } from "../modules/mastery/models/MasteryAssignment";
+import { EXAM_POOL_MAX_IDS, markExamPool, markExamPoolByFilter, setQuestionExamPool } from "../modules/questions/services/QuestionEditService";
 import { builder } from "../schema";
 import "../modules/mastery/resolvers/masteryCatalogue";
 import "../modules/questions/resolvers/questions";
@@ -145,12 +147,12 @@ describe("holding questions", () => {
 
   it("by id list: marked / not found / unchanged, and a repeat changes nothing", async () => {
     const first = await markExamPool({ qids: [Q01, " " + Q02 + " ", "QP-NOPE-1", Q01, ""], on: true, actorId: ACTOR });
-    expect(first).toEqual({ marked: 2, notFound: ["QP-NOPE-1"], unchanged: [] });
+    expect(first).toEqual({ marked: 2, notFound: ["QP-NOPE-1"], notFoundCount: 1, unchanged: [], unchangedCount: 0 });
     const second = await markExamPool({ qids: [Q01, Q02, Q03], on: true, actorId: ACTOR });
     expect(second.marked).toBe(1); // Q03
     expect(second.unchanged.sort()).toEqual([Q01, Q02]);
     const rel = await markExamPool({ qids: [Q03, "QP-NOPE-2"], on: false, actorId: ACTOR });
-    expect(rel).toEqual({ marked: 1, notFound: ["QP-NOPE-2"], unchanged: [] });
+    expect(rel).toEqual({ marked: 1, notFound: ["QP-NOPE-2"], notFoundCount: 1, unchanged: [], unchangedCount: 0 });
     const held = await ContentArtifact.find({ examPoolAt: { $ne: null } }).lean();
     expect(held.map((d) => (d.envelopeJson as any).payload.qid).sort()).toEqual(HELD);
     expect(await Audit.countDocuments({ eventKind: "QUESTION_EXAM_HELD", "meta.how": "id-list" })).toBe(3);
@@ -168,7 +170,7 @@ describe("holding questions", () => {
   });
 
   it("by filter: refused when the count moved, applied when it matches", async () => {
-    const filter = { docType: "question", current: true, subject: "MATH", "envelopeJson.payload.qid": { $in: [Q03, Q04] } };
+    const filter = { docType: "question", current: true, subject: "MATH", classLevel: 3, "envelopeJson.payload.qid": { $in: [Q03, Q04] } };
     await expect(markExamPoolByFilter({ filter, expectedCount: 5, on: true, actorId: ACTOR })).rejects.toThrow(/matches 2 questions, not 5/);
     expect(await ContentArtifact.countDocuments({ "envelopeJson.payload.qid": { $in: [Q03, Q04] }, examPoolAt: { $ne: null } })).toBe(0);
     const ok = await markExamPoolByFilter({ filter, expectedCount: 2, on: true, actorId: ACTOR });
@@ -338,5 +340,115 @@ describe("coverage CSV carries the held column", () => {
     const lines = v.typeCsv.split(/\r?\n/);
     expect(lines[0]).toBe("objective,type,gold,pending,held");
     expect(lines).toContain(`${LO},-,2,0,2`);
+  });
+});
+
+describe("bulk guard rails (review fixes)", () => {
+  it("by filter: needs a subject AND a class", async () => {
+    await expect(markExamPoolByFilter({ filter: { subject: "MATH" }, expectedCount: 4, on: true, actorId: ACTOR })).rejects.toThrow(/subject and a class/);
+    await expect(markExamPoolByFilter({ filter: { classLevel: 3 }, expectedCount: 4, on: true, actorId: ACTOR })).rejects.toThrow(/subject and a class/);
+    const gqlRes = await gql(`mutation { markExamPoolByFilter(filter: {subject: "MATH"}, expectedCount: 4, on: true) { marked } }`, "PRINCIPAL");
+    expect(gqlRes.errors?.[0].message).toMatch(/subject and a class/);
+  });
+
+  it("by filter: refuses a match above the cap before any write", async () => {
+    const many = Array.from({ length: EXAM_POOL_MAX_IDS + 1 }, (_, i) => ({
+      ...base, subject: "SCI", classLevel: 9, envelopeJson: { tags: { topic_tag: "TOP-X" }, payload: { qid: `QP-CAP-${i}`, question_text: "x" } },
+    }));
+    await ContentArtifact.insertMany(many, { ordered: false });
+    await expect(markExamPoolByFilter({ filter: { subject: "SCI", classLevel: 9 }, expectedCount: many.length, on: true, actorId: ACTOR })).rejects.toThrow(/narrow it to 5000/);
+    expect(await ContentArtifact.countDocuments({ subject: "SCI", examPoolAt: { $ne: null } })).toBe(0);
+  });
+
+  it("by filter: response carries counts and a capped id list; audit rows are written (how: filter)", async () => {
+    const f = { subject: "SCI", classLevel: 9, "envelopeJson.payload.qid": { $regex: "^QP-CAP-1" } };
+    const n = await ContentArtifact.countDocuments({ subject: "SCI", "envelopeJson.payload.qid": { $regex: "^QP-CAP-1" } });
+    const res = await markExamPoolByFilter({ filter: f, expectedCount: n, on: true, actorId: ACTOR });
+    expect(res.marked).toBe(n);
+    expect(res.marked).toBeGreaterThan(200);
+    expect(await Audit.countDocuments({ eventKind: "QUESTION_EXAM_HELD", "meta.how": "filter", "meta.qid": { $regex: "^QP-CAP-1" } })).toBe(n);
+    const again = await markExamPoolByFilter({ filter: f, expectedCount: n, on: true, actorId: ACTOR });
+    expect(again.marked).toBe(0);
+    expect(again.unchangedCount).toBe(n);
+    expect(again.unchanged).toHaveLength(200);
+  });
+
+  it("id list: over the cap is refused; lower-case and Bangla-digit ids match", async () => {
+    await expect(markExamPool({ qids: Array.from({ length: EXAM_POOL_MAX_IDS + 1 }, (_, i) => `QP-Z-${i}`), on: true, actorId: ACTOR })).rejects.toThrow(/limit is 5000/);
+    const r = await markExamPool({ qids: ["  qp-ex-q০4 "], on: true, actorId: ACTOR });
+    expect(r).toMatchObject({ marked: 1, notFoundCount: 0 });
+    expect((await ContentArtifact.findById(art.get(Q04)!).lean())!.examPoolAt).toBeInstanceOf(Date);
+    await markExamPool({ qids: [Q04], on: false, actorId: ACTOR });
+  });
+
+  it("questionsCount and the bulk filter agree with search and loCodes through GraphQL", async () => {
+    const count = async (f: string) => ((await gql(`query { questionsCount(filter: {${f}}) }`, "PRINCIPAL")).data as any).questionsCount as number;
+    expect(await count(`subject: "MATH", classLevel: 3, loCodes: ["${LO}"]`)).toBe(4);
+    expect(await count(`subject: "MATH", classLevel: 3, search: "Q03"`)).toBe(1);
+    expect(await count(`subject: "MATH", classLevel: 3, loCodes: ["LO-NONE"]`)).toBe(0);
+    const list = await gql(`query { questions(subject: "MATH", classLevel: 3, search: "Q03", limit: 50) { qid } }`, "PRINCIPAL");
+    expect((list.data as any).questions).toHaveLength(1);
+    const m = `mutation($n: Int!, $on: Boolean!) { markExamPoolByFilter(filter: {subject: "MATH", classLevel: 3, search: "Q03"}, expectedCount: $n, on: $on) { marked unchangedCount } }`;
+    const bad = await gql(m, "PRINCIPAL", { n: 2, on: true });
+    expect(bad.errors?.[0].message).toMatch(/now matches 1/);
+    const ok = await gql(m, "PRINCIPAL", { n: 1, on: true });
+    expect((ok.data as any).markExamPoolByFilter).toEqual({ marked: 1, unchangedCount: 0 });
+    await gql(m, "PRINCIPAL", { n: 1, on: false });
+  });
+});
+
+describe("the other parts of a held passage stay out too", () => {
+  const [Q05, Q06] = ["QP-EX-Q05", "QP-EX-Q06"];
+  beforeAll(async () => {
+    for (const qid of [Q05, Q06]) {
+      const e = envelope(qid);
+      (e.payload as Record<string, unknown>).stimulus_ref = "ST-EX-1";
+      const [a] = await ContentArtifact.create([{ ...base, envelopeJson: e }]);
+      art.set(qid, String(a._id));
+    }
+    await markExamPool({ qids: [Q05], on: true, actorId: ACTOR }); // hold part one only
+  });
+
+  it("goldBank leaves out the held part AND its sibling", async () => {
+    expect((await goldBank([LO])).map((q) => q.qid).sort()).toEqual(USABLE);
+  });
+
+  it("createPaper and the set path refuse the sibling with the passage reason; releasing frees both", async () => {
+    await expect(
+      createPaper({ sectionId, subject: "MATH", source: "HW", date: "2027-04-02", items: [{ origin: "BANK", artifactId: art.get(Q06)!, loCode: LO, questionTypeCode: "QT-SOLVE" }] }, TEACHER),
+    ).rejects.toThrow(/same passage as a held question/);
+    const setId = new Types.ObjectId();
+    await AssessmentSet.create({ _id: setId, setType: "HW", sectionId: new Types.ObjectId(sectionId), classId: new Types.ObjectId(), subjectId: new Types.ObjectId(), status: "draft", basketItems: [], createdBy: new Types.ObjectId() } as never);
+    await expect(addQuestionToSet(String(setId), art.get(Q06)!, ACTOR)).rejects.toThrow(/same passage as a held question/);
+    await markExamPool({ qids: [Q05], on: false, actorId: ACTOR });
+    expect((await goldBank([LO])).map((q) => q.qid).sort()).toEqual([Q03, Q04, Q05, Q06]);
+    await markExamPool({ qids: [Q05], on: true, actorId: ACTOR });
+  });
+});
+
+describe("remaining paths", () => {
+  it("homework top-up refuses a held question and a sibling of a held passage", async () => {
+    const item = { subject: "MATH", classLevel: 3 };
+    await expect(assertTopupSelectedFromPool(item, { qids: [Q01], time: 5 } as never)).rejects.toThrow(/পরীক্ষার জন্য রাখা/);
+    await expect(assertTopupSelectedFromPool(item, { qids: ["QP-EX-Q06"], time: 5 } as never)).rejects.toThrow(/same passage/);
+    await expect(assertTopupSelectedFromPool(item, { qids: [Q03], time: 5 } as never)).resolves.toBeUndefined();
+  });
+
+  it("weekly assignment with Part A on, and a SWAP, only ever land on usable questions", async () => {
+    const a = await buildAssignment({
+      sectionId, subject: "MATH", dueDate: "2027-04-09", rememberLayout: false,
+      layout: { totalMarks: 4, minutes: 20, partAOn: true, partAMarks: 2, partALoCodes: [LO], partBMarks: 2, mixWeak: 100, mixImproving: 0, mixRevision: 0, questionTypeCodes: [] },
+    }, TEACHER);
+    const doc = await MasteryAssignment.findById(a.id).lean();
+    const partA = ((doc as any).partA ?? []) as { qid?: string }[];
+    for (const q of partA) if (q.qid) expect(USABLE).toContain(q.qid);
+    const sheet = await sheetDetail(a.id, sids[0], TEACHER);
+    for (const it of sheet.items) if (it.qid) expect(USABLE).toContain(it.qid);
+    const bankIdx = sheet.items.findIndex((i) => i.origin === "BANK");
+    if (bankIdx >= 0) {
+      const swapped = await editSheet(a.id, sids[0], { op: "SWAP", index: bankIdx }, TEACHER).catch(() => null);
+      if (swapped) for (const it of swapped.items) if (it.qid) expect(USABLE).toContain(it.qid);
+    }
+    await deleteAssignment(a.id, TEACHER);
   });
 });

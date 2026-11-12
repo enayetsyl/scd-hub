@@ -240,8 +240,10 @@ ExamPoolBulkRef.implement({
   description: "Outcome of a bulk hold / release: how many changed, which ids matched nothing, which already held the state.",
   fields: (t) => ({
     marked: t.exposeInt("marked"),
-    notFound: t.exposeStringList("notFound"),
-    unchanged: t.exposeStringList("unchanged"),
+    notFound: t.exposeStringList("notFound", { description: "The first 200 only; see notFoundCount." }),
+    notFoundCount: t.exposeInt("notFoundCount"),
+    unchanged: t.exposeStringList("unchanged", { description: "The first 200 only; see unchangedCount." }),
+    unchangedCount: t.exposeInt("unchangedCount"),
   }),
 });
 
@@ -303,7 +305,7 @@ builder.mutationField("markExamPoolByFilter", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       try {
         const built = await buildQuestionsFilter(args.filter, ctx);
-        if (!built) return { marked: 0, notFound: [], unchanged: [] };
+        if (!built) return { marked: 0, notFound: [], notFoundCount: 0, unchanged: [], unchangedCount: 0 };
         const { filter, ands } = built;
         if (ands.length) filter.$and = ands;
         return await markExamPoolByFilterSvc({

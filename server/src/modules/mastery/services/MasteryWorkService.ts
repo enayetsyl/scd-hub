@@ -228,7 +228,7 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
       }).lean();
       if (!art) throw new MasteryWorkError("প্রশ্নটি গোল্ড ব্যাংকে পাওয়া যায়নি।");
       // PR-I (D-#1408): a question held for the exam papers goes on no sheet — HW, CT, any source.
-      if (art.examPoolAt) {
+      if (art.examPoolAt || stimulusRefOf((art.envelopeJson as Record<string, unknown>)?.payload as Record<string, unknown>)) {
         const why = await heldRefusal([it.artifactId]);
         if (why) throw new MasteryWorkError(why);
       }

@@ -304,7 +304,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
         {mayHold && !addToSetId ? (
           <Button title={holdOpen ? STR.qExamHide : STR.qExamOpenBulk} variant="secondary" onPress={() => setHoldOpen(!holdOpen)} />
         ) : null}
-        {mayHold && !addToSetId && holdOpen ? (
+        {mayHold && !addToSetId && !qb.filters.retired && holdOpen ? (
           <ExamPoolPanel
             filter={{
               subject: qb.filters.subject,
