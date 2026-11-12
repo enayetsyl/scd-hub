@@ -464,6 +464,52 @@ function stateView(
   };
 }
 
+/** PR-K (D-#1425): one earlier-class objective this child has evidence on (a baseline sheet). */
+export interface BaselineRow {
+  loCode: string;
+  labelBn: string;
+  classToken: string;
+  /** Judged by the earlier class's own policy. */
+  state: MasteryState;
+  /** ISO time of the child's latest live evidence on the code. */
+  lastEvidenceAt: string | null;
+}
+
+/**
+ * PR-K: the earlier-class codes this child has live evidence on in their section, each judged by its
+ * own class's policy. Empty when the child has none. Staff read only (rides the diagnosis gate).
+ */
+async function studentBaseline(studentId: string, sectionId: Types.ObjectId, subject: MasterySubject, classToken: MasteryClassToken): Promise<BaselineRow[]> {
+  const all = await liveSectionRows(sectionId, subject, undefined, { includeEarlierClasses: true });
+  const earlier = all.filter((r) => {
+    const t = parseMasteryLoCode(r.loCode)?.classToken;
+    return Boolean(t) && t !== classToken;
+  });
+  if (!earlier.some((r) => r.studentId === studentId)) return [];
+  const byClass = new Map<MasteryClassToken, LiveRow[]>();
+  for (const r of earlier) {
+    const t = parseMasteryLoCode(r.loCode)!.classToken;
+    byClass.set(t, [...(byClass.get(t) ?? []), r]);
+  }
+  const mine = new Map<string, Date>();
+  for (const r of earlier) if (r.studentId === studentId && (!mine.has(r.loCode) || r.at > mine.get(r.loCode)!)) mine.set(r.loCode, r.at);
+  const labels = new Map(
+    (await MasteryOutcome.find({ code: { $in: [...mine.keys()] } }).select("code labelBn").lean()).map((o) => [o.code, o.labelBn]),
+  );
+  const out: BaselineRow[] = [];
+  const now = new Date();
+  for (const [token, list] of byClass) {
+    const sec = computeSection(list, await diagnosisPolicy(token, subject), now);
+    for (const [code, per] of sec.states) {
+      const st = per.get(studentId);
+      if (!st || !mine.has(code)) continue;
+      out.push({ loCode: code, labelBn: labels.get(code) ?? code, classToken: token, state: st.state, lastEvidenceAt: iso(mine.get(code)) });
+    }
+  }
+  out.sort((a, b) => classIndex(a.classToken) - classIndex(b.classToken) || a.loCode.localeCompare(b.loCode, undefined, { numeric: true }));
+  return out;
+}
+
 export interface StudentDiagnosis {
   studentId: string;
   name: string;
@@ -484,6 +530,8 @@ export interface StudentDiagnosis {
   isTree: boolean;
   objectives: RollupObjectiveView[];
   domains: DomainRollupView[];
+  /** PR-K: "ভিত্তি যাচাই" — earlier-class objectives this child has evidence on; empty ⇒ section hidden. */
+  baseline: BaselineRow[];
 }
 
 async function subjectsFor(auth: Auth, sectionId: Types.ObjectId, classToken: MasteryClassToken): Promise<string[]> {
@@ -503,13 +551,14 @@ async function subjectsFor(auth: Auth, sectionId: Types.ObjectId, classToken: Ma
 export async function studentDiagnosis(studentId: string, subject: MasterySubject, auth: Auth): Promise<StudentDiagnosis> {
   const { st, ctx } = await studentContext(studentId);
   await assertMayWork(auth, ctx.sectionId, subject, new Date());
-  const [t, rows, policy, label, roster, subjects] = await Promise.all([
+  const [t, rows, policy, label, roster, subjects, baseline] = await Promise.all([
     loadTree(ctx.classToken, subject),
     liveSectionRows(ctx.sectionId, subject),
     diagnosisPolicy(ctx.classToken, subject),
     sectionLabel(ctx.sectionId),
     rosterOf(ctx.sectionId),
     subjectsFor(auth, ctx.sectionId, ctx.classToken),
+    studentBaseline(studentId, ctx.sectionId, subject, ctx.classToken),
   ]);
   const sec = computeSection(rows, policy, new Date());
   const weakCount = new Map<string, number>();
@@ -544,6 +593,7 @@ export async function studentDiagnosis(studentId: string, subject: MasterySubjec
     isTree: t.tree.isTree,
     objectives: roll.objectives,
     domains: roll.domains,
+    baseline,
   };
 }
 

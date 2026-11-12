@@ -776,6 +776,7 @@ export const MASTERY_STUDENT_DIAGNOSIS_QUERY = gql`
       isTree
       objectives { code labelBn chapterNumber strand domainCode tagged state childCodes weakChildCodes summary { ${SUMMARY_FIELDS} } }
       domains { code labelBn objectiveCodes state summary { ${SUMMARY_FIELDS} } }
+      baseline { loCode labelBn classToken state lastEvidenceAt }
     }
   }
 `;
@@ -1038,6 +1039,8 @@ export type MasteryStudentDiagnosisData = {
   domains: MasteryDomainRollup[];
   /** OT-5: per outcome, taught / missed / not taught in class. */
   objectiveLessons: ObjectiveLessonT[];
+  /** PR-K: "ভিত্তি যাচাই" rows (earlier-class objectives with evidence); empty ⇒ hidden. */
+  baseline: { loCode: string; labelBn: string; classToken: string; state: string; lastEvidenceAt: string | null }[];
 };
 
 /** LP-3 (D-#823/#825): one session plan as taught to one child, with presence from day attendance. */

@@ -46,3 +46,14 @@ Each code is judged by its own class's policy. Gate: `mastery:view` + the row ru
    Class 1 step's real state.
 4. The summary lists the code with correct counts; the heat-map, the assignment builder's rows and the
    trigger are unchanged by the extra rows.
+
+## PR-K — baseline results on the student's own page (D-#1425)
+- `masteryStudentDiagnosis` gains `baseline`: each earlier-class code this child has live evidence on in
+  their section — `loCode`, `labelBn`, `classToken`, `state` (judged by the EARLIER class's policy, like the
+  summary above) and `lastEvidenceAt`. Ordered by class then code. Empty when the child has none.
+- The student's mastery page (staff screen, behind `mastery:view` and the row rule) shows a card
+  "ভিত্তি যাচাই" with those rows (label, class, state, last date); hidden when empty. No new permission,
+  no new switch: a LOCKED tree for the earlier class is enough for the sheet to exist. Nothing is added to
+  any guardian view (the guardian read still ignores earlier-class rows).
+- The child's own-class rows, counts and "more weak than" standing are unchanged by baseline rows.
+- Acceptance: `masteryEarlierClass.test.ts` "PR-K" case.
