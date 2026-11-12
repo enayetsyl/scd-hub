@@ -36,6 +36,7 @@ import {
   assertMayWork,
   dayOf,
   nextPaperId,
+  openExtraSeen,
   rosterOf,
   sectionContext,
   type Auth,
@@ -360,13 +361,14 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   await a.save();
 
   const existing = new Map((await MasteryAssignmentSheet.find({ assignmentId: a._id }).lean()).map((s) => [String(s.studentId), s]));
+  const extraSeen = await openExtraSeen(ctx.sectionId, input.subject); // PR-J (D-#1420)
   for (const st of roster) {
     const sid = String(st._id);
     if (existing.get(sid)?.edited) continue; // the teacher's own changes survive a rebuild
     const states = new Map(
       [...sec.states.entries()].flatMap(([lo, per]) => {
         const s = per.get(sid);
-        return s ? [[lo, { state: s.state, lastEvidenceAt: s.lastEvidenceAt, seenQids: s.seenQids }] as const] : [];
+        return s ? [[lo, { state: s.state, lastEvidenceAt: s.lastEvidenceAt, seenQids: extraSeen.has(sid) ? [...new Set([...s.seenQids, ...extraSeen.get(sid)!])] : s.seenQids }] as const] : [];
       }),
     );
     const built = buildPartB(states, bctx, partAQids);
@@ -481,6 +483,7 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const rows = await liveSectionRows(a.sectionId, a.subject, cur.loCode);
       const seen = new Set(rows.filter((r) => r.studentId === studentId && r.qid).map((r) => r.qid as string));
       for (const q of [...sheet.items, ...a.partA]) if (q.qid) seen.add(q.qid);
+      for (const q of (await openExtraSeen(a.sectionId, a.subject)).get(studentId) ?? []) seen.add(q);
       const exposure = new Map<string, number>();
       for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
       const next = pickQuestion(cur.loCode, seen, { bank: await goldBank([cur.loCode]), exposure });
@@ -701,7 +704,7 @@ export async function renderAssignmentPdfForChild(assignmentId: string, studentI
 }
 
 /** The current stimulus (shared stem) of every part on the sheets: ref → title + body (D-#926). */
-async function stemsFor(items: { stimulusRef?: string | null }[]): Promise<Map<string, { title: string | null; content: string }>> {
+export async function stemsFor(items: { stimulusRef?: string | null }[]): Promise<Map<string, { title: string | null; content: string }>> {
   const refs = [...new Set(items.map((q) => q.stimulusRef).filter((r): r is string => Boolean(r)))];
   if (refs.length === 0) return new Map();
   const arts = await ContentArtifact.find({ docType: "stimulus", current: true, "envelopeJson.payload.stimulus_id": { $in: refs } })

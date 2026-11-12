@@ -51,8 +51,18 @@ flat key map validated per key and rendered field by field on the policy screen,
   CLOSED rows without `closedAt`).
 - Guardian notification (D-#1325): `MASTERY_EXTRA_HOMEWORK` "বাড়তি বাড়ির কাজ দেওয়া হয়েছে" to each given child's
   guardians; dedupe key `MSXH:<paperId>:<studentId>:<guardianId>` (carries the recipient).
-- Not built (D-#1326): the per-student PDF (the assignment renderer is bound to `MasteryAssignment`; reusing it
-  means a refactor of that renderer, not done unattended).
+- Printed sheet (PR-J, D-#1420; supersedes "Not built (D-#1326)"): `GET /pdf/mastery-extra/:paperId`
+  (`routes/masteryExtraPdf.ts`, beside the assignment PDF; `mastery:view` + the routine/`mastery:edit_all` row
+  rule) renders `services/MasteryExtraPdf.ts`: A4, ONE page per child on the sheet (none for a child with no items
+  on it): school header, name, student ID (no roll number), class, subject, date, each question with an answer box
+  and a marks box, a signature line and the paper id + the same code line the assignment prints (`pdfCodeLine`).
+  The assignment renderer is left untouched (only `stemsFor` is exported) so its output is unchanged. "প্রিন্ট"
+  button on an extra sheet in the sheet list and on the entry screen. "প্রিন্টে পাঠান" (print request) is NOT
+  built: a print request only takes SET / CONTENT_ARTIFACT / LINK / UPLOAD sources, not a generated route PDF.
+- Seen (PR-J, D-#1420): every question on a child's OPEN (unconfirmed) extra sheets of the section × subject counts
+  as seen for that child (`openExtraSeen`) — in the extra-homework preview and its create-time re-check, in the
+  class-homework draft (seen by the section), and in the weekly assignment builder and swap (that child's Part B).
+  Once the sheet is confirmed the evidence rows carry it, as before.
 - App: "দুর্বলদের বাড়তি বাড়ির কাজ" on the mastery work home → preview (child, items, reasons, tick boxes) → send;
   the sheet then appears in the normal sheet list with a "বাড়তি" badge; the guardian progress page names it.
 
@@ -64,5 +74,9 @@ flat key map validated per key and rendered field by field on the policy screen,
 4. The preview gives a weak child at most `maxQuestions` items, none seen before; a child with no weak row is NOT_WEAK.
 5. A tampered `createMasteryExtraHomework` (seen question, or a row that is not weak) is refused.
 6. On the extra sheet a child's evidence covers only their own items; the tracker homework is untouched.
+7. (PR-J, `masteryExtraPrint.test.ts`) The extra-sheet PDF has one page per child on it and none for a child not on
+   it; a second day's preview (and the create-time re-check and the class draft) never repeats a question from
+   yesterday's unmarked extra sheet; the weekly assignment PDF renderer is untouched (`masteryAssignment.test.ts`
+   unchanged and green).
 
 Help: reading guide `mastery-homework-from-lesson`; `notes-lesson-mark` intro updated.
