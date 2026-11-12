@@ -977,6 +977,9 @@ export const FEATURE_CATALOGUE = {
     en: "Year change",
     bn: "বছর পরিবর্তন",
     actions: {
+      view: { en: "See the year change", bn: "বছর পরিবর্তনের পরিকল্পনা দেখা", desc: "Open the year-change dry runs (Principal only)", teacher: false, office: false, flags: ["LOCKED"] },
+      prepare: { en: "Prepare the year change", bn: "বছর পরিবর্তনের প্রস্তুতি", desc: "Write next year's classes, sections, planned enrolments, admissions and class teachers (Principal only)", teacher: false, office: false, flags: ["LOCKED"] },
+      undo: { en: "Undo the year change", bn: "বছর পরিবর্তন ফিরিয়ে নেওয়া", desc: "Cancel the preparation or reverse the cut-over (Principal only)", teacher: false, office: false, flags: ["LOCKED"] },
       cut_over: { en: "Switch the current academic year", bn: "চালু শিক্ষাবর্ষ বদলানো", desc: "Flip the school's current year at the year-change cut-over (Principal only)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
