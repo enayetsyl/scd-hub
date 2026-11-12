@@ -31,8 +31,8 @@ import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
-/** The English drive serves Classes 1–5 (server ENGLISH_DRIVE_CLASS_LEVELS); the content axis widened to 6 (D-#1310). */
-const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
+/** The English drive serves Classes 1–6 (server ENGLISH_DRIVE_CLASS_LEVELS; Class 6 from YC-3, owner ruling Q31). */
+const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 
 interface StagedDoc {
   filename: string;

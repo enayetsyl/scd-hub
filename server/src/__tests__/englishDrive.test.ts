@@ -253,9 +253,9 @@ describe("allowedEnglishDriveClassLevels", () => {
     expect([...allowed!]).toEqual([4]);
   });
 
-  test("myEnglishDriveClassLevels: guardian [], P/O all five, teacher sorted", async () => {
+  test("myEnglishDriveClassLevels: guardian [], P/O all six (C6 from YC-3), teacher sorted", async () => {
     await expect(myEnglishDriveClassLevels(ctxOf("GUARDIAN"))).resolves.toEqual([]);
-    await expect(myEnglishDriveClassLevels(ctxOf("PRINCIPAL"))).resolves.toEqual([1, 2, 3, 4, 5]);
+    await expect(myEnglishDriveClassLevels(ctxOf("PRINCIPAL"))).resolves.toEqual([1, 2, 3, 4, 5, 6]);
     mockResolveScopes.mockResolvedValue([
       teachingScope(ENG_ID, C4_ID),
       teachingScope(ENG_ID, C3_ID),
@@ -332,11 +332,11 @@ describe("englishDriveDocById", () => {
 // ---------------------------------------------------------------------------
 
 describe("uploadEnglishDriveDoc", () => {
-  test("rejects a class level outside 1..5", async () => {
+  test("rejects a class level outside 1..6 (Class 6 included since YC-3, D-#1482)", async () => {
     await expect(uploadEnglishDriveDoc({ ...validUpload(), classLevel: 0 })).rejects.toThrow(
       /শ্রেণি/,
     );
-    await expect(uploadEnglishDriveDoc({ ...validUpload(), classLevel: 6 })).rejects.toThrow(
+    await expect(uploadEnglishDriveDoc({ ...validUpload(), classLevel: 7 })).rejects.toThrow(
       /শ্রেণি/,
     );
   });

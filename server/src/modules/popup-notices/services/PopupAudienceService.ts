@@ -24,6 +24,7 @@ import { Types } from "mongoose";
 import {
   DEFAULT_SECTION_CODE,
   ROSTER_CLASS_LABELS_BN,
+  ROSTER_CLASS_LEVELS,
   ROUTINE_SUBJECTS,
   ROUTINE_SUBJECT_LABELS_BN,
   type RosterClassLevel,
@@ -54,7 +55,8 @@ export class PopupNoticeError extends Error {
 
 const STAFF_ROLES = ["PRINCIPAL", "TEACHER", "OFFICE"] as const;
 const ROLE_BN: Record<string, string> = { PRINCIPAL: "প্রধান শিক্ষক", TEACHER: "শিক্ষক", OFFICE: "অফিস" };
-const LEVELS = new Set<number>([-1, 0, 1, 2, 3, 4, 5]);
+/** Every roster level, Class 6 included (YC-3, D-#1480). */
+const LEVELS = new Set<number>(ROSTER_CLASS_LEVELS);
 const SUBJECTS = new Set<string>(ROUTINE_SUBJECTS);
 const GENDERS = new Set(["male", "female"]);
 const EMPLOYMENT = new Set(["current", "probation", "confirmed"]);

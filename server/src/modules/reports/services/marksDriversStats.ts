@@ -320,7 +320,7 @@ export interface MarksDriversFigures {
   bands: AttendanceBand[];
   below85: Below85;
   levels: LevelRow[];
-  /** Class 4 + 5 pooled — where the study found attendance biting. */
+  /** Class 4–6 pooled (Class 6 joins from 2027, owner ruling Q32) — where the study found attendance biting. */
   senior: { n: number; r: number | null; p: number | null };
   effects: EffectRow[];
   /** Attendance × homework ABSENT_REDELIVER share. About −0.95 when the right

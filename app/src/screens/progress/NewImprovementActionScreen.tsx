@@ -11,7 +11,7 @@ import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { HW_SUBJECTS, IMPROVEMENT_MAX_DAYS } from "@scd/shared";
+import { HW_SUBJECTS, IMPROVEMENT_MAX_DAYS, subjectsForClassLevel } from "@scd/shared";
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY, STUDENTS_QUERY, TEACHERS_QUERY } from "../../graphql/operations";
 import { CREATE_IMPROVEMENT_ACTION, IMPROVEMENT_SUGGEST } from "../../graphql/improvement";
 import { Screen, Card, Body, Muted, Button, Chip, ChipRow, Field, Select, Notice } from "../../components/ui";
@@ -80,6 +80,7 @@ export default function NewImprovementActionScreen({ route, navigation }: Props)
     }
     return out;
   }, [classesQ.data]);
+  const sectionLevel = (classesQ.data?.classes ?? []).find((cl) => cl.sections.some((s) => s.id === sectionId))?.level ?? null;
   const sectionLabel = sectionOptions.find((s) => s.value === sectionId)?.label ?? "";
 
   const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: sectionId ?? "" }, pause: !sectionId || scope !== "STUDENT" });
@@ -172,7 +173,7 @@ export default function NewImprovementActionScreen({ route, navigation }: Props)
           ) : null}
           <Text style={{ marginTop: space(2) }}>{STR.impSubject}</Text>
           <ChipRow>
-            {(HW_SUBJECTS as readonly string[]).map((s) => (
+            {subjectsForClassLevel(HW_SUBJECTS as readonly string[], sectionLevel).map((s) => (
               <Chip
                 key={s}
                 label={subjectShortLabel(s)}

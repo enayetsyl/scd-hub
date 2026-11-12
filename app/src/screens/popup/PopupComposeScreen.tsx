@@ -15,6 +15,7 @@
  * button labels change (the audience and the rules are locked once people have seen it).
  * The server re-checks every rule and permission; this screen only helps get it right.
  */
+import { ROSTER_CLASS_LEVELS, ROUTINE_SUBJECTS } from "@scd/shared";
 import React, { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, Switch, View } from "react-native";
 import { useMutation, useQuery } from "urql";
@@ -58,8 +59,9 @@ import { space, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<PopupStackParamList, "PopupCompose">;
 
-const LEVELS = [-1, 0, 1, 2, 3, 4, 5];
-const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM", "QURAN"];
+/** Every roster level and routine subject — Class 6 and ICT / BAN2 / ENG2 included (YC-3). */
+const LEVELS: number[] = [...ROSTER_CLASS_LEVELS];
+const SUBJECTS: string[] = [...ROUTINE_SUBJECTS];
 const TIMES = Array.from({ length: 34 }, (_, i) => {
   const mins = 6 * 60 + i * 30;
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;

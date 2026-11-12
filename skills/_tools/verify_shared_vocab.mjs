@@ -118,6 +118,12 @@ check("ROUTINE_SUBJECT_LABELS_EN total",   total(V.ROUTINE_SUBJECT_LABELS_EN, V.
 check("ROUTINE_SUBJECTS superset of HW_SUBJECTS", V.HW_SUBJECTS.every((s) => V.ROUTINE_SUBJECTS.includes(s)));
 check("ROUTINE_SUBJECTS adds QURAN",       V.ROUTINE_SUBJECTS.includes("QURAN") && !V.HW_SUBJECTS.includes("QURAN"));
 check("ROUTINE_SUBJECTS_CLASS3_PLUS ⊂ ROUTINE_SUBJECTS", V.ROUTINE_SUBJECTS_CLASS3_PLUS.every((s) => V.ROUTINE_SUBJECTS.includes(s)));
+check("Class 6 teaching side (YC-3, D-#1480): roster 6, ICT/BAN2/ENG2 in the homework + routine lists, paper names in C6 only",
+  V.ROSTER_CLASS_LEVELS.includes(6) && V.ROSTER_CLASS_LEVEL_MAX === 6 && V.ROSTER_CLASS_LABELS_BN[6] === "ষষ্ঠ শ্রেণি" &&
+  V.CLASS6_PLUS_SUBJECTS.every((s) => V.HW_SUBJECTS.includes(s) && V.ROUTINE_SUBJECTS.includes(s)) &&
+  V.subjectLabel("BAN2", 6) === "বাংলা দ্বিতীয় পত্র" && V.subjectLabel("BAN", 6) === "বাংলা প্রথম পত্র" &&
+  V.subjectLabel("BAN", 3) === "বাংলা" && V.subjectLabel("ENG", 5) === "ইংরেজি" &&
+  !V.subjectsForClassLevel(V.ROUTINE_SUBJECTS, 5).includes("ICT") && V.subjectsForClassLevel(V.ROUTINE_SUBJECTS, 6).includes("ENG2"));
 check("DAYS_OF_WEEK index-aligned to getDay (7 days, SUN first)", V.DAYS_OF_WEEK.length === 7 && V.DAYS_OF_WEEK[0] === "SUN" && V.DAYS_OF_WEEK[6] === "SAT");
 
 console.log("=== C.4 Attendance label maps + RBAC invariants (D-#63–#67) ===");
@@ -836,8 +842,8 @@ check("mastery:approve is on the PRINCIPAL template only — Office holders get 
 check("TEACHER holds mastery:read + mastery:enter (routine-scoped in the service); GUARDIAN holds no mastery:*",
   V.roleHasPermission("TEACHER", "mastery:read") && V.roleHasPermission("TEACHER", "mastery:enter") &&
   !V.PERMISSIONS.filter((p) => p.startsWith("mastery:")).some((p) => V.roleHasPermission("GUARDIAN", p)));
-check("mastery covers every homework subject + ICT/BAN2/ENG2, and no Quran (D-#784, D-#1312)",
-  eq([...V.MASTERY_SUBJECTS], [...V.HW_SUBJECTS, "ICT", "BAN2", "ENG2"]) && !V.MASTERY_SUBJECTS.includes("QURAN"));
+check("mastery covers every homework subject (ICT/BAN2/ENG2 included since YC-3), and no Quran (D-#784, D-#1312, D-#1480)",
+  eq([...V.MASTERY_SUBJECTS], [...V.HW_SUBJECTS]) && ["ICT", "BAN2", "ENG2"].every((s) => V.MASTERY_SUBJECTS.includes(s)) && !V.MASTERY_SUBJECTS.includes("QURAN"));
 check("MASTERY_SUBJECT_LABELS_BN/EN total", total(V.MASTERY_SUBJECT_LABELS_BN, V.MASTERY_SUBJECTS) && total(V.MASTERY_SUBJECT_LABELS_EN, V.MASTERY_SUBJECTS));
 check("LO/domain codes accept Class 6 ICT / BAN2 / ENG2, refuse Class 7 (D-#1312)",
   V.MASTERY_LO_CODE_RE.test("LO-C6-BAN2-03-02.1") && V.MASTERY_LO_CODE_RE.test("LO-C6-ICT-01-01") &&

@@ -291,6 +291,13 @@ describe("createRequest", () => {
     actorId: TEACHER_ID,
   };
 
+  test("YC-3: Class 3 refuses BAN2; Class 6 accepts it; Class 3 BAN works", async () => {
+    await expect(createRequest({ ...baseInput, subject: "BAN2" })).rejects.toThrow(/ষষ্ঠ শ্রেণি/);
+    await expect(createRequest({ ...baseInput, subject: "BAN" })).resolves.toBeTruthy();
+    mockClassFindById.mockReturnValue(leanChain({ level: 6, academicYearId: AY_OID }));
+    await expect(createRequest({ ...baseInput, subject: "BAN2" })).resolves.toBeTruthy();
+  });
+
   test("POOL_SET: derives year/level from section, mints CT id, REQUESTED + audit, default passMark", async () => {
     const res = await createRequest(baseInput);
     expect(res.status).toBe("REQUESTED");

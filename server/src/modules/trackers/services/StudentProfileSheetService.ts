@@ -35,6 +35,7 @@ const ROSTER_CLASS_BN: Record<number, string> = {
   3: "তৃতীয় শ্রেণি",
   4: "চতুর্থ শ্রেণি",
   5: "পঞ্চম শ্রেণি",
+  6: "ষষ্ঠ শ্রেণি",
 };
 
 /** Subject code → Bangla, via the shared HW subject labels (the app's rule). */

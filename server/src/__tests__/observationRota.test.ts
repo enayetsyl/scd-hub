@@ -304,7 +304,7 @@ describe("normalizeEcho", () => {
   test("a missing/garbled echo degrades to no-constraints rather than throwing", () => {
     expect(normalizeEcho(undefined).perDay).toBe(1);
     expect(normalizeEcho({ intensive: "nope", caps: 7 }).intensive).toEqual([]);
-    expect(normalizeEcho({}).classLevels).toEqual([1, 2, 3, 4, 5]);
+    expect(normalizeEcho({}).classLevels).toEqual([1, 2, 3, 4, 5, 6]); // Class 6 in (owner ruling Q31, D-#1482)
   });
   test("drops nameless constraints that could never be checked", () => {
     expect(normalizeEcho({ excluded: [{ reason: "x" }] }).excluded).toEqual([]);

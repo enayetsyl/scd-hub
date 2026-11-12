@@ -22,7 +22,7 @@
  * list is indistinguishable from a broken query.
  */
 import { Types } from "mongoose";
-import { ROUTINE_SUBJECTS, SYLLABUS_FULL_MARKS, callerHasPermission } from "@scd/shared";
+import { ROUTINE_SUBJECTS, SYLLABUS_FULL_MARKS, callerHasPermission, subjectsForClassLevel } from "@scd/shared";
 import type { RoutineSubject, SyllabusItemType, SyllabusStatus } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
@@ -359,7 +359,8 @@ export async function classSyllabus(
     // A class with no routine yet must not be a dead end either. Falling back to
     // the full subject list keeps Office moving; the ones that do not apply are
     // simply never written, which the board already renders as বাকি.
-    if (taught.size === 0) taught = new Set<string>(ROUTINE_SUBJECTS);
+    // Class 6 subjects (ICT, BAN2, ENG2) only for a Class 6+ class (YC-3, D-#1480).
+    if (taught.size === 0) taught = new Set<string>(subjectsForClassLevel(ROUTINE_SUBJECTS, cls.level));
     for (const code of taught) {
       if (bySubject.has(code)) continue;
       if (onLevelBoard(code)) continue;

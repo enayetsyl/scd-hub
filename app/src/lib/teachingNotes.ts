@@ -54,6 +54,9 @@ export const TEACHING_NOTE_SUBJECT_ORDER = [
   "ARABIC",
   "ISLAM",
   "QURAN",
+  "ICT",
+  "BAN2",
+  "ENG2",
 ] as const;
 
 /**
