@@ -320,6 +320,9 @@ async function persistEnvelope(
     // Only questions carry it; a plan re-import is untouched.
     importantAt: prior && envelope.doc_type === "question" ? (prior.importantAt ?? null) : null,
     importantBy: prior && envelope.doc_type === "question" ? prior.importantBy : undefined,
+    // Held for exams (PR-I, D-#1408) follows the qid the same way.
+    examPoolAt: prior && envelope.doc_type === "question" ? (prior.examPoolAt ?? null) : null,
+    examPoolBy: prior && envelope.doc_type === "question" ? prior.examPoolBy : undefined,
     importBatchId: parentBatchId,
     importedBy: actorId,
     importedAt: new Date(),

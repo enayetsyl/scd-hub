@@ -10,6 +10,7 @@ import { useQuery, useMutation } from "urql";
 import {
   QUESTION_QUERY,
   SET_QUESTION_IMPORTANT,
+  SET_QUESTION_EXAM_POOL,
   RESTORE_QUESTION,
   QUESTION_USAGE,
 } from "../../graphql/operations";
@@ -115,6 +116,7 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
   const [editing, setEditing] = useState(false);
   const [markBusy, setMarkBusy] = useState(false);
   const [, setImportant] = useMutation(SET_QUESTION_IMPORTANT);
+  const [, setExamPool] = useMutation(SET_QUESTION_EXAM_POOL);
   const [, restore] = useMutation(RESTORE_QUESTION);
   const [notice, setNotice] = useState<string | null>(null);
   const basket = useBasket();
@@ -166,6 +168,12 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
         {q.important ? (
           <View style={{ marginLeft: space(2) }}>
             <Badge text={STR.qImportant} tone="gold" />
+          </View>
+        ) : null}
+        {/* Held for the exam papers (PR-I, D-#1408) — every reader sees it. */}
+        {q.examPool ? (
+          <View style={{ marginLeft: space(2) }}>
+            <Badge text={STR.qExamPool} tone="info" />
           </View>
         ) : null}
       </View>
@@ -279,6 +287,21 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
                   setMarkBusy(false);
                   if (res.error) { setNotice(friendlyError(res.error)); return; }
                   setNotice(q.important ? STR.qImportantCleared : STR.qImportantMarked);
+                  refetch({ requestPolicy: "network-only" });
+                });
+              }}
+            />
+            {/* Hold / release for the exam papers (PR-I, D-#1408). */}
+            <Button
+              title={q.examPool ? STR.qExamRelease : STR.qExamHold}
+              variant="secondary"
+              loading={markBusy}
+              onPress={() => {
+                setMarkBusy(true);
+                void setExamPool({ artifactId: q.id, on: !q.examPool }).then((res) => {
+                  setMarkBusy(false);
+                  if (res.error) { setNotice(friendlyError(res.error)); return; }
+                  setNotice(q.examPool ? STR.qExamReleased : STR.qExamHeld);
                   refetch({ requestPolicy: "network-only" });
                 });
               }}

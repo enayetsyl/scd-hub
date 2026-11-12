@@ -63,6 +63,10 @@ async function assertTopupSelectedFromPool(
     if (!q) {
       throw new Error(`Top-up qid "${qid}" is not an existing question — selected, never authored (§5.1)`);
     }
+    // PR-I (D-#1408): a question held for the exam papers is not handed out as a top-up either.
+    if (q.examPoolAt) {
+      throw new Error(`Top-up qid "${qid}" is held for the exam papers — it cannot be given out before the exam`);
+    }
     if (q.subject !== item.subject || q.classLevel !== item.classLevel) {
       throw new Error(
         `Top-up qid "${qid}" is outside this topic's pool (expected ${item.subject} C${item.classLevel})`,

@@ -95,6 +95,7 @@ export async function createSet(input: CreateSetInput): Promise<CreateSetResult>
 function assertPublished(artifact: {
   reviewStatus?: string;
   retiredAt?: Date | null;
+  examPoolAt?: Date | null;
   envelopeJson?: unknown;
 }): void {
   // RETIRED is checked FIRST (D-#570). It is the more specific and more actionable reason:
@@ -106,6 +107,11 @@ function assertPublished(artifact: {
   }
   if (artifact.reviewStatus !== "gold") {
     throw new Error("এই প্রশ্নটি এখনও প্রকাশিত হয়নি — প্রকাশিত প্রশ্নই কেবল সেটে যোগ করা যায়।");
+  }
+  // PR-I (D-#1408): a question held for the exam papers goes into no HW / AS / CT set.
+  if (artifact.examPoolAt != null) {
+    const qid = ((artifact.envelopeJson as Record<string, unknown> | undefined)?.payload as Record<string, unknown> | undefined)?.qid;
+    throw new Error(`প্রশ্ন ${typeof qid === "string" ? qid : ""} পরীক্ষার জন্য রাখা আছে — বাড়ির কাজ, অ্যাসাইনমেন্ট বা ক্লাস টেস্টের সেটে যোগ করা যাবে না।`);
   }
 }
 

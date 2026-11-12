@@ -40,6 +40,7 @@ import { computeEvidence, isoWeekKey, type ResultLike, type TagLike } from "../e
 import { reapplyExclusions } from "../exclusions";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { ClassTest } from "../../trackers/models/ClassTest";
+import { heldRefusal } from "../examHold";
 import {
   classTestMismatches,
   ctOutcomeOf,
@@ -226,6 +227,11 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
         _id: oid(it.artifactId), docType: "question", current: true, retiredAt: null, reviewStatus: "gold",
       }).lean();
       if (!art) throw new MasteryWorkError("প্রশ্নটি গোল্ড ব্যাংকে পাওয়া যায়নি।");
+      // PR-I (D-#1408): a question held for the exam papers goes on no sheet — HW, CT, any source.
+      if (art.examPoolAt) {
+        const why = await heldRefusal([it.artifactId]);
+        if (why) throw new MasteryWorkError(why);
+      }
       const env = art.envelopeJson as Record<string, unknown>;
       const los = loCodesOf(env.tags as Record<string, unknown>, env.payload as Record<string, unknown>);
       if (!los.includes(it.loCode)) throw new MasteryWorkError(`প্রশ্নটি ${it.loCode}-এর সাথে ট্যাগ করা নয়।`);

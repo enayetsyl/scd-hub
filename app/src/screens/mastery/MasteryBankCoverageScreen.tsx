@@ -100,6 +100,7 @@ export default function MasteryBankCoverageScreen({ route }: { route: { params?:
             </View>
             <Muted>
               {fill(STR.bcTotals, { rows: bnNum(v.totals.rows), gold: bnNum(v.totals.gold) })}
+              {v.totals.held > 0 ? ` · ${fill(STR.bcHeld, { n: bnNum(v.totals.held) })}` : null}
               {v.totals.rubricRows > 0 ? ` · ${fill(STR.bcRubricRows, { n: bnNum(v.totals.rubricRows) })}` : ""}
             </Muted>
           </Card>
@@ -135,17 +136,18 @@ export default function MasteryBankCoverageScreen({ route }: { route: { params?:
                         {r.level === "SUB" ? words.sub : words.objective}
                         {r.parentLabelBn ? ` · ${r.parentLabelBn}` : ""} · {r.code}
                         {r.pendingCount > 0 ? ` · ${fill(STR.bcPending, { n: bnNum(r.pendingCount) })}` : ""}
+                        {r.heldCount > 0 ? ` · ${fill(STR.bcHeld, { n: bnNum(r.heldCount) })}` : ""}
                       </Muted>
                       {/* PR-G: gold questions per school question type; an allowed type with none is red. */}
                       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: 2 }}>
                         {r.cells
-                          .filter((c) => c.typeCode !== null || c.goldCount > 0 || c.pendingCount > 0)
+                          .filter((c) => c.typeCode !== null || c.goldCount > 0 || c.pendingCount > 0 || c.heldCount > 0)
                           .map((c) => (
                             <Text
                               key={c.typeCode ?? "none"}
                               style={{ fontSize: 12, color: c.zero ? colors.error : colors.textSecondary, fontWeight: c.zero ? "700" : "400" }}
                             >
-                              {c.typeCode ?? STR.bcNoType} {bnNum(c.goldCount)}
+                              {c.typeCode ?? STR.bcNoType} {bnNum(c.goldCount)}{c.heldCount > 0 ? ` (+${bnNum(c.heldCount)})` : ""}
                             </Text>
                           ))}
                       </View>

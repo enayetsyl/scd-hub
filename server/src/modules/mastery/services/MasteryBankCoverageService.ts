@@ -30,8 +30,11 @@ export interface BankCoveragePair {
 /** One objective × type cell (PR-G). `typeCode` null = questions that carry no `QT-` code ("no type"). */
 export interface BankCoverageCell {
   typeCode: string | null;
+  /** Usable gold questions: gold and NOT held for the exam papers (PR-I, D-#1408). */
   goldCount: number;
   pendingCount: number;
+  /** Gold questions held for the exam papers — in the bank, but no picker gives them out (PR-I). */
+  heldCount: number;
   /** An allowed type of the objective with no gold question — the screen highlights it. */
   zero: boolean;
   /** The type is active but has no marks in the table — its questions cannot be picked yet. */
@@ -49,8 +52,10 @@ export interface BankCoverageRow {
   status: string;
   questionTypeCodes: string[];
   exercises: string[];
-  /** Gold, current, not retired questions naming this row. */
+  /** Usable gold questions naming this row (gold, current, not retired, not held for exams). */
   goldCount: number;
+  /** Gold questions naming it that are held for the exam papers (PR-I, D-#1408). */
+  heldCount: number;
   /** Current questions naming it that are not gold yet (draft / in review). */
   pendingCount: number;
   /** PR-G: gold / pending per allowed type, then any other type carried, then the "no type" cell. */
@@ -64,7 +69,7 @@ export interface BankCoverageView {
   locked: boolean;
   chapters: { number: number; titleBn: string }[];
   rows: BankCoverageRow[];
-  totals: { rows: number; zeroRows: number; gold: number; rubricRows: number };
+  totals: { rows: number; zeroRows: number; gold: number; held: number; rubricRows: number };
   /** The gaps as a brief for the next question batch (plain text, ready to paste). */
   brief: string;
   /** PR-G: active types of this class × subject with no marks in the table (questions of these types cannot be picked). */
@@ -117,7 +122,7 @@ export async function bankCoverage(
   const pick = classToken && subject ? pairs.find((p) => p.classToken === classToken && p.subject === subject) : pairs[0];
   const empty: BankCoverageView = {
     pairs, classToken: pick?.classToken ?? classToken ?? null, subject: pick?.subject ?? subject ?? null, locked: pick?.locked ?? false,
-    chapters: [], rows: [], totals: { rows: 0, zeroRows: 0, gold: 0, rubricRows: 0 }, brief: "", typeCsv: "", noMarksTypes: [],
+    chapters: [], rows: [], totals: { rows: 0, zeroRows: 0, gold: 0, held: 0, rubricRows: 0 }, brief: "", typeCsv: "", noMarksTypes: [],
   };
   if (!pick) return empty;
   const ct = pick.classToken as MasteryClassToken;
@@ -141,17 +146,21 @@ export async function bankCoverage(
   // PR-G: the same counts split by the question's own type — key `code|QT-…` (`code|` = no type).
   const goldByType = new Map<string, number>();
   const pendingByType = new Map<string, number>();
+  // PR-I: gold questions held for the exam papers, counted apart from the usable gold.
+  const held = new Map<string, number>();
+  const heldByType = new Map<string, number>();
   if (codes.length > 0) {
     const arts = await ContentArtifact.find({ docType: "question", current: true, retiredAt: null, ...loCodeMongoFilter(codes) })
-      .select("reviewStatus envelopeJson.tags envelopeJson.payload.lesson_ref")
+      .select("reviewStatus examPoolAt envelopeJson.tags envelopeJson.payload.lesson_ref")
       .lean(); // bounded: one class × subject's questions, tags only
     const want = new Set(codes);
     for (const a of arts) {
       const env = (a.envelopeJson ?? {}) as Record<string, unknown>;
       const tags = env.tags as Record<string, unknown> | undefined;
       const qt = questionTypeCodeOf(env.payload as Record<string, unknown> | undefined) ?? "";
-      const into = a.reviewStatus === "gold" ? gold : pending;
-      const byType = a.reviewStatus === "gold" ? goldByType : pendingByType;
+      const isHeld = a.reviewStatus === "gold" && a.examPoolAt != null;
+      const into = isHeld ? held : a.reviewStatus === "gold" ? gold : pending;
+      const byType = isHeld ? heldByType : a.reviewStatus === "gold" ? goldByType : pendingByType;
       for (const c of new Set(loCodesOf(tags, null))) {
         if (!want.has(c)) continue;
         into.set(c, (into.get(c) ?? 0) + 1);
@@ -161,7 +170,7 @@ export async function bankCoverage(
   }
   const cellsOf = (code: string, allowed: string[]): BankCoverageCell[] => {
     const carried = new Set<string>();
-    for (const k of [...goldByType.keys(), ...pendingByType.keys()]) {
+    for (const k of [...goldByType.keys(), ...pendingByType.keys(), ...heldByType.keys()]) {
       const [c, t] = k.split("|");
       if (c === code && t) carried.add(t);
     }
@@ -170,6 +179,7 @@ export async function bankCoverage(
       typeCode: t || null,
       goldCount: goldByType.get(`${code}|${t}`) ?? 0,
       pendingCount: pendingByType.get(`${code}|${t}`) ?? 0,
+      heldCount: heldByType.get(`${code}|${t}`) ?? 0,
       zero: t !== "" && allowed.includes(t) && (goldByType.get(`${code}|${t}`) ?? 0) === 0,
       noMarks: t !== "" && noMarks.has(t),
     });
@@ -192,6 +202,7 @@ export async function bankCoverage(
         questionTypeCodes: o.questionTypeCodes ?? [],
         exercises: outcomeBookRef(o).exercises,
         goldCount: gold.get(o.code) ?? 0,
+        heldCount: held.get(o.code) ?? 0,
         pendingCount: pending.get(o.code) ?? 0,
         cells: cellsOf(o.code, o.questionTypeCodes ?? []),
       };
@@ -206,6 +217,7 @@ export async function bankCoverage(
       rows: rows.length,
       zeroRows: rows.filter((r) => r.goldCount === 0).length,
       gold: rows.reduce((s, r) => s + r.goldCount, 0),
+      held: rows.reduce((s, r) => s + r.heldCount, 0),
       rubricRows,
     },
   };
@@ -215,10 +227,10 @@ export async function bankCoverage(
   return view;
 }
 
-/** PR-G: objective, type, gold, pending — one line per cell; "-" is the no-type cell. */
+/** PR-G: objective, type, usable gold, pending, held — one line per cell; "-" is the no-type cell. */
 export function coverageTypeCsv(view: Pick<BankCoverageView, "rows">): string {
-  const lines = ["objective,type,gold,pending"];
-  for (const r of view.rows) for (const c of r.cells) lines.push(`${r.code},${c.typeCode ?? "-"},${c.goldCount},${c.pendingCount}`);
+  const lines = ["objective,type,gold,pending,held"];
+  for (const r of view.rows) for (const c of r.cells) lines.push(`${r.code},${c.typeCode ?? "-"},${c.goldCount},${c.pendingCount},${c.heldCount}`);
   return lines.join("\n");
 }
 

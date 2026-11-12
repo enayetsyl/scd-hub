@@ -1748,6 +1748,8 @@ export interface QuestionListItem {
   reviewStatus: string;
   /** Marked important (QR-9, D-#550) — shown as a gold tag; everyone sees it. */
   important: boolean;
+  /** Held for the exam papers (PR-I, D-#1408) — shown as a badge; everyone sees it. */
+  examPool: boolean;
   /** Soft-deleted (D-#548). Only present under the retired lens (D-#558). */
   retired: boolean;
   /** Full payload JSON — list rows read question_text from it. */
@@ -1771,6 +1773,8 @@ export interface QuestionsVars {
   reviewStatus?: string | null;
   /** Narrow to the IMPORTANT questions (QR-9, D-#550), or with false to the normal ones. */
   important?: boolean | null;
+  /** Held-for-exams lens (PR-I): "only" = the held ones; omitted = every question. */
+  examPool?: string | null;
   /** Show the RETIRED questions instead of the live ones (D-#558) — the way back to restore. */
   retired?: boolean | null;
   /** Free-text over question_text + qid; Bangla digits match Latin qids. */
@@ -1797,6 +1801,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $marksMax: Float
     $reviewStatus: String
     $important: Boolean
+    $examPool: String
     $retired: Boolean
     $search: String
     $limit: Int
@@ -1818,6 +1823,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marksMax: $marksMax
       reviewStatus: $reviewStatus
       important: $important
+      examPool: $examPool
       retired: $retired
       search: $search
       limit: $limit
@@ -1839,6 +1845,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       curationTag
       reviewStatus
       important
+      examPool
       retired
       payloadJson
     }
@@ -1897,6 +1904,7 @@ export const QUESTION_QUERY = gql<{ question: QuestionDetail | null }, { id: str
       curationTag
       reviewStatus
       important
+      examPool
       retired
       current
       importedAt
@@ -9753,6 +9761,66 @@ export const SET_QUESTION_IMPORTANT = gql<
     setQuestionImportant(artifactId: $artifactId, important: $important) {
       artifactId important changedFields
     }
+  }
+`;
+
+/** Hold one question for the exam papers, or release it (PR-I, D-#1408). Principal + Office. */
+export const SET_QUESTION_EXAM_POOL = gql<
+  { setQuestionExamPool: { artifactId: string; examPool: boolean; changed: boolean } },
+  { artifactId: string; on: boolean }
+>`
+  mutation SetQuestionExamPool($artifactId: String!, $on: Boolean!) {
+    setQuestionExamPool(artifactId: $artifactId, on: $on) {
+      artifactId examPool changed
+    }
+  }
+`;
+
+export interface ExamPoolBulkResult { marked: number; notFound: string[]; unchanged: string[] }
+
+/** Hold / release many questions by a pasted list of ids (PR-I) — marked / not found / unchanged. */
+export const MARK_EXAM_POOL = gql<
+  { markExamPool: ExamPoolBulkResult },
+  { qids: string[]; on: boolean }
+>`
+  mutation MarkExamPool($qids: [String!]!, $on: Boolean!) {
+    markExamPool(qids: $qids, on: $on) { marked notFound unchanged }
+  }
+`;
+
+export interface QuestionFilterVars {
+  subject?: string | null;
+  classLevel?: number | null;
+  topicTags?: string[] | null;
+  questionTypes?: string[] | null;
+  chapters?: number[] | null;
+  category?: string | null;
+  qtCode?: string | null;
+  bloomLevel?: string | null;
+  difficulty?: string | null;
+  paperRole?: string | null;
+  marksMin?: number | null;
+  marksMax?: number | null;
+  reviewStatus?: string | null;
+  important?: boolean | null;
+  examPool?: string | null;
+  search?: string | null;
+}
+
+/** How many questions the current bank filter matches — shown before a bulk hold (PR-I). */
+export const QUESTIONS_COUNT_QUERY = gql<{ questionsCount: number }, { filter: QuestionFilterVars }>`
+  query QuestionsCount($filter: QuestionFilterInput!) {
+    questionsCount(filter: $filter)
+  }
+`;
+
+/** Hold / release every question the filter matches; `expectedCount` is the number the user saw. */
+export const MARK_EXAM_POOL_BY_FILTER = gql<
+  { markExamPoolByFilter: ExamPoolBulkResult },
+  { filter: QuestionFilterVars; expectedCount: number; on: boolean }
+>`
+  mutation MarkExamPoolByFilter($filter: QuestionFilterInput!, $expectedCount: Int!, $on: Boolean!) {
+    markExamPoolByFilter(filter: $filter, expectedCount: $expectedCount, on: $on) { marked notFound unchanged }
   }
 `;
 

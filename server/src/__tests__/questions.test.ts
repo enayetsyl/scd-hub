@@ -1164,6 +1164,41 @@ describe("QR-9 — the IMPORTANT mark survives a re-import (D-#550)", () => {
   });
 });
 
+describe("PR-I — the exam-pool hold survives a re-import (D-#1408)", () => {
+  beforeEach(() => {
+    mockBatchCreate.mockResolvedValue(makeBatchDoc());
+    mockArtifactCreate.mockResolvedValue(makeArtifactDoc());
+    mockReviewFind.mockReturnValue({ lean: () => Promise.resolve([]) });
+  });
+
+  test("a held prior version hands its hold to the new one", async () => {
+    const heldAt = new Date("2026-11-12T00:00:00.000Z");
+    const by = new mongoose.Types.ObjectId();
+    mockArtifactFindOneResult.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), examPoolAt: heldAt, examPoolBy: by });
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.examPoolAt).toEqual(heldAt);
+    expect(String(createArg.examPoolBy)).toBe(by.toString());
+  });
+
+  test("an unheld prior version, and a first import, hand over nothing", async () => {
+    mockArtifactFindOneResult.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), examPoolAt: null });
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+    expect((mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>).examPoolAt).toBeNull();
+
+    mockArtifactCreate.mockClear();
+    mockArtifactFindOneResult.mockResolvedValue(null);
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+    const first = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(first.examPoolAt).toBeNull();
+    expect(first.examPoolBy).toBeUndefined();
+  });
+});
+
 // ===========================================================================
 // QR-3 — the publish gate on SELECTION (Q3.4 / D-#508)
 // ===========================================================================

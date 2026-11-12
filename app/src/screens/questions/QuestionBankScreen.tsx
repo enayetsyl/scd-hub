@@ -29,6 +29,7 @@ import { FilterSheet } from "../../components/FilterSheet";
 import { SelectableCard } from "../../components/SelectableCard";
 import { SelectionTray } from "../../components/SelectionTray";
 import { CreateSetSheet } from "./CreateSetSheet";
+import { ExamPoolPanel } from "./ExamPoolPanel";
 import {
   STR,
   subjectLabel,
@@ -67,6 +68,10 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  // PR-I (D-#1408): the bulk hold is for question:manage holders (Principal, Office).
+  const { can } = useAuth();
+  const mayHold = can("question_bank:edit") || can("question_bank:delete");
+  const [holdOpen, setHoldOpen] = useState(false);
 
   // Add-to-set mode: rows push straight into the given draft set (addQuestionToSet)
   // rather than the basket. `addedIds` tracks what this session already added so the
@@ -111,6 +116,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
       bloomLevel: qb.filters.bloomLevel,
       reviewStatus: qb.filters.reviewStatus,
       important: qb.filters.important,
+      examPool: qb.filters.examPool,
       retired: qb.filters.retired,
       marksMin: num(qb.filters.marksMin),
       marksMax: num(qb.filters.marksMax),
@@ -150,6 +156,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   }
   if (f.reviewStatus) chips.push({ key: "reviewStatus", label: reviewStatusLabel(f.reviewStatus) });
   if (f.important) chips.push({ key: "important", label: STR.qImportantOnly });
+  if (f.examPool) chips.push({ key: "examPool", label: STR.qExamPool });
   if (f.retired) chips.push({ key: "retired", label: STR.qbShowRetired });
   if (f.questionTypes.length > 0) {
     chips.push({
@@ -171,7 +178,6 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   // Q3.7 (D-#508): with no filters applied, an empty bank is NOT a filter problem — the
   // shelf only ever shows PUBLISHED questions, and telling the teacher to change filters
   // they never set would send them hunting for something that isn't there.
-  const { can } = useAuth();
   /**
    * A SEARCH counts as narrowing (D-#570). It did not, so an unmatched search fell into the
    * “nothing here at all” branch and answered a search with “only published questions are
@@ -217,6 +223,8 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
           {/* The IMPORTANT mark (QR-9, D-#550). Gold, and placed beside the status badge so
               a marked question is identifiable while scanning the list, not only on open. */}
           {q.important ? <Badge text={STR.qImportant} tone="gold" /> : null}
+          {/* Held for the exam papers (PR-I, D-#1408) — every reader sees it. */}
+          {q.examPool ? <Badge text={STR.qExamPool} tone="info" /> : null}
           {/* A retired row can only appear under the retired lens, so the badge is not
               redundant with the filter chip — it is what marks the list as NOT the bank. */}
           {q.retired ? <Badge text={STR.qeRetired} tone="danger" /> : null}
@@ -293,6 +301,32 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
           </Card>
         ) : null}
         <SearchField value={qb.search} onSearch={qb.setSearch} />
+        {mayHold && !addToSetId ? (
+          <Button title={holdOpen ? STR.qExamHide : STR.qExamOpenBulk} variant="secondary" onPress={() => setHoldOpen(!holdOpen)} />
+        ) : null}
+        {mayHold && !addToSetId && holdOpen ? (
+          <ExamPoolPanel
+            filter={{
+              subject: qb.filters.subject,
+              classLevel: qb.filters.classLevel,
+              topicTags: qb.filters.topicTags,
+              questionTypes: qb.filters.questionTypes,
+              chapters: qb.filters.chapters,
+              category: qb.filters.category,
+              qtCode: qb.filters.qtCode,
+              paperRole: qb.filters.paperRole,
+              difficulty: qb.filters.difficulty,
+              bloomLevel: qb.filters.bloomLevel,
+              reviewStatus: qb.filters.reviewStatus,
+              important: qb.filters.important,
+              examPool: qb.filters.examPool,
+              marksMin: num(qb.filters.marksMin),
+              marksMax: num(qb.filters.marksMax),
+              search: qb.search.trim() || null,
+            }}
+            onChanged={() => reexecute({ requestPolicy: "network-only" })}
+          />
+        ) : null}
         <FilterBar
           chips={chips}
           count={qb.activeCount}

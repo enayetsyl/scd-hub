@@ -28,6 +28,7 @@ CellRef.implement({
     typeCode: t.string({ nullable: true, resolve: (c) => c.typeCode }),
     goldCount: t.exposeInt("goldCount"),
     pendingCount: t.exposeInt("pendingCount"),
+    heldCount: t.exposeInt("heldCount", { description: "PR-I: gold questions held for the exam papers." }),
     zero: t.exposeBoolean("zero"),
     noMarks: t.exposeBoolean("noMarks"),
   }),
@@ -47,7 +48,8 @@ RowRef.implement({
     status: t.exposeString("status"),
     questionTypeCodes: t.exposeStringList("questionTypeCodes"),
     exercises: t.exposeStringList("exercises"),
-    goldCount: t.exposeInt("goldCount"),
+    goldCount: t.exposeInt("goldCount", { description: "Usable gold (not held for the exam papers)." }),
+    heldCount: t.exposeInt("heldCount"),
     pendingCount: t.exposeInt("pendingCount"),
     cells: t.field({ type: [CellRef], resolve: (r) => r.cells }),
   }),
@@ -64,6 +66,7 @@ TotalsRef.implement({
     rows: t.exposeInt("rows"),
     zeroRows: t.exposeInt("zeroRows"),
     gold: t.exposeInt("gold"),
+    held: t.exposeInt("held"),
     rubricRows: t.exposeInt("rubricRows"),
   }),
 });
@@ -80,7 +83,7 @@ ViewRef.implement({
     totals: t.field({ type: TotalsRef, resolve: (v) => v.totals }),
     brief: t.exposeString("brief", { description: "The rows with no gold question, as a brief for the next question batch." }),
     noMarksTypes: t.exposeStringList("noMarksTypes", { description: "PR-G: active types with no marks in the table." }),
-    typeCsv: t.exposeString("typeCsv", { description: "PR-G: objective, type, gold, pending per cell as CSV." }),
+    typeCsv: t.exposeString("typeCsv", { description: "PR-G: objective, type, usable gold, pending, held per cell as CSV." }),
   }),
 });
 

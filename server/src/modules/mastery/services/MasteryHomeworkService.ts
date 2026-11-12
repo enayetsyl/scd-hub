@@ -42,6 +42,7 @@ import {
 } from "./MasteryWorkService";
 import { computeSection, liveSectionRows, lockedOutcomes } from "./MasteryDiagnosisService";
 import { goldBank, marksTable } from "./MasteryAssignmentService";
+import { heldRefusal } from "../examHold";
 import { pickTyped, typeFor, typeOfQuestion, type BankQuestion, type BuilderLayout, type OutcomeInfo } from "../assignmentBuilder";
 import { isTaggedRow } from "../rollup";
 import { notifyExtraHomework } from "../notify";
@@ -375,6 +376,11 @@ export async function createExtraHomework(
       const st = x.states.get(sh.studentId)?.get(it.loCode)?.state;
       if (st !== "WEAK" && st !== "IMPROVING") throw new MasteryWorkError(`${who}: ${o.labelBn} — এখন দুর্বল বা উন্নতি-হচ্ছে নয়।`);
       const q = bankBy.get(it.artifactId);
+      // PR-I (D-#1408): the bank above leaves held questions out, so name the real reason for one.
+      if (!q) {
+        const why = await heldRefusal([it.artifactId]);
+        if (why) throw new MasteryWorkError(`${who}: ${why}`);
+      }
       if (!q || !q.loCodes.includes(it.loCode)) throw new MasteryWorkError(`${who}: প্রশ্নটি গোল্ড ব্যাংকে ${it.loCode}-এর সাথে ট্যাগ করা নয়।`);
       if (seen.has(q.qid)) throw new MasteryWorkError(`${who}: প্রশ্ন ${q.qid} আগেই দেখেছে।`);
       const type = typeOfQuestion(q, { code: o.code, chapterNumber: o.chapterNumber, questionTypeCodes: o.questionTypeCodes }, { marksOf: x.marks, layout: OPEN_LAYOUT });
