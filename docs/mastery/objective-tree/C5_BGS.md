@@ -3,13 +3,14 @@
 > Generated from `C5_BGS.tree.json` (the source of truth) — edit the JSON, not this file. Contract: `docs/prd-objective-tree.md`.
 
 - **Status:** DRAFT — Claude draft for review by Mahzabin; the Principal locks. Codes become permanent at lock.
-- **Book:** C5_BGS_Book_v4_Writer-Reviewer — not yet printed (the latest Writer-Reviewer copy is the source; regular book + scholarship edition from one master) · read 2026-11-12
-  - `Book Review Material/Class 5 BGS/C5_BGS_Book_v4_Writer-Reviewer.md (+ .docx — the source: শিক্ষার্থীর পাতা নীল বৃত্তি-অংশসহ, শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ; মডেল টেস্ট ১–৩)`
+- **Book:** C5_BGS_Book_v5_Writer-Reviewer — not yet printed (the latest Writer-Reviewer copy is the source; regular book + scholarship edition from one master) · read 2026-11-12
+  - `Book Review Material/Class 5 BGS/C5_BGS_Book_v5_Writer-Reviewer.md (+ .docx — the source: শিক্ষার্থীর পাতা নীল বৃত্তি-অংশসহ, শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ; মডেল টেস্ট ১–৩)`
+  - `Book Review Material/Class 5 BGS/C5_BGS_Book_v5_Teacher.md, C5_BGS_Book_v5_Student.md, C5_BGS_Book_v5_Student_Scholarship.md (একই মাস্টার থেকে চূড়ান্ত শিক্ষক ও শিক্ষার্থী কপি; Writer-Reviewer কপির সাথে বিষয়বস্তু অভিন্ন ধরা হয়েছে)`
   - `Book Review Material/Class 5 BGS/C5_BGS_Memo_v4.pdf (সংস্করণ ৪-এর বদল)`
   - `Downloads/Class_5_BGS_Short_Long_Question_Structure.md + scholarship/ (বৃত্তি পরীক্ষা ২০২৬-এর কাঠামো — তুলনার জন্য, শুধু পড়া)`
   - `docs/mastery/objective-tree/C4_BGS.tree.json, C3_BGS.tree.json (আগের ধাপের কোড)`
 - **Counts:** 11 domains used · 73 objectives · 9 sub-objectives · 1 skill strands · **79 tagged rows**
-- **Coverage:** 693 / 693 numbered exercises mapped to a tagged row (0 unmapped). exercisesTotal = every numbered item of the Writer-Reviewer copy v4 (693): the sixteen chapters' অনুশীলনী (621) — parts ১ বহুনির্বাচনি, ২ শূন্যস্থান, ৩ সত্য-মিথ্যা, ৫ সংক্ষিপ্ত, ৬ বিস্তৃত ((ক)… — the letter is the item number, ক=1; the blue "বৃত্তি-অংশ" items continue the same lettering) and ৪ মিলকরণ (left-hand rows; a second set continues the count 5–8; the extra fifth right-hand option is not an item) — plus the three model tests at the end of the book (72; listed as chapter 17, part "টেস্ট N <ভাগ>"). 144 of the 621 chapter items are blue scholarship-only items (inventory field "sch"). Unnumbered "ছকে দেখি" tables are activities ('<ch>/ছকে দেখি N/—', N = order in the chapter). The book is NOT printed yet — letters/numbers may move in the print.
+- **Coverage:** 693 / 693 numbered exercises mapped to a tagged row (0 unmapped). exercisesTotal = every numbered item of the Writer-Reviewer copy v5 (final; the text is identical to v4 — only the cover and the decision log changed) (693): the sixteen chapters' অনুশীলনী (621) — parts ১ বহুনির্বাচনি, ২ শূন্যস্থান, ৩ সত্য-মিথ্যা, ৫ সংক্ষিপ্ত, ৬ বিস্তৃত ((ক)… — the letter is the item number, ক=1; the blue "বৃত্তি-অংশ" items continue the same lettering) and ৪ মিলকরণ (left-hand rows; a second set continues the count 5–8; the extra fifth right-hand option is not an item) — plus the three model tests at the end of the book (72; listed as chapter 17, part "টেস্ট N <ভাগ>"). 144 of the 621 chapter items are blue scholarship-only items (inventory field "sch"). Unnumbered "ছকে দেখি" tables are activities ('<ch>/ছকে দেখি N/—', N = order in the chapter). The book is NOT printed yet — letters/numbers may move in the print.
 
 Exercise refs read `অধ্যায়/অংশ/নম্বর` — অংশ = an অনুশীলনী part (বহুনির্বাচনি · শূন্যস্থান · সত্য-মিথ্যা · মিল · সংক্ষিপ্ত · বিস্তৃত; the item letter is the number, ক=১; blue "বৃত্তি-অংশ" items continue the lettering); chapter ১৭ = the three model tests at the end of the book (`১৭/টেস্ট ২ সংক্ষিপ্ত/৩`); "নম্বরহীন কাজ" = a "ছকে দেখি" table of the lesson. Rows whose label ends "(বৃত্তি-অংশ)" are scholarship-only. Codes are written without the `LO-C5-BGS-` prefix; an earlier class's code reads `C4·07-03.1`.
 
@@ -727,7 +728,7 @@ Every one of the 693 numbered exercises maps to at least one tagged row.
 
 | Row | Kind | Flag |
 |---|---|---|
-| — | VERSION_DIFF | বইটি এখনো ছাপা হয়নি। উৎস: লেখক-পর্যালোচক কপি C5_BGS_Book_v4_Writer-Reviewer (৯ নভেম্বর ২০২৬) ও স্মারক v৪। একই মাস্টার কপি থেকে দুটি শিক্ষার্থী-বই হবে — নিয়মিত বই ও বৃত্তি সংস্করণ (নীল অংশসহ); ছাপার সময় অনুশীলনীর অক্ষর-নম্বর সরতে পারে, বিশেষ করে নীল অংশ আলাদা হলে নিয়মিত বইয়ে নম্বর নতুন করে বসতে পারে। ছাপা ফাইল এলে ৬৯৩টি প্রশ্ন আবার মিলিয়ে তবেই লক। |
+| — | VERSION_DIFF | বইটি এখনো ছাপা হয়নি। উৎস: লেখক-পর্যালোচক কপি C5_BGS_Book_v5_Writer-Reviewer (সংস্করণ ৫ — চূড়ান্ত, ১২ নভেম্বর ২০২৬) ও স্মারক v৪। একই মাস্টার কপি থেকে দুটি শিক্ষার্থী-বই হবে — নিয়মিত বই ও বৃত্তি সংস্করণ (নীল অংশসহ); ছাপার সময় অনুশীলনীর অক্ষর-নম্বর সরতে পারে, বিশেষ করে নীল অংশ আলাদা হলে নিয়মিত বইয়ে নম্বর নতুন করে বসতে পারে। ছাপা ফাইল এলে ৬৯৩টি প্রশ্ন আবার মিলিয়ে তবেই লক। |
 | — | OTHER | নীল বৃত্তি-অংশ: ১৩টি সারি পুরোপুরি বৃত্তি-অংশের (০৩-০৩, ০৩-০৪, ০৪-০২ থেকে ০৪-০৫, ০৭-০৫, ০৯-০৪, ০৯-০৫, ১০-০৫, ১২-০৫, ১৪-০৫, ১৫-০৫ — লেবেলের শেষে "(বৃত্তি-অংশ)", নোটে "শুধু বৃত্তি-অংশ"), আর ০৪-০১ নিয়মিত ক্লাসে পড়ানো হলেও বিদ্যালয়ের পরীক্ষায় আসে না। অনুশীলনীর ১৪৪টি প্রশ্ন নীল; এর মধ্যে ২০টি নিয়মিত সারির ভেতরে বাড়তি প্রশ্ন (অধ্যায় ৫, ৭, ১২, ১৪ — সারির নোটে প্রশ্নের নম্বর লেখা) ও ৫টি ০৪-০১-এ। নীল সারি ও প্রশ্ন বিদ্যালয়ের অর্ধ-বার্ষিক ও বার্ষিকের সিলেবাসের বাইরে (পরিশিষ্ট ৮); অ্যাপে এগুলো শুধু বৃত্তি পরীক্ষার্থীদের জন্য চালু রাখার ব্যবস্থা দরকার। |
 | — | OTHER | বইয়ের শেষের তিনটি মডেল টেস্ট (বৃত্তি পরীক্ষার ধাঁচে, প্রতিটি ৫০ নম্বর — ২৪টি প্রশ্ন, মোট ৭২) "অধ্যায় ১৭" হিসেবে তালিকাভুক্ত; প্রতিটি প্রশ্ন তার নিজের অধ্যায়ের সারিতে উদ্ধৃত। মডেল টেস্টে অধ্যায় ৪-এর প্রশ্নও আছে (টেস্ট ১-এর মিলকরণ, টেস্ট ২-এর সত্য-মিথ্যা ১ ও সংক্ষিপ্ত ১) — বৃত্তি পরীক্ষার জন্য ঠিক, বিদ্যালয়ের পরীক্ষার জন্য নয়। |
 | — | WORDING_RULE_CONFLICT | অধ্যায় ৬-এর অনুশীলনীতে মিলকরণ দুটি আলাদা প্রশ্ন (৪। ও ৫।), ফলে অংশ সাতটি (সংক্ষিপ্ত ৬।, বিস্তৃত ৭।); বাকি ১৫ অধ্যায়ে মিলকরণ একটিই প্রশ্ন (৪।) ও অংশ ছয়টি — সিদ্ধান্ত ৪ বলে "অনুশীলনী ছয় অংশে"। অধ্যায় ৩, ৫, ৯, ১৫-তে দ্বিতীয় মিলকরণ সেট একই প্রশ্নের ভেতরে। গাছে অধ্যায় ৬-এর দ্বিতীয় সেট মিল ৫–৮ হিসেবে গোনা হয়েছে। বই-দল অধ্যায় ৬ অন্যগুলোর মতো করলে নম্বর মিলবে। |
@@ -743,7 +744,7 @@ Every one of the 693 numbered exercises maps to at least one tagged row.
 
 **কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। অভিভাবকেরা শিখনফলের নাম ও বাড়ির টিপস দেখবেন। আগের ধাপ চতুর্থ (কোথাও তৃতীয়) শ্রেণির বাংলাদেশ ও বিশ্বপরিচয়ের সারি দেখায়।
 
-**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৪ (৯ নভেম্বর ২০২৬)। ছাপার পরে — বিশেষ করে নিয়মিত বই ও বৃত্তি সংস্করণ আলাদা হলে — অনুশীলনীর অক্ষর-নম্বর মিলিয়ে তবেই লক।
+**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৫ — চূড়ান্ত (১২ নভেম্বর ২০২৬)। ছাপার পরে — বিশেষ করে নিয়মিত বই ও বৃত্তি সংস্করণ আলাদা হলে — অনুশীলনীর অক্ষর-নম্বর মিলিয়ে তবেই লক।
 
 **আগে এগুলো দেখুন (Claude-এর বিচার):**
 1. **নীল বৃত্তি-অংশের সারি রাখা হয়েছে** — লেবেলের শেষে "(বৃত্তি-অংশ)" ও নোটে "শুধু বৃত্তি-অংশ"। ১৩টি সারি পুরোপুরি নীল; অধ্যায় ৪-এর পাঁচটি সারির কোনোটিই বিদ্যালয়ের পরীক্ষায় আসে না (০৪-০১ নিয়মিত ক্লাসে এক পিরিয়ডে পড়ানো হয়)। নিয়মিত শিক্ষার্থীর জন্য এই সারিগুলো বন্ধ রাখার সিদ্ধান্ত আপনার ও অধ্যক্ষের।
@@ -758,3 +759,13 @@ Every one of the 693 numbered exercises maps to at least one tagged row.
 **বৃত্তি পরীক্ষার সাথে মিল-অমিল।** প্রশ্নের ধরন বইয়ের নম্বর বণ্টন (পরিশিষ্ট ৩, ৪) থেকে হুবহু — বৃত্তি ২০২৬-এর বাংলাদেশ ও বিশ্বপরিচয় অংশের পাঁচ প্রশ্ন, প্রশ্নসংখ্যা দ্বিগুণ (৫০ → ১০০)। পার্থক্য: (ক) বৃত্তিতে শূন্যস্থান *বা* সত্য-মিথ্যা — একটি ধরন, ৫টি; বইয়ে দুটিই, ৫ + ৫; (খ) বৃত্তিতে মিলকরণ ৪টি, বইয়ে দুই সেট × ৪; (গ) বৃত্তি পরীক্ষা NCTB-র পুরো বই থেকে — নীল অংশসহ (অধ্যায় ৪ পুরো, নৃগোষ্ঠীর জীবনধারা, দক্ষিণ এশিয়ার খাবার-পোশাক-উৎসব, বাল্যবিবাহ, সাংগঠনিক কার্যক্রম, গণতান্ত্রিক আচরণ, পর্যটন শিল্প, ব্যাংক), যা বিদ্যালয়ের পরীক্ষায় নেই; (ঘ) বার্ষিকে অর্ধ-বার্ষিকের অধ্যায় থেকে প্রশ্ন নয়, বৃত্তি ও মডেল টেস্ট পুরো বই থেকে; (ঙ) অধ্যায় ২ ও ১০-এ নিয়মিত বইয়ের পাঠ SCD রূপে (ন্যায়ভিত্তিক শিখন পরিবেশ; পরামর্শ ও খলিফা উমর রা.) — NCTB-র ভাষার সাথে মিল বৃত্তি-অংশে দেখতে হবে।
 
 **বইয়ের সমস্যা বই-দলের জন্য:** অধ্যায় ৬-এ মিলকরণ দুটি আলাদা প্রশ্ন (অংশ ৭টি); দুটি নীল পাঠের শিখনফল লেখা নেই (০৭-০৫, ১২-০৫); গল্প-নির্ভর ২০টি প্রশ্ন।
+
+## Final book v5 — changes
+
+Checked 2026-11-12 against `C5_BGS_Book_v5_Writer-Reviewer.md` (final, 12 Nov 2026). Method: v4 and v5 were normalised (blockquote/table markup) and diffed line by line.
+
+- **Book content: no change.** The decision log (সিদ্ধান্ত ৭৯) says "বইয়ের লেখা সংস্করণ ৪-এর মতোই; বদল কেবল প্রচ্ছদ ও সিদ্ধান্ত-লগে". Every chapter, lesson, শিখনফল list, numbered অনুশীলনী item and the পরিশিষ্ট নম্বর বণ্টন (marks table) is identical to v4.
+- **What did change in the book (logs only):** cover → "সংস্করণ ৫ — চূড়ান্ত", 12 Nov 2026; new log section ঞ (সিদ্ধান্ত ৭৭–৭৯): the reviewer signed memo v4 on 12/11/26 — ৭৭ chapter 4 "চার স্মরণীয় নেতা": keep the text as it is, how much to teach is left for later (open item "পরের সংস্করণের জন্য"); ৭৮ chapter 5 "প্রশ্নোত্তরে মুক্তিযুদ্ধ" approved with no change (this is the text the tree already carried as "proposed").
+- **Tree changes:** `source.book` / `source.version` / `source.files` and the VERSION_DIFF flag and coverage note point to v5 (the v5 Teacher/Student/Student_Scholarship files are listed). **Objectives added 0, label changed 0, retired 0; exercise refs remapped 0; question types / marks changed 0.** No code was touched.
+- **Coverage:** 693 / 693 before and after.
+- **Still open:** chapter 4 (rows ০৪-০১ … ০৪-০৫) — the reviewer will later decide how much of the four leaders is taught in the regular book; if that changes, rows and the "(বৃত্তি-অংশ)" split may need a revisit. The tree is still "not yet printed": re-match the 693 exercise letters against the printed regular and scholarship books before lock.
