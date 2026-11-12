@@ -84,8 +84,8 @@ Exercise refs read `ইউনিট/পাঠ/অনুশীলনীর অক
 
 ### `02-01` Salam and polite greetings
 
-- ইউনিট ২ · Greetings and Classroom Language · বইয়ের শিখনফল: "Give and return salam; use Good morning, How are you?, Allah Hafiz and JazakAllahu / JazakiLlahu Khairan correctly."
-- অভিভাবকের জন্য বাড়ির টিপস: দেখা হলে ও বিদায়ের সময় সালাম, How are you?, Allah Hafiz বলার অভ্যাস করান; ছেলেকে JazakAllahu, মেয়েকে JazakiLlahu Khairan।
+- ইউনিট ২ · Greetings and Classroom Language · বইয়ের শিখনফল: "Give and return salam; use Good morning, How are you?, Allah Hafiz and Jazakallahu / Jazakillahu Khairan correctly."
+- অভিভাবকের জন্য বাড়ির টিপস: দেখা হলে ও বিদায়ের সময় সালাম, How are you?, Allah Hafiz বলার অভ্যাস করান; ছেলেকে Jazakallahu, মেয়েকে Jazakillahu Khairan।
 - আগের খসড়ার কোড: 02-01
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
