@@ -28,8 +28,8 @@ v0.2 diff vs v0.1 (Project-04 ratification, R-IMP5):
     curation scan (Project-04 decision 5-B; the build-side REF-01+REF-21 self-scan is the gate).
 
 v1.2 diff vs v1.1 (2026-11-11, D-#1310/#1311 — 2027 content subjects + Class 6):
-  - subject += ISLAM, ICT, BAN2, ENG2; class_level 1..6 (schemas). A plan's "ISL" (the P09
-    plan tools' spelling) equals the envelope's "ISLAM" at L3.
+  - subject += ISLAM, ICT, BAN2, ENG2; class_level 1..6 (schemas). D-#1440: "ISL" (the old P09
+    spelling) is no longer an alias — it is refused, naming "ISLAM".
   - ref19_topic_id leaves the payload schema's `required`: L4 requires it for every subject
     except ISLAM / ICT (no REF-19 slugs), where it is optional and unchecked.
 
@@ -74,10 +74,8 @@ STIM_ID_RE = re.compile(r"^STIM-[A-Z][A-Z0-9]*-C[1-6]-U\d+(-L\d+)?-\d{2,}$")
 # must carry one. Mirrors shared/vocab.ts REF19_OPTIONAL_SUBJECTS.
 REF19_OPTIONAL_SUBJECTS = {"ISLAM", "ICT"}
 
-# The Project 09 plan tools (plan-tools/LOCKED_SCD_PlanSchema_v2.json) spell Islamic Studies
-# "ISL"; the app's content code is "ISLAM". The two name one subject (D-#1310).
-SUBJECT_ALIASES = {"ISL": "ISLAM"}
-def _canon_subject(s): return SUBJECT_ALIASES.get(s, s)
+# D-#1440: the old Project 09 spelling "ISL" is dropped; "ISLAM" is the only code. No aliases.
+def _canon_subject(s): return s
 
 # REF-19 canonical topic slugs (auto-extracted from LOCKED_REF-19 v1.10, 2026-06-09; the
 # doc-reference artifact 'BGS-REF19' excluded). This is the DEFAULT registry for the hard
@@ -128,6 +126,8 @@ def load_json(path):
 
 # ---- L1: envelope schema ------------------------------------------------
 def layer1_envelope(env, env_schema):
+    if env.get("subject") == "ISL" or (env.get("payload") or {}).get("subject") == "ISL":
+        fail("ENVELOPE", "['subject']: 'ISL' is no longer accepted — Islamic Studies is spelled 'ISLAM'")
     v = Draft202012Validator(env_schema)
     for e in sorted(v.iter_errors(env), key=lambda e: list(e.path)):
         fail("ENVELOPE", f"{list(e.path)}: {e.message}")

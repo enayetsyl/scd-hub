@@ -165,8 +165,8 @@ def main():
     envelope = {
         "envelope_version": env_version,
         "doc_type": plan_type,
-        # The P09 plan tools spell Islamic Studies "ISL"; the envelope code is "ISLAM" (D-#1310).
-        "subject": {"ISL": "ISLAM"}.get(plan.get("subject"), plan.get("subject")),
+        # D-#1440: Islamic Studies is "ISLAM" everywhere; the old plan spelling "ISL" is gone.
+        "subject": plan.get("subject"),
         "class_level": plan.get("class_level"),
         "address": address,
         "curation_tag": plan.get("curation_tag"),
