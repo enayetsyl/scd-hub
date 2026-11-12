@@ -1,0 +1,2426 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C4",
+ "subject": "SCI",
+ "status": "DRAFT",
+ "source": {
+  "book": "C4_SCI_Book_v3_Writer-Reviewer — not yet printed (the latest Writer-Reviewer copy is the source)",
+  "version": "C4_SCI_Book_v3_Writer-Reviewer (১০ নভেম্বর ২০২৬) — not yet printed",
+  "files": [
+   "Book Review Material/Class 4 Sci/C4_SCI_Book_v3_Writer-Reviewer.md (+ .docx — the source: শিক্ষার্থীর পাতা, শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ ১–৬০)",
+   "Book Review Material/Class 4 Sci/C4_SCI_Memo_v3.docx (সংস্করণ ৩-এর বদল: অধ্যায় ১০ বাদ, নক্ষত্রমণ্ডলের সংজ্ঞা; D-০৯ খোলা)",
+   "Book Review Material/Feedback_C4_Science_Memo_Science_v2.pdf (পর্যালোচকের রাউন্ড ২-এর উত্তর — স্মারক v৩-এ সারসংক্ষেপ করা)",
+   "docs/mastery/objective-tree/C3_SCI.tree.json (আগের ধাপের কোড)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "জীবের বৃদ্ধি ও জীবনচক্র"
+  },
+  {
+   "number": 2,
+   "titleBn": "স্বাস্থ্য সুরক্ষা"
+  },
+  {
+   "number": 3,
+   "titleBn": "দুর্ঘটনা ও প্রাথমিক চিকিৎসা"
+  },
+  {
+   "number": 4,
+   "titleBn": "পদার্থ"
+  },
+  {
+   "number": 5,
+   "titleBn": "শক্তি"
+  },
+  {
+   "number": 6,
+   "titleBn": "গতি ও বল"
+  },
+  {
+   "number": 7,
+   "titleBn": "প্রাকৃতিক সম্পদ"
+  },
+  {
+   "number": 8,
+   "titleBn": "মহাবিশ্ব"
+  },
+  {
+   "number": 9,
+   "titleBn": "আবহাওয়া"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-MCQ",
+   "labelBn": "বহুনির্বাচনি — সঠিক উত্তরে টিক (√)",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ১ — ১০×১ = ১০ (অর্ধ-বার্ষিক ও বার্ষিক); চারটি বিকল্প, একটিই সঠিক"
+  },
+  {
+   "code": "QT-FILL",
+   "labelBn": "শূন্যস্থান পূরণ",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ২-এর ৫টি — ৫×১ = ৫ (দুই পরীক্ষাতেই); পূর্ণ শব্দ, শব্দ-বাক্স নেই"
+  },
+  {
+   "code": "QT-TF",
+   "labelBn": "সত্য-মিথ্যা নির্ণয় (স / মি)",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ২-এর ৫টি — ৫×১ = ৫ (দুই পরীক্ষাতেই); শুধু স/মি দেখে নম্বর — শুদ্ধ করে লিখতে হবে না"
+  },
+  {
+   "code": "QT-MATCH",
+   "labelBn": "মিলকরণ",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ৩ — ৮টি জোড়া × ১ = ৮ (দুই পরীক্ষাতেই)"
+  },
+  {
+   "code": "QT-SHORT",
+   "labelBn": "সংক্ষিপ্ত উত্তর প্রশ্ন",
+   "marksBn": "২",
+   "examUse": "প্রশ্ন ৪ — ১২×২ = ২৪ (দুই পরীক্ষাতেই); প্রতিটি সঠিক পয়েন্টে ১, ২টি পয়েন্টে পূর্ণ নম্বর; অন্তত ৩টি প্রয়োগ বা উচ্চতর দক্ষতার"
+  },
+  {
+   "code": "QT-LONG",
+   "labelBn": "বিস্তৃত উত্তর প্রশ্ন",
+   "marksBn": "৬",
+   "examUse": "প্রশ্ন ৫ — ৮×৬ = ৪৮ (দুই পরীক্ষাতেই); প্রতিটি সঠিক পয়েন্টে ১, ৬টি পয়েন্টে পূর্ণ নম্বর; আঁকার বদলে ছাপা চিত্রে নাম লেখা; অন্তত ২টি প্রয়োগ বা উচ্চতর দক্ষতার"
+  },
+  {
+   "code": "QT-OBS",
+   "labelBn": "শ্রেণির কাজে পর্যবেক্ষণ (রুব্রিক)",
+   "marksBn": "—",
+   "examUse": "লিখিত পরীক্ষায় নয় — কাজ (পরীক্ষণ) দেখে ফল বলা, হাত ধোয়া (শ্রেণির কাজ ও শ্রেণি পরীক্ষা); ৪ ধাপ: ১ পারে না · ২ সাহায্যে পারে · ৩ প্রায় পারে · ৪ ভালো পারে"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C4-SCI-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-LIFE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "অঙ্কুরোদ্গম কী ও এর জন্য কী কী লাগে",
+   "sourceText": "অঙ্কুরোদ্গম কী বলতে পারবে; অঙ্কুরোদ্গমের জন্য পানি, বাতাস ও উপযুক্ত তাপ লাগে — প্রদর্শন দেখে ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/4",
+     "1/শূন্যস্থান/5",
+     "1/সংক্ষিপ্ত/2",
+     "1/বিস্তৃত/2",
+     "1/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "ভেজা কাপড়ে কয়েকটি ছোলা রেখে সন্তানকে প্রতিদিন দেখতে দিন — বীজ থেকে চারা বের হতে কী কী লাগল, জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বোতলে তিনটি ছোলা বীজের প্রদর্শনের ফলাফল (টিক ৪, বিস্তৃত ২) এখানে; কাজটি দেখা ও ফল বলা SK-OBS-01-এ (সিদ্ধান্ত ২৮: ফলাফল পরীক্ষায় আসতে পারে, ধাপ নয়)।"
+  },
+  {
+   "code": "LO-C4-SCI-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-LIFE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "উদ্ভিদের বৃদ্ধির জন্য কী লাগে এবং উদ্ভিদ কী গ্রহণ ও ত্যাগ করে",
+   "sourceText": "উদ্ভিদের বৃদ্ধির জন্য সূর্যের আলো, পানি ও বায়ু লাগে — তিন টবের ফলাফলের ছক থেকে ব্যাখ্যা করতে পারবে; খাদ্য তৈরি ও শ্বাসকার্যে উদ্ভিদ কী গ্রহণ ও ত্যাগ করে বলতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG",
+    "QT-MCQ",
+    "QT-TF"
+   ],
+   "homeTipBn": "টবের একটি গাছ রোদে আর একটি ছায়ায় রাখলে কী তফাত হয়, সন্তানের সঙ্গে এক সপ্তাহ দেখে আলোচনা করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-01-02",
+    "LO-C3-SCI-09-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-01-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-01-02",
+   "domainCode": "DOM-SCI-LIFE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "উদ্ভিদের বৃদ্ধির জন্য সূর্যের আলো, পানি ও বায়ু — তিন টবের ফলাফল ব্যাখ্যা",
+   "sourceText": "উদ্ভিদের বৃদ্ধির জন্য সূর্যের আলো, পানি ও বায়ু লাগে — তিন টবের ফলাফলের ছক থেকে ব্যাখ্যা করতে পারবে [ভাগ: বৃদ্ধির উপাদান]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/শূন্যস্থান/2",
+     "1/সংক্ষিপ্ত/5",
+     "1/বিস্তৃত/3",
+     "1/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "সংক্ষিপ্ত ৫ (বাক্স দিয়ে ঢাকা টব) প্রয়োগের প্রশ্ন — তিন টবের ছকের টব-৩।"
+  },
+  {
+   "code": "LO-C4-SCI-01-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-01-02",
+   "domainCode": "DOM-SCI-LIFE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "খাদ্য তৈরি ও শ্বাসকার্যে উদ্ভিদ কী গ্রহণ করে ও কী ত্যাগ করে",
+   "sourceText": "… খাদ্য তৈরি ও শ্বাসকার্যে উদ্ভিদ কী গ্রহণ ও ত্যাগ করে বলতে পারবে [ভাগ: গ্রহণ ও ত্যাগ]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/1",
+     "1/টিক/2",
+     "1/শূন্যস্থান/1",
+     "1/সত্য-মিথ্যা/1",
+     "1/সত্য-মিথ্যা/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"খাদ্য থেকে পুষ্টি ও শক্তি\" (টিক ২, শূন্যস্থান ১) এখানে — পাঠ্যে খাদ্য তৈরির অংশেই আছে। শিশু অক্সিজেন ও কার্বন ডাই-অক্সাইড উলটে ফেলে, তাই আলাদা সারি।"
+  },
+  {
+   "code": "LO-C4-SCI-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-PLANT",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "ফুলের অংশের নাম ও কাজ; পরাগায়ন কী",
+   "sourceText": "জবাফুলের চিত্রে ফুলের অংশের নাম চিনতে পারবে এবং বৃতি, দলমণ্ডল, পুংকেশর ও স্ত্রীকেশরের কাজ অল্প কথায় বলতে পারবে; পরাগায়ন কী বলতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/3",
+     "1/টিক/5",
+     "1/সত্য-মিথ্যা/2",
+     "1/মিল/1",
+     "1/মিল/2",
+     "1/মিল/3",
+     "1/মিল/4",
+     "1/সংক্ষিপ্ত/3",
+     "1/বিস্তৃত/1",
+     "1/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "একটি জবা ফুল হাতে নিয়ে সন্তানকে বৃতি, পাপড়ি, পুংকেশর ও স্ত্রীকেশর দেখাতে ও প্রতিটির কাজ বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-01-01",
+    "LO-C3-SCI-01-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পরাগায়নের একটিই প্রশ্ন (সংক্ষিপ্ত ৩), তাই আলাদা সারি নয়। চিত্রে অংশের নাম লেখার নম্বরযুক্ত অনুশীলনী নেই (ফ্ল্যাগ) — পরীক্ষায় ছাপা জবাফুলের চিত্রে নাম লেখা এই সারিতে (সিদ্ধান্ত ২৮, ৩৮)।"
+  },
+  {
+   "code": "LO-C4-SCI-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-PLANT",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "ফলের অংশ ও বীজ",
+   "sourceText": "ফলের অংশ (খোসা, খোসা ও বীজের মাঝখানের অংশ, বীজ) বলতে পারবে; বেশিরভাগ ফলে বীজ থাকে — উদাহরণ দিতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/6",
+     "1/শূন্যস্থান/3",
+     "1/শূন্যস্থান/4",
+     "1/সত্য-মিথ্যা/4",
+     "1/মিল/5",
+     "1/সংক্ষিপ্ত/1",
+     "1/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "আম বা পেঁপে কাটার সময় সন্তানকে খোসা, খাওয়ার অংশ ও বীজ দেখাতে বলুন; কোন ফলে একটি বীজ আর কোনটিতে অনেক, জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-01-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-01-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-LIFE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "জীবনচক্র কী ও জীবনচক্রের ধাপ",
+   "sourceText": "জীবনচক্র কী বলতে পারবে; মরিচ গাছ ও মুরগির জীবনচক্রের ধাপ ক্রমানুসারে লিখতে পারবে; জীবনচক্রের মাধ্যমে নতুন জীব তৈরি হয় — বুঝিয়ে বলতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/সত্য-মিথ্যা/5",
+     "1/সংক্ষিপ্ত/4",
+     "1/বিস্তৃত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "ডিম থেকে মুরগি বা বীজ থেকে মরিচ গাছ — ধাপগুলো সন্তানকে পরপর সাজিয়ে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-01-01",
+    "LO-C4-SCI-01-04",
+    "LO-C3-SCI-02-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তিনটি অনুশীলনীই মুরগি বা সাধারণ জীবনচক্র নিয়ে; মরিচ গাছের জীবনচক্রের ধাপ লেখার প্রশ্ন নেই (ফ্ল্যাগ)। জীবন্ত প্রাণী আঁকা নয় — ধাপ লেখা (সিদ্ধান্ত ১৩)।"
+  },
+  {
+   "code": "LO-C4-SCI-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "সুস্বাস্থ্য ও রোগ কী; সংক্রামক ও অসংক্রামক রোগ আলাদা করা",
+   "sourceText": "সুস্বাস্থ্য ও রোগ কী বলতে পারবে; রোগকে সংক্রামক ও অসংক্রামক — এই দুই ভাগে উদাহরণসহ ভাগ করতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/1",
+     "2/টিক/3",
+     "2/শূন্যস্থান/1",
+     "2/সত্য-মিথ্যা/1",
+     "2/সত্য-মিথ্যা/3",
+     "2/সংক্ষিপ্ত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "সর্দি-জ্বর একজন থেকে আরেকজনে ছড়ায়, কিন্তু ডায়াবেটিস ছড়ায় না — কেন, সন্তানকে বুঝিয়ে বলতে বলুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "কোন রোগ কী কারণে হয় ও কীভাবে ছড়ায়",
+   "sourceText": "কয়েকটি রোগের কারণ বলতে পারবে; সংক্রামক রোগ পানি, বায়ু, প্রাণী ও সংস্পর্শের মাধ্যমে কীভাবে ছড়ায় এবং ডেঙ্গু কীভাবে ছড়ায় ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "মশারি টানানো বা পানি ফুটিয়ে খাওয়ার সময় জিজ্ঞেস করুন — এতে কোন কোন রোগ থেকে বাঁচা যায়, রোগটি কীভাবে ছড়ায়।",
+   "prereqCodes": [
+    "LO-C4-SCI-02-01",
+    "LO-C3-SCI-07-02.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-02-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-02-02",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "সংক্রামক রোগ কীভাবে ছড়ায় — পানি, বায়ু, প্রাণী ও সংস্পর্শ",
+   "sourceText": "… সংক্রামক রোগ পানি, বায়ু, প্রাণী ও সংস্পর্শের মাধ্যমে কীভাবে ছড়ায় এবং ডেঙ্গু কীভাবে ছড়ায় ব্যাখ্যা করতে পারবে [ভাগ: বিস্তার]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/4",
+     "2/শূন্যস্থান/2",
+     "2/সত্য-মিথ্যা/2",
+     "2/সত্য-মিথ্যা/5",
+     "2/মিল/1",
+     "2/মিল/2",
+     "2/মিল/3",
+     "2/সংক্ষিপ্ত/1",
+     "2/সংক্ষিপ্ত/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মিল ১–৩ (ম্যালেরিয়া — মশা, জলাতঙ্ক — কুকুর, ডায়রিয়া — দূষিত পানি) সংক্রামক রোগের মাধ্যম; মিল ৪–৫ অসংক্রামক রোগের কারণ (.২)। ব্যাংকে মিলের প্রশ্ন জোড়া ধরে ট্যাগ হবে।"
+  },
+  {
+   "code": "LO-C4-SCI-02-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-02-02",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "অসংক্রামক রোগের কারণ — ভিটামিনের অভাব ও দূষণ",
+   "sourceText": "কয়েকটি রোগের কারণ বলতে পারবে … [ভাগ: অসংক্রামক রোগের কারণ]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/শূন্যস্থান/3",
+     "2/মিল/4",
+     "2/মিল/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-03-04.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "রিকেটস (ভিটামিন ডি), রাতকানা (ভিটামিন এ), অ্যাজমা (বায়ু দূষণ) — তৃতীয় শ্রেণির \"পুষ্টি উপাদানের অভাবে সমস্যা\"-র পরের ধাপ। মাত্র তিনটি অনুশীলনী; মেশাতে চাইলে ০২-০১-এর সঙ্গে।"
+  },
+  {
+   "code": "LO-C4-SCI-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "লক্ষণ দেখে সাধারণ রোগ চেনা",
+   "sourceText": "লক্ষণ দেখে সাধারণ রোগ চিনতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/6",
+     "2/বিস্তৃত/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-LONG"
+   ],
+   "homeTipBn": "জ্বর, পাতলা পায়খানা বা অনেক দিনের কাশি — কোনটি কোন রোগের লক্ষণ হতে পারে, বইয়ের ছক দেখে সন্তানকে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-SCI-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুটি মাত্র অনুশীলনী, তবে বইয়ের আলাদা শিখনফল ও আলাদা অংশ (৩. রোগের লক্ষণ) — তাই সারি রাখা হলো।"
+  },
+  {
+   "code": "LO-C4-SCI-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "রোগ হলে করণীয় ও রোগ প্রতিরোধের উপায়",
+   "sourceText": "রোগের প্রতিকারে করণীয় এবং সংক্রামক ও অসংক্রামক রোগ প্রতিরোধের উপায় বলতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বাড়িতে কারো জ্বর বা ডায়রিয়া হলে কী করতে হয় (জলপট্টি, স্যালাইন, ডাক্তার), সন্তানকে সঙ্গে নিয়ে দেখান; টিকার কার্ডটিও দেখান।",
+   "prereqCodes": [
+    "LO-C4-SCI-02-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-02-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-02-04",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "রোগ হলে করণীয় — জ্বর ও ডায়রিয়ার প্রতিকার",
+   "sourceText": "রোগের প্রতিকারে করণীয় … বলতে পারবে [ভাগ: প্রতিকার]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/শূন্যস্থান/4",
+     "2/সংক্ষিপ্ত/2",
+     "2/বিস্তৃত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-02-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-02-04",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "সংক্রামক ও অসংক্রামক রোগ প্রতিরোধের উপায়",
+   "sourceText": "… সংক্রামক ও অসংক্রামক রোগ প্রতিরোধের উপায় বলতে পারবে [ভাগ: প্রতিরোধ]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/শূন্যস্থান/5",
+     "2/সংক্ষিপ্ত/3",
+     "2/বিস্তৃত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রতিকার (রোগ হওয়ার পরে) আর প্রতিরোধ (হওয়ার আগে) শিশুরা গুলিয়ে ফেলে — তাই দুই সারি।"
+  },
+  {
+   "code": "LO-C4-SCI-02-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "স্বাস্থ্য রক্ষার নিয়ম ও সঠিক নিয়মে হাত ধোয়া",
+   "sourceText": "স্বাস্থ্য রক্ষার নিয়ম বলতে পারবে এবং সঠিক নিয়মে হাত ধুতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-LONG",
+    "QT-OBS"
+   ],
+   "homeTipBn": "খাওয়ার আগে ও টয়লেটের পরে সন্তান সাবান দিয়ে ধাপে ধাপে হাত ধোয় কি না লক্ষ করুন; ঘুম, খেলা ও পরিষ্কার থাকার নিয়ম মনে করিয়ে দিন।",
+   "prereqCodes": [
+    "LO-C3-SCI-03-05",
+    "LO-C3-SCI-03-06"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-02-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-02-05",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "স্বাস্থ্য রক্ষার নিয়ম বলা",
+   "sourceText": "স্বাস্থ্য রক্ষার নিয়ম বলতে পারবে … [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/2",
+     "2/টিক/5",
+     "2/সত্য-মিথ্যা/4",
+     "2/বিস্তৃত/3",
+     "2/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-02-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-02-05",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "সঠিক নিয়মে হাত ধোয়া (হাতে-কলমে)",
+   "sourceText": "… সঠিক নিয়মে হাত ধুতে পারবে [ভাগ: করে দেখানো]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/কাজ ১/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-OBS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "রুব্রিক — শ্রেণিতে বা কলের কাছে হাতে-কলমে দেখা হয়; লিখিত পরীক্ষায় কাজ করিয়ে দেখানো আসে না (পরিশিষ্ট ৮)। নম্বরযুক্ত অনুশীলনী নেই, শুধু \"কাজ: হাত ধোয়ার সঠিক নিয়ম\"। নিয়ম জানা (.১) আর ঠিকভাবে ধুতে পারা আলাদা।"
+  },
+  {
+   "code": "LO-C4-SCI-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "দুর্ঘটনা কী, সাধারণ দুর্ঘটনা ও তার ক্ষতি",
+   "sourceText": "দুর্ঘটনা কী বলতে পারবে; দৈনন্দিন জীবনের সাধারণ দুর্ঘটনার নাম ও দুর্ঘটনায় কী ক্ষতি হয় বলতে পারবে।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/1",
+     "3/টিক/3",
+     "3/সংক্ষিপ্ত/1",
+     "3/বিস্তৃত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বাড়িতে বা রাস্তায় কী কী দুর্ঘটনা ঘটতে পারে ও তাতে কী ক্ষতি হয়, সন্তানকে তিনটি উদাহরণ দিতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-04-06"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "দুর্ঘটনা প্রতিরোধে সতর্কতা",
+   "sourceText": "গাছ থেকে পড়া, আগুনে পোড়া, পানিতে ডোবা, সড়ক দুর্ঘটনা, সাপে কাটা ও বিদ্যুৎস্পৃষ্ট হওয়াসহ আটটি দুর্ঘটনা প্রতিরোধের সতর্কতা বলতে ও মেনে চলতে পারবে। [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/শূন্যস্থান/1",
+     "3/শূন্যস্থান/2",
+     "3/শূন্যস্থান/3",
+     "3/সত্য-মিথ্যা/1",
+     "3/সত্য-মিথ্যা/3",
+     "3/বিস্তৃত/3",
+     "3/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": "ভেজা হাতে সুইচ না ধরা, একা পানিতে না নামা, রাস্তা পার হওয়ার নিয়ম — সন্তানের সঙ্গে বাড়ির ঝুঁকির জায়গাগুলো ঘুরে দেখুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-03-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"মেনে চলতে পারবে\" অংশ লিখিত প্রশ্নে যাচাই হয় না — \"বলা\" অংশই সারি (তৃতীয় শ্রেণির রীতি)। আটটি দুর্ঘটনা ধরে ভাগ করলে প্রতিটি এক-দুই প্রশ্নের সারি হতো।"
+  },
+  {
+   "code": "LO-C4-SCI-03-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "প্রাথমিক চিকিৎসা",
+   "sourceText": "প্রাথমিক চিকিৎসা কী, এর চারটি সাধারণ নিয়ম এবং বিভিন্ন দুর্ঘটনায় প্রাথমিক চিকিৎসার পদক্ষেপ বলতে পারবে।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG",
+    "QT-TF",
+    "QT-MATCH"
+   ],
+   "homeTipBn": "হাত কেটে গেলে বা পুড়ে গেলে প্রথমে কী করতে হয়, সন্তানকে ধাপে ধাপে বলতে বলুন; বাড়ির প্রাথমিক চিকিৎসার বাক্সটি দেখান।",
+   "prereqCodes": [
+    "LO-C4-SCI-03-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-03-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-03-03",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "প্রাথমিক চিকিৎসা কী ও এর সাধারণ নিয়ম",
+   "sourceText": "প্রাথমিক চিকিৎসা কী, এর চারটি সাধারণ নিয়ম … বলতে পারবে [ভাগ: সংজ্ঞা ও সাধারণ নিয়ম]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/2",
+     "3/শূন্যস্থান/4",
+     "3/শূন্যস্থান/5",
+     "3/সংক্ষিপ্ত/3",
+     "3/বিস্তৃত/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-03-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-03-03",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "কোন দুর্ঘটনায় কী প্রাথমিক চিকিৎসা — কাটা, আঘাত, পোড়া, ডোবা, সাপে কাটা, বিদ্যুৎস্পৃষ্ট",
+   "sourceText": "… বিভিন্ন দুর্ঘটনায় প্রাথমিক চিকিৎসার পদক্ষেপ বলতে পারবে [ভাগ: দুর্ঘটনাভেদে পদক্ষেপ]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/4",
+     "3/টিক/5",
+     "3/টিক/6",
+     "3/সত্য-মিথ্যা/2",
+     "3/সত্য-মিথ্যা/4",
+     "3/সত্য-মিথ্যা/5",
+     "3/মিল/1",
+     "3/মিল/2",
+     "3/মিল/3",
+     "3/মিল/4",
+     "3/মিল/5",
+     "3/সংক্ষিপ্ত/2",
+     "3/সংক্ষিপ্ত/4",
+     "3/সংক্ষিপ্ত/5",
+     "3/বিস্তৃত/4",
+     "3/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "১৫টি অনুশীলনী — অধ্যায়ের বড়ো অংশ। দুর্ঘটনা ধরে ছয় সারিতে ভাঙা যায়, কিন্তু প্রতিটি দু-তিন প্রশ্নের হতো এবং দক্ষতা একই (\"এই দুর্ঘটনায় কী করব\")। পর্যালোচক চাইলে পোড়া / সাপে কাটা / বিদ্যুৎস্পৃষ্ট আলাদা করা যায় (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C4-SCI-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পদার্থ কী ও পদার্থের তিন প্রকার; বাতাসও পদার্থ",
+   "sourceText": "পদার্থ কী তা নিজের ভাষায় বলতে পারবে এবং পদার্থের তিন প্রকার (কঠিন, তরল, বায়বীয়) উদাহরণসহ বলতে পারবে (৩.১.১)।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/1",
+     "4/শূন্যস্থান/3",
+     "4/মিল/3",
+     "4/সংক্ষিপ্ত/1",
+     "4/সংক্ষিপ্ত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ঘরের পাঁচটি জিনিস দেখিয়ে জিজ্ঞেস করুন — এটি কঠিন, তরল না বায়বীয়? বাতাসকে কেন পদার্থ বলা হয়?",
+   "prereqCodes": [
+    "LO-C3-SCI-04-01",
+    "LO-C3-SCI-04-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"বাতাস চোখে দেখা যায় না, তবু পদার্থ\" (শূন্যস্থান ৩, মিল ৩, সংক্ষিপ্ত ২) সংজ্ঞার প্রয়োগ — তাই এখানে।"
+  },
+  {
+   "code": "LO-C4-SCI-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "কঠিন, তরল ও বায়বীয় পদার্থের বৈশিষ্ট্য",
+   "sourceText": "কঠিন, তরল ও বায়বীয় পদার্থের আকৃতি, আয়তন, ওজন ও চাপে বাধা দেওয়ার বৈশিষ্ট্য বলতে পারবে এবং সহজ পরীক্ষায় ওজন ও আয়তন দেখাতে পারবে (৩.১.২, ৩.১.৩)।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-LONG",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "গ্লাসের পানি বাটিতে ঢেলে দেখান — আকৃতি বদলাল, পরিমাণ বদলাল কি? পাথরের বেলায় কী হয়, সন্তানকে তুলনা করতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-04-01",
+    "LO-C3-SCI-04-02.1"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-04-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-04-02",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "তিন প্রকার পদার্থের আকৃতি, আয়তন ও চাপে বাধা — পার্থক্য",
+   "sourceText": "কঠিন, তরল ও বায়বীয় পদার্থের আকৃতি, আয়তন, ওজন ও চাপে বাধা দেওয়ার বৈশিষ্ট্য বলতে পারবে [ভাগ: বৈশিষ্ট্য]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/2",
+     "4/শূন্যস্থান/1",
+     "4/সত্য-মিথ্যা/1",
+     "4/বিস্তৃত/1",
+     "4/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-04-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-04-02",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পদার্থের ওজন ও আয়তন আছে — সহজ পরীক্ষার ফলাফল থেকে বলা",
+   "sourceText": "… সহজ পরীক্ষায় ওজন ও আয়তন দেখাতে পারবে [ভাগ: পরীক্ষার ফলাফল]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/3",
+     "4/সংক্ষিপ্ত/3",
+     "4/কাজ ১/—",
+     "4/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-04-02.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পানিতে পাথর (আয়তন) ও স্কেল দিয়ে নিক্তি (ওজন) — ফলাফলের প্রশ্ন এখানে; কাজ দেখা SK-OBS-01-এ। দুটি মাত্র নম্বরযুক্ত অনুশীলনী।"
+  },
+  {
+   "code": "LO-C4-SCI-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পানির তিন অবস্থা — পরিবর্তন ও ব্যবহার",
+   "sourceText": "পানির তিন অবস্থার নাম, বৈশিষ্ট্য, অবস্থার পরিবর্তন ও ব্যবহার বলতে পারবে (৩.৩.৩–৩.৩.৫)।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বরফ গলা ও পানি ফুটে বাষ্প হওয়া দেখিয়ে জিজ্ঞেস করুন — তাপ দিলে কী হয়, ঠান্ডা করলে কী হয়? বরফ ও বাষ্প কী কাজে লাগে?",
+   "prereqCodes": [
+    "LO-C3-SCI-04-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-04-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-04-03",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পানির তিন অবস্থা ও তাপ-ঠান্ডায় অবস্থার পরিবর্তন",
+   "sourceText": "পানির তিন অবস্থার নাম, বৈশিষ্ট্য, অবস্থার পরিবর্তন … বলতে পারবে [ভাগ: অবস্থা ও পরিবর্তন]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/4",
+     "4/শূন্যস্থান/2",
+     "4/শূন্যস্থান/4",
+     "4/সত্য-মিথ্যা/3",
+     "4/মিল/1",
+     "4/মিল/2",
+     "4/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-04-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-04-03",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "কঠিন, তরল ও বায়বীয় অবস্থায় পানির ব্যবহার",
+   "sourceText": "… পানির তিন অবস্থার … ব্যবহার বলতে পারবে [ভাগ: ব্যবহার]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/সংক্ষিপ্ত/5",
+     "4/বিস্তৃত/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-04-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "মরিচা — কী, কেন পড়ে ও কীভাবে রোধ করা যায়",
+   "sourceText": "মরিচা কী, কেন পড়ে ও কীভাবে রোধ করা যায় বলতে পারবে … (৩.২.১) [ভাগ: মরিচা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/5",
+     "4/সত্য-মিথ্যা/4",
+     "4/মিল/4",
+     "4/সংক্ষিপ্ত/4",
+     "4/বিস্তৃত/4",
+     "4/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বাড়ির পুরোনো লোহার জিনিসে মরিচা দেখিয়ে জিজ্ঞেস করুন — কেন ধরল? রং বা তেল দিলে কেন ধরে না?",
+   "prereqCodes": [
+    "LO-C4-SCI-04-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুটি পেরেকের পরীক্ষার ফলাফল (সত্য-মিথ্যা ৪, বিস্তৃত ৪) এখানে। বইয়ের এক শিখনফলে মরিচা ও রাসায়নিক পরিবর্তন একসাথে — দুই সারি, কারণ দুটি আলাদা অংশ (৬ ও ৭) ও আলাদা প্রশ্ন।"
+  },
+  {
+   "code": "LO-C4-SCI-04-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "রাসায়নিক পরিবর্তন কী ও উদাহরণ চেনা",
+   "sourceText": "… রাসায়নিক পরিবর্তন কী তা বলতে ও উদাহরণ চিনতে পারবে (৩.২.১) [ভাগ: রাসায়নিক পরিবর্তন]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/6",
+     "4/শূন্যস্থান/5",
+     "4/সত্য-মিথ্যা/2",
+     "4/সত্য-মিথ্যা/5",
+     "4/মিল/5",
+     "4/বিস্তৃত/2",
+     "4/কাজ ৫/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-LONG"
+   ],
+   "homeTipBn": "দুধ থেকে দই হওয়া আর কাগজ ছেঁড়া — কোনটিতে নতুন পদার্থ তৈরি হলো, সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-04-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তি কী ও শক্তির রূপ চেনা",
+   "sourceText": "শক্তি কী তা নিজের ভাষায় বলতে পারবে এবং শক্তির সাতটি রূপ — তাপ, আলোক, বিদ্যুৎ, শব্দ, রাসায়নিক, গতি ও স্থিতিশক্তি — উদাহরণসহ চিনতে পারবে (৩.৪.১, ৩.৪.২)।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বাড়ির পাঁচটি কাজ (বাতি জ্বালানো, রান্না, ঘণ্টা বাজা…) দেখিয়ে জিজ্ঞেস করুন — এখানে শক্তির কোন রূপ কাজ করছে?",
+   "prereqCodes": [
+    "LO-C3-SCI-05-01",
+    "LO-C3-SCI-05-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "গতিশক্তি ও স্থিতিশক্তি আলাদা শিখনফল (০৫-০২)-এ; এখানে বাকি পাঁচ রূপ।"
+  },
+  {
+   "code": "LO-C4-SCI-05-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-05-01",
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তি কী এবং তাপ, আলোক, বিদ্যুৎ, শব্দ ও রাসায়নিক শক্তির পরিচয়",
+   "sourceText": "শক্তি কী তা নিজের ভাষায় বলতে পারবে এবং শক্তির … রূপ … উদাহরণসহ চিনতে পারবে [ভাগ: সংজ্ঞা ও প্রতিটি রূপের পরিচয়]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/1",
+     "5/শূন্যস্থান/1",
+     "5/শূন্যস্থান/4",
+     "5/সত্য-মিথ্যা/1",
+     "5/সত্য-মিথ্যা/2",
+     "5/সত্য-মিথ্যা/4",
+     "5/মিল/1",
+     "5/মিল/2",
+     "5/সংক্ষিপ্ত/1",
+     "5/সংক্ষিপ্ত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-05-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-05-01",
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "একটি ঘটনা বা যন্ত্রে কোন কোন শক্তি জড়িত — চেনা (বাস, ঘণ্টা, বিদ্যুৎ চমকানো)",
+   "sourceText": "… শক্তির … রূপ … উদাহরণসহ চিনতে পারবে [ভাগ: ঘটনায় শক্তির রূপ শনাক্ত করা]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/2",
+     "5/টিক/3",
+     "5/সত্য-মিথ্যা/3",
+     "5/সংক্ষিপ্ত/4",
+     "5/বিস্তৃত/3",
+     "5/কাজ ১/—",
+     "5/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রয়োগের সারি: শিশু প্রতিটি রূপের সংজ্ঞা জানলেও চলন্ত বাসে বা বিদ্যুৎ চমকানোয় কোন কোন শক্তি আছে বলতে আটকে যায়।"
+  },
+  {
+   "code": "LO-C4-SCI-05-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "স্থিতিশক্তি ও গতিশক্তি; স্থিতিশক্তির গতিশক্তিতে রূপান্তর",
+   "sourceText": "স্থিতিশক্তি কীভাবে গতিশক্তিতে রূপান্তরিত হয় তা উদাহরণসহ বলতে পারবে (৩.৪.২)।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/5",
+     "5/শূন্যস্থান/2",
+     "5/মিল/3",
+     "5/মিল/4",
+     "5/বিস্তৃত/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-LONG"
+   ],
+   "homeTipBn": "উঁচু থেকে বল ছেড়ে দিয়ে দেখান — ওপরে ধরা অবস্থায় কোন শক্তি জমা ছিল, পড়ার সময় কোন শক্তি হলো?",
+   "prereqCodes": [
+    "LO-C4-SCI-05-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-05-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তির উৎস ও বিদ্যুৎ উৎপাদনের চার উপায়",
+   "sourceText": "শক্তির উৎস কী তা বলতে পারবে এবং বিদ্যুৎ উৎপাদনের চারটি উপায়ে শক্তির উৎস চিনতে পারবে (৩.৪.৩)।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/6",
+     "5/শূন্যস্থান/5",
+     "5/মিল/5",
+     "5/সংক্ষিপ্ত/3",
+     "5/বিস্তৃত/4",
+     "5/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "ছাদের সৌর প্যানেল বা বায়ুকলের ছবি দেখিয়ে জিজ্ঞেস করুন — এখানে বিদ্যুৎ কোন উৎস থেকে তৈরি হয়?",
+   "prereqCodes": [
+    "LO-C4-SCI-05-01",
+    "LO-C3-SCI-05-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-05-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তির দায়িত্বশীল ব্যবহার",
+   "sourceText": "শক্তির দায়িত্বশীল ব্যবহারের উপায় বলতে পারবে এবং বাড়ি ও বিদ্যালয়ে মেনে চলবে (৩.৪.৪)। [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/4",
+     "5/শূন্যস্থান/3",
+     "5/সত্য-মিথ্যা/5",
+     "5/সংক্ষিপ্ত/5",
+     "5/বিস্তৃত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "ঘর ছাড়ার আগে বাতি-পাখা বন্ধ করা, রান্নার পাত্র ঢেকে রাখা — সন্তানকে দায়িত্ব দিন এবং কেন তা দরকার, বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-05-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "গতি ও বল কী; বল প্রয়োগে বস্তু চলে ও থামে",
+   "sourceText": "গতি ও বল কী তা নিজের ভাষায় বলতে পারবে এবং বল প্রয়োগে থেমে থাকা বস্তু চলতে শুরু করে ও চলন্ত বস্তু থেমে যায় — তা দেখে বলতে পারবে (৪.১.১)।",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/টিক/1",
+     "6/টিক/2",
+     "6/শূন্যস্থান/2",
+     "6/সত্য-মিথ্যা/1",
+     "6/সত্য-মিথ্যা/4",
+     "6/সত্য-মিথ্যা/5",
+     "6/সংক্ষিপ্ত/1",
+     "6/সংক্ষিপ্ত/2",
+     "6/সংক্ষিপ্ত/3",
+     "6/বিস্তৃত/1",
+     "6/কাজ ১/—",
+     "6/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "একটি বল গড়িয়ে দিয়ে আবার থামান; সন্তানকে জিজ্ঞেস করুন — বলটি কেন চলল, কেন থামল? গতি আর বল কাকে বলে?",
+   "prereqCodes": [
+    "LO-C3-SCI-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "সংজ্ঞা (গতি, বল) ও \"বল প্রয়োগে চলে-থামে\" এক সারি: সংজ্ঞার চারটি প্রশ্ন আলাদা করলে তৃতীয় শ্রেণির ০৬-০১.১-এর পুনরাবৃত্তি থাকত।"
+  },
+  {
+   "code": "LO-C4-SCI-06-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "বল প্রয়োগের ধরন — টান, ঠেলা ও চাপ — এবং এদের প্রভাব",
+   "sourceText": "বল প্রয়োগের ধরন — টান, ঠেলা (ধাক্কা) ও চাপ — এবং এদের প্রভাব উদাহরণসহ বলতে পারবে (৪.১.২)।",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/টিক/6",
+     "6/শূন্যস্থান/1",
+     "6/শূন্যস্থান/5",
+     "6/মিল/1",
+     "6/মিল/2",
+     "6/মিল/3",
+     "6/সংক্ষিপ্ত/5",
+     "6/বিস্তৃত/2",
+     "6/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "দরজা টানা, ভারী বাক্স ঠেলা, খালি বোতল চাপা — প্রতিটিতে কোন ধরনের বল ও তাতে কী বদলাল, সন্তানকে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-06-01",
+    "LO-C3-SCI-06-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-06-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "দৈনন্দিন জীবনে বল — সাইকেল, কুয়া থেকে পানি তোলা ও সাঁতার",
+   "sourceText": "সাইকেল চালানো, কুয়া থেকে পানি তোলা ও সাঁতার কাটায় বলের ভূমিকা ব্যাখ্যা করতে পারবে (৪.১.৩)।",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/টিক/3",
+     "6/টিক/4",
+     "6/টিক/5",
+     "6/শূন্যস্থান/3",
+     "6/শূন্যস্থান/4",
+     "6/সত্য-মিথ্যা/2",
+     "6/সত্য-মিথ্যা/3",
+     "6/মিল/4",
+     "6/মিল/5",
+     "6/সংক্ষিপ্ত/4",
+     "6/বিস্তৃত/3",
+     "6/বিস্তৃত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "সাইকেলের প্যাডেল, ব্রেক ও হ্যান্ডেল দেখিয়ে জিজ্ঞেস করুন — কোথায় বল দিলে সাইকেল চলে, থামে, দিক বদলায়?",
+   "prereqCodes": [
+    "LO-C4-SCI-06-02",
+    "LO-C3-SCI-06-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তিনটি উদাহরণ এক সারি (তৃতীয় শ্রেণির ০৬-০২-এর মতো) — দক্ষতা একই: ঘটনায় কোথায় কোন বল কাজ করছে বলা।"
+  },
+  {
+   "code": "LO-C4-SCI-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "প্রাকৃতিক সম্পদ কী, কী কী ও কোনটি কী কাজে লাগে",
+   "sourceText": "প্রকৃতিতে পাওয়া যায় এমন যা কিছু মানুষের কাজে লাগে তাই প্রাকৃতিক সম্পদ — বলতে পারবে; পানি, বনজ, ভূমি, খনিজ সম্পদ, সূর্যের আলো ও বায়ু এবং বাংলাদেশের প্রাকৃতিক সম্পদের নাম ও ব্যবহার লিখতে পারবে (৫.১.১)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/2",
+     "7/টিক/3",
+     "7/শূন্যস্থান/1",
+     "7/সত্য-মিথ্যা/1",
+     "7/মিল/1",
+     "7/সংক্ষিপ্ত/1",
+     "7/সংক্ষিপ্ত/3",
+     "7/বিস্তৃত/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "রান্নার গ্যাস, কাঠের চেয়ার, কলের পানি — এগুলো কোন প্রাকৃতিক সম্পদ থেকে এল, সন্তানকে খুঁজে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-07-03",
+    "LO-C3-SCI-08-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-07-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "নবায়নযোগ্য ও অনবায়নযোগ্য সম্পদ এবং যথাযথ ব্যবহারের গুরুত্ব",
+   "sourceText": "প্রাকৃতিক সম্পদকে নবায়নযোগ্য ও অনবায়নযোগ্য — এই দুই প্রকারে উদাহরণসহ ভাগ করতে পারবে এবং প্রাকৃতিক সম্পদ সীমিত বলে এর যথাযথ ব্যবহারের গুরুত্ব বলতে পারবে (৫.১.২, ৫.১.৩)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "সূর্যের আলো ও বাতাস ফুরায় না, কিন্তু গ্যাস ও কয়লা ফুরিয়ে যায় — কোনটি কোন দলে এবং কেন হিসাব করে ব্যবহার করব, সন্তানের সঙ্গে আলোচনা করুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-07-01",
+    "LO-C3-SCI-05-03.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-07-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-07-02",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "নবায়নযোগ্য ও অনবায়নযোগ্য প্রাকৃতিক সম্পদ আলাদা করা",
+   "sourceText": "প্রাকৃতিক সম্পদকে নবায়নযোগ্য ও অনবায়নযোগ্য — এই দুই প্রকারে উদাহরণসহ ভাগ করতে পারবে [ভাগ: দুই প্রকার]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/1",
+     "7/শূন্যস্থান/2",
+     "7/সত্য-মিথ্যা/2",
+     "7/মিল/2",
+     "7/সংক্ষিপ্ত/2",
+     "7/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-07-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-07-02",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "প্রাকৃতিক সম্পদের যথাযথ (টেকসই) ব্যবহার কেন জরুরি",
+   "sourceText": "… প্রাকৃতিক সম্পদ সীমিত বলে এর যথাযথ ব্যবহারের গুরুত্ব বলতে পারবে [ভাগ: গুরুত্ব]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/শূন্যস্থান/3",
+     "7/সত্য-মিথ্যা/3",
+     "7/বিস্তৃত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বিস্তৃত ৪ (\"ভবিষ্যৎ প্রজন্মের জন্য … কী কী কাজ করা উচিত — যুক্তি দিয়ে লেখো\") গুরুত্ব ও উপায় দুটোই চায়; যুক্তির অংশ বলে এখানে — ব্যাংকে ক/খ ভাগ করলে উপায়ের অংশ ০৭-০৪.১-এ।"
+  },
+  {
+   "code": "LO-C4-SCI-07-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "পরিবেশ পরিবর্তনের মানবসৃষ্ট কারণ ও তার প্রভাব",
+   "sourceText": "পরিবেশ পরিবর্তনের মানবসৃষ্ট কারণ (বন উজাড়, বায়ু দূষণ, পানি দূষণ ও ভূমি দূষণ) ও তাদের প্রভাব লিখতে পারবে (৫.২.১, ৫.২.২)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/4",
+     "7/শূন্যস্থান/4",
+     "7/সত্য-মিথ্যা/5",
+     "7/মিল/3",
+     "7/মিল/4",
+     "7/সংক্ষিপ্ত/4",
+     "7/বিস্তৃত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "এলাকার একটি দূষণ (ধোঁয়া, ময়লা পানি, যেখানে-সেখানে আবর্জনা) দেখিয়ে জিজ্ঞেস করুন — কে করল, এতে কার কী ক্ষতি হচ্ছে?",
+   "prereqCodes": [
+    "LO-C4-SCI-07-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-07-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "প্রাকৃতিক সম্পদ সংরক্ষণ ও পরিমিত ব্যবহার",
+   "sourceText": "ব্যবহার কমানো, পুনর্ব্যবহার ও পুনঃপ্রক্রিয়াকরণসহ সংরক্ষণের উপায় এবং বাড়ি ও বিদ্যালয়ে পানি, বিদ্যুৎ, গ্যাস ও কাগজের পরিমিত ব্যবহারের উপায় লিখতে পারবে (৫.২.৩)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "দাঁত মাজার সময় কল বন্ধ রাখা, কাগজের দুই পিঠে লেখা, পুরোনো বোতল আবার কাজে লাগানো — সন্তানকে নিজে করতে দিন।",
+   "prereqCodes": [
+    "LO-C4-SCI-07-02",
+    "LO-C3-SCI-07-05",
+    "LO-C3-SCI-05-03.1"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-07-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-07-04",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "সংরক্ষণের তিন উপায় — ব্যবহার কমানো, পুনর্ব্যবহার ও পুনঃপ্রক্রিয়াকরণ",
+   "sourceText": "ব্যবহার কমানো, পুনর্ব্যবহার ও পুনঃপ্রক্রিয়াকরণসহ সংরক্ষণের উপায় … লিখতে পারবে [ভাগ: তিন উপায়]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/5",
+     "7/শূন্যস্থান/5",
+     "7/সত্য-মিথ্যা/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পুনর্ব্যবহার আর পুনঃপ্রক্রিয়াকরণের পার্থক্য (সত্য-মিথ্যা ৪) শিশুদের কাছে কঠিন — তাই পরিমিত ব্যবহারের সারি থেকে আলাদা।"
+  },
+  {
+   "code": "LO-C4-SCI-07-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-07-04",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "বাড়ি ও বিদ্যালয়ে পানি, বিদ্যুৎ, গ্যাস ও কাগজের পরিমিত ব্যবহার",
+   "sourceText": "… বাড়ি ও বিদ্যালয়ে পানি, বিদ্যুৎ, গ্যাস ও কাগজের পরিমিত ব্যবহারের উপায় লিখতে পারবে [ভাগ: পরিমিত ব্যবহার]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/6",
+     "7/মিল/5",
+     "7/সংক্ষিপ্ত/5",
+     "7/বিস্তৃত/3",
+     "7/কাজ ২/—",
+     "7/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "সৌরজগৎ ও আটটি গ্রহ",
+   "sourceText": "সৌরজগৎ কী বলতে পারবে এবং সূর্য থেকে দূরত্ব অনুসারে আটটি গ্রহের নাম ও প্রধান বৈশিষ্ট্য লিখতে পারবে (৬.১.১, ৬.১.২)।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/4",
+     "8/শূন্যস্থান/1",
+     "8/শূন্যস্থান/2",
+     "8/শূন্যস্থান/4",
+     "8/সত্য-মিথ্যা/1",
+     "8/মিল/1",
+     "8/মিল/2",
+     "8/মিল/3",
+     "8/মিল/4",
+     "8/মিল/5",
+     "8/বিস্তৃত/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-LONG"
+   ],
+   "homeTipBn": "সূর্য থেকে পরপর আটটি গ্রহের নাম সন্তানকে বলতে বলুন; কোনটি সবচেয়ে বড়ো, কোনটি লাল গ্রহ, কোনটিকে শুকতারা বলে — জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-08-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "উপগ্রহ ও চাঁদের আলো",
+   "sourceText": "উপগ্রহ ও তার দুই প্রকার বলতে পারবে, গ্রহ ও উপগ্রহের পার্থক্য লিখতে পারবে এবং চাঁদ সূর্যের আলো প্রতিফলিত করে আলোকিত হয় — তা ব্যাখ্যা করতে পারবে (৬.১.৩)।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-LONG",
+    "QT-TF"
+   ],
+   "homeTipBn": "রাতে চাঁদ দেখিয়ে জিজ্ঞেস করুন — চাঁদের কি নিজের আলো আছে? তাহলে আলোকিত দেখায় কেন? চাঁদ গ্রহ না উপগ্রহ?",
+   "prereqCodes": [
+    "LO-C4-SCI-08-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-08-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-08-02",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "উপগ্রহ কী, প্রাকৃতিক ও কৃত্রিম উপগ্রহ; গ্রহ ও উপগ্রহের পার্থক্য",
+   "sourceText": "উপগ্রহ ও তার দুই প্রকার বলতে পারবে, গ্রহ ও উপগ্রহের পার্থক্য লিখতে পারবে [ভাগ: উপগ্রহ]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/3",
+     "8/সংক্ষিপ্ত/4",
+     "8/বিস্তৃত/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-08-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-08-02",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "চাঁদ সূর্যের আলো প্রতিফলিত করে আলোকিত হয়",
+   "sourceText": "… চাঁদ সূর্যের আলো প্রতিফলিত করে আলোকিত হয় — তা ব্যাখ্যা করতে পারবে [ভাগ: চাঁদের আলো]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/1",
+     "8/সত্য-মিথ্যা/2",
+     "8/সংক্ষিপ্ত/5",
+     "8/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-TF",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "টর্চ ও বলের কাজের ফলাফল এখানে; কাজ দেখা SK-OBS-01-এ।"
+  },
+  {
+   "code": "LO-C4-SCI-08-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "চাঁদের দশা, অমাবস্যা ও পূর্ণিমা এবং চাঁদের উপরিভাগ",
+   "sourceText": "চাঁদের আটটি দশার নাম বলতে পারবে, অমাবস্যা ও পূর্ণিমার সময় সূর্য, পৃথিবী ও চাঁদের অবস্থান বলতে পারবে এবং চাঁদ ও পৃথিবীর উপরিভাগের পার্থক্য লিখতে পারবে (৬.১.৪, ৬.১.৫, ৬.১.৬)।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/2",
+     "8/শূন্যস্থান/3",
+     "8/সত্য-মিথ্যা/3",
+     "8/বিস্তৃত/2",
+     "8/কাজ ২/—",
+     "8/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": "পরপর কয়েক রাত সন্তানের সঙ্গে চাঁদ দেখুন — আকৃতি কীভাবে বদলাচ্ছে, অমাবস্যা ও পূর্ণিমায় কী হয়, বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-08-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিখনফলের তিনটি অংশের মধ্যে আটটি দশার নাম ও উপরিভাগের পার্থক্য — কোনোটিরই আলাদা অনুশীলনী নেই (ফ্ল্যাগ); চারটি অনুশীলনী অমাবস্যা-পূর্ণিমা, চান্দ্রমাস ও চাঁদের বৈশিষ্ট্য নিয়ে — তাই এক সারি।"
+  },
+  {
+   "code": "LO-C4-SCI-08-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ছায়াপথ, নক্ষত্র ও মহাকাশের অন্য বস্তু এবং আমাদের জীবনে এদের প্রভাব",
+   "sourceText": "ছায়াপথ, নক্ষত্র, নক্ষত্রমণ্ডল, ধূমকেতু ও গ্রহাণু চিনতে পারবে এবং দৈনন্দিন জীবনে সূর্য, চাঁদ ও নক্ষত্রের প্রভাব লিখতে পারবে (৬.১.৭, ৬.১.৮, ৬.১.৯)।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "পরিষ্কার রাতে আকাশ দেখে তারা ও চাঁদ চিনতে দিন; চাঁদ দেখে হিজরি মাসের হিসাব আর জোয়ার-ভাটার কথা সন্তানকে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-08-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-08-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-08-04",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ছায়াপথ, নক্ষত্র, নক্ষত্রমণ্ডল, ধূমকেতু ও গ্রহাণু চেনা",
+   "sourceText": "ছায়াপথ, নক্ষত্র, নক্ষত্রমণ্ডল, ধূমকেতু ও গ্রহাণু চিনতে পারবে [ভাগ: মহাকাশের বস্তু]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/5",
+     "8/টিক/6",
+     "8/শূন্যস্থান/5",
+     "8/সত্য-মিথ্যা/5",
+     "8/সংক্ষিপ্ত/1",
+     "8/সংক্ষিপ্ত/2",
+     "8/সংক্ষিপ্ত/3",
+     "8/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "টিক ৬ (দিনের আকাশে তারা দেখা যায় না কেন) অধ্যায়ের ভূমিকা থেকে — নক্ষত্রের সারিতে।"
+  },
+  {
+   "code": "LO-C4-SCI-08-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-08-04",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "দৈনন্দিন জীবনে সূর্য, চাঁদ ও নক্ষত্রের প্রভাব",
+   "sourceText": "… দৈনন্দিন জীবনে সূর্য, চাঁদ ও নক্ষত্রের প্রভাব লিখতে পারবে [ভাগ: প্রভাব]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/সত্য-মিথ্যা/4",
+     "8/বিস্তৃত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-09-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "আবহাওয়া কী, আবহাওয়ার প্রতীক ও আবহাওয়ার খবর কোথায় পাই",
+   "sourceText": "আবহাওয়া কী তা বলতে পারবে এবং প্রতীক দেখে আবহাওয়ার অবস্থা (রৌদ্রোজ্জ্বল, আংশিক মেঘাচ্ছন্ন, বর্ষণমুখর, বজ্রবৃষ্টি) চিনতে পারবে (৬.২.১, ৬.২.২)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/সত্য-মিথ্যা/3",
+     "9/বিস্তৃত/1",
+     "9/নিজে করি/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF",
+    "QT-LONG"
+   ],
+   "homeTipBn": "মোবাইল ফোন বা খবরের কাগজের আবহাওয়ার খবরের প্রতীক দেখিয়ে জিজ্ঞেস করুন — আজ রৌদ্রোজ্জ্বল, মেঘাচ্ছন্ন না বৃষ্টির দিন?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রতীক দেখে অবস্থা চেনার নম্বরযুক্ত অনুশীলনী নেই (সত্য-মিথ্যা ৩ শুধু বলে প্রতীক ব্যবহার হয়) — \"নিজে করি\" (এক সপ্তাহের আবহাওয়া লেখা) এখানে; ফ্ল্যাগ। দুটি মাত্র অনুশীলনী।"
+  },
+  {
+   "code": "LO-C4-SCI-09-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "আবহাওয়ার চার উপাদান ও তাদের পারস্পরিক সম্পর্ক",
+   "sourceText": "আবহাওয়ার চারটি উপাদান — তাপমাত্রা, আর্দ্রতা, বৃষ্টিপাত ও বায়ুপ্রবাহ — ও তাদের একক বলতে পারবে; একটি উপাদান বদলালে অন্যটির কী হয়, উদাহরণ দিয়ে বলতে পারবে (৬.২.৩, ৬.২.৪)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "আবহাওয়ার খবরে তাপমাত্রা (°C), আর্দ্রতা (%) ও বৃষ্টিপাত (মিলিমিটার) দেখিয়ে সন্তানকে পড়তে দিন; আর্দ্রতা বাড়লে কী হতে পারে, জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-09-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-09-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-09-02",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "চার উপাদানের পরিচয় ও একক — তাপমাত্রা, আর্দ্রতা, বৃষ্টিপাত, বায়ুপ্রবাহ",
+   "sourceText": "আবহাওয়ার চারটি উপাদান — তাপমাত্রা, আর্দ্রতা, বৃষ্টিপাত ও বায়ুপ্রবাহ — ও তাদের একক বলতে পারবে [ভাগ: উপাদান ও একক]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/1",
+     "9/টিক/4",
+     "9/শূন্যস্থান/1",
+     "9/সত্য-মিথ্যা/2",
+     "9/সত্য-মিথ্যা/4",
+     "9/মিল/1",
+     "9/মিল/2",
+     "9/মিল/3",
+     "9/সংক্ষিপ্ত/1",
+     "9/সংক্ষিপ্ত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-09-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-09-02",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "উপাদানগুলো পরস্পর নির্ভরশীল — একটি বদলালে অন্যটির কী হয়",
+   "sourceText": "… একটি উপাদান বদলালে অন্যটির কী হয়, উদাহরণ দিয়ে বলতে পারবে [ভাগ: পারস্পরিক সম্পর্ক]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/শূন্যস্থান/2",
+     "9/শূন্যস্থান/4",
+     "9/সত্য-মিথ্যা/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-TF"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "আর্দ্রতা বাড়লে বৃষ্টিপাতের সম্ভাবনা বাড়ে (শূন্যস্থান ২, সত্য-মিথ্যা ৫) — সম্পর্কের তিনটি অনুশীলনী; একক মুখস্থ বলা থেকে আলাদা দক্ষতা।"
+  },
+  {
+   "code": "LO-C4-SCI-09-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "মেঘ, বৃষ্টি, শিলা, কুয়াশা ও শিশির এবং পানিচক্র",
+   "sourceText": "মেঘ, বৃষ্টি, শিলা, কুয়াশা ও শিশির কীভাবে তৈরি হয় এবং পানিচক্রে বাষ্পীভবন, ঘনীভবন ও তাপের ভূমিকা ব্যাখ্যা করতে পারবে (৬.২.৬, ৬.৩.২, ৬.৩.৩)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "গরম ভাতের ঢাকনার নিচে পানির ফোঁটা দেখিয়ে জিজ্ঞেস করুন — এগুলো কোথা থেকে এল? আকাশে মেঘ ও বৃষ্টি কীভাবে হয়?",
+   "prereqCodes": [
+    "LO-C4-SCI-04-03.1",
+    "LO-C3-SCI-04-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-09-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-09-03",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "মেঘ, বৃষ্টি, শিলা, কুয়াশা ও শিশির কীভাবে তৈরি হয়; মেঘের ধরন",
+   "sourceText": "মেঘ, বৃষ্টি, শিলা, কুয়াশা ও শিশির কীভাবে তৈরি হয় … ব্যাখ্যা করতে পারবে [ভাগ: মেঘ-বৃষ্টি-কুয়াশা-শিশির]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/5",
+     "9/টিক/6",
+     "9/শূন্যস্থান/3",
+     "9/সত্য-মিথ্যা/1",
+     "9/মিল/4",
+     "9/সংক্ষিপ্ত/3",
+     "9/বিস্তৃত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-TF",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-SCI-09-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-SCI-09-03",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "পানিচক্র — বাষ্পীভবন, ঘনীভবন ও তাপের ভূমিকা",
+   "sourceText": "… পানিচক্রে বাষ্পীভবন, ঘনীভবন ও তাপের ভূমিকা ব্যাখ্যা করতে পারবে [ভাগ: পানিচক্র]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/2",
+     "9/টিক/3",
+     "9/শূন্যস্থান/5",
+     "9/সংক্ষিপ্ত/4",
+     "9/বিস্তৃত/4",
+     "9/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"জলীয় বাষ্প থেকে পানি তৈরি\" কাজের ফলাফল (ঘনীভবন) এখানে; কাজ দেখা SK-OBS-01-এ।"
+  },
+  {
+   "code": "LO-C4-SCI-09-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "আবহাওয়ার পূর্বাভাস, সতর্কতা এবং জীবন ও কৃষিতে আবহাওয়ার প্রভাব",
+   "sourceText": "আবহাওয়ার তথ্য ও মেঘ দেখে পূর্বাভাস এবং সতর্কতামূলক ব্যবস্থা বলতে পারবে; আমাদের জীবনে ও কৃষিতে আবহাওয়ার প্রভাব বর্ণনা করতে পারবে (৬.২.৫, ৬.২.৮)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/মিল/5",
+     "9/সংক্ষিপ্ত/5",
+     "9/বিস্তৃত/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "ঝড় বা ভারী বৃষ্টির পূর্বাভাস পেলে পরিবার কী কী প্রস্তুতি নেয়, সন্তানকে বলতে বলুন; কৃষকের কাছে পূর্বাভাস কেন দরকারি, আলোচনা করুন।",
+   "prereqCodes": [
+    "LO-C4-SCI-09-01",
+    "LO-C4-SCI-09-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তিনটি অনুশীলনী; পূর্বাভাস-সতর্কতা ও কৃষিতে প্রভাব আলাদা করলে প্রতিটি এক-দুই প্রশ্নের সারি হতো।"
+  },
+  {
+   "code": "LO-C4-SCI-SK-OBS-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-INQ",
+   "chapterNumber": null,
+   "strand": "OBS",
+   "labelBn": "কাজ (পরীক্ষণ) মন দিয়ে দেখে ফলাফল ঠিকভাবে বলা ও লেখা",
+   "sourceText": "প্রতিটি অধ্যায়ের \"কাজ\" (বেশির ভাগ \"শিক্ষক শ্রেণিতে দেখাবেন\") ও \"নিজে করি\" — কাজের ফলাফল লিখিত পরীক্ষায় আসতে পারে, ধাপ নয়; আঁকা, মডেল, জরিপ ও কাজ করিয়ে দেখানো শ্রেণির কাজ ও শ্রেণি পরীক্ষায় (সিদ্ধান্ত ১০, ২৮, ৩৫; পরিশিষ্ট ৮) · শিখনফল: \"ধৈর্য ধরে পর্যবেক্ষণ করে যা দেখেছে তা-ই লিখবে\"",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/কাজ ১/—",
+     "1/কাজ ২/—",
+     "1/কাজ ৩/—",
+     "1/নিজে করি/—",
+     "3/কাজ ১/—",
+     "4/কাজ ১/—",
+     "4/কাজ ২/—",
+     "4/কাজ ৩/—",
+     "4/কাজ ৪/—",
+     "4/কাজ ৫/—",
+     "5/কাজ ১/—",
+     "5/কাজ ২/—",
+     "6/কাজ ১/—",
+     "6/কাজ ২/—",
+     "7/কাজ ১/—",
+     "7/কাজ ২/—",
+     "8/কাজ ১/—",
+     "8/কাজ ২/—",
+     "8/কাজ ৩/—",
+     "8/নিজে করি/—",
+     "9/কাজ ১/—",
+     "9/নিজে করি/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-OBS"
+   ],
+   "homeTipBn": "শিক্ষক শ্রেণিতে কোন পরীক্ষা দেখালেন, তাতে কী হলো ও কেন — সন্তানকে বাড়িতে নিজের ভাষায় বলতে বলুন; \"নিজে করি\"-র পর্যবেক্ষণ খাতায় লিখতে সাহায্য করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-SK-OBS-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চতুর্থ শ্রেণিতে নম্বরযুক্ত পরীক্ষণ-অনুশীলনী নেই — সব \"কাজ\" ও \"নিজে করি\" নম্বরহীন, তাই এই সারি শুধু সেগুলোই উদ্ধৃত করে। তৃতীয় শ্রেণিতে শিশু নিজে পরীক্ষা করত; এখানে বেশির ভাগ কাজ শিক্ষক দেখান, শিশু দেখে ফল বলে/লেখে। ফলাফলের লিখিত প্রশ্ন বিষয়ের সারিতে (০১-০১, ০৪-০২.২, ০৪-০৪, ০৮-০২.২, ০৯-০৩.২)। হাত ধোয়া আলাদা সারি ০২-০৫.২।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 270,
+  "mapped": 270,
+  "unmapped": [],
+  "note": "exercisesTotal = every numbered item of the Writer-Reviewer copy v3 (270 = 9 chapters × 30): each chapter's অনুশীলনী parts ১ টিক (১)…৬)), ২(ক) শূন্যস্থান, ২(খ) সত্য-মিথ্যা, ৪ সংক্ষিপ্ত, ৫ বিস্তৃত (ক)… — the letter is the item number: ক=1, খ=2 …) and ৩ মিল (the table rows are unnumbered in the book; counted by row order, left cell = item). Unnumbered blocks are activities, not exercises: each \"কাজ\" (teacher demonstration; '<ch>/কাজ N/—', N = order in the chapter) and each chapter's \"নিজে করি\" box (home task, not examined; '<ch>/নিজে করি/—'). The book is NOT printed yet — numbers may move in the print."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "বইটি এখনো ছাপা হয়নি। উৎস: লেখক-পর্যালোচক কপি C4_SCI_Book_v3_Writer-Reviewer (১০ নভেম্বর ২০২৬; স্মারক v৩-এর D-০৯ — সংস্করণ ৩ অনুমোদন — পর্যালোচকের কাছে খোলা)। ছাপার সময় অনুশীলনীর নম্বর বা ক্রম সরতে পারে; ছাপা ফাইল এলে ২৭০টি নম্বরযুক্ত প্রশ্ন আবার মিলিয়ে দেখতে হবে, তারপরই লক।"
+  },
+  {
+   "code": null,
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "অনুশীলনীর নির্দেশের ভাষা অধ্যায়ভেদে দুই রকম: অধ্যায় ১–৩ ও ৭–৯-এ \"লেখো / ব্যাখ্যা করো / বর্ণনা করো\" (যেমন ১/সংক্ষিপ্ত/৪, ৭/বিস্তৃত/১, ৯/বিস্তৃত/৪), অধ্যায় ৪–৬-এ \"লিখি / দিই / ব্যাখ্যা করি\" (যেমন ৪/সংক্ষিপ্ত/১, ৫/বিস্তৃত/১, ৬/বিস্তৃত/২)। শিরোনামগুলো সব \"…করি / দিই / লিখি\" রূপে। বই-দল এক রূপ বেছে নিলে ভালো।"
+  },
+  {
+   "code": "LO-C4-SCI-01-01",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "১/টিক/৪-এর চতুর্থ বিকল্প \"কোনোটিই নয়\" — পরিশিষ্ট ৮-এর নিয়ম: বহুনির্বাচনিতে \"উপরের সবগুলো\" ধরনের বিকল্প নয়। \"কোনোটিই নয়\" একই ধরনের ফাঁকা বিকল্প; একটি সত্যিকারের ভুল উত্তর বসালে নিয়মের সাথে মেলে।"
+  },
+  {
+   "code": "LO-C4-SCI-06-02",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "৬/শূন্যস্থান/১ (\"চাপের সাহায্যে বল প্রয়োগে বস্তুর ------------ পরিবর্তন হয়।\") — শিক্ষক-নোটে দুটি উত্তর গ্রহণযোগ্য (\"আকৃতি\"; \"আয়তন লিখলেও সঠিক\")। পরীক্ষার শূন্যস্থানে একটিই পূর্ণ শব্দ হওয়ার কথা (পরিশিষ্ট ৮); বাক্যটি একটি উত্তরে বাঁধলে ভালো।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "শিখনফল আছে, নম্বরযুক্ত অনুশীলনী নেই — ছয়টি জায়গা: (১) জবাফুলের চিত্রে ফুলের অংশের নাম চেনা (অধ্যায় ১ — চিত্রে নাম লেখার প্রশ্ন নেই); (২) মরিচ গাছের জীবনচক্রের ধাপ (অধ্যায় ১ — প্রশ্ন শুধু মুরগির); (৩) চাঁদের আটটি দশার নাম (অধ্যায় ৮); (৪) চাঁদ ও পৃথিবীর উপরিভাগের পার্থক্য (অধ্যায় ৮ — বিস্তৃত ২-এর উত্তরে আংশিক); (৫) প্রতীক দেখে আবহাওয়ার অবস্থা চেনা (অধ্যায় ৯); (৬) সঠিক নিয়মে হাত ধোয়া (অধ্যায় ২ — শুধু কাজ; রুব্রিক সারি ০২-০৫.২)। ১–৫-এর আলাদা সারি নেই (পাঁচ পরীক্ষার ২ নম্বর: বই অন্তত একটি নম্বরযুক্ত অনুশীলনীতে চর্চা করায়) — নিকটতম সারিতে ধরা আছে। বই-দল চাইলে প্রতিটির জন্য একটি করে অনুশীলনী যোগ করতে পারে।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "প্রতিটি অধ্যায়ের শিখনফলের শেষ বুলেট \"মূল্যবোধ ও দৃষ্টিভঙ্গি\" সারি হয়নি — মালিকের সিদ্ধান্ত (২০২৬-১১-০৫): মূল্যবোধ কোনো গাছে থাকবে না। \"বলতে ও মেনে চলতে\" ধরনের শিখনফলে শুধু \"বলা\" অংশ সারি (০৩-০২, ০৫-০৪)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "বইয়ের পাঠ-সংখ্যার হিসাব (৪১ পাঠ, প্রতিটি ৫০ মিনিট; শিক্ষক-নোটের পাঠ-বিন্যাস) এই গাছে ব্যবহার হয়নি — মালিকের সিদ্ধান্ত: বিদ্যালয় নিজের পাঠ-পরিকল্পনা করবে। চতুর্থ শ্রেণির বিজ্ঞানের আগের কোনো ফ্ল্যাট খসড়া (lo-catalogue) নেই, তাই legacyCodes ফাঁকা।"
+  },
+  {
+   "code": "LO-C4-SCI-03-03.2",
+   "kind": "TOO_BROAD",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০৩-০৩.২ (\"কোন দুর্ঘটনায় কী প্রাথমিক চিকিৎসা\") ১৫টি অনুশীলনী ধরে — গাছের সবচেয়ে বড়ো সারি। দক্ষতা একই বলে এক সারি রাখা হলো; পর্যালোচক চাইলে তিন ভাগ: (ক) কাটা ও আঘাত (মিল ১, ২; বিস্তৃত ৪), (খ) পোড়া ও পানিতে ডোবা (টিক ৪; সত্য-মিথ্যা ২, ৪; মিল ৪; সংক্ষিপ্ত ৫), (গ) সাপে কাটা ও বিদ্যুৎস্পৃষ্ট (টিক ৫, ৬; সত্য-মিথ্যা ৫; মিল ৩, ৫; সংক্ষিপ্ত ২, ৪)।"
+  },
+  {
+   "code": "LO-C4-SCI-05-01.2",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০৫-০১ দুই ভাগ — প্রতিটি রূপের পরিচয় (.১) আর একটি ঘটনায় কোন কোন শক্তি জড়িত তা শনাক্ত করা (.২: ঘণ্টা, বাস, বিদ্যুৎ চমকানো)। বইয়ের শিখনফলে এই ভাগ নেই; অনুশীলনী দুই রকম জ্ঞান চায় বলে করা। সত্য-মিথ্যা ৪ (\"গ্যাসের চুলার গ্যাস থেকে আমরা স্থিতিশক্তি পাই\" — মিথ্যা, রাসায়নিক শক্তি) .১-এ রাখা হয়েছে, ০৫-০২ (স্থিতিশক্তি)-এ নয়, কারণ যাচাই হয় রাসায়নিক শক্তির জ্ঞান। পর্যালোচক এক সারি চাইলে মেশানো যায়।"
+  },
+  {
+   "code": "LO-C4-SCI-02-02.2",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০২-০২.২ (অসংক্রামক রোগের কারণ) মাত্র তিনটি অনুশীলনী (শূন্যস্থান ৩; মিল ৪, ৫), ০৯-০২.২ তিনটি, ০৭-০৪.১ তিনটি, ০২-০৩ / ০৮-০৪.২ / ০৪-০২.২ / ০৪-০৩.২ দুটি করে। শিখনফলের আলাদা অংশ বলে রাখা হলো; প্রশ্নব্যাংকে এগুলোর জন্য বাড়তি প্রশ্ন দরকার হবে।"
+  },
+  {
+   "code": "LO-C4-SCI-08-03",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ৮/বিস্তৃত/২ (\"চাঁদ কী? এর বৈশিষ্ট্যগুলো লেখো\") উত্তরে তিন সারির তথ্য চায় — উপগ্রহ (০৮-০২.১), নিজের আলো নেই (০৮-০২.২), আকৃতি বদল ও উপরিভাগ (০৮-০৩)। এক প্রশ্নে এক কোডের নিয়মে ০৮-০৩-এ রাখা হলো (বেশির ভাগ পয়েন্ট এখানে)। একইভাবে ৭/বিস্তৃত/৪ গুরুত্ব ও উপায় দুটোই চায় — ০৭-০২.২-এ; ব্যাংকে এমন প্রশ্ন ক/খ ভাগে ভাঙলে ভালো।"
+  },
+  {
+   "code": "LO-C4-SCI-09-02.1",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): শিক্ষক-নোটের উত্তর মিলিয়ে তিনটি অনুশীলনী সরানো হলো — ৯/সত্য-মিথ্যা/২ (সূর্য ডুবলে তাপমাত্রা কমে), ৯/সত্য-মিথ্যা/৪ (উপরে উঠলে তাপমাত্রা কমে) ও ৯/সংক্ষিপ্ত/২ (আর্দ্রতা কম থাকলে কাপড় তাড়াতাড়ি শুকায়, ঠোঁট ফাটে) প্রথম খসড়ায় ০৯-০২.২ (পারস্পরিক সম্পর্ক)-এ ছিল; এগুলো একটি উপাদানের নিজের তথ্য, তাই ০৯-০২.১-এ। ০৯-০২.২-এ থাকল শুধু \"একটি বদলালে অন্যটি\" (শূন্যস্থান ২, ৪; সত্য-মিথ্যা ৫)। ১/শূন্যস্থান/৪ (\"বীজ থেকে নতুন চারাগাছ হয়\") ফলের অংশের ছক থেকে — ০১-০৪-এ, অঙ্কুরোদ্গমে নয়।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম ও বাড়ির টিপস দেখবেন। আগের ধাপ (prerequisite) তৃতীয় শ্রেণির বিজ্ঞানের সারি দেখায় (যেমন C3·04-03)।\n\n**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৩ (১০ নভেম্বর ২০২৬)। ছাপার পরে অনুশীলনীর নম্বর আবার মিলিয়ে তবেই লক করা উচিত।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **ভাগের নিয়ম:** শিখনফল তখনই ভাগ হয়েছে যখন দুই অংশ আলাদাভাবে ভুল হতে পারে *এবং* প্রতিটি অংশের অন্তত দুটি নম্বরযুক্ত অনুশীলনী আছে। তাই পরাগায়ন (একটি প্রশ্ন) ফুলের সারিতে (০১-০৩), আর সংজ্ঞা (\"পদার্থ কী\", \"শক্তি কী\", \"গতি ও বল কী\", \"প্রাকৃতিক সম্পদ কী\") নিকটতম সারির সাথে — আলাদা সারি নয়।\n2. **মরিচা ও রাসায়নিক পরিবর্তন দুই সারি** (০৪-০৪, ০৪-০৫) — বইয়ের এক শিখনফল, কিন্তু দুটি আলাদা অংশ ও আলাদা প্রশ্ন।\n3. **শক্তির রূপ দুই ভাগ (০৫-০১):** প্রতিটি রূপের পরিচয় (.১) আর \"এই ঘটনায় কোন কোন শক্তি\" (.২ — বাস, ঘণ্টা, বিদ্যুৎ চমকানো)। বইয়ে এই ভাগ নেই — দেখে বলুন রাখবেন কি না।\n4. **প্রতিকার বনাম প্রতিরোধ (০২-০৪), সংক্রামক রোগের বিস্তার বনাম অসংক্রামক রোগের কারণ (০২-০২), উপাদান-একক বনাম পারস্পরিক সম্পর্ক (০৯-০২), মেঘ-বৃষ্টি বনাম পানিচক্র (০৯-০৩)** — এই চারটি ভাগ শিশুরা যেখানে গুলিয়ে ফেলে সেখানে।\n5. **০৩-০৩.২ (কোন দুর্ঘটনায় কী প্রাথমিক চিকিৎসা) সবচেয়ে বড়ো সারি — ১৫টি অনুশীলনী।** এক সারি রাখা হয়েছে; তিন ভাগের প্রস্তাব ফ্ল্যাগে আছে।\n6. **কাজ (পরীক্ষণ) ও ফলাফল আলাদা (সিদ্ধান্ত ২৮, ৩৫):** চতুর্থ শ্রেণিতে বেশির ভাগ কাজ শিক্ষক দেখান। ফলাফলের লিখিত প্রশ্ন বিষয়ের সারিতে; কাজ দেখে ফল বলা-লেখা একটি রুব্রিক ধারা SK-OBS-01। **হাত ধোয়া (০২-০৫.২) একমাত্র হাতে-কলমে রুব্রিক সারি** — নম্বরযুক্ত অনুশীলনী নেই, শুধু \"কাজ\"।\n7. **শিখনফল আছে, অনুশীলনী নেই — পাঁচটি অংশের সারি নেই** (ফুলের চিত্রে নাম, মরিচ গাছের জীবনচক্র, চাঁদের আট দশার নাম, চাঁদ-পৃথিবীর উপরিভাগ, আবহাওয়ার প্রতীক)। নিকটতম সারিতে ধরা; বই-দল অনুশীলনী যোগ করলে সারি বাড়ানো যাবে।\n8. **মূল্যবোধের সারি নেই** (মালিকের সিদ্ধান্ত ২০২৬-১১-০৫); \"নিজে করি\" বাড়ির কাজ — পরীক্ষায় নয়, সংশ্লিষ্ট সারির নম্বরহীন কাজ হিসেবে আছে।\n\n**প্রশ্নের ধরন ও নম্বর** বইয়ের পরিশিষ্ট ২ থেকে হুবহু (বৃত্তি পরীক্ষা ২০২৬-এর কাঠামো দ্বিগুণ): টিক ১০×১, শূন্যস্থান ৫ + সত্য-মিথ্যা ৫, মিলকরণ ৮, সংক্ষিপ্ত ১২×২, বিস্তৃত ৮×৬ — কোনো ধরন যোগ হয়নি। QT-OBS শুধু শ্রেণির কাজের রুব্রিক।\n\n**বইয়ের সমস্যা বই-দলের জন্য:** নির্দেশের ভাষা দুই রকম (\"লেখো\" বনাম \"লিখি\"); ১/টিক/৪-এ \"কোনোটিই নয়\" বিকল্প; ৬/শূন্যস্থান/১-এ দুটি গ্রহণযোগ্য উত্তর; অনুশীলনী ছাড়া পাঁচটি শিখনফল-অংশ।\n"
+}
