@@ -18,7 +18,7 @@ import jsonschema
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Resolve the schema by suffix so a DRAFT_ / LOCKED_ prefix rename does not
-# break the toolchain. SCD edition: prefers SCD_PlanSchema_v2 (Nursery–Class 10 + ISL);
+# break the toolchain. SCD edition: prefers SCD_PlanSchema_v2 (Nursery–Class 10 + ISLAM);
 # falls back to the Project 03 C5_PlanSchema_v1. LOCKED_ beats DRAFT_.
 _cands = []
 for _pat in ("*SCD_PlanSchema_v2.json", "*C5_PlanSchema_v1.json"):
@@ -213,6 +213,10 @@ def main():
     ap.add_argument("--chapter", help="Chapter Plan JSON for cross-plan check of a multi-period session")
     args = ap.parse_args()
     plan = json.load(open(args.plan, encoding="utf-8"))
+
+    # D-#1440: the old spelling ISL is refused with a message that names the one code.
+    if plan.get("subject") == "ISL":
+        fail("SCHEMA", "['subject']: 'ISL' is no longer accepted — Islamic Studies is spelled 'ISLAM'")
 
     # Layer 1 — schema
     v = jsonschema.Draft202012Validator(SCHEMA)

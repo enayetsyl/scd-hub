@@ -28,8 +28,8 @@ v0.2 diff vs v0.1 (Project-04 ratification, R-IMP5):
     curation scan (Project-04 decision 5-B; the build-side REF-01+REF-21 self-scan is the gate).
 
 v1.2 diff vs v1.1 (2026-11-11, D-#1310/#1311 — 2027 content subjects + Class 6):
-  - subject += ISLAM, ICT, BAN2, ENG2; class_level 1..6 (schemas). A plan's "ISL" (the P09
-    plan tools' spelling) equals the envelope's "ISLAM" at L3.
+  - subject += ISLAM, ICT, BAN2, ENG2; class_level 1..6 (schemas). D-#1440: "ISL" (the old P09
+    spelling) is no longer an alias — it is refused, naming "ISLAM".
   - ref19_topic_id leaves the payload schema's `required`: L4 requires it for every subject
     except ISLAM / ICT (no REF-19 slugs), where it is optional and unchecked.
 
@@ -74,10 +74,8 @@ STIM_ID_RE = re.compile(r"^STIM-[A-Z][A-Z0-9]*-C[1-6]-U\d+(-L\d+)?-\d{2,}$")
 # must carry one. Mirrors shared/vocab.ts REF19_OPTIONAL_SUBJECTS.
 REF19_OPTIONAL_SUBJECTS = {"ISLAM", "ICT"}
 
-# The Project 09 plan tools (plan-tools/LOCKED_SCD_PlanSchema_v2.json) spell Islamic Studies
-# "ISL"; the app's content code is "ISLAM". The two name one subject (D-#1310).
-SUBJECT_ALIASES = {"ISL": "ISLAM"}
-def _canon_subject(s): return SUBJECT_ALIASES.get(s, s)
+# D-#1440: the old Project 09 spelling "ISL" is dropped; "ISLAM" is the only code. No aliases.
+def _canon_subject(s): return s
 
 # REF-19 canonical topic slugs (auto-extracted from LOCKED_REF-19 v1.10, 2026-06-09; the
 # doc-reference artifact 'BGS-REF19' excluded). This is the DEFAULT registry for the hard
@@ -128,6 +126,8 @@ def load_json(path):
 
 # ---- L1: envelope schema ------------------------------------------------
 def layer1_envelope(env, env_schema):
+    if env.get("subject") == "ISL" or (env.get("payload") or {}).get("subject") == "ISL":
+        fail("ENVELOPE", "['subject']: 'ISL' is no longer accepted — Islamic Studies is spelled 'ISLAM'")
     v = Draft202012Validator(env_schema)
     for e in sorted(v.iter_errors(env), key=lambda e: list(e.path)):
         fail("ENVELOPE", f"{list(e.path)}: {e.message}")
@@ -227,6 +227,50 @@ def lo_code_semantics(env, p):
             fail("LO", f"{code}: unknown subject {csubj}")
 
 
+def _footer_lo_codes(payload):
+    """The plan footer's `Objective codes` key as a de-duplicated list (same parse as
+    build_envelope.py footer_lo_codes); None when the key is absent/empty."""
+    footer = payload.get("footer") if isinstance(payload, dict) else None
+    if not isinstance(footer, dict):
+        return None
+    raw = None
+    for k, v in footer.items():
+        if isinstance(k, str) and k.strip().lower() == "objective codes":
+            raw = v
+            break
+    if isinstance(raw, list):
+        parts = [x for x in raw if isinstance(x, str)]
+    elif isinstance(raw, str):
+        parts = re.split(r"[,;\n]", raw)
+    else:
+        return None
+    out = []
+    for t in parts:
+        t = t.strip()
+        if t and t not in out:
+            out.append(t)
+    return out or None
+
+
+def plan_footer_lo_agreement(env):
+    """PR-O (D-#1445): on a SESSION plan the footer `Objective codes` and envelope
+    tags.lo_codes must name the same codes (a chapter plan carries none, the footer is ignored)."""
+    if env.get("doc_type") != "session_plan":
+        return
+    footer = _footer_lo_codes(env.get("payload"))
+    if footer is None:
+        return
+    tags = env.get("tags") or {}
+    tag_codes = tags.get("lo_codes") if isinstance(tags, dict) else None
+    if not isinstance(tag_codes, list):
+        fail("LO", f"footer 'Objective codes' names {footer} but envelope tags.lo_codes is missing")
+    elif sorted(tag_codes) != sorted(footer):
+        only_f = [c for c in footer if c not in tag_codes]
+        only_t = [c for c in tag_codes if c not in footer]
+        fail("LO", f"footer 'Objective codes' and tags.lo_codes disagree "
+                   f"(footer only: {only_f}; tags only: {only_t})")
+
+
 def plan_lo_semantics(env):
     """Session-plan objective codes (prd-objective-tree §8.3): a plan may carry many
     `tags.lo_codes` (a lesson teaches several steps). The envelope schema already checks
@@ -234,6 +278,7 @@ def plan_lo_semantics(env):
     subject. Whether a code exists in the catalogue is the APP's check (a warning)."""
     if env.get("doc_type") not in PLAN_DOC_TYPES:
         return
+    plan_footer_lo_agreement(env)
     codes = (env.get("tags") or {}).get("lo_codes")
     if not isinstance(codes, list):
         return

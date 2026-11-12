@@ -209,6 +209,7 @@ QueueRef.implement({
     chapters: t.field({ type: [ChapterItemRef], resolve: (q) => q.chapters }),
     domains: t.field({ type: [CodeLabelRef], resolve: (q) => q.domains }),
     questionTypes: t.field({ type: [CodeLabelRef], resolve: (q) => q.questionTypes }),
+    externalLabels: t.field({ type: [CodeLabelRef], resolve: (q) => q.externalLabels }),
     rows: t.field({ type: [RowRef], resolve: (q) => q.rows }),
     threads: t.field({ type: [ThreadRef], resolve: (q) => q.threads }),
     unmapped: t.field({ type: [UnmappedItemRef], resolve: (q) => q.unmapped }),
