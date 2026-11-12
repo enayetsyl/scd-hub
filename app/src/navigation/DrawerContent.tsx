@@ -365,6 +365,8 @@ const STAFF_NAV: NavSection[] = [
     ],
   },
   { type: "item", route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️" },
+  // YC-5: the Principal's year-change screen, one tap from the sidebar (year_change:view is LOCKED).
+  { type: "item", route: "AdminTab", labelKey: "ycTitle", icon: "🔄", screen: "YearChange", perms: ["year_change:view"] },
 ];
 
 const GUARDIAN_NAV: NavSection[] = [

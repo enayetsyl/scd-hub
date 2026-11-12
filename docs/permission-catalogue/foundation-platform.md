@@ -1,7 +1,7 @@
 # Foundation & platform — build checklist
 
 Features: `students`, `guardians`, `classes_sections`, `teaching_assignments`, `staff_logins`, `view_as`, `access_control`, `audit_log`, `system_health`, `guardian_engagement`, `message_templates`, `admin_dashboard`, `archive`, `notifications` (SELF), `my_account` (SELF) (owner rows: see README). The proxy-grant rows (`cover:assign_proxy`) also live here; the rest of the `cover` feature is in hr-finance.md. Source: inventory B, origin/dev 2026-10-20.
-Counts: 58 mutations (46 in (a), 12 in (e)), 71 queries (48 in (b), 23 in (e)), 3 REST. The inventory's other 2 mutations, 2 queries and 1 SSE topic are listed elsewhere (see the end of this file).
+Counts: 61 mutations (49 in (a), 12 in (e)), 76 queries (53 in (b), 23 in (e)), 3 REST. The inventory's other 2 mutations, 2 queries and 1 SSE topic are listed elsewhere (see the end of this file).
 
 ## (a) Mutations
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
@@ -9,6 +9,9 @@ Counts: 58 mutations (46 in (a), 12 in (e)), 71 queries (48 in (b), 23 in (e)), 
 | `server/src/modules/foundation/resolvers/auth.ts:147` | startImpersonation | authenticated; service re-reads `user:view_as` from the DB (ImpersonationService.ts:95); no second hop; target ≠ self/Principal/inactive (:338) | `view_as:open` (service DB re-read must read the new key; no-second-hop and target guards stay) |
 | `server/src/modules/foundation/resolvers/classes.ts:122` | createAcademicYear | roster:manage | `classes_sections:settings` |
 | `server/src/modules/foundation/resolvers/classes.ts:158` | setCurrentAcademicYear | roster:manage | `year_change:cut_over` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:522` | applyYearChangePrepare | `year_change:prepare` (Principal, LOCKED); the engine re-checks the same right | `year_change:prepare` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:539` | applyYearChangeCutover | `year_change:cut_over` (Principal, LOCKED); the engine re-checks | `year_change:cut_over` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:551` | undoYearChange | `year_change:undo` (Principal, LOCKED); the engine re-checks | `year_change:undo` |
 | `server/src/modules/foundation/resolvers/classes.ts:217` | mergeSections | roster:manage | `classes_sections:merge_split` |
 | `server/src/modules/foundation/resolvers/classes.ts:240` | splitSections | roster:manage | `classes_sections:merge_split` |
 | `server/src/modules/foundation/resolvers/classes.ts:249` | createClass | roster:manage | `classes_sections:create` |
@@ -60,6 +63,11 @@ Counts: 58 mutations (46 in (a), 12 in (e)), 71 queries (48 in (b), 23 in (e)), 
 | `server/src/modules/foundation/resolvers/auth.ts:126` | impersonationTargetsPage | authenticated; same | `view_as:open` (service DB re-read reads the new key) |
 | `server/src/modules/foundation/resolvers/classes.ts:78` | classes | authenticated | authenticated, no action (base reference read) |
 | `server/src/modules/foundation/resolvers/classes.ts:92` | subjects | authenticated | authenticated, no action (base reference read) |
+| `server/src/modules/year-change/resolvers/yearChange.ts:445` | yearChangeSetup | `year_change:view` (Principal, LOCKED) | `year_change:view` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:457` | yearChangePlan | `year_change:view` (Principal, LOCKED); read-only dry run | `year_change:view` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:470` | yearChangeCutoverPlan | `year_change:view` (Principal, LOCKED); read-only dry run | `year_change:view` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:482` | yearChangeUndoPlan | `year_change:view` (Principal, LOCKED); read-only dry run | `year_change:view` |
+| `server/src/modules/year-change/resolvers/yearChange.ts:495` | yearChangeRuns | `year_change:view` (Principal, LOCKED) | `year_change:view` |
 | `server/src/modules/foundation/resolvers/classes.ts:111` | academicYears | authenticated | authenticated, no action (base reference read) |
 | `server/src/modules/foundation/resolvers/classes.ts:198` | activeSectionMerges | roster:manage | `classes_sections:merge_split` |
 | `server/src/modules/foundation/resolvers/classes.ts:331` | homeworkSupervisors | roster:manage | `teaching_assignments:assign_homework_checker` |

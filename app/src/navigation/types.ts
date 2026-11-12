@@ -723,6 +723,7 @@ export type AdminStackParamList = {
   GroupMembers: undefined;
   AcademicYear: undefined;
   SectionConfig: undefined;
+  YearChange: undefined;
   GuardianCredentials: undefined;
   MessageTemplates: undefined;
   MessageTemplateEdit: { key: string; labelBn: string };

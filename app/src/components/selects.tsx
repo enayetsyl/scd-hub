@@ -16,6 +16,7 @@ import {
 } from "../graphql/operations";
 import { STR, hrCategoryLabel, subjectLabel, bnNum } from "../lib/labels";
 import { personName } from "../lib/personName";
+import { yearOptionLabel } from "../lib/yearHandling";
 import { useAuth } from "../auth/AuthContext";
 
 /** Pick a staff member by name → yields the StaffProfile id (HR admin surfaces).
@@ -211,7 +212,9 @@ export function AcademicYearSelect({
   // year (or none yet) there is nothing to choose, so the picker is hidden (design-A).
   // It returns only where switching matters: multiple years, or an explicit filter.
   if (variant === "auto" && years.length <= 1) return null;
-  const options = years.map((y) => ({ label: y.current ? `${y.label} ✓` : y.label, value: y.id }));
+  // YC-5: an earlier year reads "2026 (গত বছর)" so nobody mistakes it for the live one.
+  const currentLabel = years.find((y) => y.current)?.label ?? null;
+  const options = years.map((y) => ({ label: yearOptionLabel(y, currentLabel), value: y.id }));
   return (
     <Select
       label={label}

@@ -51,7 +51,7 @@ function findErrorClasses(): Map<string, string> {
       }
       if (!p.endsWith(".ts") || p.includes("__tests__")) continue;
       const src = readFileSync(p, "utf8");
-      for (const m of src.matchAll(/export class ([A-Za-z0-9_]*Error) extends Error/g)) {
+      for (const m of src.matchAll(/export class ([A-Za-z0-9_]*(?:Error|Refusal)) extends Error/g)) {
         out.set(m[1], p);
       }
     }
