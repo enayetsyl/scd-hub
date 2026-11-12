@@ -280,6 +280,7 @@ const POLICY_FIELDS = `
   sectionTriggerPct sectionTriggerMinAssessments retestAfterDays rubricWeakAtOrBelow rubricGoodAt
   assignmentTotalMarks assignmentMinutes assignmentPartAOn assignmentPartAMarks assignmentPartBMarks
   assignmentMixWeak assignmentMixImproving assignmentMixRevision
+  homeworkDraftQuestionsPerObjective homeworkDraftMaxItems extraHomeworkMaxQuestions extraHomeworkIncludeImproving
 `;
 
 export const MASTERY_POLICY_QUERY = gql`
@@ -392,6 +393,7 @@ const PAPER_FIELDS = `
   date
   hwItemId
   classTestId
+  extra
   entryState
   totalMarks
   rubricLoCodes
@@ -601,6 +603,8 @@ export type MasteryPaperRow = {
   hwItemId: string | null;
   /** PR-C: the class test whose totals this sheet writes (null when none). */
   classTestId?: string | null;
+  /** PR-D: an extra homework for weak children (per-child items). */
+  extra?: boolean;
   entryState: string;
   totalMarks: number;
   rubricLoCodes: string[];
@@ -1697,3 +1701,77 @@ export type ChildMasteryProgressRow = {
   improving: { labelBn: string }[];
   schoolDid: { date: string; kind: string; labelBn: string; status: string; present: boolean | null; retestPct: number | null }[];
 };
+
+// ---------------------------------------------------------------------------
+// PR-D (D-#1321–#1326): homework from the lesson taught + extra homework for weak children
+// ---------------------------------------------------------------------------
+
+export interface MasteryHomeworkDraftItem {
+  origin: "BANK" | "TEACHER";
+  artifactId: string | null;
+  qid: string | null;
+  textBn: string | null;
+  loCode: string;
+  questionTypeCode: string;
+  marks: number;
+  fromBook: boolean;
+}
+
+export interface MasteryHomeworkDraft {
+  reason: string | null;
+  items: MasteryHomeworkDraftItem[];
+  rubricCodes: string[];
+  gaps: string[];
+  leftOut: string[];
+  hwItemId: string | null;
+}
+
+export const MASTERY_HOMEWORK_DRAFT_QUERY = gql`
+  query MasteryHomeworkDraft($sectionId: String!, $subject: String!, $dateKey: String!) {
+    masteryHomeworkDraft(sectionId: $sectionId, subject: $subject, dateKey: $dateKey) {
+      reason
+      items { origin artifactId qid textBn loCode questionTypeCode marks fromBook }
+      rubricCodes
+      gaps
+      leftOut
+      hwItemId
+    }
+  }
+`;
+
+export interface MasteryExtraHomeworkStudent {
+  studentId: string;
+  name: string;
+  rollNumber: string | null;
+  cause: string | null;
+  items: { artifactId: string; qid: string; textBn: string | null; loCode: string; labelBn: string; questionTypeCode: string; marks: number; reasonBn: string }[];
+}
+
+export const MASTERY_EXTRA_HOMEWORK_PREVIEW_QUERY = gql`
+  query MasteryExtraHomeworkPreview($sectionId: String!, $subject: String!) {
+    masteryExtraHomeworkPreview(sectionId: $sectionId, subject: $subject) {
+      studentId
+      name
+      rollNumber
+      cause
+      items { artifactId qid textBn loCode labelBn questionTypeCode marks reasonBn }
+    }
+  }
+`;
+
+export const CREATE_MASTERY_EXTRA_HOMEWORK = gql`
+  mutation CreateMasteryExtraHomework($sectionId: String!, $subject: String!, $date: String!, $sheets: [MasteryExtraHomeworkSheetInput!]!) {
+    createMasteryExtraHomework(sectionId: $sectionId, subject: $subject, date: $date, sheets: $sheets) {
+      paperId
+    }
+  }
+`;
+
+export const MASTERY_SECTION_SWITCH_QUERY = gql`
+  query MasterySectionSwitch($sectionId: String!, $subject: String!) {
+    masterySectionSwitch(sectionId: $sectionId, subject: $subject) {
+      enabled
+      classLevel
+    }
+  }
+`;

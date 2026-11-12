@@ -77,6 +77,7 @@ PaperRef.implement({
     date: t.exposeString("date"),
     hwItemId: t.string({ nullable: true, resolve: (p) => p.hwItemId }),
     classTestId: t.string({ nullable: true, description: "PR-C: the class test whose totals this sheet writes.", resolve: (p) => p.classTestId }),
+    extra: t.boolean({ description: "PR-D: an extra homework for weak children (per-child items).", resolve: (p) => p.extra }),
     entryState: t.exposeString("entryState"),
     totalMarks: t.exposeFloat("totalMarks"),
     items: t.field({ type: [PaperItemRef], resolve: (p) => p.items }),

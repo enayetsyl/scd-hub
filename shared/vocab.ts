@@ -1550,9 +1550,11 @@ export const NOTIFICATION_KINDS = [
   //   PROPOSAL        → every holder of mastery:approve when a section crosses the line
   //   EXTRA_CLASS     → the routine teacher, and each planned student's guardians, when planned
   //   ASSIGNMENT_SENT → each student's guardians when the weekly assignment is sent
+  //   EXTRA_HOMEWORK  → each child's guardians when an extra tailored homework is given (PR-D, D-#1325)
   "MASTERY_PROPOSAL",
   "MASTERY_EXTRA_CLASS",
   "MASTERY_ASSIGNMENT_SENT",
+  "MASTERY_EXTRA_HOMEWORK",
   // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md; app-native, NO wire twin):
   //   SUBMISSION_ESCALATION → holders of mark_submission:alerts at 09:30 (unmarked assignments)
   //   CORRECTION            → the same holders when a teacher flips a same-day chase
@@ -1663,6 +1665,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "অতিরিক্ত ক্লাসের প্রস্তাব",
   MASTERY_EXTRA_CLASS: "অতিরিক্ত ক্লাস",
   MASTERY_ASSIGNMENT_SENT: "সাপ্তাহিক অ্যাসাইনমেন্ট",
+  MASTERY_EXTRA_HOMEWORK: "বাড়তি বাড়ির কাজ",
   MARK_SUBMISSION_ESCALATION: "অ্যাসাইনমেন্টের জমার হিসাব বাকি",
   MARK_CORRECTION: "জমার হিসাবে ভুল",
   WORK_MARK_CORRECTED: "জমার বার্তা সংশোধন",
@@ -1748,6 +1751,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "Extra-class proposal",
   MASTERY_EXTRA_CLASS: "Extra class",
   MASTERY_ASSIGNMENT_SENT: "Weekly assignment",
+  MASTERY_EXTRA_HOMEWORK: "Extra homework",
   MARK_SUBMISSION_ESCALATION: "Assignments not marked",
   MARK_CORRECTION: "Submission marks corrected",
   WORK_MARK_CORRECTED: "Correction: work was submitted",
@@ -5418,8 +5422,9 @@ export const MASTERY_TAG_EFFECTS = ["WEAK", "LIGHT", "NO_EVIDENCE", "VOID_BEHAVI
 export type MasteryTagEffect = (typeof MASTERY_TAG_EFFECTS)[number];
 
 /** What the school does about an outcome (D-#781, M-5). A SECTION trigger proposes EXTRA_CLASS;
- *  the approver may turn it into RETEACH (in the normal period, no extra slot). */
-export const MASTERY_ACTION_KINDS = ["TAILORED_ASSIGNMENT", "EXTRA_CLASS", "RETEACH", "REVISION_SHEET", "GUARDIAN_NOTE"] as const;
+ *  the approver may turn it into RETEACH (in the normal period, no extra slot). EXTRA_HOMEWORK
+ *  (PR-D, D-#1324): one row per child given an extra tailored homework — appended, never reordered. */
+export const MASTERY_ACTION_KINDS = ["TAILORED_ASSIGNMENT", "EXTRA_CLASS", "RETEACH", "REVISION_SHEET", "GUARDIAN_NOTE", "EXTRA_HOMEWORK"] as const;
 export type MasteryActionKind = (typeof MASTERY_ACTION_KINDS)[number];
 /** PROPOSED (app) → APPROVED (scheduled) → IN_PROGRESS (class held) → CHECKING (re-test built) → CLOSED; or REJECTED. */
 export const MASTERY_ACTION_STATUSES = ["PROPOSED", "APPROVED", "IN_PROGRESS", "CHECKING", "CLOSED", "REJECTED"] as const;
@@ -5535,6 +5540,12 @@ export const MASTERY_POLICY_DEFAULTS = {
   assignmentMixWeak: 60,
   assignmentMixImproving: 25,
   assignmentMixRevision: 15,
+  // PR-D (D-#1321/#1323): the class homework drafted from the lesson taught, and the extra homework
+  // for weak children. Flat keys like every other policy value (the brief's nested shape, flattened).
+  homeworkDraftQuestionsPerObjective: 1,
+  homeworkDraftMaxItems: 6,
+  extraHomeworkMaxQuestions: 3,
+  extraHomeworkIncludeImproving: false,
 } as const;
 export type MasteryPolicyValues = { -readonly [K in keyof typeof MASTERY_POLICY_DEFAULTS]: (typeof MASTERY_POLICY_DEFAULTS)[K] extends boolean ? boolean : number };
 
