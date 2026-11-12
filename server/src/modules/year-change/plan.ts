@@ -16,6 +16,8 @@ import { Section } from "../foundation/models/Section";
 import { Student } from "../foundation/models/Student";
 import { Enrolment } from "../foundation/models/Enrolment";
 import { User } from "../foundation/models/User";
+import { YearChangeRun } from "./models/YearChangeRun";
+import { GuardianLink } from "../foundation/models/GuardianLink";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import { dayBefore } from "../foundation/services/EnrolmentService";
 import { normalizePhone } from "../foundation/services/credentials";
@@ -38,6 +40,11 @@ import {
 } from "./types";
 
 const sid = (id: unknown): string => String(id);
+/** School IDs compare numerically when numeric ("0104" = "104"), else trimmed upper-case. */
+export function normSchoolId(id: string): string {
+  const t = (id ?? "").trim();
+  return /^[0-9]+$/.test(t) ? String(Number(t)) : t.toUpperCase();
+}
 const isCode = (c: unknown): c is SectionCode => typeof c === "string" && (SECTION_CODES as readonly string[]).includes(c);
 const validLevel = (l: number): boolean => Number.isInteger(l) && l >= ROSTER_CLASS_LEVEL_MIN && l <= ROSTER_CLASS_LEVEL_MAX;
 
@@ -71,6 +78,8 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
     leavers: [],
     admissions: [],
     classTeachers: [],
+    runId: null,
+    reconcile: { removeEnrolments: [], removeAdmissions: [] },
     counts: {
       classesToCreate: 0,
       sectionsToCreate: 0,
@@ -82,6 +91,10 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
       admissionsToCreate: 0,
       admissionsExisting: 0,
       classTeachersToSet: 0,
+      enrolmentsToUpdate: 0,
+      enrolmentsToRemove: 0,
+      admissionsToUpdate: 0,
+      admissionsToRemove: 0,
     },
     refusals,
     warnings,
@@ -103,6 +116,12 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
     refusals.push(`নতুন শিক্ষাবর্ষ ৩ জানুয়ারির মধ্যে শুরু হতে হবে (এখন ${startKey})।`);
   }
   const plan = empty(fromYear.label, toYear.label, startKey, closeKey);
+  // One prepared run per year pair (the exists/changed checks compare against its runId).
+  const existingRun = await YearChangeRun.findOne({ fromYearId: fromYear._id, toYearId: toYear._id }).lean();
+  if (existingRun) {
+    plan.runId = existingRun.runId;
+    if (existingRun.status !== "PREPARED") refusals.push(`রান ${existingRun.runId} উত্তরণ শুরু করেছে বা শেষ করেছে — নতুন প্রস্তুতি চলবে না।`);
+  }
 
   // --- 2. past year: classes, sections, children --------------------------------------------
   const fromClasses = await Class.find({ academicYearId: fromYear._id }).lean();
@@ -190,6 +209,7 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
 
   const enrolments: PlanEnrolmentRow[] = [];
   const leavers: PlanLeaverRow[] = [];
+  const leaverSet = new Set<string>(resolved.filter((r) => r.decision === "LEFT").map((r) => sid(r.s._id)));
   for (const r of resolved) {
     const base = { studentId: sid(r.s._id), schoolId: r.s.schoolId, name: r.s.name, fromLevel: r.info.level, fromSectionCode: r.info.code };
     if (r.decision === "LEFT") {
@@ -203,10 +223,13 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
     }
     const have = enrolByStudent.get(base.studentId);
     let exists = false;
+    let update = false;
     if (have) {
       const cls = toClassByLevel.get(r.toLevel);
       const sec = cls ? toSectionBy.get(toSectionKey(cls._id, code)) : undefined;
-      if (have.status === "PLANNED" && have.runId && sec && have.sectionId.equals(sec._id)) exists = true;
+      const ours = have.status === "PLANNED" && !!have.runId && have.runId === plan.runId;
+      if (ours && sec && have.sectionId.equals(sec._id)) exists = true;
+      else if (ours) update = true;
       else refusals.push(`${r.s.schoolId} ${r.s.name}: ${toYear.label} বর্ষে আগে থেকেই অন্য তালিকাভুক্তি আছে — আগের প্রস্তুতি বাতিল করুন।`);
     }
     enrolments.push({
@@ -216,12 +239,18 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
       toLevel: r.toLevel,
       toSectionCode: code,
       exists,
+      update,
     });
   }
 
   // --- 7. admissions ------------------------------------------------------------------------
   const admissions: PlanAdmissionRow[] = [];
   const seenIds = new Set<string>();
+  // Every Student, active or not: ids are compared numerically ("0104" is "104").
+  const everyone = await Student.find({}).select("schoolId active yearChangeRunId name nameBn gender phone classId sectionId").lean();
+  const byNorm = new Map<string, typeof everyone>();
+  for (const st of everyone) byNorm.set(normSchoolId(st.schoolId), [...(byNorm.get(normSchoolId(st.schoolId)) ?? []), st]);
+  const matchedAdmissionIds = new Set<string>();
   for (const a of admissionIn as AdmissionInput[]) {
     const schoolId = (a.schoolId ?? "").trim();
     const name = (a.name ?? "").trim();
@@ -239,26 +268,58 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
       refusals.push(`${tag}: লিঙ্গ লাগবে।`);
       continue;
     }
-    if (seenIds.has(schoolId)) {
+    if (seenIds.has(normSchoolId(schoolId))) {
       refusals.push(`${tag}: একই আইডি তালিকায় দুইবার আছে।`);
       continue;
     }
-    seenIds.add(schoolId);
+    seenIds.add(normSchoolId(schoolId));
     const code = pickCode(shapeOf(a.level), a.sectionCode, "?", a.gender);
     if (!code) {
       refusals.push(`${tag}: কোন শাখায় যাবে ঠিক করা যায়নি।`);
       continue;
     }
-    const clash = await Student.findOne({ schoolId }).select("active yearChangeRunId").lean();
+    const clashes = byNorm.get(normSchoolId(schoolId)) ?? [];
     let exists = false;
-    if (clash) {
-      if (clash.yearChangeRunId && clash.active === false) exists = true;
-      else {
-        refusals.push(`${tag}: এই আইডি আগে থেকেই ব্যবহৃত।`);
+    let changed = false;
+    if (clashes.length) {
+      const mine = clashes.length === 1 && !!clashes[0].yearChangeRunId && clashes[0].yearChangeRunId === plan.runId && clashes[0].active === false ? clashes[0] : null;
+      if (!mine) {
+        refusals.push(`${tag}: এই আইডি আগে থেকেই ব্যবহৃত (${clashes[0].schoolId})।`);
         continue;
       }
+      matchedAdmissionIds.add(sid(mine._id));
+      const cls = toClassByLevel.get(a.level);
+      const sec = cls ? toSectionBy.get(toSectionKey(cls._id, code)) : undefined;
+      changed =
+        mine.schoolId !== schoolId ||
+        mine.name !== name ||
+        (mine.nameBn ?? "") !== (a.nameBn?.trim() ?? "") ||
+        mine.gender !== a.gender ||
+        (mine.phone ?? "") !== phone ||
+        !sec ||
+        !mine.sectionId.equals(sec._id);
+      exists = !changed;
     }
-    admissions.push({ schoolId, name, ...(a.nameBn ? { nameBn: a.nameBn.trim() } : {}), gender: a.gender, toLevel: a.level, toSectionCode: code, guardianPhone: phone, exists });
+    admissions.push({ schoolId, name, ...(a.nameBn ? { nameBn: a.nameBn.trim() } : {}), gender: a.gender, toLevel: a.level, toSectionCode: code, guardianPhone: phone, exists, changed });
+  }
+
+  // --- 7b. reconcile with the prepared run: rows of THIS run the plan no longer contains --------
+  const reconcile = plan.reconcile;
+  if (plan.runId) {
+    const keepStudents = new Set<string>([...enrolments.map((e) => e.studentId), ...matchedAdmissionIds]);
+    const runAdmissions = everyone.filter((st) => st.yearChangeRunId === plan.runId);
+    const runAdmissionIds = new Set(runAdmissions.map((st) => sid(st._id)));
+    for (const st of runAdmissions) {
+      if (!matchedAdmissionIds.has(sid(st._id))) reconcile.removeAdmissions.push({ studentId: sid(st._id), schoolId: st.schoolId });
+    }
+    const planned = await Enrolment.find({ runId: plan.runId, academicYearId: toYear._id, status: "PLANNED" }).select("studentId").lean();
+    const schoolOf = new Map(everyone.map((st) => [sid(st._id), st.schoolId]));
+    const activeNow = new Set(everyone.filter((st) => st.active).map((st) => sid(st._id)));
+    for (const e of planned) {
+      const id = sid(e.studentId);
+      if (keepStudents.has(id) || runAdmissionIds.has(id)) continue;
+      reconcile.removeEnrolments.push({ studentId: id, schoolId: schoolOf.get(id) ?? id, reason: leaverSet.has(id) ? "চলে গেছে" : activeNow.has(id) ? "তালিকায় নেই" : "শিক্ষার্থী আর সক্রিয় নয়" });
+    }
   }
 
   // --- 8. classes + sections + counts -------------------------------------------------------
@@ -338,14 +399,18 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
   plan.counts = {
     classesToCreate: classes.filter((c) => !c.existingId).length,
     sectionsToCreate: classes.reduce((n, c) => n + c.sections.filter((s) => !s.existingId).length, 0),
-    enrolmentsToCreate: enrolments.filter((e) => !e.exists).length,
+    enrolmentsToCreate: enrolments.filter((e) => !e.exists && !e.update).length,
     enrolmentsExisting: enrolments.filter((e) => e.exists).length,
     promoted: enrolments.filter((e) => e.decision === "PROMOTE").length,
     repeaters: enrolments.filter((e) => e.decision === "REPEAT").length,
     left: leavers.length,
-    admissionsToCreate: admissions.filter((a) => !a.exists).length,
+    admissionsToCreate: admissions.filter((a) => !a.exists && !a.changed).length,
     admissionsExisting: admissions.filter((a) => a.exists).length,
     classTeachersToSet: classTeachers.filter((t) => !t.alreadySet).length,
+    enrolmentsToUpdate: enrolments.filter((e) => e.update).length,
+    enrolmentsToRemove: reconcile.removeEnrolments.length,
+    admissionsToUpdate: admissions.filter((a) => a.changed).length,
+    admissionsToRemove: reconcile.removeAdmissions.length,
   };
   return plan;
 }

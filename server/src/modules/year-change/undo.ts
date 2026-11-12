@@ -37,6 +37,9 @@ export interface UndoPlan {
   kind: "PREPARE" | "CUT_OVER";
   runId: string;
   counts: Record<string, number>;
+  /** Cut-over undo: school IDs of (a) children changed after the cut-over, (b) children created on next-year sections after it. */
+  changedAfter?: string[];
+  createdAfter?: string[];
   notes: string[];
   refusals: string[];
 }
@@ -69,7 +72,7 @@ async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; section
   if (pointing) refusals.push(`${pointing} জন শিক্ষার্থী এই রানের শাখায় আছে।`);
   const admissionIds = admissions.map((a) => a._id);
   const links = admissionIds.length ? await GuardianLink.countDocuments({ studentId: { $in: admissionIds } }) : 0;
-  const teacherRestores = run?.teacherSets.length ?? 0;
+  const teacherRestores = new Set((run?.teacherSets ?? []).map((t) => t.sectionId)).size;
   if (classes.length) notes.push("ক্লাস মুছবে শুধু যেগুলোতে অন্য শাখা নেই।");
   return {
     plan: {
@@ -100,7 +103,10 @@ export async function undoPrepare(runId: string, actor: YearChangeActor, opts: {
   let total = 0;
 
   // Class teachers the run set on sections it did not create go back to what they were.
+  const seenSections = new Set<string>();
   for (const t of run?.teacherSets ?? []) {
+    if (seenSections.has(t.sectionId)) continue; // only the FIRST recorded previous teacher counts
+    seenSections.add(t.sectionId);
     const sec = await Section.findById(t.sectionId);
     if (!sec || sec.runId === runId) continue;
     const before = t.previous;
@@ -140,10 +146,12 @@ export async function undoPrepare(runId: string, actor: YearChangeActor, opts: {
 // ---------------------------------------------------------------------------------------------
 
 async function beforeStateOf(runId: string): Promise<StudentBefore[] | null> {
-  const audit = (await Audit.findOne({ eventKind: "YEAR_CHANGE_CUT_OVER", "meta.runId": runId }).sort({ eventAt: -1 }).lean()) as unknown as { meta?: { before?: StudentBefore[] } } | null;
-  if (audit?.meta?.before?.length) return audit.meta.before;
+  // The run record holds the before-state of THIS cut-over; an older audit row may be from a
+  // cut-over that was undone since, so it is only the fallback.
   const run = await YearChangeRun.findOne({ runId }).select("before").lean();
-  return run?.before?.length ? run.before : null;
+  if (run?.before?.length) return run.before;
+  const audit = (await Audit.findOne({ eventKind: "YEAR_CHANGE_CUT_OVER", "meta.runId": runId }).sort({ eventAt: -1 }).lean()) as unknown as { meta?: { before?: StudentBefore[] } } | null;
+  return audit?.meta?.before?.length ? audit.meta.before : null;
 }
 
 async function planCutoverUndo(runId: string) {
@@ -168,14 +176,42 @@ async function planCutoverUndo(runId: string) {
   if (homework + assignments + attendance > 0) {
     notes.push(`নতুন শাখায় তৈরি কাজ থেকে যাবে: বাড়ির কাজ ${homework}, অ্যাসাইনমেন্ট ${assignments}, উপস্থিতির দিন ${attendance}।`);
   }
+  const stopped = run ? await ImprovementAction.countDocuments({ stopReason: improvementStopReason(runId) }) : 0;
+  // (a) pointer / active changed after the cut-over; (b) created on next-year sections after it
+  const changedAfter: string[] = [];
+  const createdAfter: string[] = [];
+  if (run && before) {
+    const wantedBy = new Map((await Enrolment.find({ runId, status: "ACTIVE" }).select("studentId classId sectionId").lean()).map((e) => [e.studentId.toString(), e]));
+    const leavers = new Set(run.leaverIds);
+    const beforeIds = new Set(before.map((b) => b.studentId));
+    const now = await Student.find({ _id: { $in: before.map((b) => oid(b.studentId)) } }).select("schoolId classId sectionId active").lean();
+    const bMap = new Map(before.map((b) => [b.studentId, b]));
+    for (const st of now) {
+      const id = st._id.toString();
+      const w = wantedBy.get(id);
+      const b = bMap.get(id) as StudentBefore;
+      const expectActive = !leavers.has(id);
+      const expectClass = w ? w.classId.toString() : b.classId;
+      const expectSection = w ? w.sectionId.toString() : b.sectionId;
+      if (st.active !== expectActive || st.classId.toString() !== expectClass || st.sectionId.toString() !== expectSection) changedAfter.push(st.schoolId);
+    }
+    if (newSectionIds.length) {
+      const extra = await Student.find({ sectionId: { $in: newSectionIds } }).select("schoolId").lean();
+      for (const st of extra) if (!beforeIds.has(st._id.toString())) createdAfter.push(st.schoolId);
+    }
+  }
+  if (changedAfter.length) notes.push(`কাট-ওভারের পরে বদলানো শিক্ষার্থী (ফিরিয়ে দেওয়া হবে): ${changedAfter.join(", ")}`);
+  if (createdAfter.length) notes.push(`কাট-ওভারের পরে নতুন শাখায় যোগ হওয়া শিক্ষার্থী (force ছাড়া আটকাবে): ${createdAfter.join(", ")}`);
   const plan: UndoPlan = {
+    changedAfter,
+    createdAfter,
     kind: "CUT_OVER",
     runId,
     counts: {
       studentsRestored: before?.length ?? 0,
       pastEnrolmentsReopened: reopen,
       newEnrolmentsToPlanned: newRows.length,
-      improvementRestarted: run?.improvementEndedIds.length ?? 0,
+      improvementRestarted: stopped,
       homeworkOnNewSections: homework,
       assignmentsOnNewSections: assignments,
       attendanceDaysOnNewSections: attendance,
@@ -191,17 +227,20 @@ export async function planUndoCutover(runId: string, actor?: YearChangeActor): P
   return (await planCutoverUndo(runId)).plan;
 }
 
-export async function undoCutover(runId: string, actor: YearChangeActor, opts: { dryRun?: boolean } = {}): Promise<UndoResult> {
+export async function undoCutover(runId: string, actor: YearChangeActor, opts: { dryRun?: boolean; force?: boolean } = {}): Promise<UndoResult> {
   assertYearChangeRight(actor, "undo");
   const { plan, run, before, fromYear, toYear, closeKey } = await planCutoverUndo(runId);
   if (opts.dryRun) return { plan, total: 0 };
   if (plan.refusals.length || !run || !before || !fromYear || !toYear) throw new YearChangeRefusal(plan.refusals.length ? plan.refusals : ["রান অসম্পূর্ণ।"]);
+  if ((plan.createdAfter?.length ?? 0) > 0 && !opts.force) {
+    throw new YearChangeRefusal([`কাট-ওভারের পরে নতুন শাখায় ${plan.createdAfter!.length} জন শিক্ষার্থী যোগ হয়েছে (${plan.createdAfter!.join(", ")}) — force ছাড়া ফেরানো যাবে না।`]);
+  }
   let total = 0;
 
   // 1. flip the current year back first
   if (!fromYear.current || toYear.current) {
-    await AcademicYear.updateMany({ _id: { $ne: fromYear._id } }, { $set: { current: false } });
-    await AcademicYear.updateOne({ _id: fromYear._id }, { $set: { current: true } });
+    // ONE write, so there is never zero or two current years.
+    await AcademicYear.updateMany({}, [{ $set: { current: { $eq: ["$_id", fromYear._id] } } }]);
     total++;
   }
   // 2. Students byte for byte (updatedAt included)
@@ -237,14 +276,10 @@ export async function undoCutover(runId: string, actor: YearChangeActor, opts: {
   // 4. new-year rows back to PLANNED
   total += (await Enrolment.updateMany({ runId, status: "ACTIVE" }, { $set: { status: "PLANNED" } })).modifiedCount;
   // 5. improvement actions the cut-over stopped
-  if (run.improvementEndedIds.length) {
-    total += (
-      await ImprovementAction.updateMany(
-        { _id: { $in: run.improvementEndedIds.map(oid) }, stopReason: improvementStopReason(runId) },
-        { $set: { stoppedAt: null, stoppedBy: null, stopReason: null } },
-      )
-    ).modifiedCount;
-  }
+  // by the tag the cut-over stamped, so a crash between its updateMany and its run-record save still restarts them
+  total += (
+    await ImprovementAction.updateMany({ stopReason: improvementStopReason(runId) }, { $set: { stoppedAt: null, stoppedBy: null, stopReason: null } })
+  ).modifiedCount;
   // 6. the run is a prepared run again (a new cut-over captures a fresh before-state)
   await YearChangeRun.updateOne({ _id: run._id }, { $set: { status: "PREPARED", improvementEndedIds: [] }, $unset: { before: 1, cutOverBy: 1, cutOverAt: 1 } });
   total++;

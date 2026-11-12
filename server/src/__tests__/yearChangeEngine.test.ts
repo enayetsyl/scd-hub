@@ -26,6 +26,11 @@ import { ClassTeacherAssignment } from "../modules/foundation/models/ClassTeache
 import { Audit } from "../modules/platform/models/Audit";
 import { HomeworkItem } from "../modules/trackers/models/HomeworkItem";
 import { ImprovementAction } from "../modules/improvement/models/ImprovementAction";
+import { mySectionsAsClassTeacher } from "../modules/foundation/services/ClassTeacherService";
+import { myChildren } from "../modules/guardian/services/GuardianPortalService";
+import { attendanceUnitsForDate } from "../modules/attendance/services/AttendanceReportService";
+import { myMarkingUnits } from "../modules/attendance/services/StudentAttendanceService";
+import { myDayFor } from "../modules/routine/services/MyDayService";
 import { checkInvariant, sectionRoster } from "../modules/foundation/services/EnrolmentService";
 import { currentYearFilter, currentYearSectionFilter } from "../modules/foundation/services/currentYear";
 import { ForbiddenError } from "../middleware/authz";
@@ -73,6 +78,8 @@ beforeEach(async () => {
 });
 
 const RUN = "yc-test-1";
+const EARLY = { allowEarly: true };
+const cut = (runId = RUN, o: { allowEarly?: boolean; force?: boolean; today?: string } = {}) => applyCutover(runId, w.principal, { allowEarly: true, ...o });
 const input = (): PlanInput => ({
   fromYearId: w.years.y2026.toString(),
   toYearId: w.years.y2027.toString(),
@@ -112,7 +119,7 @@ describe("YC-4: planYearChange (the dry run)", () => {
     expect(plan.refusals).toEqual([]);
     expect(plan.startKey).toBe("2027-01-01");
     expect(plan.closeKey).toBe("2026-12-31");
-    expect(plan.counts).toEqual({
+    expect(plan.counts).toMatchObject({
       classesToCreate: 5, // levels 2,3,4,5,6
       sectionsToCreate: 9, // C2 Main + 2 each for C3..C6
       enrolmentsToCreate: 5, // 4 promoted + 1 repeater
@@ -242,21 +249,21 @@ describe("YC-4: applyCutover", () => {
 
   it("refuses (and writes nothing) while homework is unissued, then runs once it is issued", async () => {
     await prepare();
-    await HomeworkItem.collection.insertOne({ sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, status: "declared", hwId: "HW-X-1" });
-    const dry = await planCutover(RUN);
+    await HomeworkItem.collection.insertOne({ sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, status: "declared", hwId: "HW-X-1", dateGiven: new Date() });
+    const dry = await planCutover(RUN, undefined, EARLY);
     expect(dry.refusals.some((r) => r.includes("বাড়ির কাজ"))).toBe(true);
-    await expect(applyCutover(RUN, w.principal)).rejects.toBeInstanceOf(YearChangeRefusal);
+    await expect(cut()).rejects.toBeInstanceOf(YearChangeRefusal);
     expect((await AcademicYear.findById(w.years.y2026))!.current).toBe(true);
     expect(await Enrolment.countDocuments({ status: "CLOSED" })).toBe(0);
     expect((await YearChangeRun.findOne({ runId: RUN }))!.status).toBe("PREPARED");
     await HomeworkItem.collection.updateMany({}, { $set: { status: "issued" } });
-    expect((await planCutover(RUN)).refusals).toEqual([]);
+    expect((await planCutover(RUN, undefined, EARLY)).refusals).toEqual([]);
   });
 
   it("refuses a child who was admitted after the preparation", async () => {
     await prepare();
     await Student.create({ schoolId: "T-LATE", name: "Late", gender: "male", classId: w.c2Main.classId, sectionId: w.c2Main.sectionId, active: true });
-    const dry = await planCutover(RUN);
+    const dry = await planCutover(RUN, undefined, EARLY);
     expect(dry.refusals.some((r) => r.includes("T-LATE"))).toBe(true);
   });
 
@@ -266,11 +273,11 @@ describe("YC-4: applyCutover", () => {
       { scope: "CLASS", sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, subject: "BAN", repeat: "NONE", days: 3, startKey: "2026-12-28", dayKeys: ["2026-12-28", "2027-01-03", "2027-01-04"], stoppedAt: null },
       { scope: "CLASS", sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, subject: "ENG", repeat: "NONE", days: 1, startKey: "2026-12-10", dayKeys: ["2026-12-10"], stoppedAt: null },
     ]);
-    const dry = await planCutover(RUN, w.principal);
+    const dry = await planCutover(RUN, w.principal, EARLY);
     expect(dry).toMatchObject({ promoted: 4, repeated: 1, left: 2, admitted: 2, activating: 7, scholarshipCleared: 3, improvementToEnd: 1, refusals: [] });
     expect(printCutover(dry)).toContain("চলতি বর্ষ");
 
-    const r = await applyCutover(RUN, w.principal);
+    const r = await cut();
     expect(r.writes).toMatchObject({ enrolmentsClosed: 7, enrolmentsActivated: 7, improvementEnded: 1, yearFlipped: 1 });
     expect((await AcademicYear.findById(w.years.y2027))!.current).toBe(true);
     expect((await AcademicYear.findById(w.years.y2026))!.current).toBe(false);
@@ -322,9 +329,9 @@ describe("YC-4: applyCutover", () => {
 
   it("a re-run writes 0", async () => {
     await prepare();
-    await applyCutover(RUN, w.principal);
+    await cut();
     const snap = JSON.stringify(await Student.find({}).sort({ schoolId: 1 }).lean());
-    const again = await applyCutover(RUN, w.principal);
+    const again = await cut();
     expect(again.total).toBe(0);
     expect(JSON.stringify(await Student.find({}).sort({ schoolId: 1 }).lean())).toBe(snap);
     expect(await Audit.countDocuments({ eventKind: "YEAR_CHANGE_CUT_OVER" })).toBe(1);
@@ -347,14 +354,18 @@ describe("YC-4: applyCutover", () => {
     await Enrolment.updateOne({ _id: to._id }, { $set: { status: "ACTIVE" } });
     await Student.updateOne({ _id: w.c2Up }, { $set: { classId: to.classId, sectionId: to.sectionId } });
 
+    // an unissued recent homework item and no allowEarly: a RESUME skips the precondition refusals
+    await HomeworkItem.collection.insertOne({ sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, status: "declared", hwId: "HW-X-9", dateGiven: new Date() });
+    await Audit.create({ eventKind: "YEAR_CHANGE_CUT_OVER", eventAt: new Date(), meta: { runId: RUN, before: [] } });
     const r = await applyCutover(RUN, w.principal);
+    expect(await Audit.countDocuments({ eventKind: "YEAR_CHANGE_CUT_OVER", "meta.runId": RUN })).toBe(1); // none written twice
     expect(r.writes.enrolmentsClosed).toBe(5); // the 5 still open
     expect(r.writes.enrolmentsActivated).toBe(6);
     expect(r.writes.yearFlipped).toBe(1);
     expect(await checkInvariant()).toEqual([]);
     expect((await Student.findById(w.c4Up).lean())!.sectionId.toString()).not.toBe(w.c4Boys.sectionId.toString());
     expect((await Enrolment.findOne({ studentId: w.c4Up, academicYearId: w.years.y2026 }).lean())!.outcome).toBe("PROMOTED");
-    expect((await applyCutover(RUN, w.principal)).total).toBe(0);
+    expect((await cut()).total).toBe(0);
   });
 });
 
@@ -368,13 +379,13 @@ describe("YC-4: undo", () => {
     );
     const todayBefore = await todaySnapshot();
 
-    await applyCutover(RUN, w.principal);
+    await cut();
     expect(JSON.stringify(await Student.find({}).sort({ schoolId: 1 }).lean())).not.toBe(studentsBefore);
 
     await expect(undoCutover(RUN, w.office)).rejects.toBeInstanceOf(ForbiddenError);
     const dry = await planUndoCutover(RUN, w.principal);
     expect(dry.counts).toMatchObject({ studentsRestored: 9, pastEnrolmentsReopened: 7, newEnrolmentsToPlanned: 7, improvementRestarted: 1 });
-    expect(printUndo(dry)).toContain("studentsRestored");
+    expect(printUndo(dry)).toContain("ফিরবে: শিক্ষার্থীর আগের অবস্থা: 9");
 
     const r = await undoCutover(RUN, w.principal);
     expect(r.total).toBeGreaterThan(0);
@@ -390,13 +401,13 @@ describe("YC-4: undo", () => {
     expect(await Audit.countDocuments({ eventKind: "YEAR_CHANGE_CUT_OVER_UNDONE" })).toBe(1);
 
     // the prepared run can be cut over again
-    expect((await applyCutover(RUN, w.principal)).writes.yearFlipped).toBe(1);
+    expect((await cut()).writes.yearFlipped).toBe(1);
     expect(await checkInvariant()).toEqual([]);
   });
 
   it("undoCutover lists work created on 2027 sections in between", async () => {
     await prepare();
-    await applyCutover(RUN, w.principal);
+    await cut();
     const six = (await Section.findOne({ runId: RUN, code: "Boys", classId: (await Class.findOne({ level: 6, runId: RUN }))!._id }).lean())!;
     await HomeworkItem.collection.insertOne({ sectionId: six._id, classId: six.classId, status: "issued", hwId: "HW-NEW-1" });
     const dry = await planUndoCutover(RUN);
@@ -433,7 +444,7 @@ describe("YC-4: undo", () => {
 
   it("undoPrepare is refused once the cut-over has run", async () => {
     await prepare();
-    await applyCutover(RUN, w.principal);
+    await cut();
     await expect(undoPrepare(RUN, w.principal)).rejects.toBeInstanceOf(YearChangeRefusal);
     expect(await rowsWithRun()).toMatchObject({ enrolments: 7, runs: 1 });
   });
@@ -442,14 +453,263 @@ describe("YC-4: undo", () => {
 describe("YC-4: retirePastYearSections", () => {
   it("is refused for the current year, then sets the old sections inactive once, idempotently", async () => {
     await prepare();
-    await expect(retirePastYearSections(w.years.y2026.toString(), w.principal)).rejects.toBeInstanceOf(YearChangeRefusal);
-    await applyCutover(RUN, w.principal);
+    await expect(retirePastYearSections(w.years.y2026.toString(), w.principal, EARLY)).rejects.toBeInstanceOf(YearChangeRefusal);
+    await cut();
     expect(await Section.countDocuments({ classId: w.c4Boys.classId, active: true })).toBe(1); // still open after the cut-over
     await expect(retirePastYearSections(w.years.y2026.toString(), w.office)).rejects.toBeInstanceOf(ForbiddenError);
-    expect((await retirePastYearSections(w.years.y2026.toString(), w.principal)).retired).toBe(4);
+    expect((await retirePastYearSections(w.years.y2026.toString(), w.principal, EARLY)).retired).toBe(4);
     expect(await Section.countDocuments({ classId: w.c4Boys.classId, active: true })).toBe(0);
-    expect((await retirePastYearSections(w.years.y2026.toString(), w.principal)).retired).toBe(0);
+    expect((await retirePastYearSections(w.years.y2026.toString(), w.principal, EARLY)).retired).toBe(0);
     // next year's sections untouched
     expect(await Section.countDocuments({ runId: RUN, active: true })).toBe(9);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Review fixes (coordinator review of 5de25cb4)
+// ---------------------------------------------------------------------------------------------
+
+describe("YC-4 review: prepare reconciles a re-run", () => {
+  const replan = (over: Partial<PlanInput>) => planYearChange({ ...input(), ...over });
+  const reprepare = async (over: Partial<PlanInput>) => applyPrepare(await replan(over), RUN, w.principal);
+
+  it("a child marked LEFT after the first prepare: the dry run lists it, the planned row goes, the cut-over deactivates", async () => {
+    await prepare();
+    const edited = { promotions: [...w.promotions, { studentId: w.c4Up.toString(), decision: "LEFT" as const }] };
+    const plan = await replan(edited);
+    expect(plan.counts).toMatchObject({ enrolmentsToRemove: 1, left: 3, promoted: 3, repeaters: 1 });
+    expect(plan.reconcile.removeEnrolments).toEqual([expect.objectContaining({ schoolId: "T-E3", reason: "চলে গেছে" })]);
+    expect(printPlan(plan)).toContain("T-E3");
+    const r = await reprepare(edited);
+    expect(r.writes.removed).toBe(1);
+    expect(await Enrolment.countDocuments({ runId: RUN, studentId: w.c4Up })).toBe(0);
+    expect((await reprepare(edited)).total).toBe(0);
+
+    const dry = await planCutover(RUN, undefined, EARLY);
+    expect(dry).toMatchObject({ promoted: 3, repeated: 1, left: 3, refusals: [] });
+    await cut();
+    expect((await Student.findById(w.c4Up).lean())!.active).toBe(false);
+    expect((await Enrolment.findOne({ studentId: w.c4Up, academicYearId: w.years.y2026 }).lean())!.outcome).toBe("LEFT");
+    expect(await checkInvariant()).toEqual([]);
+  });
+
+  it("an admission removed after the first prepare is deleted and never activated", async () => {
+    await prepare();
+    const plan = await replan({ admissions: [w.admissions[0]] });
+    expect(plan.reconcile.removeAdmissions).toEqual([expect.objectContaining({ schoolId: "T-A2" })]);
+    await applyPrepare(plan, RUN, w.principal);
+    expect(await Student.countDocuments({ schoolId: "T-A2" })).toBe(0);
+    expect(await Enrolment.countDocuments({ runId: RUN })).toBe(6);
+    await cut();
+    expect(await Student.countDocuments({ schoolId: "T-A1", active: true })).toBe(1);
+    expect(await Student.countDocuments({ yearChangeRunId: RUN, active: true })).toBe(1);
+  });
+
+  it("an edited admission is updated, not skipped (and \"104\" / \"0104\" is the same child)", async () => {
+    const first = [{ ...w.admissions[0], schoolId: "104" }, w.admissions[1]];
+    await applyPrepare(await planYearChange({ ...input(), admissions: first }), RUN, w.principal);
+    const edited = [{ ...w.admissions[0], schoolId: "0104", name: "Admission Boy Renamed", gender: "female" as const, guardianPhone: "01800000009" }, w.admissions[1]];
+    const plan = await replan({ admissions: edited });
+    expect(plan.counts).toMatchObject({ admissionsToUpdate: 1, admissionsToCreate: 0 });
+    const r = await applyPrepare(plan, RUN, w.principal);
+    expect(r.writes.admissionsUpdated).toBe(1);
+    const st = (await Student.findOne({ yearChangeRunId: RUN, name: "Admission Boy Renamed" }).lean())!;
+    expect(st.schoolId).toBe("0104");
+    expect(st.gender).toBe("female");
+    expect(st.phone).toBe("01800000009");
+    const sec = (await Section.findById(st.sectionId).lean())!;
+    expect(sec.code).toBe("Girls");
+    expect((await Enrolment.findOne({ studentId: st._id }).lean())!.sectionId.toString()).toBe(st.sectionId.toString());
+    expect(await Student.countDocuments({ yearChangeRunId: RUN })).toBe(2);
+    expect((await applyPrepare(await replan({ admissions: edited }), RUN, w.principal)).total).toBe(0);
+  });
+
+  it("a child deactivated in December no longer blocks the cut-over once the run is re-prepared", async () => {
+    await prepare();
+    await Student.updateOne({ _id: w.c2Up }, { $set: { active: false } });
+    await Enrolment.updateOne({ studentId: w.c2Up, academicYearId: w.years.y2026 }, { $set: { status: "CLOSED", endKey: "2026-12-05", outcome: "LEFT" } });
+    expect((await planCutover(RUN, undefined, EARLY)).refusals.length).toBeGreaterThan(0);
+    const plan = await replan({});
+    expect(plan.reconcile.removeEnrolments).toEqual([expect.objectContaining({ schoolId: "T-E1", reason: "শিক্ষার্থী আর সক্রিয় নয়" })]);
+    await applyPrepare(plan, RUN, w.principal);
+    expect((await planCutover(RUN, undefined, EARLY)).refusals).toEqual([]);
+    await cut();
+    expect(await checkInvariant()).toEqual([]);
+  });
+});
+
+describe("YC-4 review: guards", () => {
+  it("the cut-over is refused before the last day of the old year, allowed on it, and allowEarly overrides", async () => {
+    await prepare();
+    expect((await planCutover(RUN, undefined, { today: "2026-12-30" })).refusals.join(" ")).toContain("2026-12-31");
+    await expect(applyCutover(RUN, w.principal, { today: "2026-12-30" })).rejects.toBeInstanceOf(YearChangeRefusal);
+    await expect(applyCutover(RUN, w.principal)).rejects.toBeInstanceOf(YearChangeRefusal); // the real clock is far earlier
+    expect((await AcademicYear.findById(w.years.y2026))!.current).toBe(true);
+    expect((await planCutover(RUN, undefined, { today: "2026-12-31" })).refusals).toEqual([]);
+    const r = await applyCutover(RUN, w.principal, { today: "2026-12-31" });
+    expect(r.writes.yearFlipped).toBe(1);
+  });
+
+  it("retirePastYearSections is refused before 15 Jan unless allowEarly", async () => {
+    await prepare();
+    await cut();
+    const y = w.years.y2026.toString();
+    await expect(retirePastYearSections(y, w.principal, { today: "2027-01-14" })).rejects.toBeInstanceOf(YearChangeRefusal);
+    expect(await Section.countDocuments({ classId: w.c4Boys.classId, active: true })).toBe(1);
+    expect((await retirePastYearSections(y, w.principal, { today: "2027-01-15" })).retired).toBe(4);
+  });
+
+  it("admission ids compare numerically against EVERY student, inactive included", async () => {
+    await Student.create({ schoolId: "104", name: "Old Inactive", classId: w.c2Main.classId, sectionId: w.c2Main.sectionId, active: false });
+    const clash = await planYearChange({ ...input(), admissions: [{ ...w.admissions[0], schoolId: "0104" }] });
+    expect(clash.refusals.some((r) => r.includes("0104") && r.includes("ব্যবহৃত"))).toBe(true);
+    const dup = await planYearChange({ ...input(), admissions: [{ ...w.admissions[0], schoolId: "0105" }, { ...w.admissions[1], schoolId: "105" }] });
+    expect(dup.refusals.some((r) => r.includes("দুইবার"))).toBe(true);
+    const lower = await planYearChange({ ...input(), admissions: [{ ...w.admissions[0], schoolId: "t-e1" }] });
+    expect(lower.refusals.some((r) => r.includes("ব্যবহৃত"))).toBe(true);
+  });
+
+  it("one prepared run per year pair: a second runId is refused, the plan names the first", async () => {
+    await prepare();
+    const plan = await planYearChange(input());
+    expect(plan.runId).toBe(RUN);
+    await expect(applyPrepare(plan, "yc-other", w.principal)).rejects.toBeInstanceOf(YearChangeRefusal);
+    expect(await Class.countDocuments({ runId: "yc-other" })).toBe(0);
+    expect(plan.counts.enrolmentsToCreate).toBe(0);
+  });
+
+  it("the pre-cut-over invariant check refuses a drifted pointer and lists it; a clean run reports none after", async () => {
+    await prepare();
+    await Student.updateOne({ _id: w.c2Up }, { $set: { sectionId: w.c4Boys.sectionId } });
+    const dry = await planCutover(RUN, undefined, EARLY);
+    expect(dry.refusals.join(" ")).toContain("POINTER_MISMATCH");
+    await expect(cut()).rejects.toBeInstanceOf(YearChangeRefusal);
+    await Student.updateOne({ _id: w.c2Up }, { $set: { sectionId: w.c2Main.sectionId } });
+    expect((await cut()).invariantAfter).toEqual([]);
+  });
+
+  it("unissued homework: only the last 60 days count, named by id, force ignores them", async () => {
+    await prepare();
+    const hw = (hwId: string, daysAgo: number) =>
+      HomeworkItem.collection.insertOne({ sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, status: "declared", hwId, dateGiven: new Date(Date.now() - daysAgo * 86400000) });
+    await hw("HW-OLD-1", 90);
+    expect((await planCutover(RUN, undefined, EARLY)).refusals).toEqual([]);
+    await hw("HW-NEW-7", 3);
+    const dry = await planCutover(RUN, undefined, EARLY);
+    expect(dry.refusals.join(" ")).toContain("HW-NEW-7");
+    expect(dry.refusals.join(" ")).not.toContain("HW-OLD-1");
+    await expect(cut()).rejects.toBeInstanceOf(YearChangeRefusal);
+    expect((await cut(RUN, { force: true })).writes.yearFlipped).toBe(1);
+  });
+
+  it("the year flip is one write: zero or two current years end as exactly one", async () => {
+    await prepare();
+    await AcademicYear.updateMany({}, { $set: { current: false } });
+    await cut();
+    expect(await AcademicYear.countDocuments({ current: true })).toBe(1);
+    expect((await AcademicYear.findById(w.years.y2027))!.current).toBe(true);
+    await undoCutover(RUN, w.principal);
+    await AcademicYear.updateMany({}, { $set: { current: true } });
+    await cut();
+    expect(await AcademicYear.countDocuments({ current: true })).toBe(1);
+  });
+
+  it("the dry run lists each child (name, id, from to, outcome) and the improvement actions it stops", async () => {
+    await prepare();
+    await ImprovementAction.collection.insertOne({ scope: "CLASS", sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, subject: "BAN", repeat: "NONE", days: 2, startKey: "2026-12-28", dayKeys: ["2027-01-03"], stoppedAt: null });
+    const dry = await planCutover(RUN, undefined, EARLY);
+    expect(dry.children).toHaveLength(9);
+    expect(dry.children.find((c) => c.schoolId === "T-E2")).toMatchObject({ fromLevel: 2, fromCode: "Main", toLevel: 2, toCode: "Main", outcome: "REPEATED" });
+    expect(dry.children.find((c) => c.schoolId === "T-A1")).toMatchObject({ fromLevel: null, toLevel: 6, toCode: "Boys", outcome: "ADMITTED" });
+    expect(dry.children.find((c) => c.schoolId === "T-E4")).toMatchObject({ toLevel: null, outcome: "LEFT" });
+    expect(dry.improvement).toEqual([expect.objectContaining({ subject: "BAN", lastDay: "2027-01-03" })]);
+    expect(printCutover(dry)).toContain("T-E2");
+  });
+});
+
+describe("YC-4 review: undo", () => {
+  it("restarts stopped improvement actions by the stop tag even when the run record never saved their ids", async () => {
+    await prepare();
+    await ImprovementAction.collection.insertOne({ scope: "CLASS", sectionId: w.c4Boys.sectionId, classId: w.c4Boys.classId, subject: "BAN", repeat: "NONE", days: 1, startKey: "2026-12-28", dayKeys: ["2027-01-03"], stoppedAt: null });
+    await cut();
+    await YearChangeRun.updateOne({ runId: RUN }, { $set: { improvementEndedIds: [] } }); // the crash between updateMany and save
+    expect((await planUndoCutover(RUN)).counts.improvementRestarted).toBe(1);
+    await undoCutover(RUN, w.principal);
+    expect(await ImprovementAction.countDocuments({ stoppedAt: { $ne: null } })).toBe(0);
+  });
+
+  it("uses the run record's before-state, not a stale audit row", async () => {
+    await prepare();
+    const snap = JSON.stringify(await Student.find({}).sort({ schoolId: 1 }).lean());
+    await cut();
+    await Audit.updateMany({ eventKind: "YEAR_CHANGE_CUT_OVER" }, { $set: { "meta.before": [{ studentId: w.c2Up.toString(), classId: w.c4Boys.classId.toString(), sectionId: w.c4Boys.sectionId.toString(), active: false }] } });
+    await undoCutover(RUN, w.principal);
+    expect(JSON.parse(JSON.stringify(await Student.find({}).sort({ schoolId: 1 }).lean()))).toEqual(JSON.parse(snap));
+  });
+
+  it("lists children changed after the cut-over and children created on 2027 sections; the latter block the undo unless forced", async () => {
+    await prepare();
+    await cut();
+    await Student.updateOne({ _id: w.c2Repeat }, { $set: { active: false } });
+    const six = (await Section.findOne({ runId: RUN, code: "Boys", classId: (await Class.findOne({ level: 6, runId: RUN }))!._id }).lean())!;
+    const late = await Student.create({ schoolId: "T-LATE2", name: "Late Joiner", gender: "male", classId: six.classId, sectionId: six._id, active: true });
+    const dry = await planUndoCutover(RUN);
+    expect(dry.changedAfter).toEqual(["T-E2"]);
+    expect(dry.createdAfter).toEqual(["T-LATE2"]);
+    expect(printUndo(dry)).toContain("T-LATE2");
+    expect(printUndo(dry)).toContain("ফিরবে");
+    await expect(undoCutover(RUN, w.principal)).rejects.toBeInstanceOf(YearChangeRefusal);
+    expect((await AcademicYear.findById(w.years.y2027))!.current).toBe(true);
+    await undoCutover(RUN, w.principal, { force: true });
+    expect((await AcademicYear.findById(w.years.y2026))!.current).toBe(true);
+    const kept = (await Student.findById(late._id).lean())!;
+    expect(kept.sectionId.toString()).toBe(six._id.toString()); // left untouched
+    expect(kept.active).toBe(true);
+  });
+
+  it("teacherSets keeps only the FIRST previous teacher per section; undo restores that one", async () => {
+    const third = (await User.create({ name: "Test Teacher Third", phone: "01700000403", passwordHash: "x", role: "TEACHER" }))._id;
+    const c4 = await Class.create({ level: 4, nameBn: "চতুর্থ", academicYearId: w.years.y2027 });
+    const sec = await Section.create({ classId: c4._id, code: "Boys", nameBn: "বালক", classTeacherId: w.teacherOther });
+    await prepare(); // prefilled teacher4 replaces teacherOther
+    const edited = await planYearChange({ ...input(), classTeachers: [{ level: 4, sectionCode: "Boys", teacherId: third.toString() }] });
+    await applyPrepare(edited, RUN, w.principal); // second change: previous would now be teacher4
+    expect((await Section.findById(sec._id))!.classTeacherId!.toString()).toBe(third.toString());
+    expect((await YearChangeRun.findOne({ runId: RUN }).lean())!.teacherSets).toHaveLength(1);
+    await undoPrepare(RUN, w.principal);
+    expect((await Section.findById(sec._id))!.classTeacherId!.toString()).toBe(w.teacherOther.toString());
+  });
+});
+
+describe("YC-4 review: today-readers are unchanged by prepare (strong snapshot)", () => {
+  it("class-teacher sections, guardian portal children (with a linked admission), attendance units, marking units and MyDay", async () => {
+    const g = await Guardian.create({ identifierKind: "phone", identifier: "01800000001", name: "Parent", phone: "01800000001", loginEnabled: true, active: true });
+    await GuardianLink.create({ guardianId: g._id, studentId: w.c2Up, relation: "mother", active: true });
+    const day = "2026-11-10";
+    const safe = async (f: () => Promise<unknown>): Promise<unknown> => {
+      try {
+        return await f();
+      } catch (e) {
+        return `ERR:${(e as Error).message}`;
+      }
+    };
+    const snap = async (): Promise<unknown> =>
+      JSON.parse(
+        JSON.stringify({
+          mine: await safe(() => mySectionsAsClassTeacher(w.teacher4.toString())),
+          children: await safe(() => myChildren(g._id.toString())),
+          units: await safe(() => attendanceUnitsForDate(day)),
+          marking: await safe(() => myMarkingUnits(w.teacher4.toString(), day)),
+          myDay: await safe(() => myDayFor({ auth: { userId: w.teacher4.toString(), role: "TEACHER" } } as never, day)),
+          today: await todaySnapshot(),
+        }),
+      );
+    const before = await snap();
+    await prepare();
+    expect(await GuardianLink.countDocuments({ guardianId: g._id })).toBe(2); // the admission is linked...
+    const after = await snap();
+    expect(after).toEqual(before); // ...and invisible: the child is inactive
+    const kids = (after as { children: unknown }).children;
+    expect(Array.isArray(kids) ? kids.length : -1).toBe(1);
   });
 });

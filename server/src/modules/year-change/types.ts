@@ -81,6 +81,8 @@ export interface PlanEnrolmentRow {
   toSectionCode: SectionCode;
   /** A PLANNED row of the same placement already exists (idempotent re-run). */
   exists: boolean;
+  /** A PLANNED row of THIS run exists but in another section: it is moved (reconciled). */
+  update: boolean;
 }
 export interface PlanLeaverRow {
   studentId: string;
@@ -98,6 +100,8 @@ export interface PlanAdmissionRow {
   toSectionCode: SectionCode;
   guardianPhone: string;
   exists: boolean;
+  /** The admission exists from this run but was edited: it is updated, not skipped. */
+  changed: boolean;
 }
 export interface PlanClassTeacherRow {
   level: number;
@@ -121,6 +125,13 @@ export interface YearChangePlan {
   leavers: PlanLeaverRow[];
   admissions: PlanAdmissionRow[];
   classTeachers: PlanClassTeacherRow[];
+  /** The prepared run of this year pair being reconciled (null on a first prepare). */
+  runId: string | null;
+  /** Rows of THIS run the new plan no longer contains (deleted by the apply). */
+  reconcile: {
+    removeEnrolments: Array<{ studentId: string; schoolId: string; reason: string }>;
+    removeAdmissions: Array<{ studentId: string; schoolId: string }>;
+  };
   counts: {
     classesToCreate: number;
     sectionsToCreate: number;
@@ -132,6 +143,10 @@ export interface YearChangePlan {
     admissionsToCreate: number;
     admissionsExisting: number;
     classTeachersToSet: number;
+    enrolmentsToUpdate: number;
+    enrolmentsToRemove: number;
+    admissionsToUpdate: number;
+    admissionsToRemove: number;
   };
   /** Anything here blocks `applyPrepare`. */
   refusals: string[];

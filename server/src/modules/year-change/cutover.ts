@@ -24,14 +24,37 @@ import { Enrolment, type IEnrolment, type EnrolmentOutcome } from "../foundation
 import { HomeworkItem } from "../trackers/models/HomeworkItem";
 import { AssignmentItem } from "../trackers/models/AssignmentItem";
 import { ImprovementAction } from "../improvement/models/ImprovementAction";
-import { closeEnrolment, dayBefore } from "../foundation/services/EnrolmentService";
+import { checkInvariant, closeEnrolment, dayBefore, type InvariantViolation } from "../foundation/services/EnrolmentService";
+import { onSectionTeachersChangedSync } from "../chat/services/ChatGroupService";
+import { Audit } from "../platform/models/Audit";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import { writeAudit } from "../platform/services/AuditService";
 import { assertYearChangeRight } from "./authz";
 import { YearChangeRun, type IYearChangeRun, type StudentBefore } from "./models/YearChangeRun";
 import { YearChangeRefusal, type YearChangeActor } from "./types";
 
+export interface CutoverOptions {
+  /** Dev rehearsal: skip the "not before the last day of the old year" guard. */
+  allowEarly?: boolean;
+  /** Ignore the unissued-homework refusal. */
+  force?: boolean;
+  /** Clock override (tests): the Dhaka date key "today". */
+  today?: string;
+}
+
+export interface CutoverChildRow {
+  schoolId: string;
+  name: string;
+  fromLevel: number | null;
+  fromCode: string | null;
+  toLevel: number | null;
+  toCode: string | null;
+  outcome: "PROMOTED" | "REPEATED" | "LEFT" | "ADMITTED";
+}
+
 export interface CutoverPlan {
+  children: CutoverChildRow[];
+  improvement: Array<{ id: string; subject: string; lastDay: string }>;
   runId: string;
   status: string;
   fromLabel: string;
@@ -50,6 +73,8 @@ export interface CutoverPlan {
 }
 
 export interface CutoverResult {
+  /** Invariant violations found AFTER the run (empty = clean). */
+  invariantAfter: InvariantViolation[];
   runId: string;
   writes: {
     run: number;
@@ -70,6 +95,7 @@ export const improvementStopReason = (runId: string): string => `year-change:${r
 interface StudentRow {
   _id: Types.ObjectId;
   schoolId: string;
+  name?: string;
   classId: Types.ObjectId;
   sectionId: Types.ObjectId;
   active: boolean;
@@ -110,7 +136,7 @@ function clearsScholarship(ctx: Ctx, studentId: string): boolean {
   return o === "PROMOTED" || o === "LEFT";
 }
 
-async function load(runId: string): Promise<Ctx | { refusals: string[] }> {
+async function load(runId: string, opts: CutoverOptions = {}): Promise<Ctx | { refusals: string[] }> {
   const run = await YearChangeRun.findOne({ runId });
   if (!run) return { refusals: [`রান ${runId} পাওয়া যায়নি।`] };
   const [fromYear, toYear] = await Promise.all([AcademicYear.findById(run.fromYearId).lean(), AcademicYear.findById(run.toYearId).lean()]);
@@ -127,7 +153,7 @@ async function load(runId: string): Promise<Ctx | { refusals: string[] }> {
 
   const ids = [...new Set([...planned.keys(), ...leavers])];
   const students = new Map(
-    (await Student.find({ _id: { $in: ids.map(oid) } }).select("schoolId classId sectionId active rollNumber scholarshipExcluded updatedAt").lean()).map((s) => [sid(s._id), s as unknown as StudentRow]),
+    (await Student.find({ _id: { $in: ids.map(oid) } }).select("schoolId name classId sectionId active rollNumber scholarshipExcluded updatedAt").lean()).map((s) => [sid(s._id), s as unknown as StudentRow]),
   );
   const pastRows = await Enrolment.find({ academicYearId: fromYear._id, studentId: { $in: ids.filter((i) => !admissionIds.has(i)).map(oid) } });
   const past = new Map<string, IEnrolment>();
@@ -157,23 +183,40 @@ async function load(runId: string): Promise<Ctx | { refusals: string[] }> {
   const inactiveSecs = await Section.find({ _id: { $in: secIds.map(oid) }, active: false }).select("_id").lean();
   if (inactiveSecs.length) refusals.push(`${inactiveSecs.length} টি নতুন শাখা বন্ধ আছে।`);
 
-  const unissued = await HomeworkItem.countDocuments({ sectionId: { $in: fromSectionIds }, status: { $ne: "issued" } });
-  if (unissued) refusals.push(`${unissued} টি বাড়ির কাজ এখনো ইস্যু হয়নি।`);
-  const draftAs = await AssignmentItem.countDocuments({ sectionId: { $in: fromSectionIds }, status: "DRAFT" });
-  if (draftAs) refusals.push(`${draftAs} টি অ্যাসাইনমেন্ট সপ্তাহ DRAFT অবস্থায় আছে।`);
+  // A run that already started (CUTTING_OVER) is being finished: its preconditions held when it began
+  // and the half-moved state would trip them now, so they are skipped on a resume.
+  if (run.status === "PREPARED") {
+    const today = opts.today ?? dhakaDayKey(new Date());
+    if (!opts.allowEarly && today < closeKey) {
+      refusals.push(`উত্তরণ ${closeKey}-এর আগে চালানো যাবে না (আজ ${today})। রিহার্সালে allowEarly দিন।`);
+    }
+    if (!opts.force) {
+      const since = new Date(Date.now() - 60 * 86400000);
+      const unissued = await HomeworkItem.find({ sectionId: { $in: fromSectionIds }, status: { $ne: "issued" }, $or: [{ dateGiven: { $gte: since } }, { dateGiven: { $exists: false } }] }).select("hwId").limit(11).lean();
+      if (unissued.length) {
+        refusals.push(`গত ৬০ দিনের ${unissued.length > 10 ? "১০+" : unissued.length} টি বাড়ির কাজ এখনো ইস্যু হয়নি: ${unissued.slice(0, 10).map((h) => h.hwId).join(", ")}`);
+      }
+    }
+    const draftAs = await AssignmentItem.countDocuments({ sectionId: { $in: fromSectionIds }, status: "DRAFT" });
+    if (draftAs) refusals.push(`${draftAs} টি অ্যাসাইনমেন্ট সপ্তাহ DRAFT অবস্থায় আছে।`);
 
-  const fromClassIds = fromClasses.map((c) => c._id);
-  const unplaced = await Student.find({ active: true, classId: { $in: fromClassIds }, _id: { $nin: ids.map(oid) } }).select("schoolId").lean();
-  for (const u of unplaced.slice(0, 20)) refusals.push(`${u.schoolId}: তালিকায় নেই (প্রস্তুতির পরে ভর্তি?) — প্রস্তুতি আবার চালান।`);
-  if (unplaced.length > 20) refusals.push(`... আরও ${unplaced.length - 20} জন তালিকায় নেই।`);
+    const fromClassIds = fromClasses.map((c) => c._id);
+    const unplaced = await Student.find({ active: true, classId: { $in: fromClassIds }, _id: { $nin: ids.map(oid) } }).select("schoolId").lean();
+    for (const u of unplaced.slice(0, 20)) refusals.push(`${u.schoolId}: তালিকায় নেই (প্রস্তুতির পরে ভর্তি?) — প্রস্তুতি আবার চালান।`);
+    if (unplaced.length > 20) refusals.push(`... আরও ${unplaced.length - 20} জন তালিকায় নেই।`);
+
+    const bad = await checkInvariant();
+    for (const v of bad.slice(0, 20)) refusals.push(`অসঙ্গতি ${v.schoolId}: ${v.kind} (${v.detail})`);
+    if (bad.length > 20) refusals.push(`... আরও ${bad.length - 20} টি অসঙ্গতি।`);
+  }
   return ctx;
 }
 
-export async function planCutover(runId: string, actor?: YearChangeActor): Promise<CutoverPlan> {
+export async function planCutover(runId: string, actor?: YearChangeActor, opts: CutoverOptions = {}): Promise<CutoverPlan> {
   if (actor) assertYearChangeRight(actor, "view");
-  const ctx = await load(runId);
+  const ctx = await load(runId, opts);
   if (!("run" in ctx)) {
-    return { runId, status: "NONE", fromLabel: "", toLabel: "", startKey: "", closeKey: "", promoted: 0, repeated: 0, left: 0, activating: 0, admitted: 0, studentsChanged: 0, scholarshipCleared: 0, improvementToEnd: 0, refusals: ctx.refusals };
+    return { children: [], improvement: [], runId, status: "NONE", fromLabel: "", toLabel: "", startKey: "", closeKey: "", promoted: 0, repeated: 0, left: 0, activating: 0, admitted: 0, studentsChanged: 0, scholarshipCleared: 0, improvementToEnd: 0, refusals: ctx.refusals };
   }
   const real = [...ctx.planned.keys()].filter((id) => !ctx.admissionIds.has(id));
   let promoted = 0;
@@ -186,8 +229,33 @@ export async function planCutover(runId: string, actor?: YearChangeActor): Promi
     }
     for (const id of [...real, ...ctx.leavers]) if (clearsScholarship(ctx, id) && ctx.students.get(id)?.scholarshipExcluded !== undefined) scholarship++;
   }
-  const improvement = await ImprovementAction.countDocuments({ scope: "CLASS", sectionId: { $in: ctx.fromSectionIds }, stoppedAt: null, dayKeys: { $gte: ctx.startKey } });
+  const improvementRows = await ImprovementAction.find({ scope: "CLASS", sectionId: { $in: ctx.fromSectionIds }, stoppedAt: null, dayKeys: { $gte: ctx.startKey } }).select("subject dayKeys").lean();
+  const improvement = improvementRows.length;
+  const secs = await Section.find({ _id: { $in: [...ctx.planned.values()].map((e) => e.sectionId) } }).select("code").lean();
+  const codeOfSec = new Map(secs.map((x) => [sid(x._id), x.code]));
+  const pastSecs = await Section.find({ _id: { $in: [...ctx.past.values()].map((e) => e.sectionId) } }).select("code").lean();
+  const pastCode = new Map(pastSecs.map((x) => [sid(x._id), x.code]));
+  const children: CutoverChildRow[] = [];
+  for (const id of [...ctx.planned.keys(), ...ctx.leavers]) {
+    const st = ctx.students.get(id);
+    const to = ctx.planned.get(id);
+    const from = ctx.past.get(id);
+    if (!st) continue;
+    const adm = ctx.admissionIds.has(id);
+    children.push({
+      schoolId: st.schoolId,
+      name: st.name ?? "",
+      fromLevel: adm ? null : from?.classLevel ?? null,
+      fromCode: adm || !from ? null : pastCode.get(sid(from.sectionId)) ?? null,
+      toLevel: to ? to.classLevel : null,
+      toCode: to ? codeOfSec.get(sid(to.sectionId)) ?? null : null,
+      outcome: adm ? "ADMITTED" : !to ? "LEFT" : from && to.classLevel > from.classLevel ? "PROMOTED" : "REPEATED",
+    });
+  }
+  children.sort((x, y) => x.schoolId.localeCompare(y.schoolId));
   return {
+    children,
+    improvement: improvementRows.map((r) => ({ id: sid(r._id), subject: r.subject, lastDay: r.dayKeys[r.dayKeys.length - 1] })),
     runId,
     status: ctx.run.status,
     fromLabel: ctx.fromYear.label,
@@ -206,17 +274,18 @@ export async function planCutover(runId: string, actor?: YearChangeActor): Promi
   };
 }
 
-export async function applyCutover(runId: string, actor: YearChangeActor): Promise<CutoverResult> {
+export async function applyCutover(runId: string, actor: YearChangeActor, opts: CutoverOptions = {}): Promise<CutoverResult> {
   assertYearChangeRight(actor, "cut_over");
   const writes: CutoverResult["writes"] = { run: 0, enrolmentsClosed: 0, enrolmentsActivated: 0, students: 0, improvementEnded: 0, yearFlipped: 0 };
-  const done = (): CutoverResult => ({ runId, writes, total: Object.values(writes).reduce((n, v) => n + v, 0) });
+  let invariantAfter: InvariantViolation[] = [];
+  const done = (): CutoverResult => ({ runId, writes, total: Object.values(writes).reduce((n, v) => n + v, 0), invariantAfter });
 
   const existing = await YearChangeRun.findOne({ runId }).lean();
   if (existing?.status === "CUT_OVER") {
     const to = await AcademicYear.findById(existing.toYearId).lean();
     if (to?.current) return done();
   }
-  const ctx = await load(runId);
+  const ctx = await load(runId, opts);
   if (!("run" in ctx)) throw new YearChangeRefusal(ctx.refusals);
   if (ctx.refusals.length) throw new YearChangeRefusal(ctx.refusals);
   const { run } = ctx;
@@ -291,16 +360,18 @@ export async function applyCutover(runId: string, actor: YearChangeActor): Promi
   }
 
   // --- 6. flip the current year - the last write ------------------------------------------
-  const toNow = await AcademicYear.findById(ctx.toYear._id).select("current").lean();
-  if (!toNow?.current) {
-    await AcademicYear.updateMany({ _id: { $ne: ctx.toYear._id } }, { $set: { current: false } });
-    await AcademicYear.updateOne({ _id: ctx.toYear._id }, { $set: { current: true } });
+  // ONE write (a pipeline update), so there is never zero or two current years.
+  const currents = await AcademicYear.find({ current: true }).select("_id").lean();
+  if (!(currents.length === 1 && currents[0]._id.equals(ctx.toYear._id))) {
+    await AcademicYear.updateMany({}, [{ $set: { current: { $eq: ["$_id", ctx.toYear._id] } } }]);
     writes.yearFlipped++;
   }
 
   // --- 7. audit + done --------------------------------------------------------------------
   if (run.status !== "CUT_OVER") {
-    await writeAudit({
+    const lastUndo = (await Audit.findOne({ eventKind: "YEAR_CHANGE_CUT_OVER_UNDONE", "meta.runId": runId }).sort({ eventAt: -1 }).select("eventAt").lean()) as unknown as { eventAt: Date } | null;
+    const have = await Audit.exists({ eventKind: "YEAR_CHANGE_CUT_OVER", "meta.runId": runId, ...(lastUndo ? { eventAt: { $gt: lastUndo.eventAt } } : {}) });
+    if (!have) await writeAudit({
       eventKind: "YEAR_CHANGE_CUT_OVER",
       actorId: actor.userId,
       targetId: ctx.toYear._id,
@@ -311,6 +382,10 @@ export async function applyCutover(runId: string, actor: YearChangeActor): Promi
     run.cutOverAt = new Date();
     await run.save();
     writes.run++;
+    // the new year's section chat groups follow their class teachers (never blocks)
+    const newSecs = await Section.find({ _id: { $in: [...ctx.planned.values()].map((e) => e.sectionId) }, classTeacherId: { $exists: true } }).select("_id").lean();
+    for (const sec of newSecs) await onSectionTeachersChangedSync(sid(sec._id));
   }
+  invariantAfter = await checkInvariant();
   return done();
 }
