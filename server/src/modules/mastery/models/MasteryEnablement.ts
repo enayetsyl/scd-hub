@@ -18,6 +18,8 @@ export interface IMasteryEnablement extends Document {
   enabled: boolean;
   changedBy?: Types.ObjectId;
   changedAt: Date;
+  /** Year-change run that copied this row (YC-6). */
+  runId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +32,7 @@ const MasteryEnablementSchema = new Schema<IMasteryEnablement>(
     enabled: { type: Boolean, required: true, default: false },
     changedBy: { type: Schema.Types.ObjectId },
     changedAt: { type: Date, required: true, default: () => new Date() },
+    runId: { type: String },
   },
   { timestamps: true },
 );

@@ -32,6 +32,22 @@ export interface IYearChangeRun extends Document {
   /** Pre-existing next-year sections whose class teacher this run set (previous = null when none). */
   teacherSets: Array<{ sectionId: string; previous: string | null }>;
   before?: StudentBefore[];
+  /** YC-6: 2026 routine slots whose effectiveTo this run set (previous = ISO time or null). Undo restores them. */
+  routineEnds: Array<{ slotId: string; previous: string | null }>;
+  /** YC-6: grants whose expiresAt this run stamped (previous = ISO time or null). Undo restores them. */
+  grantExpiries: Array<{ grantId: string; previous: string | null }>;
+  /** YC-6: source (old-year) slot ids already copied - a copy that vanished from this list's rows was deleted by the Principal and is not recreated. */
+  copiedSources: string[];
+  /** YC-6: cells ("level:code|day|period") already copied - a cell whose copy is gone was deleted by the Principal and is not recreated. */
+  copiedCells: string[];
+  /** YC-6: SECTION chat groups the cut-over created (undo-cutover archives them). */
+  chatGroupsCreated: string[];
+  /** YC-6: hash of what the run wrote to the new year's AssignmentSchedule (a mismatch later = edited). */
+  assignmentHash?: string;
+  /** YC-6: the copy options this run was prepared with (the cut-over reuses them). */
+  copyOptions?: Record<string, boolean>;
+  /** YC-6: pre-existing inactive routine grants the cut-over switched back on (undo switches them off again). */
+  grantReactivated: string[];
   improvementEndedIds: string[];
   preparedBy?: Types.ObjectId;
   cutOverBy?: Types.ObjectId;
@@ -49,6 +65,14 @@ const YearChangeRunSchema = new Schema<IYearChangeRun>(
     leaverIds: { type: [String], default: [] },
     teacherSets: { type: Schema.Types.Mixed, default: [] },
     before: { type: Schema.Types.Mixed },
+    routineEnds: { type: Schema.Types.Mixed, default: [] },
+    grantExpiries: { type: Schema.Types.Mixed, default: [] },
+    copiedSources: { type: [String], default: [] },
+    copiedCells: { type: [String], default: [] },
+    chatGroupsCreated: { type: [String], default: [] },
+    assignmentHash: { type: String },
+    copyOptions: { type: Schema.Types.Mixed },
+    grantReactivated: { type: [String], default: [] },
     improvementEndedIds: { type: [String], default: [] },
     preparedBy: { type: Schema.Types.ObjectId, ref: "User" },
     cutOverBy: { type: Schema.Types.ObjectId, ref: "User" },

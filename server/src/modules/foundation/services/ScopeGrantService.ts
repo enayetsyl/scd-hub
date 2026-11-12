@@ -108,15 +108,15 @@ function extentCovers(
  * The request-time `expiresAt` lapse composeTeacherScope applies — a TEACHING grant
  * (a future-dated routine retirement stamps the lapse instead of deactivating, e.g. the
  * combined section's grants at a gender split) or a DELEGATION (D-#488) whose expiresAt
- * has passed is no longer in scope though the row stays `active` as history. Supervisory
- * grants carry no expiry; proxies use their own window (isProxyActive). One predicate so
+ * has passed is no longer in scope though the row stays `active` as history. A SUPERVISORY
+ * grant carries an expiry only when a year-change run stamped one (YC-6); proxies use their own window (isProxyActive). One predicate so
  * `myScopes` (D-#770) lists exactly what authz honours.
  */
 export function isGrantLapsed(
   g: { kind?: string | null; expiresAt?: Date | string | null },
   now: Date = new Date(),
 ): boolean {
-  if (g.kind !== "teaching" && g.kind !== "delegation") return false;
+  if (g.kind !== "teaching" && g.kind !== "delegation" && g.kind !== "supervisory") return false;
   return !!g.expiresAt && new Date(g.expiresAt) <= now;
 }
 
@@ -146,7 +146,9 @@ export async function composeTeacherScope(
         subjectId: (g as { subjectId?: Types.ObjectId }).subjectId!.toString(),
       });
     } else if (g.kind === "supervisory") {
-      const sg = g as { extent?: string; classId?: Types.ObjectId; subjectId?: Types.ObjectId; explicitSet?: Array<{ classId: Types.ObjectId; subjectId: Types.ObjectId }> };
+      const sg = g as { extent?: string; classId?: Types.ObjectId; subjectId?: Types.ObjectId; explicitSet?: Array<{ classId: Types.ObjectId; subjectId: Types.ObjectId }>; expiresAt?: Date };
+      // YC-6: a 2026 supervisory grant lapses at the cut-over (the 2027 copy takes over).
+      if (isGrantLapsed({ kind: "supervisory", expiresAt: sg.expiresAt }, now)) continue;
       scopes.push({
         kind: "supervisory",
         extent: sg.extent!,

@@ -19,6 +19,7 @@ import { ClassTeacherAssignment } from "../foundation/models/ClassTeacherAssignm
 import { openEnrolment, placeOfSection } from "../foundation/services/EnrolmentService";
 import { writeAudit } from "../platform/services/AuditService";
 import { normSchoolId } from "./plan";
+import { applyScheduleCopy, NO_COPY_WRITES, precheckScheduleCopy, ScheduleCopyRefusal } from "./copy";
 import { assertYearChangeRight } from "./authz";
 import { YearChangeRun } from "./models/YearChangeRun";
 import { YearChangeRefusal, SECTION_LABEL_BN, type YearChangeActor, type YearChangePlan } from "./types";
@@ -36,6 +37,14 @@ export interface PrepareResult {
     enrolmentsUpdated: number;
     removed: number;
     admissionsUpdated: number;
+    /** YC-6 routine + schedule copy. */
+    routineSlots: number;
+    routineEnded: number;
+    bellWindows: number;
+    assignmentSchedule: number;
+    grants: number;
+    grantsExpired: number;
+    masteryEnablements: number;
   };
   total: number;
 }
@@ -47,7 +56,7 @@ export async function applyPrepare(plan: YearChangePlan, runId: string, actor: Y
   if (!runId || !runId.trim()) throw new YearChangeRefusal(["রান আইডি লাগবে।"]);
   if (plan.refusals.length) throw new YearChangeRefusal(plan.refusals);
 
-  const writes: PrepareResult["writes"] = { run: 0, classes: 0, sections: 0, enrolments: 0, admissions: 0, guardianLinks: 0, classTeachers: 0, enrolmentsUpdated: 0, removed: 0, admissionsUpdated: 0 };
+  const writes: PrepareResult["writes"] = { run: 0, classes: 0, sections: 0, enrolments: 0, admissions: 0, guardianLinks: 0, classTeachers: 0, enrolmentsUpdated: 0, removed: 0, admissionsUpdated: 0, ...NO_COPY_WRITES };
   const actorId = oid(actor.userId);
   const toYearId = oid(plan.toYearId);
 
@@ -55,6 +64,11 @@ export async function applyPrepare(plan: YearChangePlan, runId: string, actor: Y
   const other = await YearChangeRun.findOne({ fromYearId: oid(plan.fromYearId), toYearId, runId: { $ne: runId } }).select("runId").lean();
   if (other) throw new YearChangeRefusal([`এই শিক্ষাবর্ষ জোড়ার জন্য রান ${other.runId} আগেই আছে — সেটিই ব্যবহার করুন বা আগে বাতিল করুন।`]);
   if (plan.runId && plan.runId !== runId) throw new YearChangeRefusal([`রান আইডি ${plan.runId} হতে হবে।`]);
+
+  // Decision I: the routine copy must be clean BEFORE the first write. A clash found now (a changed 2026 or
+  // 2027 routine since the plan was made) refuses with the list and leaves nothing written.
+  const clash = await precheckScheduleCopy(plan, runId);
+  if (clash.length) throw new YearChangeRefusal(clash);
 
   // The run record first: a crash later leaves a run the next call picks up and finishes.
   let run = await YearChangeRun.findOne({ runId });
@@ -189,6 +203,14 @@ export async function applyPrepare(plan: YearChangePlan, runId: string, actor: Y
     await sec.save();
     await ClassTeacherAssignment.create({ sectionId: secId, role: "class_teacher", teacherId: oid(t.teacherId), op: "assigned", actorId, at: new Date() });
     writes.classTeachers++;
+  }
+
+  // --- YC-6: routine + schedule copy (future-dated / next-year rows only) ----------------------
+  try {
+    Object.assign(writes, await applyScheduleCopy(plan, runId, actorId));
+  } catch (e) {
+    if (e instanceof ScheduleCopyRefusal) throw new YearChangeRefusal(e.reasons);
+    throw e;
   }
 
   const total = Object.values(writes).reduce((n, v) => n + v, 0);

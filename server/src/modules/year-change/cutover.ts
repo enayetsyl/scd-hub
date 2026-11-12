@@ -9,6 +9,9 @@
  *   4. Student pointers move to the new enrolment; leavers go inactive; admissions go active;
  *      the scholarship flag is cleared for children leaving Class 5 (promoted or left)
  *   5. the past year's CLASS-scope improvement actions that still run into the new year are stopped
+ *   5b. (YC-6) the routine copy is re-checked; any 2026 row/grant a December edit left un-ended/un-lapsed is
+ *       ended/lapsed (idempotent, tagged with the run), then the new year's routine teaching grants and the
+ *       supervisory/delegation clones are CREATED from the 2027 rows as they stand now
  *   6. AcademicYear.current flips to the new year - the LAST data write
  *   7. audit YEAR_CHANGE_CUT_OVER (with every changed Student's before-state)
  *
@@ -26,6 +29,8 @@ import { AssignmentItem } from "../trackers/models/AssignmentItem";
 import { ImprovementAction } from "../improvement/models/ImprovementAction";
 import { checkInvariant, closeEnrolment, dayBefore, type InvariantViolation } from "../foundation/services/EnrolmentService";
 import { onSectionTeachersChangedSync } from "../chat/services/ChatGroupService";
+import { Conversation } from "../chat/models/Conversation";
+import { applyCutoverCopy, planCopyDrift, ScheduleCopyRefusal, type CopyDrift } from "./copy";
 import { Audit } from "../platform/models/Audit";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import { writeAudit } from "../platform/services/AuditService";
@@ -69,6 +74,8 @@ export interface CutoverPlan {
   studentsChanged: number;
   scholarshipCleared: number;
   improvementToEnd: number;
+  /** YC-6: what the cut-over will end / lapse / create for the routine copy, and what drifted since the prepare. */
+  copy: { lines: string[]; endsToStamp: number; lapsesToStamp: number; grantsToCreate: number };
   refusals: string[];
 }
 
@@ -83,6 +90,10 @@ export interface CutoverResult {
     students: number;
     improvementEnded: number;
     yearFlipped: number;
+    /** YC-6: 2026 routine rows ended / grants lapsed that a December edit had left open, and 2027 grants created. */
+    copyEnds: number;
+    copyLapses: number;
+    grants: number;
   };
   total: number;
 }
@@ -119,6 +130,7 @@ interface Ctx {
   students: Map<string, StudentRow>;
   refusals: string[];
   fromSectionIds: Types.ObjectId[];
+  copyDrift: CopyDrift | null;
 }
 
 function outcomeOf(ctx: Ctx, studentId: string): EnrolmentOutcome {
@@ -168,7 +180,7 @@ async function load(runId: string, opts: CutoverOptions = {}): Promise<Ctx | { r
   const fromSections = await Section.find({ classId: { $in: fromClasses.map((c) => c._id) } }).select("_id").lean();
   const fromSectionIds = fromSections.map((s) => s._id);
 
-  const ctx: Ctx = { run, fromYear, toYear, startKey, closeKey, planned, past, leavers, admissionIds, students, refusals, fromSectionIds };
+  const ctx: Ctx = { run, fromYear, toYear, startKey, closeKey, planned, past, leavers, admissionIds, students, refusals, fromSectionIds, copyDrift: null };
 
   // --- refusals ---------------------------------------------------------------------------
   const tag = (id: string): string => students.get(id)?.schoolId ?? id;
@@ -205,6 +217,10 @@ async function load(runId: string, opts: CutoverOptions = {}): Promise<Ctx | { r
     for (const u of unplaced.slice(0, 20)) refusals.push(`${u.schoolId}: তালিকায় নেই (প্রস্তুতির পরে ভর্তি?) — প্রস্তুতি আবার চালান।`);
     if (unplaced.length > 20) refusals.push(`... আরও ${unplaced.length - 20} জন তালিকায় নেই।`);
 
+    // YC-6: a clash among the 2027 rows (December edits) blocks the cut-over, listed
+    ctx.copyDrift = await planCopyDrift(runId);
+    for (const r of ctx.copyDrift.refusals) refusals.push(r);
+
     const bad = await checkInvariant();
     for (const v of bad.slice(0, 20)) refusals.push(`অসঙ্গতি ${v.schoolId}: ${v.kind} (${v.detail})`);
     if (bad.length > 20) refusals.push(`... আরও ${bad.length - 20} টি অসঙ্গতি।`);
@@ -216,7 +232,7 @@ export async function planCutover(runId: string, actor?: YearChangeActor, opts: 
   if (actor) assertYearChangeRight(actor, "view");
   const ctx = await load(runId, opts);
   if (!("run" in ctx)) {
-    return { children: [], improvement: [], runId, status: "NONE", fromLabel: "", toLabel: "", startKey: "", closeKey: "", promoted: 0, repeated: 0, left: 0, activating: 0, admitted: 0, studentsChanged: 0, scholarshipCleared: 0, improvementToEnd: 0, refusals: ctx.refusals };
+    return { children: [], improvement: [], runId, status: "NONE", fromLabel: "", toLabel: "", startKey: "", closeKey: "", promoted: 0, repeated: 0, left: 0, activating: 0, admitted: 0, studentsChanged: 0, scholarshipCleared: 0, improvementToEnd: 0, copy: { lines: [], endsToStamp: 0, lapsesToStamp: 0, grantsToCreate: 0 }, refusals: ctx.refusals };
   }
   const real = [...ctx.planned.keys()].filter((id) => !ctx.admissionIds.has(id));
   let promoted = 0;
@@ -270,13 +286,19 @@ export async function planCutover(runId: string, actor?: YearChangeActor, opts: 
     studentsChanged: ctx.planned.size + ctx.leavers.length,
     scholarshipCleared: scholarship,
     improvementToEnd: improvement,
+    copy: {
+      lines: ctx.copyDrift?.lines ?? [],
+      endsToStamp: ctx.copyDrift?.endsToStamp ?? 0,
+      lapsesToStamp: ctx.copyDrift?.lapsesToStamp ?? 0,
+      grantsToCreate: ctx.copyDrift?.grantsToCreate ?? 0,
+    },
     refusals: ctx.refusals,
   };
 }
 
 export async function applyCutover(runId: string, actor: YearChangeActor, opts: CutoverOptions = {}): Promise<CutoverResult> {
   assertYearChangeRight(actor, "cut_over");
-  const writes: CutoverResult["writes"] = { run: 0, enrolmentsClosed: 0, enrolmentsActivated: 0, students: 0, improvementEnded: 0, yearFlipped: 0 };
+  const writes: CutoverResult["writes"] = { run: 0, enrolmentsClosed: 0, enrolmentsActivated: 0, students: 0, improvementEnded: 0, yearFlipped: 0, copyEnds: 0, copyLapses: 0, grants: 0 };
   let invariantAfter: InvariantViolation[] = [];
   const done = (): CutoverResult => ({ runId, writes, total: Object.values(writes).reduce((n, v) => n + v, 0), invariantAfter });
 
@@ -359,6 +381,17 @@ export async function applyCutover(runId: string, actor: YearChangeActor, opts: 
     writes.improvementEnded += running.length;
   }
 
+  // --- 5b. YC-6: finish the old-year ends/lapses, then create the new year's grants ------------
+  try {
+    const cc = await applyCutoverCopy(runId, actorId);
+    writes.copyEnds += cc.ends;
+    writes.copyLapses += cc.lapses;
+    writes.grants += cc.grants;
+  } catch (e) {
+    if (e instanceof ScheduleCopyRefusal) throw new YearChangeRefusal(e.reasons);
+    throw e;
+  }
+
   // --- 6. flip the current year - the last write ------------------------------------------
   // ONE write (a pipeline update), so there is never zero or two current years.
   const currents = await AcademicYear.find({ current: true }).select("_id").lean();
@@ -382,9 +415,17 @@ export async function applyCutover(runId: string, actor: YearChangeActor, opts: 
     run.cutOverAt = new Date();
     await run.save();
     writes.run++;
-    // the new year's section chat groups follow their class teachers (never blocks)
-    const newSecs = await Section.find({ _id: { $in: [...ctx.planned.values()].map((e) => e.sectionId) }, classTeacherId: { $exists: true } }).select("_id").lean();
+    // The new year's section chat groups are created now (none exist in December, decision F): every active
+    // section of the new year follows its class + subject teachers (never blocks).
+    const newClasses = await Class.find({ academicYearId: ctx.toYear._id }).select("_id").lean();
+    const newSecs = await Section.find({ classId: { $in: newClasses.map((x) => x._id) }, active: true }).select("_id").lean();
+    const refIds = newSecs.map((sec) => sid(sec._id));
+    const before = new Set((await Conversation.find({ kind: "SECTION", refId: { $in: refIds } }).select("_id").lean()).map((x) => sid(x._id)));
+    // groups this run created earlier (a re-cut-over after an undo) are switched back on
+    if (run.chatGroupsCreated?.length) await Conversation.updateMany({ _id: { $in: run.chatGroupsCreated.map(oid) } }, { $set: { active: true } });
     for (const sec of newSecs) await onSectionTeachersChangedSync(sid(sec._id));
+    const made = (await Conversation.find({ kind: "SECTION", refId: { $in: refIds } }).select("_id").lean()).map((x) => sid(x._id)).filter((x) => !before.has(x));
+    if (made.length) await YearChangeRun.updateOne({ _id: run._id }, { $addToSet: { chatGroupsCreated: { $each: made } } });
   }
   invariantAfter = await checkInvariant();
   return done();

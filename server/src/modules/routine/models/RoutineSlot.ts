@@ -30,6 +30,11 @@ export interface IRoutineSlot extends Document {
   effectiveFrom: Date;
   effectiveTo?: Date;
   active: boolean;
+  /** Year-change run that copied this row (YC-6); absent on every other row. */
+  runId?: string;
+  /** YC-6: the 2026 slot this copy was made from, and a hash of the copied fields (a later hash mismatch = the Principal edited it). */
+  copiedFromSlotId?: Types.ObjectId;
+  copyHash?: string;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +59,9 @@ const RoutineSlotSchema = new Schema<IRoutineSlot>(
     effectiveFrom: { type: Date, required: true },
     effectiveTo: { type: Date },
     active: { type: Boolean, default: true },
+    runId: { type: String },
+    copiedFromSlotId: { type: Schema.Types.ObjectId },
+    copyHash: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true },
