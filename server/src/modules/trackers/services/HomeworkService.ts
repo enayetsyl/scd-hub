@@ -28,7 +28,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
-import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
+import { nextYearSeq, translateDuplicateId, createWithYearId } from "../../../lib/yearSequence";
 import { HomeworkTopic } from "../models/HomeworkTopic";
 import {
   HomeworkNilDeclaration,
@@ -276,8 +276,15 @@ export async function declareHomeworkItem(
   // it before either insert lands. The unique index on the model is the real
   // enforcement, so translate its duplicate-key error into the SAME message the
   // check gives — a racing teacher must not see a raw E11000.
-  const doc = await HomeworkItem.create({
-    hwId,
+  const doc = await createWithYearId({
+    idField: "hwId",
+    seqModel: HomeworkSequence,
+    academicYearId: input.academicYearId,
+    key: { classLevel: input.classLevel, subject },
+    firstId: hwId,
+    makeId: () => generateHwId(input.academicYearId, input.classLevel, subject),
+    create: (id) => HomeworkItem.create({
+    hwId: id,
     academicYearId: input.academicYearId,
     classId: input.classId,
     classLevel: input.classLevel,
@@ -295,6 +302,7 @@ export async function declareHomeworkItem(
     status: "declared",
     declaredBy: input.actorId,
     attachmentIds,
+  }),
   }).catch((err: unknown) => {
     const e = err as { code?: number; keyPattern?: Record<string, unknown> };
     if (e?.code === 11000 && e.keyPattern && "sectionId" in e.keyPattern && "subject" in e.keyPattern) {

@@ -23,7 +23,7 @@ import {
 import { ScholarshipPaper, type IScholarshipPaper } from "../models/ScholarshipPaper";
 import { ScholarshipScore } from "../models/ScholarshipScore";
 import { ScholarshipSequence } from "../models/ScholarshipSequence";
-import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
+import { nextYearSeq, createWithYearId } from "../../../lib/yearSequence";
 import { ScholarshipTopic } from "../models/ScholarshipTopic";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -277,15 +277,22 @@ export async function declarePaper(
   // A blank name is filled from the generated id rather than refused (D-#675): the paper
   // id is unique and already carries the class and subjects, so it names the row well
   // enough for a list, and the teacher can rename it afterwards.
-  const name = input.name?.trim() || paperId;
-  const paper = await ScholarshipPaper.create({
-    paperId,
+  const givenName = input.name?.trim();
+  const paper = await createWithYearId({
+    idField: "paperId",
+    seqModel: ScholarshipSequence,
+    academicYearId: klass.academicYearId,
+    key: { classLevel: klass.level, subjectKey: subjectKeyOf(input.subjects) },
+    firstId: paperId,
+    makeId: () => generatePaperId(klass.academicYearId, klass.level, input.subjects),
+    create: (id) => ScholarshipPaper.create({
+    paperId: id,
     academicYearId: klass.academicYearId,
     classLevel: klass.level,
     classId: section.classId,
     sectionId: new Types.ObjectId(input.sectionId),
     subjects: input.subjects,
-    name,
+    name: givenName || id,
     paperDate: input.paperDate,
     totalMarks: input.totalMarks,
     durationMinutes: input.durationMinutes,
@@ -301,7 +308,8 @@ export async function declarePaper(
     })),
     declaredBy: new Types.ObjectId(actor.userId),
     declaredAt: new Date(),
-  }).catch(translateDuplicateId("paperId"));
+  }),
+  });
 
   await writeAudit({
     eventKind: "SCHOLARSHIP_PAPER_DECLARED",
@@ -310,7 +318,7 @@ export async function declarePaper(
     targetId: paper._id,
     targetKind: "ScholarshipPaper",
     meta: {
-      paperId,
+      paperId: paper.paperId,
       subjects: input.subjects,
       itemCount: input.items.length,
       totalMarks: input.totalMarks,

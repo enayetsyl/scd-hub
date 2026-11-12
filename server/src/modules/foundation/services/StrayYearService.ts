@@ -2,39 +2,30 @@
  * Stray academic-year report + guarded delete (YC-0, docs/prd-year-change.md Q4).
  * Used by server/scripts/delete-stray-year.ts (dry run / --apply); never runs by itself.
  */
+import * as fs from "fs";
+import * as path from "path";
 import mongoose from "mongoose";
 import { AcademicYear } from "../models/AcademicYear";
 
-// Register every model that can hold an academic-year reference (side-effect imports).
-import "../../archive/models/ScriptBundle";
-import "../../comments/models/ParentMeeting";
-import "../../exams/models/Exam";
-import "../../finance/models/BudgetLine";
-import "../models/Class";
-import "../../hr/models/Appraisal";
-import "../../hr/models/StaffLeaveApplication";
-import "../../hr/models/StaffLeaveEntitlement";
-import "../../mastery/models/MasteryAction";
-import "../../mastery/models/MasteryAssignment";
-import "../../mastery/models/MasteryEnablement";
-import "../../mastery/models/MasteryEvidence";
-import "../../mastery/models/MasteryPaper";
-import "../../reports/models/MonthlyReport";
-import "../../routine/models/ScheduleWindow";
-import "../../scholarship/models/ScholarshipPaper";
-import "../../scholarship/models/ScholarshipSequence";
-import "../../trackers/models/AssignmentGiftAward";
-import "../../trackers/models/AssignmentItem";
-import "../../trackers/models/AssignmentNilDeclaration";
-import "../../trackers/models/AssignmentSchedule";
-import "../../trackers/models/AssignmentSequence";
-import "../../trackers/models/ClassTest";
-import "../../trackers/models/ClassTestGroupSequence";
-import "../../trackers/models/ClassTestQuestionRequest";
-import "../../trackers/models/ClassTestSequence";
-import "../../trackers/models/HomeworkItem";
-import "../../trackers/models/HomeworkReconciliation";
-import "../../trackers/models/HomeworkSequence";
+// Register every model file under modules/*/models (side-effect require) so a model added
+// later is covered without editing this list.
+function registerAllModels(): void {
+  const modulesDir = path.resolve(__dirname, "../..");
+  for (const mod of fs.readdirSync(modulesDir)) {
+    const dir = path.join(modulesDir, mod, "models");
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (!/\.(ts|js)$/.test(file) || file.endsWith(".d.ts")) continue;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require(path.join(dir, file));
+      } catch {
+        /* a model file that cannot load standalone is skipped */
+      }
+    }
+  }
+}
+registerAllModels();
 
 const YEAR_PATHS = ["academicYearId", "academicYear"] as const;
 
@@ -77,7 +68,12 @@ export async function deleteStrayYear(label: string, apply: boolean): Promise<{ 
   if (report.total > 0) {
     return { refused: `"${label}" is still referenced by ${report.total} row(s) — nothing deleted`, report };
   }
-  if (apply) await AcademicYear.deleteOne({ _id: report.yearId });
+  if (apply) {
+    const res = await AcademicYear.deleteOne({ _id: report.yearId, current: { $ne: true } });
+    if (res.deletedCount !== 1) {
+      return { refused: `"${label}" was not deleted (it became the current year, or is already gone)`, report };
+    }
+  }
   return { refused: null, report };
 }
 

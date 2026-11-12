@@ -15,7 +15,7 @@ import { generateHwId } from "../modules/trackers/services/HomeworkService";
 import { generateAsId } from "../modules/trackers/services/AssignmentService";
 import { generateCtId, generateGroupCtId } from "../modules/trackers/services/ClassTestService";
 import { generatePaperId } from "../modules/scholarship/services/ScholarshipService";
-import { nextYearSeq, translateDuplicateId, DUPLICATE_ID_BN } from "../lib/yearSequence";
+import { nextYearSeq, translateDuplicateId, createWithYearId, DUPLICATE_ID_BN } from "../lib/yearSequence";
 
 let mongo: MongoMemoryServer;
 let y26: Types.ObjectId;
@@ -79,9 +79,54 @@ test("concurrent first-creates of a new year never hand out the same number", as
   expect(await HomeworkSequence.countDocuments({ academicYearId: y27 })).toBe(1);
 });
 
-test("a LATER year's row never seeds an earlier year", async () => {
-  await HomeworkSequence.create({ academicYearId: y27, classLevel: 3, subject: "BAN", seq: 40 });
-  expect(await generateHwId(String(y26), 3, "BAN")).toBe("HW-C3-BAN-0001");
+const ItemModel = mongoose.model(
+  "YearSeqItem",
+  new mongoose.Schema({ hwId: { type: String, unique: true, required: true }, y: String }),
+);
+const key = { classLevel: 3, subject: "BAN" };
+const mkHw = (year: Types.ObjectId) => generateHwId(String(year), 3, "BAN");
+const insertHw = async (year: Types.ObjectId): Promise<string> =>
+  createWithYearId({
+    idField: "hwId",
+    seqModel: HomeworkSequence,
+    academicYearId: year,
+    key,
+    firstId: await mkHw(year),
+    makeId: () => mkHw(year),
+    create: async (id) => (await ItemModel.create({ hwId: id, y: String(year) })).hwId,
+  });
+
+test("after 2027 handed out M+1, a late 2026 create gets a fresh unused number (and vice versa)", async () => {
+  await ItemModel.init();
+  await ItemModel.deleteMany({});
+  await HomeworkSequence.create({ academicYearId: y26, classLevel: 3, subject: "BAN", seq: 5 });
+  // 2027 continues at 6 and files an item with it
+  expect(await insertHw(y27)).toBe("HW-C3-BAN-0006");
+  // 2026's own counter is still at 5: its next number (6) is taken -> catch-up, no error
+  expect(await insertHw(y26)).toBe("HW-C3-BAN-0007");
+  // and vice versa: 2027's counter is at 6, the next (7) is taken -> catch-up to 8
+  expect(await insertHw(y27)).toBe("HW-C3-BAN-0008");
+  expect(await ItemModel.countDocuments()).toBe(3);
+});
+
+test("a persistent duplicate gives up after 3 attempts with the Bangla message", async () => {
+  let calls = 0;
+  const dup = Object.assign(new Error("E11000"), { code: 11000, keyPattern: { hwId: 1 } });
+  await expect(
+    createWithYearId({
+      idField: "hwId",
+      seqModel: HomeworkSequence,
+      academicYearId: y26,
+      key,
+      firstId: "HW-C3-BAN-0001",
+      makeId: () => mkHw(y26),
+      create: async () => {
+        calls += 1;
+        throw dup;
+      },
+    }),
+  ).rejects.toThrow(DUPLICATE_ID_BN);
+  expect(calls).toBe(3);
 });
 
 test("a duplicate id insert becomes the shared Bangla message", async () => {

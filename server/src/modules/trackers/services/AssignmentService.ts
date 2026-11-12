@@ -35,7 +35,7 @@ import {
   type IAssignmentStudentRecord,
 } from "../models/AssignmentStudentRecord";
 import { AssignmentSequence } from "../models/AssignmentSequence";
-import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
+import { nextYearSeq, createWithYearId } from "../../../lib/yearSequence";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { Student } from "../../foundation/models/Student";
 import { resolveScheduleWeek } from "./AssignmentScheduleService";
@@ -229,8 +229,15 @@ export async function deliverAssignmentItem(
   // AS-T6 (D-#274): deliver DRAFTS the item — the present/absent roster is stored on
   // the item; per-student records are NOT spawned here. confirmAssignmentWeek issues
   // them once the section's weekly estMinutes sum is confirmed under the ceiling.
-  const item = await AssignmentItem.create({
-    asId,
+  const item = await createWithYearId({
+    idField: "asId",
+    seqModel: AssignmentSequence,
+    academicYearId: input.academicYearId,
+    key: { classLevel: entry.classLevel, subject: entry.subject },
+    firstId: asId,
+    makeId: () => generateAsId(input.academicYearId, entry.classLevel, entry.subject),
+    create: (id) => AssignmentItem.create({
+    asId: id,
     academicYearId: input.academicYearId,
     scheduleEntryId: entry._id,
     weekNumber: input.weekNumber,
@@ -251,7 +258,8 @@ export async function deliverAssignmentItem(
     deliveredBy: input.actorId,
     deliveredAt: at,
     attachmentIds,
-  }).catch(translateDuplicateId("asId"));
+  }),
+  });
   await AssignmentNilDeclaration.deleteOne({
     academicYearId: input.academicYearId,
     weekNumber: input.weekNumber,
@@ -261,7 +269,7 @@ export async function deliverAssignmentItem(
 
   return {
     itemId: item._id.toString(),
-    asId,
+    asId: item.asId,
     weekNumber: input.weekNumber,
     subject: entry.subject,
     deliveryDate: dateOnlyISO(item.deliveryDate),

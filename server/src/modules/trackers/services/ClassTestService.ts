@@ -29,7 +29,7 @@ import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestSequence } from "../models/ClassTestSequence";
 import { ClassTestGroupSequence } from "../models/ClassTestGroupSequence";
-import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
+import { nextYearSeq, createWithYearId } from "../../../lib/yearSequence";
 import { ClassTestResult } from "../models/ClassTestResult";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -441,9 +441,11 @@ export async function createRequest(
     throw new Error("Copies-per-present needs a class; a group exam must give a fixed number of copies");
   }
 
-  const ctId = group
-    ? await generateGroupCtId(academicYearId.toString(), group._id.toString(), group.code)
-    : await generateCtId(academicYearId.toString(), classLevel!, subject);
+  const makeCtId = () =>
+    group
+      ? generateGroupCtId(academicYearId.toString(), group._id.toString(), group.code)
+      : generateCtId(academicYearId.toString(), classLevel!, subject);
+  const ctId = await makeCtId();
 
   // The ACCOUNTABLE subject teacher: an explicit pick (Principal/Office requesting
   // on a teacher's behalf) wins; otherwise the routine names the unit×subject
@@ -472,8 +474,15 @@ export async function createRequest(
   // D-#339: a no-print register is born PRINTED — the record is the official exam
   // immediately (deadline clock anchors on the exam date as usual).
   const now = new Date();
-  const doc = await ClassTest.create({
-    ctId,
+  const doc = await createWithYearId({
+    idField: "ctId",
+    seqModel: group ? ClassTestGroupSequence : ClassTestSequence,
+    academicYearId,
+    key: group ? { subjectGroupId: group._id.toString() } : { classLevel, subject },
+    firstId: ctId,
+    makeId: makeCtId,
+    create: (id) => ClassTest.create({
+    ctId: id,
     academicYearId,
     classLevel,
     classId,
@@ -495,14 +504,15 @@ export async function createRequest(
     printedBy: input.skipPrint ? new Types.ObjectId(input.actorId) : undefined,
     printedAt: input.skipPrint ? now : undefined,
     notes: input.notes,
-  }).catch(translateDuplicateId("ctId"));
+  }),
+  });
 
   await writeAudit({
     eventKind: input.skipPrint ? "CLASS_TEST_PRINTED" : "CLASS_TEST_REQUESTED",
     actorId: input.actorId,
     targetId: doc._id,
     targetKind: "ClassTest",
-    meta: { ctId, subject, source, sectionId: input.sectionId, testNumber, ...(input.skipPrint ? { skipPrint: true } : {}) },
+    meta: { ctId: doc.ctId, subject, source, sectionId: input.sectionId, testNumber, ...(input.skipPrint ? { skipPrint: true } : {}) },
   });
 
   if (input.skipPrint) {

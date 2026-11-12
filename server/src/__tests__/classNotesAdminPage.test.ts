@@ -138,6 +138,17 @@ describe("classNotesAdminPage", () => {
     });
   });
 
+  test("with 2027 current, a December-2026 window + class level still lists the 2026 notes (no year filter)", async () => {
+    mockClassFind.mockResolvedValue([{ _id: CLASS_ID }]);
+    mockSectionFind.mockResolvedValue([{ _id: SECTION_A }]);
+    await classNotesAdminPage({ date: new Date(2026, 11, 1), dateTo: new Date(2026, 11, 31), classLevel: 3 });
+    // the class lookup is by level alone: it carries no academicYearId filter
+    expect(mockClassFind).toHaveBeenCalledWith({ level: 3 });
+    const { query } = mockNoteFind.mock.calls[0][0] as { query: { date: { $gte: Date; $lte: Date }; groupId: unknown } };
+    expect(query.date.$gte).toEqual(new Date(2026, 11, 1, 0, 0, 0, 0));
+    expect(query.groupId).toEqual({ $in: [SECTION_A] });
+  });
+
   test("an unknown teacher name matches nothing rather than dropping the filter", async () => {
     await classNotesAdminPage({ date: new Date(2026, 9, 18), teacherName: "নেই" });
     const { query } = mockNoteFind.mock.calls[0][0] as { query: Record<string, unknown> };

@@ -11,7 +11,8 @@
  * Dry run is the default and never writes. The report lists every collection whose schema
  * has an `academicYearId` (or `academicYear`) path — classes, exams, budget lines, leave
  * entitlements, schedule windows, assignment schedules, mastery enablements, id sequences and
- * the rest — so a model added later is covered without editing this file.
+ * the rest — so a model added later is covered without editing this file: the service require()s every
+ * file under server/src/modules/*/models before it enumerates mongoose.modelNames().
  *
  * REFUSES (exit 1) to delete when: the year is missing, is the CURRENT year, or any
  * collection still references it. Uses MONGODB_URI from the repo .env (never printed) — the

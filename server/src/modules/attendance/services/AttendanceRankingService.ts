@@ -34,7 +34,6 @@ import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
-import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import {
@@ -284,7 +283,6 @@ async function resolveStudentUnits(
     const filter: Record<string, unknown> = {};
     if (axis === "section") filter._id = axisValue;
     if (axis === "class") filter.classId = axisValue;
-    if (axis === "school") Object.assign(filter, await currentYearSectionFilter());
     const sections = await Section.find(filter).select("code nameBn classId").lean();
     // The section name alone is USELESS as a label: every class's default section is
     // "Main"/মূল (D-#1), so a whole-school ranking rendered "মূল" on every row and the

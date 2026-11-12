@@ -26,7 +26,6 @@ import { emitClassNotePublished } from "../../notifications/services/emitters";
 import { liveWindow } from "../liveWindow";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
-import { currentYearFilter } from "../../foundation/services/currentYear";
 
 function dayBounds(date: Date): { start: Date; end: Date } {
   const s = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
@@ -479,7 +478,7 @@ export async function classNotesAdminPage(f: ClassNotesAdminFilter & PageArgs): 
     q.publishedBy = { $in: users.map((u) => u._id) };
   }
   if (f.classLevel != null) {
-    const classes = (await Class.find({ level: f.classLevel, ...(await currentYearFilter()) }).select("_id").lean()) as unknown as { _id: Types.ObjectId }[];
+    const classes = (await Class.find({ level: f.classLevel }).select("_id").lean()) as unknown as { _id: Types.ObjectId }[];
     const secs = (await Section.find({ classId: { $in: classes.map((c) => c._id) } })
       .select("_id")
       .lean()) as unknown as { _id: Types.ObjectId }[];

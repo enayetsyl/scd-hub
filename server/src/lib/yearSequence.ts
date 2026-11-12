@@ -80,3 +80,53 @@ export function translateDuplicateId(idField: string) {
     throw err;
   };
 }
+
+/**
+ * The id carries no year, so an earlier year's counter can lag behind a later year's
+ * (a late 2026 create after 2027 handed out the next number). Raise THIS year's counter
+ * to the highest `seq` of the same key in ANY year ($max is monotonic and safe to race).
+ */
+async function catchUpYearSeq(
+  model: SeqModel,
+  academicYearId: string | Types.ObjectId,
+  key: Record<string, unknown>,
+): Promise<void> {
+  const top = (await model.findOne(key).sort({ seq: -1 }).select("seq").lean()) as unknown as { seq?: number } | null;
+  if (!top?.seq) return;
+  await model.updateOne({ ...key, academicYearId }, { $max: { seq: top.seq } }, { upsert: true });
+}
+
+const MAX_ID_ATTEMPTS = 3;
+
+function isDuplicateOn(err: unknown, idField: string): boolean {
+  const e = err as { code?: number; keyPattern?: Record<string, unknown>; message?: string };
+  return e?.code === 11000 && (e.keyPattern ? idField in e.keyPattern : !!e.message?.includes(idField));
+}
+
+/**
+ * The one insert-with-id loop the HW / AS / CT / CT-G / SP services share. `create(id)`
+ * inserts the item. On E11000 on `idField` it catches the year's counter up, regenerates
+ * the id with `makeId()` and retries — at most 3 attempts, then the Bangla
+ * `DUPLICATE_ID_BN`. Any other error passes through unchanged.
+ */
+export async function createWithYearId<T>(opts: {
+  idField: string;
+  seqModel: SeqModel;
+  academicYearId: string | Types.ObjectId;
+  key: Record<string, unknown>;
+  firstId: string;
+  makeId: () => Promise<string>;
+  create: (id: string) => Promise<T>;
+}): Promise<T> {
+  let id = opts.firstId;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await opts.create(id);
+    } catch (err) {
+      if (!isDuplicateOn(err, opts.idField)) throw err;
+      if (attempt >= MAX_ID_ATTEMPTS) throw new Error(DUPLICATE_ID_BN);
+      await catchUpYearSeq(opts.seqModel, opts.academicYearId, opts.key);
+      id = await opts.makeId();
+    }
+  }
+}
