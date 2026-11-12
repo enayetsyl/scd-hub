@@ -21,8 +21,29 @@ import { space } from "../theme/tokens";
 
 type Steps = { step: number; textBn: string }[];
 
-export function ChildQuestionHints({ studentId }: { studentId: string }): React.ReactElement | null {
-  const [{ data }] = useQuery({ query: CHILD_ASSIGNED_QUESTIONS, variables: { studentId }, pause: !studentId });
+export type HintSource = ChildAssignedQuestion["source"];
+
+export function ChildQuestionHints({
+  studentId,
+  sources,
+  refreshKey,
+}: {
+  studentId: string;
+  /** Which assigned questions this tab shows (Assignments: ASSIGNMENT; Homework: HOMEWORK + EXTRA_HOMEWORK). */
+  sources: HintSource[];
+  /** Bump to refetch (the screen's pull-to-refresh). */
+  refreshKey?: number;
+}): React.ReactElement | null {
+  const [{ data, fetching, error }, refetch] = useQuery({
+    query: CHILD_ASSIGNED_QUESTIONS,
+    variables: { studentId, sources },
+    pause: !studentId,
+    requestPolicy: "cache-and-network",
+  });
+  useEffect(() => {
+    if (refreshKey) refetch({ requestPolicy: "network-only" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
   const [, openHint] = useMutation<{ openQuestionHint: OpenedQuestionHint }>(OPEN_QUESTION_HINT);
   const [opened, setOpened] = useState<Record<string, Steps>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -33,6 +54,15 @@ export function ChildQuestionHints({ studentId }: { studentId: string }): React.
   }, [studentId]);
 
   const list = ((data?.childAssignedQuestions ?? []) as ChildAssignedQuestion[]).filter((q) => q.hintCount > 0);
+  if (!data && fetching) return <Muted style={{ marginBottom: space(4) }}>{STR.ghHintsLoading}</Muted>;
+  if (error && list.length === 0) {
+    return (
+      <View style={{ gap: space(2), marginBottom: space(4) }}>
+        <Notice message={STR.ghHintsError} tone="danger" />
+        <Button title={STR.retry} variant="secondary" onPress={() => refetch({ requestPolicy: "network-only" })} />
+      </View>
+    );
+  }
   if (list.length === 0) return null;
 
   const stepsOf = (q: ChildAssignedQuestion): Steps => {
@@ -46,7 +76,7 @@ export function ChildQuestionHints({ studentId }: { studentId: string }): React.
   const open = async (q: ChildAssignedQuestion, next: number) => {
     setErr(null);
     setBusy(q.qid);
-    const r = await openHint({ studentId, qid: q.qid, step: next });
+    const r = await openHint({ studentId, qid: q.qid, step: next }, { additionalTypenames: ["ChildAssignedQuestion"] });
     setBusy(null);
     const h = r.data?.openQuestionHint;
     if (!h) {
@@ -54,6 +84,7 @@ export function ChildQuestionHints({ studentId }: { studentId: string }): React.
       return;
     }
     setOpened((cur) => ({ ...cur, [q.qid]: [...(cur[q.qid] ?? []), { step: h.step, textBn: h.textBn }] }));
+    refetch({ requestPolicy: "network-only" }); // the list shows the opened steps on return
   };
 
   return (

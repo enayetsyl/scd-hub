@@ -16,6 +16,8 @@
 import { Types } from "mongoose";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { Student } from "../../foundation/models/Student";
+import { Class } from "../../foundation/models/Class";
+import { Enrolment } from "../../foundation/models/Enrolment";
 import { MasteryAssignment } from "../../mastery/models/MasteryAssignment";
 import { MasteryAssignmentSheet } from "../../mastery/models/MasteryAssignmentSheet";
 import { MasteryPaper } from "../../mastery/models/MasteryPaper";
@@ -47,17 +49,23 @@ interface QidOrigin {
 }
 
 /** Every bank qid assigned to the child, newest first, one row per qid (its newest origin). */
-async function assignedOrigins(studentId: string): Promise<QidOrigin[]> {
-  const st = await Student.findById(studentId).select("sectionId").lean();
+async function assignedOrigins(studentId: string, sources?: readonly AssignedQuestionSource[] | null): Promise<QidOrigin[]> {
+  const st = await Student.findById(studentId).select("sectionId classId").lean();
   if (!st) return [];
   const sid = oid(studentId);
+  const want = (k: AssignedQuestionSource) => !sources || sources.length === 0 || sources.includes(k);
+  // Every section the child belonged to THIS academic year (a gender split must not hide the earlier
+  // questions): the current one plus the year's enrolments.
+  const cls = await Class.findById(st.classId).select("academicYearId").lean();
+  const enrol = cls ? await Enrolment.find({ studentId: sid, academicYearId: cls.academicYearId }).select("sectionId").lean() : [];
+  const sectionIds = [...new Map([st.sectionId, ...enrol.map((e) => e.sectionId)].map((x) => [String(x), x])).values()];
   const found: QidOrigin[] = [];
 
   // 1) Weekly tailored assignments (SENT only; add-on switch on) — Part A for the class, Part B the child's own.
-  const sheets = await MasteryAssignmentSheet.find({ studentId: sid }).select("assignmentId items").lean();
+  const sheets = want("ASSIGNMENT") ? await MasteryAssignmentSheet.find({ studentId: sid }).select("assignmentId items").lean() : [];
   if (sheets.length > 0) {
     const bySheet = new Map(sheets.map((s) => [String(s.assignmentId), s]));
-    const assignments = await MasteryAssignment.find({ _id: { $in: sheets.map((s) => s.assignmentId) }, sectionId: st.sectionId, status: "SENT" })
+    const assignments = await MasteryAssignment.find({ _id: { $in: sheets.map((s) => s.assignmentId) }, sectionId: { $in: sectionIds }, status: "SENT" })
       .sort({ dueDate: -1 })
       .limit(RECENT_ASSIGNMENTS)
       .lean();
@@ -71,12 +79,15 @@ async function assignedOrigins(studentId: string): Promise<QidOrigin[]> {
   }
 
   // 2) Extra homework (a HW paper marked `extra`) — only the items on THIS child's list.
-  const papers = await MasteryPaper.find({ sectionId: st.sectionId, source: "HW", extra: true, "perStudentItems.studentId": sid })
-    .sort({ date: -1 })
-    .limit(RECENT_EXTRA_PAPERS)
-    .select("subject date items perStudentItems")
-    .lean();
+  const papers = want("EXTRA_HOMEWORK")
+    ? await MasteryPaper.find({ sectionId: { $in: sectionIds }, source: "HW", extra: true, "perStudentItems.studentId": sid })
+        .sort({ date: -1 })
+        .limit(RECENT_EXTRA_PAPERS)
+        .select("subject date items perStudentItems academicYearId classToken")
+        .lean()
+    : [];
   for (const p of papers) {
+    if (!(await isMasteryEnabled(p.academicYearId, p.classToken, p.subject))) continue; // same switch as assignments
     const mine = new Set((p.perStudentItems ?? []).find((x) => String(x.studentId) === studentId)?.itemNos ?? []);
     const date = p.date.toISOString().slice(0, 10);
     for (const it of p.items ?? []) {
@@ -85,7 +96,9 @@ async function assignedOrigins(studentId: string): Promise<QidOrigin[]> {
   }
 
   // 3) Homework — the item's selected bank questions, plus the record's top-up questions.
-  const records = await HomeworkStudentRecord.find({ studentId: sid }).sort({ createdAt: -1 }).limit(RECENT_HW_RECORDS).select("hwItemId topupQids").lean();
+  const records = want("HOMEWORK")
+    ? await HomeworkStudentRecord.find({ studentId: sid }).sort({ createdAt: -1 }).limit(RECENT_HW_RECORDS).select("hwItemId topupQids").lean()
+    : [];
   if (records.length > 0) {
     const items = await HomeworkItem.find({ _id: { $in: [...new Set(records.map((r) => String(r.hwItemId)))] } })
       .select("subject dateGiven selectedQids")
@@ -131,9 +144,13 @@ export interface AssignedQuestionView {
   opened: HintStepText[];
 }
 
-export async function childAssignedQuestions(guardianUserId: string, studentId: string): Promise<AssignedQuestionView[]> {
+export async function childAssignedQuestions(
+  guardianUserId: string,
+  studentId: string,
+  sources?: readonly AssignedQuestionSource[] | null,
+): Promise<AssignedQuestionView[]> {
   if (!Types.ObjectId.isValid(studentId) || !Types.ObjectId.isValid(guardianUserId)) return [];
-  const origins = await assignedOrigins(studentId);
+  const origins = await assignedOrigins(studentId, sources);
   if (origins.length === 0) return [];
   const qids = origins.map((o) => o.qid);
   const [bank, hints, views] = await Promise.all([

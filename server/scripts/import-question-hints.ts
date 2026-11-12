@@ -60,6 +60,8 @@ async function main(): Promise<void> {
       `== ${f}: ${r.total} entries — ${r.created} new, ${r.updated} replaced, ${r.unchanged} unchanged, ${r.refused} refused` +
         (r.warnings.length ? `, ${r.warnings.length} warnings` : ""),
     );
+    for (const w of r.warnings.slice(0, 40)) console.log(`    WARN ${w.qid}: ${w.message}`);
+    if (r.warnings.length > 40) console.log(`    … ${r.warnings.length - 40} more warnings`);
     for (const p of r.problems.slice(0, 40)) console.log(`    REFUSED ${p.qid}: ${p.message}`);
     if (r.problems.length > 40) console.log(`    … ${r.problems.length - 40} more`);
     bad += r.refused;

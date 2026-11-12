@@ -79,7 +79,7 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
         {/* M-4b: the weekly tailored assignment — own query, outside the gate so an empty
             tracker list never hides it. Renders nothing when the add-on is off. */}
         {selected ? <ChildMasteryAssignments studentId={selected.studentId} childName={selected.nameBn || selected.name} /> : null}
-        {selected ? <ChildQuestionHints studentId={selected.studentId} /> : null}
+        {selected ? <ChildQuestionHints studentId={selected.studentId} sources={["ASSIGNMENT"]} /> : null}
         {!selected ? (
           <Loader label={STR.loading} />
         ) : (

@@ -13,6 +13,7 @@ jest.mock("../modules/guardian-help/services/QuestionHintService", () => ({
   })),
 }));
 jest.mock("../modules/guardian-help/services/GuardianHintService", () => ({
+  ASSIGNED_QUESTION_SOURCES: ["ASSIGNMENT", "EXTRA_HOMEWORK", "HOMEWORK"],
   childAssignedQuestions: jest.fn(async () => []),
   openQuestionHint: jest.fn(async () => ({ qid: "q", step: 1, textBn: "ক", hasNext: true })),
 }));

@@ -5,8 +5,8 @@
 import { gql } from "urql";
 
 export const CHILD_ASSIGNED_QUESTIONS = gql`
-  query ChildAssignedQuestions($studentId: String!) {
-    childAssignedQuestions(studentId: $studentId) {
+  query ChildAssignedQuestions($studentId: String!, $sources: [String!]) {
+    childAssignedQuestions(studentId: $studentId, sources: $sources) {
       qid
       textBn
       source

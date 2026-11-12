@@ -10,8 +10,9 @@
  *
  * The answer set: correct option text, `blanks[].accepted`, `answer_key.accepted`, matching right
  * sides. English grammar words (a, an, is …) only WARN (they appear in rule statements).
- * `tf_answer` is also only a WARNING (the generation checker does not check it, and the guideline
- * has step 3 judge a similar statement with its own verdict word, which may legitimately repeat it).
+ * True/false items (`question_type: true_false` or a `tf_answer`): a verdict word (সত্য, মিথ্যা, true, false)
+ * as a whole word in step 1 or 2 is REFUSED; in step 3 it only WARNS (its worked example may judge a
+ * different statement).
  */
 import { Types } from "mongoose";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
@@ -75,7 +76,9 @@ export function answersOfPayload(p: Payload): Set<string> {
   return out;
 }
 
-const TF_WORDS: Record<string, string[]> = { true: ["true", "সত্য"], false: ["false", "মিথ্যা"] };
+/** The two verdicts of a true/false item: naming either in step 1-2 hands over (or halves) the answer. */
+const TF_VERDICT_WORDS = ["সত্য", "মিথ্যা", "true", "false"];
+const isTrueFalse = (p: Payload) => p?.question_type === "true_false" || typeof p?.tf_answer === "boolean";
 
 export interface StepCheck {
   problems: string[];
@@ -106,14 +109,18 @@ export function checkHintSteps(steps: unknown, payload: Payload): StepCheck {
     }
     const hit = leakedAnswer(s, hard);
     if (hit) {
-      problems.push(`step ${n} contains the answer '${hit}'`);
+      problems.push(`step ${n} contains the answer '${hit}' - "${s}"`);
       return;
     }
     const g = leakedAnswer(s, soft);
-    if (g) warnings.push(`step ${n} names the grammar word '${g}' (rule statement? check)`);
-    if (typeof payload?.tf_answer === "boolean") {
-      const w = leakedAnswer(s, TF_WORDS[String(payload.tf_answer)]);
-      if (w) warnings.push(`step ${n} says '${w}' — the item's true/false word (fine only in a different example)`);
+    if (g) warnings.push(`step ${n} names the grammar word '${g}' (rule statement? check) - "${s}"`);
+    if (isTrueFalse(payload)) {
+      const w = leakedAnswer(s, TF_VERDICT_WORDS);
+      if (w && i < 2) {
+        problems.push(`step ${n} names a true/false verdict word '${w}' - "${s}"`);
+        return;
+      }
+      if (w) warnings.push(`step ${n} says '${w}' - ok only if its own example judges a different statement - "${s}"`);
     }
   });
   return { problems, warnings };
@@ -173,7 +180,7 @@ export async function importQuestionHints(input: string | unknown, actor: HintAc
 
   // The current bank question per qid (chunked queries, never one per entry).
   const bank = new Map<string, { subject: string; classToken: string; payload: Payload }>();
-  const existing = new Map<string, { version: number; steps: string }>();
+  const existing = new Map<string, { version: number; steps: string; meta: string }>();
   for (let i = 0; i < qids.length; i += 500) {
     const chunk = qids.slice(i, i + 500);
     const rows = await ContentArtifact.find({ docType: "question", current: true, "envelopeJson.payload.qid": { $in: chunk } })
@@ -183,8 +190,10 @@ export async function importQuestionHints(input: string | unknown, actor: HintAc
       const payload = ((r.envelopeJson as Record<string, unknown>)?.payload ?? {}) as Payload;
       bank.set(String(payload.qid), { subject: r.subject, classToken: `C${r.classLevel}`, payload });
     }
-    const had = await QuestionHint.find({ qid: { $in: chunk } }).select("qid version steps").lean();
-    for (const r of had) existing.set(r.qid, { version: r.version, steps: JSON.stringify(r.steps.map((s) => s.textBn)) });
+    const had = await QuestionHint.find({ qid: { $in: chunk } }).select("qid version steps language source classToken").lean();
+    for (const r of had) {
+      existing.set(r.qid, { version: r.version, steps: JSON.stringify(r.steps.map((s) => s.textBn)), meta: `${r.language}|${r.source}|${r.classToken}` });
+    }
   }
 
   const seen = new Set<string>();
@@ -218,7 +227,9 @@ export async function importQuestionHints(input: string | unknown, actor: HintAc
     }
     const texts = (e.steps as string[]).map((s) => s.trim());
     const prev = existing.get(qid);
-    if (prev && prev.steps === JSON.stringify(texts)) {
+    const language = e.language === "en" ? "en" : "bn";
+    const source = opts.source ?? "agent";
+    if (prev && prev.steps === JSON.stringify(texts) && prev.meta === `${language}|${source}|${q.classToken}`) {
       rep.unchanged++;
       continue;
     }
@@ -232,8 +243,8 @@ export async function importQuestionHints(input: string | unknown, actor: HintAc
             classToken: q.classToken,
             subject: q.subject,
             steps: texts.map((textBn, i) => ({ n: (i + 1) as 1 | 2 | 3, textBn })),
-            language: e.language === "en" ? "en" : "bn",
-            source: opts.source ?? "agent",
+            language,
+            source,
             version: (prev?.version ?? 0) + 1,
             updatedBy: by,
           },

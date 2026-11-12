@@ -19,6 +19,7 @@ import { ContentArtifact } from "../modules/content/models/ContentArtifact";
 import { HomeworkItem } from "../modules/trackers/models/HomeworkItem";
 import { HomeworkStudentRecord } from "../modules/trackers/models/HomeworkStudentRecord";
 import { MasteryPaper } from "../modules/mastery/models/MasteryPaper";
+import { MasteryEnablement } from "../modules/mastery/models/MasteryEnablement";
 import { QuestionHint } from "../modules/guardian-help/models/QuestionHint";
 import { HintView } from "../modules/guardian-help/models/HintView";
 import { assertGuardianOfStudent } from "../middleware/authz";
@@ -74,6 +75,8 @@ beforeAll(async () => {
     { guardianId: gA._id, studentId: new Types.ObjectId(sidA), relation: "FATHER" },
     { guardianId: gB._id, studentId: new Types.ObjectId(sidB), relation: "MOTHER" },
   ]);
+
+  await MasteryEnablement.create([{ academicYearId: yearId, classToken: "C3", subject: "MATH", enabled: true }]);
 
   // The bank: Q1 MCQ (answer "পাঁচ"), Q2 no hint yet, Q3 B's, Q4 extra homework, Q5 on the paper but NOT on A's list.
   const mcq = (qid: string) => ({

@@ -10,7 +10,9 @@ import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
 import { importQuestionHints, type HintEntryProblem, type HintImportReport } from "../services/QuestionHintService";
 import {
+  ASSIGNED_QUESTION_SOURCES,
   childAssignedQuestions,
+  type AssignedQuestionSource,
   openQuestionHint,
   type AssignedQuestionView,
   type HintStepText,
@@ -79,10 +81,15 @@ builder.queryField("childAssignedQuestions", (t) =>
       "The bank questions assigned to the linked child (assignment sheets, extra homework, homework), newest first, with the " +
       "hint ladder state. Link-gated (assertGuardianOfStudent).",
     authScopes: { hasPermission: "guardian:read_child" },
-    args: { studentId: t.arg.string({ required: true }) },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      sources: t.arg.stringList({ required: false, description: "Only these sources: ASSIGNMENT, EXTRA_HOMEWORK, HOMEWORK (default all)." }),
+    },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return childAssignedQuestions(ctx.auth!.userId, args.studentId);
+      const ok = (ASSIGNED_QUESTION_SOURCES as readonly string[]);
+      const sources = (args.sources ?? []).filter((x) => ok.includes(x)) as AssignedQuestionSource[];
+      return childAssignedQuestions(ctx.auth!.userId, args.studentId, sources);
     },
   }),
 );
