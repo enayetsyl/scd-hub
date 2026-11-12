@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-11-12: **BUILT — PR-P BAN2/ENG2 earlier steps may name BAN/ENG (D-#1447)**. Next for the trees: when the C6 Bangla/English books are final, add the BAN→BAN2 and ENG→ENG2 links to the C6 BAN2/ENG2 trees before loading them.
 - 2026-11-12: **BUILT — PR-O plan footer `Objective codes` → `tags.lo_codes` (D-#1445)**, branch `feat/fu-o-plan-lo-codes`. The C1 Math lesson-plan pack should write the codes in each session plan's footer under `Objective codes`.
 - 2026-11-12: **BUILT — PR-N one name for Islam, 1.8 min/mark, division words (D-#1440)**, branch `feat/fu-n-content-names`. Reminder for the owner when Islam lesson plans start: the P09 Claude project must use the subject code `ISLAM` (not `ISL`).
 - 2026-11-11: **PLANNED — 2027 year change + Class 6: audit and build plan** (cloud session, docs only, branch `claude/cool-brown-x2nzvt`; `docs/prd-year-change.md`). No code, schema, vocab or test changed; no DECISIONS rows (YC-D1–D9 proposed inside the PRD for the owner to ratify).
