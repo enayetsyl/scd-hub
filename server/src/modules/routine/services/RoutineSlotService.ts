@@ -4,10 +4,11 @@
  * binding.ts); this layer does the DB queries + the idempotent ScopeGrant sync.
  */
 import { Types } from "mongoose";
-import { DAYS_OF_WEEK, type DayOfWeek, type RoutineSubject, type PeriodTrack } from "@scd/shared";
+import { DAYS_OF_WEEK, subjectAllowedForClassLevel, type DayOfWeek, type RoutineSubject, type PeriodTrack } from "@scd/shared";
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { Section } from "../../foundation/models/Section";
+import { Class } from "../../foundation/models/Class";
 import { SubjectGroup } from "../models/SubjectGroup";
 import { Subject } from "../../foundation/models/Subject";
 import { User } from "../../foundation/models/User";
@@ -82,6 +83,10 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
     const section = await Section.findById(input.groupId).lean();
     if (!section) throw new Error("Section not found");
     classId = section.classId as Types.ObjectId;
+    const klass = (await Class.findById(classId).select("level").lean()) as { level: number } | null;
+    if (klass && !subjectAllowedForClassLevel(input.subject, klass.level)) {
+      throw new Error("এই বিষয়টি ষষ্ঠ শ্রেণি থেকে চালু; নিচের শ্রেণির জন্য নেওয়া যাবে না");
+    }
   } else {
     const group = await SubjectGroup.findById(input.groupId).lean();
     if (!group) throw new Error("SubjectGroup not found");
@@ -261,6 +266,13 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
     const section = await Section.findById(existing.groupId).lean();
     if (!section) throw new Error("Section not found");
     classId = section.classId as Types.ObjectId;
+    // Only a subject CHANGE is checked, so an older slot can still change teacher/room.
+    if (input.subject !== existing.subject) {
+      const klass = (await Class.findById(classId).select("level").lean()) as { level: number } | null;
+      if (klass && !subjectAllowedForClassLevel(input.subject, klass.level)) {
+        throw new Error("এই বিষয়টি ষষ্ঠ শ্রেণি থেকে চালু; নিচের শ্রেণির জন্য নেওয়া যাবে না");
+      }
+    }
   }
 
   // R2.2–R2.4 — conflict engine against the other active slots at this (day, period).

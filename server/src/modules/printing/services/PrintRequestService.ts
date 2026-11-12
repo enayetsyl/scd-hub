@@ -1093,7 +1093,7 @@ export async function printHistoryFacets(
  * work, or grants that have since changed), so it is evidence, not proof.
  */
 export interface PrintTagSuggestion {
-  /** Roster class LEVEL (-1 Nursery … 5), not an id — the caller maps it to a class. */
+  /** Roster class LEVEL (-1 Nursery … 6), not an id — the caller maps it to a class. */
   classLevel: number | null;
   /** A `ROUTINE_SUBJECTS` code. */
   subject: string | null;
@@ -1114,12 +1114,12 @@ function normalizeForMatch(text: string): string {
 function classLevelFromText(raw: string): number | null {
   const text = normalizeForMatch(raw);
   // `Class 3` / `C-1` / `C_2` — a digit must follow the separator, so "Class Test" misses.
-  const spelt = /\bC(?:lass)?[ _-]?([1-5])\b/i.exec(text);
+  const spelt = /\bC(?:lass)?[ _-]?([1-6])\b/i.exec(text);
   if (spelt) return Number(spelt[1]);
   // `C1B03`, `C4B02` — a code glued to the next token.
-  const glued = /\bC([1-5])[A-Za-z_]/.exec(text);
+  const glued = /\bC([1-6])[A-Za-z_]/.exec(text);
   if (glued) return Number(glued[1]);
-  const dashed = /-C([1-5])-/i.exec(text);
+  const dashed = /-C([1-6])-/i.exec(text);
   if (dashed) return Number(dashed[1]);
   // `CN`/`CK` are the minted id tokens; `C-1`/`C0` are the same two classes as
   // spelled by ids minted before that change, and both still circulate on paper.
@@ -1133,6 +1133,10 @@ function classLevelFromText(raw: string): number | null {
 function subjectFromText(raw: string): string | null {
   const text = normalizeForMatch(raw);
   if (/bangladesh|\bBGS\b|বিশ্বপরিচয়/i.test(text)) return "BGS";
+  // Class 6 (YC-3): the 2nd papers BEFORE Bangla/English, ICT before anything else.
+  if (/\bICT\b|তথ্য ও যোগাযোগ/i.test(text)) return "ICT";
+  if (/\bban2\b|\bbangla[ -]?(2nd|second)[ -]?paper\b|বাংলা\s*(২য়|দ্বিতীয়)\s*পত্র/i.test(text)) return "BAN2";
+  if (/\beng2\b|\benglish[ -]?(2nd|second)[ -]?paper\b|ইংরেজি\s*(২য়|দ্বিতীয়)\s*পত্র/i.test(text)) return "ENG2";
   if (/\bban(gla)?\b|বাংলা/i.test(text)) return "BAN";
   if (/\beng(lish)?\b|ইংরেজি/i.test(text)) return "ENG";
   if (/\bmath(s|ematics)?\b|গণিত/i.test(text)) return "MATH";

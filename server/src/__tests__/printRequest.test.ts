@@ -1206,6 +1206,15 @@ describe("suggestTagFor — reading a class/subject out of the job's own names",
     expect(suggestTagFor({ title: "CT-C2-ISLAM-0003" })).toMatchObject({ classLevel: 2, subject: "ISLAM" });
   });
 
+  test("Class 6 second papers need the paper word; a chapter or term stays BAN / ENG", () => {
+    expect(suggestTagFor({ fileNames: ["বাংলা দ্বিতীয় পত্র.pdf"] }).subject).toBe("BAN2");
+    expect(suggestTagFor({ fileNames: ["বাংলা ২য় পত্র.pdf"] }).subject).toBe("BAN2");
+    expect(suggestTagFor({ fileNames: ["bangla 2nd paper.pdf"] }).subject).toBe("BAN2");
+    expect(suggestTagFor({ fileNames: ["english 2nd paper.pdf"] }).subject).toBe("ENG2");
+    expect(suggestTagFor({ fileNames: ["বাংলা ২য় অধ্যায়.pdf"] }).subject).toBe("BAN");
+    expect(suggestTagFor({ fileNames: ["English 2nd term.pdf"] }).subject).toBe("ENG");
+  });
+
   test("pre-primary is read by name, not by number", () => {
     expect(suggestTagFor({ fileNames: ["Nursery rhymes sheet.pdf"] }).classLevel).toBe(-1);
     expect(suggestTagFor({ fileNames: ["নার্সারি ছড়া.pdf"] }).classLevel).toBe(-1);

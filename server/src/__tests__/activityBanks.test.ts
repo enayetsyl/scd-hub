@@ -159,10 +159,11 @@ describe("pure helpers", () => {
     expect(rows[0]).toMatchObject({ itemId: "SD-E-001", level: "E", classesText: "Nursery – KG", details: "5 changes, a masjid", page: 2 });
     expect(rows[6]).toMatchObject({ itemId: "SU-E-001", page: null });
   });
-  it("turns the Classes text into class levels, capped at Class 5", () => {
+  it("turns the Classes text into class levels, capped at the roster top (Class 6)", () => {
     expect(classLevelsOf("Nursery – KG")).toEqual([-1, 0]);
     expect(classLevelsOf("KG – Class 1")).toEqual([0, 1]);
-    expect(classLevelsOf("Class 3 – 6")).toEqual([3, 4, 5]);
+    // Capped at the roster top, Class 6 since YC-3 (D-#1480).
+    expect(classLevelsOf("Class 3 – 7")).toEqual([3, 4, 5, 6]);
     expect(classLevelsOf("Class 2")).toEqual([2]);
     expect(classLevelsOf("Nursery")).toEqual([-1]);
     expect(classLevelsOf("")).toEqual([]);
@@ -184,14 +185,14 @@ describe("import", () => {
     const r = await importSD();
     expect(r).toMatchObject({ sheets: 6, answersFound: 5, warnings: ["1টি শিটের উত্তর উত্তরপত্রে পাওয়া যায়নি"] });
     expect(r.bank).toMatchObject({ code: "SD", bankNo: 8, nameEn: "Spot the Difference", status: "DRAFT", skillArea: "THINKING" });
-    expect(r.bank.levelClasses).toEqual({ E: [-1, 0], M: [0, 1], H: [3, 4, 5] });
+    expect(r.bank.levelClasses).toEqual({ E: [-1, 0], M: [0, 1], H: [3, 4, 5, 6] }); // "Class 3 – 6": Class 6 is on the roster since YC-3
     expect(r.bank.sampleFileIds.E).toHaveLength(2);
     const sheets = await bankSheets(r.bank._id.toString());
     expect(sheets.map((s) => [s.itemId, s.page, s.answerPage ?? null, s.classLevels])).toEqual([
       ["SD-E-001", 2, 1, [-1, 0]],
       ["SD-E-002", 3, 1, [-1, 0]],
-      ["SD-H-001", 6, 3, [3, 4, 5]],
-      ["SD-H-002", 7, null, [3, 4, 5]],
+      ["SD-H-001", 6, 3, [3, 4, 5, 6]],
+      ["SD-H-002", 7, null, [3, 4, 5, 6]],
       ["SD-M-001", 4, 2, [0, 1]],
       ["SD-M-002", 5, 2, [0, 1]],
     ]);

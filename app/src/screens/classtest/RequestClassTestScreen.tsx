@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import {
   HW_SUBJECTS,
+  subjectsForClassLevel,
   PRINT_COLOURS,
   PRINT_COLOUR_LABELS_EN,
   PRINT_SIDES,
@@ -304,7 +305,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
             <Select
               label={STR.ctSubject}
               value={subject}
-              options={(HW_SUBJECTS as readonly string[]).map((s) => ({ label: hwSubjectLabel(s), value: s }))}
+              options={subjectsForClassLevel(HW_SUBJECTS as readonly string[], section?.classLevel).map((s) => ({ label: hwSubjectLabel(s), value: s }))}
               onChange={setSubject}
               placeholder={STR.ctPickSubject}
             />

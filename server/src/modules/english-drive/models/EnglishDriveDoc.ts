@@ -32,7 +32,7 @@ export const ENGLISH_DRIVE_MD_MAX_BYTES = 1024 * 1024;
 
 export interface IEnglishDriveDoc extends Document {
   _id: Types.ObjectId;
-  /** Content axis C1..C5 stored as the integer 1..5 (English Drive covers no Nursery/KG). */
+  /** Content axis C1..C6 stored as the integer 1..6 (English Drive covers no Nursery/KG; C6 from YC-3). */
   classLevel: number;
   /** Null for block-less documents — assignments are week-scoped (D-#346); also null
    *  for PT, which uses `blockNumbers` instead. Required for every other kind (service). */
@@ -72,7 +72,7 @@ export interface IEnglishDriveDoc extends Document {
 
 const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
   {
-    classLevel: { type: Number, required: true, min: 1, max: 5 },
+    classLevel: { type: Number, required: true, min: 1, max: 6 },
     // Optional at the schema so AS can be block-less; the SERVICE requires it for
     // every other kind (D-#346).
     blockNumber: { type: Number, min: 1, default: null },

@@ -13,7 +13,7 @@ import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, subjectsForClassLevel } from "@scd/shared";
 import {
   CLASSES_QUERY,
   DECLARE_HOMEWORK_ITEM,
@@ -367,8 +367,9 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
             <Card>
               <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwSubject}</Body>
               <ChipRow>
-                {HW_SUBJECTS.map((s) => (
-                  <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => chooseSubject(s)} />
+                {/* ICT / BAN2 / ENG2 only for a Class 6 section (YC-3); names follow the class. */}
+                {subjectsForClassLevel(HW_SUBJECTS, classLevel).map((s) => (
+                  <Chip key={s} label={hwSubjectLabel(s, classLevel)} selected={subject === s} onPress={() => chooseSubject(s)} />
                 ))}
               </ChipRow>
               {fieldErrors.subject ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.subject}</Body> : null}

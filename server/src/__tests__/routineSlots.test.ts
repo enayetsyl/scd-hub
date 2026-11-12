@@ -49,6 +49,11 @@ jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => ({ lean: () => mockSectionFindById(id) }) },
 }));
 
+const mockClassFindById = jest.fn();
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { findById: () => ({ select: () => ({ lean: () => mockClassFindById() }) }) },
+}));
+
 const mockGroupFindById = jest.fn();
 jest.mock("../modules/routine/models/SubjectGroup", () => ({
   SubjectGroup: { findById: (id: unknown) => ({ lean: () => mockGroupFindById(id) }) },
@@ -111,6 +116,7 @@ beforeEach(() => {
   mockSlotCreate.mockImplementation(async (d) => ({ _id: new mongoose.Types.ObjectId(), ...d }));
   mockSlotUpdateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
   mockSectionFindById.mockResolvedValue({ _id: SECTION, classId: CLASS });
+  mockClassFindById.mockResolvedValue({ level: 3 });
   mockGroupFindById.mockResolvedValue({ _id: GROUP, track: "quran" });
   mockSubjectFindOne.mockResolvedValue({ _id: SUBJ, code: "BAN" });
   mockGrantFindOne.mockResolvedValue(null);
@@ -221,6 +227,19 @@ describe("R2.2/R2.3/R2.4 detectConflicts", () => {
   test("a slot never conflicts with itself (id match skipped)", () => {
     const cand = lite();
     expect(hasConflict(detectConflicts(cand, [cand]))).toBe(false);
+  });
+});
+
+describe("YC-3 Class 6-only subjects", () => {
+  test("Class 3 refuses BAN2 / ICT / ENG2 with a Bangla message", async () => {
+    for (const subject of ["BAN2", "ICT", "ENG2"]) {
+      await expect(createRoutineSlot(baseInput({ subject }))).rejects.toThrow(/ষষ্ঠ শ্রেণি/);
+    }
+  });
+  test("Class 3 BAN works; Class 6 accepts BAN2", async () => {
+    await expect(createRoutineSlot(baseInput())).resolves.toBeTruthy();
+    mockClassFindById.mockResolvedValue({ level: 6 });
+    await expect(createRoutineSlot(baseInput({ subject: "BAN2" }))).resolves.toBeTruthy();
   });
 });
 
@@ -366,6 +385,18 @@ describe("updateRoutineSlot (versioned cell edit — D-#47(3))", () => {
     effectiveFrom: D("2026-01-01"),
     effectiveTo: null,
   };
+
+  test("YC-3: a Class 3 slot cannot change to BAN2; changing to BAN still works", async () => {
+    mockSlotFindById.mockResolvedValue({ ...sectionSlot, subject: "ENG" });
+    mockSlotFind.mockResolvedValue([]);
+    await expect(
+      updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN2", track: "general", teacherId: TEACHER_A, roomId: null, actorId: ACTOR }),
+    ).rejects.toThrow(/ষষ্ঠ শ্রেণি/);
+    expect(mockSlotUpdateOne).not.toHaveBeenCalled();
+    await expect(
+      updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_A, roomId: null, actorId: ACTOR }),
+    ).resolves.toBeTruthy();
+  });
 
   test("rejects when the new teacher is already booked at that (day, period)", async () => {
     mockSlotFindById.mockResolvedValue(sectionSlot);

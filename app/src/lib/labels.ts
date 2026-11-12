@@ -358,6 +358,7 @@ import {
 } from "@scd/shared";
 import { IMPROVEMENT_REASON_LABELS_BN, IMPROVEMENT_REASON_LABELS_EN, type ImprovementReason } from "@scd/shared";
 import { LESSON_NONE_REASON_LABELS_BN, type LessonNoneReason } from "@scd/shared";
+import { PAPER_SPLIT_FROM_LEVEL, subjectLabel as sharedSubjectLabel } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
 
@@ -854,7 +855,8 @@ export const hrCategoryLabel = (v?: string | null): string =>
   (v && pick(HR_CATEGORY_LABELS_BN, HR_CATEGORY_LABELS_EN)[v as HrCategory]) || v || DASH;
 
 // Homework tracker (HW-T1..T4)
-export const hwSubjectLabel = (v?: string | null): string =>
+export const hwSubjectLabel = (v?: string | null, level?: number | null): string =>
+  (v && level != null && level >= PAPER_SPLIT_FROM_LEVEL ? subjectLabelAt(v, level) : "") ||
   (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) ||
   // D-#1310: the mastery screens also name the Class 6 content subjects (ICT, BAN2, ENG2).
   (v && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[v as Subject]) || v || DASH;
@@ -1107,8 +1109,14 @@ export const minutesToHHMM = (m?: number | null): string => {
 };
 
 // Routine / timetable (R-1..R-3)
-export const routineSubjectLabel = (v?: string | null): string =>
+export const routineSubjectLabel = (v?: string | null, level?: number | null): string =>
+  (v && level != null && level >= PAPER_SPLIT_FROM_LEVEL ? subjectLabelAt(v, level) : "") ||
   (v && pick(ROUTINE_SUBJECT_LABELS_BN, ROUTINE_SUBJECT_LABELS_EN)[v as RoutineSubject]) || v || DASH;
+
+/** A subject's name AT a class level, in the active language — the shared `subjectLabel`
+ *  (Class 6: বাংলা/ইংরেজি প্রথম পত্র, দ্বিতীয় পত্র; YC-3, D-#1481). */
+export const subjectLabelAt = (v: string, level?: number | null): string =>
+  sharedSubjectLabel(v, level, _lang === "en" ? "en" : "bn");
 
 // Exam syllabus (SY-1..SY-6) — labels come from vocab.ts, never re-typed here.
 export const syllabusStatusLabel = (v?: string | null): string =>
@@ -5885,10 +5893,10 @@ const STR_BN = {
   mdOutRowHwGap: "বাড়ির কাজ জমা: উপরের − নিচের ভাগ",
   mdOutRowAttGap: "উপস্থিতি: উপরের − নিচের ভাগ",
   mdOutRowBelow85: "৮৫%-এর নিচে − বাকিরা",
-  mdOutRowSenior: "চতুর্থ ও পঞ্চম: উপস্থিতি → ফলাফল",
+  mdOutRowSenior: "চতুর্থ–ষষ্ঠ: উপস্থিতি → ফলাফল",
   mdOutLegend: "সম্পর্ক: গাঢ় = স্পষ্ট, ধূসর = আকস্মিকতা থেকে আলাদা করা যায় না · ব্যবধান ক্লাস টেস্টের নম্বরে; ঋণাত্মক = পিছিয়ে",
   mdFNotCertain: "(সংখ্যা কম — পরিসংখ্যানগতভাবে এখনো নিশ্চিত নয়।)",
-  mdFSenior: "চতুর্থ ও পঞ্চম শ্রেণিতে উপস্থিতি ফলাফলের সঙ্গে জোরালোভাবে চলে (সম্পর্ক {r}, {n} জন)।",
+  mdFSenior: "চতুর্থ–ষষ্ঠ শ্রেণিতে উপস্থিতি ফলাফলের সঙ্গে জোরালোভাবে চলে (সম্পর্ক {r}, {n} জন)।",
   mdFLongAbsent: "{n} জন শিক্ষার্থী হাজিরার দিনের অর্ধেকের বেশি অনুপস্থিত — শ্রেণির গড় এদের কারণে বদলে যায়।",
   mdHwQual: "বাড়ির কাজের মান",
   mdAsQual: "অ্যাসাইনমেন্টের মান",
@@ -14112,10 +14120,10 @@ const STR_EN: StrTable = {
   mdOutRowHwGap: "Homework submitted: top − bottom third",
   mdOutRowAttGap: "Attendance: top − bottom third",
   mdOutRowBelow85: "Below 85% − everyone else",
-  mdOutRowSenior: "Class 4 + 5: attendance → result",
+  mdOutRowSenior: "Class 4–6: attendance → result",
   mdOutLegend: "Correlations: bold = clear link, grey = not distinguishable from chance · gaps in class-test marks; negative = behind",
   mdFNotCertain: "(Small group — not statistically certain yet.)",
-  mdFSenior: "In Class 4 and Class 5 attendance tracks results strongly (correlation {r}, {n} students).",
+  mdFSenior: "In Classes 4–6 attendance tracks results strongly (correlation {r}, {n} students).",
   mdFLongAbsent: "{n} students were absent on more than half their marked days — they move class averages on their own.",
   mdHwQual: "Homework quality",
   mdAsQual: "Assignment quality",

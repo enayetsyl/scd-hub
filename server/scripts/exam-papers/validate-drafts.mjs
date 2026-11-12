@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const SOURCES = new Set(["MP2026", "MP2026_ADAPTED", "MP_OTHER", "MP_OTHER_ADAPTED", "NEW"]);
-const SUBJECTS = new Set(["BAN", "ENG", "MATH", "ISLAM", "SCI", "BGS", "ARABIC"]);
+const SUBJECTS = new Set(["BAN", "ENG", "MATH", "ISLAM", "SCI", "BGS", "ARABIC", "ICT", "BAN2", "ENG2"]);
 const KINDS = new Set(["WRITTEN", "ORAL"]);
 
 function listFiles(args) {
@@ -46,7 +46,7 @@ export function validatePaper(p) {
   const e = (m) => errors.push(m);
   if (p.schema !== "scd.exam-paper-draft/v1") e(`schema must be scd.exam-paper-draft/v1`);
   if (typeof p.key !== "string" || !/^[a-z0-9-]+$/i.test(p.key)) e(`key missing/invalid`);
-  if (!Number.isInteger(p.classLevel) || p.classLevel < -1 || p.classLevel > 5) e(`classLevel must be -1..5`);
+  if (!Number.isInteger(p.classLevel) || p.classLevel < -1 || p.classLevel > 6) e(`classLevel must be -1..6`);
   if (!SUBJECTS.has(p.subject)) e(`subject ${p.subject} unknown`);
   if (!(p.fullMarks > 0)) e(`fullMarks missing`);
   if (!p.exam || p.exam.term !== "ANNUAL" || !Number.isInteger(p.exam.year)) e(`exam {term:"ANNUAL", year} missing`);

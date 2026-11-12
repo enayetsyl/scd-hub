@@ -20,6 +20,7 @@ import {
   ROSTER_CLASS_LEVEL_MAX,
   CLASS_TOKEN_PATTERN,
   classToken,
+  subjectAllowedForClassLevel,
 } from "@scd/shared";
 import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { Types } from "mongoose";
@@ -49,7 +50,7 @@ const GENERIC_TOPIC_LABEL_BN = "সাধারণ (নির্দিষ্ট 
 
 /** Matches a synthetic generic-topic code in EITHER class spelling — `TOP-BAN-CK-GEN`
  *  as minted now, and `TOP-BAN-C0-GEN` as minted before the CK/CN change. */
-const GENERIC_TOPIC_CODE_RE = new RegExp(`^TOP-[A-Z]+-${CLASS_TOKEN_PATTERN}-GEN$`);
+const GENERIC_TOPIC_CODE_RE = new RegExp(`^TOP-[A-Z][A-Z0-9]*-${CLASS_TOKEN_PATTERN}-GEN$`);
 
 function genericTopicCode(subject: string, classLevel: number): string {
   return `TOP-${subject}-${classToken(classLevel)}-GEN`;
@@ -205,7 +206,13 @@ export async function declareHomeworkItem(
     input.classLevel < ROSTER_CLASS_LEVEL_MIN ||
     input.classLevel > ROSTER_CLASS_LEVEL_MAX
   ) {
-    throw new Error("Homework is for roster classes Nursery/KG/C1–C5 only (classLevel must be -1..5)");
+    throw new Error(
+      `Homework is for roster classes Nursery/KG/C1–C${ROSTER_CLASS_LEVEL_MAX} only (classLevel must be ${ROSTER_CLASS_LEVEL_MIN}..${ROSTER_CLASS_LEVEL_MAX})`,
+    );
+  }
+
+  if (!subjectAllowedForClassLevel(subject, input.classLevel)) {
+    throw new Error("এই বিষয়টি ষষ্ঠ শ্রেণি থেকে চালু; নিচের শ্রেণির জন্য নেওয়া যাবে না");
   }
 
   const dateGiven = new Date(input.dateGiven);

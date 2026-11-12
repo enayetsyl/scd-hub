@@ -34,6 +34,7 @@ import {
   PRINT_SIDES_LABELS_EN,
   MAX_PRINT_UPLOADS,
   ROUTINE_SUBJECTS,
+  subjectsForClassLevel,
 } from "@scd/shared";
 import { CREATE_PRINT_REQUEST } from "../../graphql/printing";
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
@@ -337,7 +338,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
           {STR.hrCoverSubject} *
         </Body>
         <ChipRow>
-          {ROUTINE_SUBJECTS.map((s) => (
+          {subjectsForClassLevel(ROUTINE_SUBJECTS, selectedClass?.level).map((s) => (
             <Chip
               key={s}
               label={routineSubjectLabel(s)}
