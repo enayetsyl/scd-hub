@@ -412,13 +412,13 @@ describe("coverage by objective × type (acceptance 4)", () => {
     const row = (code: string) => v.rows.find((r) => r.code === code)!;
     expect(row("LO-C1-MATH-07-01.2").goldCount).toBe(3); // unchanged total
     expect(row("LO-C1-MATH-07-01.2").cells).toEqual([
-      { typeCode: "QT-SOLVE", goldCount: 2, pendingCount: 1, zero: false, noMarks: false },
-      { typeCode: null, goldCount: 1, pendingCount: 0, zero: false, noMarks: false },
+      { typeCode: "QT-SOLVE", goldCount: 2, pendingCount: 1, heldCount: 0, zero: false, noMarks: false },
+      { typeCode: null, goldCount: 1, pendingCount: 0, heldCount: 0, zero: false, noMarks: false },
     ]);
     expect(row("LO-C1-MATH-07-04").cells).toEqual([
       // QT-WORD has no numeric marks in the C1 MATH table: the cell says so.
-      { typeCode: "QT-WORD", goldCount: 0, pendingCount: 0, zero: true, noMarks: true },
-      { typeCode: null, goldCount: 1, pendingCount: 0, zero: false, noMarks: false },
+      { typeCode: "QT-WORD", goldCount: 0, pendingCount: 0, heldCount: 0, zero: true, noMarks: true },
+      { typeCode: null, goldCount: 1, pendingCount: 0, heldCount: 0, zero: false, noMarks: false },
     ]);
     // An allowed type nobody has written yet is a zero cell on a row with no questions at all.
     expect(row("LO-C1-MATH-07-02").cells[0]).toMatchObject({ typeCode: expect.any(String), goldCount: 0, zero: true });
@@ -427,12 +427,12 @@ describe("coverage by objective × type (acceptance 4)", () => {
     expect(v.noMarksTypes).not.toContain("QT-SOLVE");
 
     const lines = v.typeCsv.split(/\r?\n/);
-    expect(lines[0]).toBe("objective,type,gold,pending");
+    expect(lines[0]).toBe("objective,type,gold,pending,held");
     expect(lines).toEqual(expect.arrayContaining([
-      "LO-C1-MATH-07-01.2,QT-SOLVE,2,1",
-      "LO-C1-MATH-07-01.2,-,1,0",
-      "LO-C1-MATH-07-04,QT-WORD,0,0",
-      "LO-C1-MATH-07-04,-,1,0",
+      "LO-C1-MATH-07-01.2,QT-SOLVE,2,1,0",
+      "LO-C1-MATH-07-01.2,-,1,0,0",
+      "LO-C1-MATH-07-04,QT-WORD,0,0,0",
+      "LO-C1-MATH-07-04,-,1,0,0",
     ]));
   });
 });

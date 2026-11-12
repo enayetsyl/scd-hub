@@ -29,6 +29,8 @@ export interface QbFilters {
   reviewStatus: string | null;
   /** The IMPORTANT lens (QR-9, D-#550): true = marked only, null = every question. */
   important: boolean | null;
+  /** The held-for-exams lens (PR-I, D-#1408): "only" = the held ones, null = every question. */
+  examPool: "only" | null;
   /** The RETIRED lens (D-#558): true = show only soft-deleted, null = the live bank. */
   retired: boolean | null;
   marksMin: string;
@@ -48,6 +50,7 @@ export const EMPTY_FILTERS: QbFilters = {
   bloomLevel: null,
   reviewStatus: null,
   important: null,
+  examPool: null,
   retired: null,
   marksMin: "",
   marksMax: "",
@@ -130,6 +133,7 @@ export function normalizeFilters(raw: unknown): QbFilters {
     bloomLevel: str(r.bloomLevel),
     reviewStatus: str(r.reviewStatus),
     important: r.important === true ? true : null,
+    examPool: r.examPool === "only" ? "only" : null,
     retired: r.retired === true ? true : null,
     marksMin: text(r.marksMin),
     marksMax: text(r.marksMax),

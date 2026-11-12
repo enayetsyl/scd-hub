@@ -31,11 +31,13 @@ export const MASTERY_BANK_COVERAGE_QUERY = gql`
         questionTypeCodes
         exercises
         goldCount
+        heldCount
         pendingCount
         cells {
           typeCode
           goldCount
           pendingCount
+          heldCount
           zero
           noMarks
         }
@@ -44,6 +46,7 @@ export const MASTERY_BANK_COVERAGE_QUERY = gql`
         rows
         zeroRows
         gold
+        held
         rubricRows
       }
       brief
@@ -54,7 +57,7 @@ export const MASTERY_BANK_COVERAGE_QUERY = gql`
 `;
 
 /** PR-G: one objective × school-question-type cell; typeCode null = questions carrying no type. */
-export type BankCoverageCell = { typeCode: string | null; goldCount: number; pendingCount: number; zero: boolean; noMarks: boolean };
+export type BankCoverageCell = { typeCode: string | null; goldCount: number; pendingCount: number; heldCount: number; zero: boolean; noMarks: boolean };
 
 export type BankCoverageRow = {
   code: string;
@@ -67,7 +70,10 @@ export type BankCoverageRow = {
   status: string;
   questionTypeCodes: string[];
   exercises: string[];
+  /** Usable gold (not held for the exam papers). */
   goldCount: number;
+  /** Gold held for the exam papers (PR-I). */
+  heldCount: number;
   pendingCount: number;
   cells: BankCoverageCell[];
 };
@@ -79,9 +85,9 @@ export type BankCoverage = {
   locked: boolean;
   chapters: { number: number; titleBn: string }[];
   rows: BankCoverageRow[];
-  totals: { rows: number; zeroRows: number; gold: number; rubricRows: number };
+  totals: { rows: number; zeroRows: number; gold: number; held: number; rubricRows: number };
   brief: string;
-  /** PR-G: objective,type,gold,pending per cell, as CSV ("-" = no type). */
+  /** PR-G: objective,type,gold,pending,held per cell, as CSV ("-" = no type). */
   typeCsv: string;
   /** PR-G: active types with no marks in the table. */
   noMarksTypes: string[];

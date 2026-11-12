@@ -31,6 +31,7 @@ import { QUESTION_CATEGORIES, callerHasPermission } from "@scd/shared";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../../mastery/bank";
+import { examPoolClause } from "../../mastery/examHold";
 
 type LeanArtifact = FlattenMaps<IContentArtifact> & { _id: Types.ObjectId };
 
@@ -66,6 +67,8 @@ interface QuestionArtifactShape {
   reviewStatus: string;
   /** The IMPORTANT mark (QR-9, D-#550) — visible to everyone who can see the question. */
   important: boolean;
+  /** Set aside for the exam papers (PR-I, D-#1408) — visible to everyone who can see the question. */
+  examPool: boolean;
   /** Soft-deleted (D-#548). Only ever true when the caller asked for `retired: true`. */
   retired: boolean;
   current: boolean;
@@ -96,6 +99,8 @@ QuestionArtifactRef.implement({
     reviewStatus: t.exposeString("reviewStatus"),
     /** Marked important by a reviewer or the desk (QR-9, D-#550). Everyone sees it. */
     important: t.exposeBoolean("important"),
+    /** Held for the exam papers (PR-I, D-#1408). Everyone sees the badge. */
+    examPool: t.exposeBoolean("examPool"),
     /** Soft-deleted (D-#548) — the bank shows these only under the retired lens (D-#558). */
     retired: t.exposeBoolean("retired"),
     current: t.exposeBoolean("current"),
@@ -135,6 +140,7 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
     curationTag: doc.curationTag,
     reviewStatus: doc.reviewStatus,
     important: doc.importantAt != null,
+    examPool: doc.examPoolAt != null,
     retired: doc.retiredAt != null,
     current: doc.current,
     importedAt: doc.importedAt,
@@ -158,6 +164,129 @@ async function applyScope(
 // ---------------------------------------------------------------------------
 // Query: questions — J2.2 multi-tag filter
 // ---------------------------------------------------------------------------
+
+/** Everything the bank filter understands — shared by `questions`, `questionsCount` and the bulk hold. */
+export interface QuestionFilterArgs {
+  subject?: string | null;
+  classLevel?: number | null;
+  topicTag?: string | null;
+  questionType?: string | null;
+  topicTags?: string[] | null;
+  loCodes?: string[] | null;
+  questionTypes?: string[] | null;
+  chapters?: number[] | null;
+  category?: string | null;
+  qtCode?: string | null;
+  bloomLevel?: string | null;
+  difficulty?: string | null;
+  paperRole?: string | null;
+  marksMin?: number | null;
+  marksMax?: number | null;
+  reviewStatus?: string | null;
+  search?: string | null;
+  retired?: boolean | null;
+  important?: boolean | null;
+  examPool?: string | null;
+}
+
+/**
+ * The bank filter, built once. Returns the base filter plus the clauses to AND, or null when the
+ * caller can read no content at all. The caller sets `filter.$and = ands` after adding its own
+ * (the list adds a cursor).
+ */
+export async function buildQuestionsFilter(
+  args: QuestionFilterArgs,
+  ctx: import("../../../context").AppContext,
+): Promise<{ filter: FilterQuery<IContentArtifact>; ands: FilterQuery<IContentArtifact>[] } | null> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  const filter: FilterQuery<IContentArtifact> = {
+    docType: "question",
+    current: true,
+  };
+  if (args.subject) filter.subject = args.subject;
+  if (args.classLevel != null) filter.classLevel = args.classLevel;
+  if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
+
+  // Retired questions (D-#548) are hidden from everyone by default — a soft delete that
+  // still showed up in the bank would not be a delete. `retired: true` is the way back
+  // in, so somebody with question_bank:delete can find one and restore it; for anyone else
+  // the argument is ignored rather than refused, since it is not a permission boundary
+  // so much as a view nobody else has a use for.
+  const mayManage = callerHasPermission(ctx.auth, "question_bank:delete");
+  filter.retiredAt = mayManage && args.retired === true ? { $ne: null } : null;
+
+  // The important lens (D-#550). Not a permission boundary and not gated: a teacher
+  // picking questions for a set is exactly who the mark is FOR.
+  if (args.important === true) filter.importantAt = { $ne: null };
+  else if (args.important === false) filter.importantAt = null;
+
+  // Publish gate (Q3.1): a teacher sees ONLY published questions. Set last so an
+  // explicit reviewStatus arg can never widen it back open.
+  applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
+
+  // Tag-level filters stored in envelopeJson.tags or envelopeJson.payload.
+  // Multi-select (D-#524): a non-empty list wins over the single-value arg for
+  // that axis; an empty list is no constraint at all.
+  applyMultiFilter(filter, "envelopeJson.tags.topic_tag", args.topicTags, args.topicTag);
+  applyMultiFilter(filter, "envelopeJson.payload.question_type", args.questionTypes, args.questionType);
+  // Chapter (D-#524) — the artifact's OWN address, not a tag. `address.number` is
+  // Mixed on the model and older imports wrote it as a string, so both forms are
+  // matched; filtering on the number alone would silently drop those rows.
+  const chapters = (args.chapters ?? []).filter((c) => Number.isFinite(c));
+  if (chapters.length > 0) {
+    filter["address.number"] = { $in: chapterMatchValues(chapters) };
+  }
+  if (args.bloomLevel) filter["envelopeJson.tags.bloom_level"] = args.bloomLevel;
+  if (args.difficulty) filter["envelopeJson.tags.difficulty"] = args.difficulty;
+  if (args.paperRole) filter["envelopeJson.tags.paper_role"] = args.paperRole;
+  // Category (D-#511) — the exercise family, carried in the payload's free-text
+  // lesson_ref. Payload-side like question_type, because it is not an envelope tag.
+  if (args.category) filter["envelopeJson.payload.lesson_ref"] = args.category;
+
+  // Marks range filter on payload.marks
+  if (args.marksMin != null || args.marksMax != null) {
+    const marksFilter: Record<string, number> = {};
+    if (args.marksMin != null) marksFilter.$gte = args.marksMin;
+    if (args.marksMax != null) marksFilter.$lte = args.marksMax;
+    filter["envelopeJson.payload.marks"] = marksFilter;
+  }
+
+  // Multiple $or clauses (content scope / search / cursor) must be ANDed —
+  // a bare filter.$or would let a later clause clobber an earlier one.
+  const ands: FilterQuery<IContentArtifact>[] = [];
+
+  // Mastery LO filter (D-#785) — ANDed like every other $or clause.
+  const loCodes = (args.loCodes ?? []).filter((c) => c.trim());
+  if (loCodes.length > 0) ands.push(loCodeMongoFilter(loCodes) as FilterQuery<IContentArtifact>);
+  // PR-G: the school question type, from the payload's lesson_ref.
+  if (args.qtCode) ands.push({ "envelopeJson.payload.lesson_ref": args.qtCode } as FilterQuery<IContentArtifact>);
+
+  // Free-text search: question body as typed + digit-normalised qid.
+  const rawSearch = args.search?.trim();
+  if (rawSearch) {
+    const textRe = new RegExp(escapeRegex(rawSearch), "i");
+    const qidRe = new RegExp(escapeRegex(normalizeBanglaDigits(rawSearch)), "i");
+    ands.push({
+      $or: [
+        { "envelopeJson.payload.question_text": textRe },
+        { "envelopeJson.payload.qid": qidRe },
+      ],
+    });
+  }
+
+  // Held for exams (PR-I, D-#1408). Not gated: the badge and the filter are for every reader.
+  const held = examPoolClause(args.examPool);
+  if (held) Object.assign(filter, held);
+
+  // Push TEACHER content-scope INTO the DB query so pagination is correct and we
+  // don't load-then-filter every artifact (J2.4). question_bank:view_all → unrestricted.
+  const scope = await buildContentScope(ctx, "question_bank:view_all");
+  const scopeFilter = contentScopeMongo(scope);
+  if (scopeFilter === null) return null; // caller has no readable content
+  if (scopeFilter) ands.push({ $or: scopeFilter.$or });
+
+  return { filter, ands };
+}
 
 builder.queryField("questions", (t) =>
   t.field({
@@ -210,84 +339,19 @@ builder.queryField("questions", (t) =>
        * visible to anyone who can see the question, so it must be filterable by them too.
        */
       important: t.arg.boolean({ required: false }),
+      /**
+       * Held-for-exams lens (PR-I, D-#1408): `only` = the held ones, `exclude` = the ones a
+       * picker may give out, `any` (the default here — this is the bank list) = no constraint.
+       * Open to every caller, like the badge it filters on.
+       */
+      examPool: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
 
-      const filter: FilterQuery<IContentArtifact> = {
-        docType: "question",
-        current: true,
-      };
-      if (args.subject) filter.subject = args.subject;
-      if (args.classLevel != null) filter.classLevel = args.classLevel;
-      if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
-
-      // Retired questions (D-#548) are hidden from everyone by default — a soft delete that
-      // still showed up in the bank would not be a delete. `retired: true` is the way back
-      // in, so somebody with question_bank:delete can find one and restore it; for anyone else
-      // the argument is ignored rather than refused, since it is not a permission boundary
-      // so much as a view nobody else has a use for.
-      const mayManage = callerHasPermission(ctx.auth, "question_bank:delete");
-      filter.retiredAt = mayManage && args.retired === true ? { $ne: null } : null;
-
-      // The important lens (D-#550). Not a permission boundary and not gated: a teacher
-      // picking questions for a set is exactly who the mark is FOR.
-      if (args.important === true) filter.importantAt = { $ne: null };
-      else if (args.important === false) filter.importantAt = null;
-
-      // Publish gate (Q3.1): a teacher sees ONLY published questions. Set last so an
-      // explicit reviewStatus arg can never widen it back open.
-      applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
-
-      // Tag-level filters stored in envelopeJson.tags or envelopeJson.payload.
-      // Multi-select (D-#524): a non-empty list wins over the single-value arg for
-      // that axis; an empty list is no constraint at all.
-      applyMultiFilter(filter, "envelopeJson.tags.topic_tag", args.topicTags, args.topicTag);
-      applyMultiFilter(filter, "envelopeJson.payload.question_type", args.questionTypes, args.questionType);
-      // Chapter (D-#524) — the artifact's OWN address, not a tag. `address.number` is
-      // Mixed on the model and older imports wrote it as a string, so both forms are
-      // matched; filtering on the number alone would silently drop those rows.
-      const chapters = (args.chapters ?? []).filter((c) => Number.isFinite(c));
-      if (chapters.length > 0) {
-        filter["address.number"] = { $in: chapterMatchValues(chapters) };
-      }
-      if (args.bloomLevel) filter["envelopeJson.tags.bloom_level"] = args.bloomLevel;
-      if (args.difficulty) filter["envelopeJson.tags.difficulty"] = args.difficulty;
-      if (args.paperRole) filter["envelopeJson.tags.paper_role"] = args.paperRole;
-      // Category (D-#511) — the exercise family, carried in the payload's free-text
-      // lesson_ref. Payload-side like question_type, because it is not an envelope tag.
-      if (args.category) filter["envelopeJson.payload.lesson_ref"] = args.category;
-
-      // Marks range filter on payload.marks
-      if (args.marksMin != null || args.marksMax != null) {
-        const marksFilter: Record<string, number> = {};
-        if (args.marksMin != null) marksFilter.$gte = args.marksMin;
-        if (args.marksMax != null) marksFilter.$lte = args.marksMax;
-        filter["envelopeJson.payload.marks"] = marksFilter;
-      }
-
-      // Multiple $or clauses (content scope / search / cursor) must be ANDed —
-      // a bare filter.$or would let a later clause clobber an earlier one.
-      const ands: FilterQuery<IContentArtifact>[] = [];
-
-      // Mastery LO filter (D-#785) — ANDed like every other $or clause.
-      const loCodes = (args.loCodes ?? []).filter((c) => c.trim());
-      if (loCodes.length > 0) ands.push(loCodeMongoFilter(loCodes) as FilterQuery<IContentArtifact>);
-      // PR-G: the school question type, from the payload's lesson_ref.
-      if (args.qtCode) ands.push({ "envelopeJson.payload.lesson_ref": args.qtCode } as FilterQuery<IContentArtifact>);
-
-      // Free-text search: question body as typed + digit-normalised qid.
-      const rawSearch = args.search?.trim();
-      if (rawSearch) {
-        const textRe = new RegExp(escapeRegex(rawSearch), "i");
-        const qidRe = new RegExp(escapeRegex(normalizeBanglaDigits(rawSearch)), "i");
-        ands.push({
-          $or: [
-            { "envelopeJson.payload.question_text": textRe },
-            { "envelopeJson.payload.qid": qidRe },
-          ],
-        });
-      }
+      const built = await buildQuestionsFilter(args, ctx);
+      if (!built) return [];
+      const { filter, ands } = built;
 
       // Cursor: strictly-before tuple matching the {importedAt:-1,_id:-1} sort.
       if (args.after) {
@@ -304,13 +368,6 @@ builder.queryField("questions", (t) =>
         }
       }
 
-      // Push TEACHER content-scope INTO the DB query so pagination is correct and we
-      // don't load-then-filter every artifact (J2.4). question_bank:view_all → unrestricted.
-      const scope = await buildContentScope(ctx, "question_bank:view_all");
-      const scopeFilter = contentScopeMongo(scope);
-      if (scopeFilter === null) return []; // caller has no readable content
-      if (scopeFilter) ands.push({ $or: scopeFilter.$or });
-
       if (ands.length) filter.$and = ands;
 
       const limit = Math.min(Math.max(args.limit ?? 40, 1), 200);
@@ -322,6 +379,57 @@ builder.queryField("questions", (t) =>
         .lean()) as LeanArtifact[];
       return docs.map(docToShape);
     },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// The bank filter as an input, and the count of what it matches (PR-I, D-#1408)
+// ---------------------------------------------------------------------------
+
+/** The `questions` filter axes as one input — what "the current filter" means for a bulk action. */
+export const QuestionFilterInput = builder.inputType("QuestionFilterInput", {
+  fields: (t) => ({
+    subject: t.string({ required: false }),
+    classLevel: t.int({ required: false }),
+    topicTag: t.string({ required: false }),
+    questionType: t.string({ required: false }),
+    topicTags: t.stringList({ required: false }),
+    loCodes: t.stringList({ required: false }),
+    questionTypes: t.stringList({ required: false }),
+    chapters: t.intList({ required: false }),
+    category: t.string({ required: false }),
+    qtCode: t.string({ required: false }),
+    bloomLevel: t.string({ required: false }),
+    difficulty: t.string({ required: false }),
+    paperRole: t.string({ required: false }),
+    marksMin: t.float({ required: false }),
+    marksMax: t.float({ required: false }),
+    reviewStatus: t.string({ required: false }),
+    search: t.string({ required: false }),
+    retired: t.boolean({ required: false }),
+    important: t.boolean({ required: false }),
+    examPool: t.string({ required: false }),
+  }),
+});
+
+/** How many questions the filter matches (readable by the caller) — the number shown before a bulk action. */
+export async function countQuestionsByFilter(
+  args: QuestionFilterArgs,
+  ctx: import("../../../context").AppContext,
+): Promise<number> {
+  const built = await buildQuestionsFilter(args, ctx);
+  if (!built) return 0;
+  const { filter, ands } = built;
+  if (ands.length) filter.$and = ands;
+  return ContentArtifact.countDocuments(filter);
+}
+
+builder.queryField("questionsCount", (t) =>
+  t.int({
+    description: "How many questions the bank filter matches (PR-I) — the count shown before a bulk action.",
+    authScopes: { hasPermission: "question_bank:view" },
+    args: { filter: t.arg({ type: QuestionFilterInput, required: true }) },
+    resolve: async (_root, args, ctx) => countQuestionsByFilter(args.filter, ctx),
   }),
 );
 

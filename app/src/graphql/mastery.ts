@@ -512,7 +512,7 @@ export const MASTERY_HOMEWORK_OPTIONS_QUERY = gql`
 
 export const MASTERY_BANK_QUESTIONS_QUERY = gql`
   query MasteryBankQuestions($loCodes: [String!], $subject: String, $classLevel: Int) {
-    questions(loCodes: $loCodes, subject: $subject, classLevel: $classLevel, reviewStatus: "gold", limit: 50) {
+    questions(loCodes: $loCodes, subject: $subject, classLevel: $classLevel, reviewStatus: "gold", examPool: "exclude", limit: 50) {
       id
       qid
       loCodes

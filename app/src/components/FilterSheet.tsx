@@ -190,6 +190,16 @@ export function FilterSheet({
               />
             </ChipRow>
 
+            {/* The held-for-exams lens (PR-I, D-#1408) — open to teachers too, like its badge. */}
+            <Muted style={styles.groupGap}>{STR.qExamPool}</Muted>
+            <ChipRow>
+              <Chip
+                label={STR.qExamPool}
+                selected={draft.examPool === "only"}
+                onPress={() => toggle("examPool", "only")}
+              />
+            </ChipRow>
+
             {/* The RETIRED lens (D-#558). Soft-deleted questions are hidden from the bank
                 by default — this is the ONLY way to find one in order to restore it, so
                 without it `restoreQuestion` is unreachable and retire is a one-way door. */}
