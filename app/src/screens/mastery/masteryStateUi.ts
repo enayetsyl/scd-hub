@@ -36,7 +36,7 @@ export function stateCell(c: ThemeColors, state: string): { bg: string; fg: stri
 export const STATE_ORDER = ["WEAK", "IMPROVING", "REVISION_DUE", "MASTERED", "INSUFFICIENT", "NOT_ASSESSED"] as const;
 
 /** "LO-C3-MATH-07-03" → "07-03"; "LO-C3-MATH-SK-ANS-01" → "ANS-01". */
-export const shortLo = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-Z]+-(SK-)?/, "");
+export const shortLo = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-Z][A-Z0-9]*-(SK-)?/, "");
 
 export const fill = (tpl: string, vars: Record<string, string | number>): string =>
   Object.entries(vars).reduce((s, [k, v]) => s.split(`{${k}}`).join(String(v)), tpl);

@@ -20,8 +20,8 @@
       }
     },
     "plan_type": { "enum": ["chapter_plan", "session_plan"] },
-    "subject": { "enum": ["BAN", "ENG", "MATH", "SCI", "BGS"] },
-    "class_level": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "subject": { "enum": ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"] },
+    "class_level": { "type": "integer", "minimum": 1, "maximum": 6 },
     "curation_tag": { "enum": ["KEEP_AS_IS", "NEEDS_REPLACEMENT", "FLEXIBLE"] },
 
     "division": {
@@ -202,7 +202,7 @@
                   "properties": { "label": { "type": "string" }, "value": { "type": "string" } }
                 }},
                 "reason": { "type": "string", "minLength": 1 },
-                "topic_tag": { "type": "string", "pattern": "^TOP-[A-Z]+-C[1-5]-[A-Z0-9]+$", "description": "internal only; never rendered to the surface" }
+                "topic_tag": { "type": "string", "pattern": "^TOP-[A-Z][A-Z0-9]*-C[1-6]-[A-Z0-9]+$", "description": "internal only; never rendered to the surface" }
               }
             }
           }
@@ -326,7 +326,7 @@
           "required": ["intro", "inline_content", "illustration", "teacher_note", "positive_value"],
           "additionalProperties": false,
           "properties": {
-            "rc_id": { "type": "string", "pattern": "^RC-[A-Z]+-C[1-5]-U[0-9]+(-S[0-9]+)?$", "description": "internal only" },
+            "rc_id": { "type": "string", "pattern": "^RC-[A-Z][A-Z0-9]*-C[1-6]-U[0-9]+(-S[0-9]+)?$", "description": "internal only" },
             "intro": { "type": "string", "minLength": 1 },
             "inline_content": { "type": "string", "minLength": 1, "description": "the full replacement story/poem/example, rendered as a blockquote" },
             "illustration": { "type": "string", "minLength": 1 },

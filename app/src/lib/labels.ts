@@ -832,7 +832,9 @@ export const hrCategoryLabel = (v?: string | null): string =>
 
 // Homework tracker (HW-T1..T4)
 export const hwSubjectLabel = (v?: string | null): string =>
-  (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) || v || DASH;
+  (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) ||
+  // D-#1310: the mastery screens also name the Class 6 content subjects (ICT, BAN2, ENG2).
+  (v && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[v as Subject]) || v || DASH;
 
 /** Subject names where space is tight (grids, chips): BGS shortened as on the guardian
  *  Class Test tab (owner, 2026-10-13). Everything else is the full name. */
