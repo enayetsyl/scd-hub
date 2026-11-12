@@ -8,8 +8,10 @@
  *   schedule   2027 AssignmentSchedule; the handout on 2027-01-03 shows week 1
  *   grants     2027 routine teaching grants, 2026 ones lapse 3 Jan, supervisory/delegation re-pointed
  *   mastery    LOCKED trees only
- *   undo       0 rows with the run id, the 2026 ends and expiries put back
+ *   undo       0 rows with the run id, the 2026 ends and expiries put back (only where still as stamped)
  *   readers    every today-reader unchanged before the cut-over
+ *   fixes      (review of the YC-6 slice) December edits survive a re-run and the cut-over; the 2027 grants and
+ *              chat groups appear at the cut-over; every 2026 row ends; windows are clipped; no write on a clash
  */
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
@@ -33,17 +35,21 @@ import { AssignmentSchedule } from "../modules/trackers/models/AssignmentSchedul
 import { MasteryEnablement } from "../modules/mastery/models/MasteryEnablement";
 import { MasteryOutcome } from "../modules/mastery/models/MasteryOutcome";
 import { composeTeacherScope } from "../modules/foundation/services/ScopeGrantService";
-import { slotsForDate, slotsForTeacherOnDate } from "../modules/routine/services/RoutineSlotService";
+import { createRoutineSlot, deleteRoutineSlot, slotsForDate, slotsForTeacherOnDate, updateRoutineSlot } from "../modules/routine/services/RoutineSlotService";
+import { Conversation } from "../modules/chat/models/Conversation";
 import { handoutBoard } from "../modules/trackers/services/AssignmentHandoutService";
 import {
   YearChangeRefusal,
   YearChangeRun,
   applyCutover,
   applyPrepare,
+  planCutover,
   planYearChange,
   planUndoPrepare,
+  printCutover,
   printPlan,
   printUndo,
+  undoCutover,
   undoPrepare,
   type PlanInput,
 } from "../modules/year-change";
@@ -61,6 +67,16 @@ beforeAll(async () => {
 afterAll(async () => {
   await mongoose.disconnect();
   await mongo.stop();
+});
+
+// The test clock sits in December 2026, the window in which the Principal edits the 2027 draft. Only Date is
+// faked (and it keeps running), so the in-memory Mongo driver's timers are untouched.
+const FAKE_ALL_BUT_DATE = ["hrtime", "nextTick", "performance", "queueMicrotask", "requestAnimationFrame", "cancelAnimationFrame", "requestIdleCallback", "cancelIdleCallback", "setImmediate", "clearImmediate", "setInterval", "clearInterval", "setTimeout", "clearTimeout"] as const;
+beforeEach(() => {
+  jest.useFakeTimers({ now: new Date("2026-12-06T10:00:00+06:00"), advanceTimers: true, doNotFake: [...FAKE_ALL_BUT_DATE] });
+});
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 const RUN = "yc6-test-1";
@@ -372,44 +388,73 @@ describe("YC-6: bell windows, assignment schedule, mastery", () => {
 });
 
 describe("YC-6: grants", () => {
-  it("2027 teachers hold their grants from 3 Jan; the 2026 routine grant lapses then", async () => {
+  const teaching = (scopes: Awaited<ReturnType<typeof composeTeacherScope>>["scopes"]) => scopes.filter((s) => s.kind === "teaching").map((s) => (s as { sectionId: string }).sectionId);
+  const jan3 = new Date("2027-01-03T00:30:00+06:00");
+  const dec = new Date("2026-12-06T10:00:00+06:00");
+
+  it("in December nothing in 2027 grants write; the cut-over creates the 2027 grants and the 2026 routine grant lapses 3 Jan", async () => {
     const r = await prepare();
-    expect(r.writes.grants).toBeGreaterThan(0);
+    expect(r.writes.grants).toBe(0);
     const c4b27 = await sec2027(4, "Boys");
-    const jan3 = new Date("2027-01-03T00:30:00+06:00");
-    const dec = new Date("2026-12-06T10:00:00+06:00");
-    const teaching = (scopes: Awaited<ReturnType<typeof composeTeacherScope>>["scopes"]) => scopes.filter((s) => s.kind === "teaching").map((s) => (s as { sectionId: string }).sectionId);
-    const atJan3 = (await composeTeacherScope(w.tMath.toString(), jan3)).scopes;
-    expect(teaching(atJan3)).toContain(c4b27.toString());
-    expect(teaching(atJan3)).not.toContain(w.c4Boys.sectionId.toString());
+    // December and January 3rd, before the cut-over: no 2027 section in any teacher's scope
+    expect(teaching((await composeTeacherScope(w.tMath.toString(), jan3)).scopes)).not.toContain(c4b27.toString());
+    expect(teaching((await composeTeacherScope(w.tMath.toString(), dec)).scopes)).not.toContain(c4b27.toString());
+    expect(await ScopeGrant.countDocuments({ runId: RUN })).toBe(0);
     const old = (await ScopeGrant.findById(w.grants.routine).lean())!;
     expect(new Date((old as unknown as { expiresAt: Date }).expiresAt).toISOString()).toBe("2027-01-02T18:00:00.000Z");
     // before 3 Jan the 2026 grant still works
     expect(teaching((await composeTeacherScope(w.tMath.toString(), dec)).scopes)).toContain(w.c4Boys.sectionId.toString());
+
+    // the cut-over dry run lists what it will create
+    const dry = await planCutover(RUN, undefined, { allowEarly: true });
+    expect(dry.copy.grantsToCreate).toBe(8);
+    const cut = await applyCutover(RUN, w.principal, { allowEarly: true });
+    expect(cut.writes.grants).toBe(8);
+    const atJan3 = (await composeTeacherScope(w.tMath.toString(), jan3)).scopes;
+    expect(teaching(atJan3)).toContain(c4b27.toString());
+    expect(teaching(atJan3)).not.toContain(w.c4Boys.sectionId.toString());
     // the 2027 grants carry the run id and the routine source
     const made = await ScopeGrant.find({ runId: RUN, kind: "teaching" }).lean();
     expect(made.every((g) => g.source === "routine" && g.active)).toBe(true);
     expect(made).toHaveLength(6);
   });
 
-  it("supervisory and delegation grants on a 2026 class are re-pointed to the same-level 2027 class", async () => {
+  it("supervisory and delegation grants on a 2026 class are re-pointed to the same-level 2027 class at the cut-over", async () => {
     await prepare();
     const c4_27 = (await Class.findOne({ level: 4, academicYearId: w.years.y2027 }))!._id;
     const c5_27 = (await Class.findOne({ level: 5, academicYearId: w.years.y2027 }))!._id;
-    const jan3 = new Date("2027-01-03T00:30:00+06:00");
-    const dec = new Date("2026-12-06T10:00:00+06:00");
-    const scopes = (await composeTeacherScope(w.teacherOther.toString(), jan3)).scopes;
-    const sup = scopes.filter((s) => s.kind === "supervisory").map((s) => (s as { classId?: string }).classId);
-    expect(sup).toEqual([c4_27.toString()]); // no 2026 read any more
-    const del = scopes.filter((s) => s.kind === "delegation").flatMap((s) => (s as { explicitSet?: Array<{ classId: string }> }).explicitSet?.map((e) => e.classId) ?? []);
+    const sup = (at: Date) => composeTeacherScope(w.teacherOther.toString(), at).then((r) => r.scopes.filter((s) => s.kind === "supervisory").map((s) => (s as { classId?: string }).classId));
+    expect(await sup(jan3)).toEqual([]); // the 2026 grant lapsed, the 2027 clone is not made yet
+    expect(await ScopeGrant.countDocuments({ runId: RUN, repointedFrom: { $exists: true } })).toBe(0);
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    expect(await sup(jan3)).toEqual([c4_27.toString()]); // no 2026 read any more
+    const del = (await composeTeacherScope(w.teacherOther.toString(), jan3)).scopes.filter((s) => s.kind === "delegation").flatMap((s) => (s as { explicitSet?: Array<{ classId: string }> }).explicitSet?.map((e) => e.classId) ?? []);
     expect(del).toEqual([c5_27.toString()]);
     // in December the 2026 grants still read
-    const decSup = (await composeTeacherScope(w.teacherOther.toString(), dec)).scopes.filter((s) => s.kind === "supervisory").map((s) => (s as { classId?: string }).classId);
-    expect(decSup).toContain(w.c4Boys.classId.toString());
+    expect(await sup(dec)).toContain(w.c4Boys.classId.toString());
     // the clones are tagged and linked
     const clones = await ScopeGrant.find({ runId: RUN, repointedFrom: { $exists: true } }).lean();
     expect(clones).toHaveLength(2);
     expect(clones.map((g) => String(g.repointedFrom)).sort()).toEqual([w.grants.supervisory.toString(), w.grants.delegation.toString()].sort());
+  });
+
+  it("an inactive routine grant for the same teacher + section + subject is switched back on, and undo-cutover returns it", async () => {
+    await prepare();
+    const c4b27 = await sec2027(4, "Boys");
+    const c4cls27 = (await Class.findOne({ level: 4, academicYearId: w.years.y2027 }))!._id;
+    const dormant = await ScopeGrant.create({ teacherId: w.tMath, kind: "teaching", source: "routine", classId: c4cls27, sectionId: c4b27, subjectId: w.math, active: false, createdBy: w.teacher4 });
+    const plan = await planCutover(RUN, undefined, { allowEarly: true });
+    expect(plan.copy.grantsToCreate).toBe(8); // an inactive grant does not count as "already have it"
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    const back = (await ScopeGrant.findById(dormant._id).lean())!;
+    expect(back.active).toBe(true);
+    expect(back.runId).toBe(RUN);
+    expect(await ScopeGrant.countDocuments({ teacherId: w.tMath, sectionId: c4b27, subjectId: w.math })).toBe(1);
+    await undoCutover(RUN, w.principal);
+    const after = (await ScopeGrant.findById(dormant._id).lean())!;
+    expect(after.active).toBe(false);
+    expect(after.runId).toBeUndefined();
+    expect(await ScopeGrant.countDocuments({ runId: RUN })).toBe(0);
   });
 });
 
@@ -425,7 +470,9 @@ describe("YC-6: undo-prepare", () => {
 
     await prepare();
     expect(dayKey((await RoutineSlot.findById(own._id).lean())!.effectiveTo as Date)).toBe("2027-01-02");
-    expect(Object.values(await runRows()).every((n) => n > 0)).toBe(true);
+    const { grants: grantRows, ...otherRows } = await runRows();
+    expect(Object.values(otherRows).every((n) => n > 0)).toBe(true);
+    expect(grantRows).toBe(0); // the 2027 grants wait for the cut-over
 
     const dry = await planUndoPrepare(RUN);
     expect(dry.counts).toMatchObject({ routineSlots: 9, routineEndsCleared: 9, scheduleWindows: 2, assignmentSchedules: 1, masteryEnablements: 1, grantExpiriesCleared: 3 });
@@ -439,6 +486,222 @@ describe("YC-6: undo-prepare", () => {
     expect(await ScheduleWindow.countDocuments({ academicYearId: w.years.y2027 })).toBe(0);
     expect(await AssignmentSchedule.countDocuments({ academicYearId: w.years.y2027 })).toBe(0);
     expect(await MasteryEnablement.countDocuments({ academicYearId: w.years.y2027 })).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// The review fixes (decisions A-J): the December workflow between prepare and cut-over
+// ---------------------------------------------------------------------------------------------
+
+describe("YC-6 fixes: the December draft", () => {
+  const jan3 = new Date("2027-01-03T00:30:00+06:00");
+  const teachingOf = async (teacher: Types.ObjectId, at: Date) =>
+    (await composeTeacherScope(teacher.toString(), at)).scopes.filter((s) => s.kind === "teaching").map((s) => (s as { sectionId: string }).sectionId);
+  const newTeacher = async (n: string, phone: string): Promise<Types.ObjectId> => (await User.create({ name: n, phone, passwordHash: "x", role: "TEACHER" }))._id;
+  const cell = async (sectionId: Types.ObjectId, day: string, period: number) => (await RoutineSlot.findOne({ groupId: sectionId, groupType: "section", dayOfWeek: day, periodNumber: period }))!;
+
+  it("a December edit of a 2027 copied cell survives a re-run; after the cut-over the old teacher keeps write where they still teach and the new one gets write (B, C, A)", async () => {
+    const tU = await newTeacher("New T", "01700000421");
+    await prepare();
+    const c4b27 = await sec2027(4, "Boys");
+    const sun = await cell(c4b27, "SUN", 1);
+    await updateRoutineSlot({ slotId: sun._id.toString(), subject: "MATH", track: "general", teacherId: tU.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: new Date() });
+    // edited in place: still ONE row, still from 3 Jan, no zero-length twin
+    expect(await RoutineSlot.countDocuments({ groupId: c4b27, dayOfWeek: "SUN", periodNumber: 1 })).toBe(1);
+    const edited = await cell(c4b27, "SUN", 1);
+    expect(String(edited.teacherId)).toBe(tU.toString());
+    expect(dayKey(edited.effectiveFrom)).toBe("2027-01-03");
+    expect(edited.effectiveTo).toBeFalsy();
+    // December: still no 2027 grant for anybody
+    expect(await ScopeGrant.countDocuments({ sectionId: c4b27 })).toBe(0);
+
+    // the re-run keeps the edit and says so, in the dry run too
+    const plan = await planYearChange(input());
+    expect(plan.scheduleCopy.routine.notes.some((n) => n.includes("kept your edit"))).toBe(true);
+    expect(plan.scheduleCopy.routine.slotsToUpdate).toBe(0);
+    expect(printPlan(plan)).toContain("kept your edit");
+    expect((await prepare()).total).toBe(0);
+    expect(String((await cell(c4b27, "SUN", 1)).teacherId)).toBe(tU.toString());
+
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    expect(await teachingOf(w.tMath, jan3)).toContain(c4b27.toString()); // still has THU P1
+    expect(await teachingOf(tU, jan3)).toContain(c4b27.toString());
+    const uGrant = await ScopeGrant.findOne({ teacherId: tU, sectionId: c4b27, subjectId: w.math }).lean();
+    expect(uGrant?.runId).toBe(RUN);
+  });
+
+  it("a deleted copy is not recreated on a re-run and a hand-made 2027 cell is kept (C)", async () => {
+    const tEng2 = await newTeacher("Free T", "01700000422");
+    await prepare();
+    const c5g27 = await sec2027(5, "Girls");
+    const c2m27 = await sec2027(2, "Main");
+    // the Principal deletes the C5 Girls THU copy, and replaces the C2 Main SUN P1 copy with a cell of their own
+    await deleteRoutineSlot((await cell(c5g27, "THU", 3))._id.toString(), w.teacher4.toString());
+    expect(await RoutineSlot.countDocuments({ groupId: c5g27, dayOfWeek: "THU" })).toBe(0);
+    await deleteRoutineSlot((await cell(c2m27, "SUN", 1))._id.toString(), w.teacher4.toString());
+    const own = await createRoutineSlot({ groupType: "section", groupId: c2m27.toString(), dayOfWeek: "SUN", periodNumber: 1, subject: "BAN", track: "general", isBreak: false, teacherId: tEng2.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    expect(dayKey(own.slot.effectiveFrom)).toBe("2027-01-03"); // clamped to the new routine
+
+    const plan = await planYearChange(input());
+    expect(plan.refusals).toEqual([]);
+    expect(plan.scheduleCopy.routine.notes.some((n) => n.includes("you deleted it"))).toBe(true);
+    expect(plan.scheduleCopy.routine.notes.some((n) => n.includes("kept your cell"))).toBe(true);
+    expect(plan.scheduleCopy.routine.slotsToCreate).toBe(0);
+    const again = await prepare();
+    expect(again.writes.routineSlots).toBe(0);
+    expect(await RoutineSlot.countDocuments({ groupId: c5g27, dayOfWeek: "THU" })).toBe(0);
+    const mine = await cell(c2m27, "SUN", 1);
+    expect(mine.subject).toBe("BAN");
+    expect(mine.runId).toBeUndefined();
+  });
+
+  it("a 2027 AssignmentSchedule edited by hand is kept on a re-run (C)", async () => {
+    await prepare();
+    const sched = (await AssignmentSchedule.findOne({ academicYearId: w.years.y2027 }))!;
+    await AssignmentSchedule.updateOne({ _id: sched._id }, { $pull: { entries: { cycleWeek: 2 } } });
+    const plan = await planYearChange(input());
+    expect(plan.scheduleCopy.assignment.keptEdit).toBe(true);
+    expect(printPlan(plan)).toContain("kept your edit");
+    expect((await prepare()).writes.assignmentSchedule).toBe(0);
+    expect((await AssignmentSchedule.findOne({ academicYearId: w.years.y2027 }).lean())!.entries).toHaveLength(2);
+  });
+
+  it("undo-prepare after a December edit of a 2026 cell does not reopen the edited row and lists it as skipped (D)", async () => {
+    const tU = await newTeacher("New T", "01700000423");
+    await prepare();
+    const old = await cell(w.c4Boys.sectionId, "SUN", 1);
+    await updateRoutineSlot({ slotId: old._id.toString(), subject: "MATH", track: "general", teacherId: tU.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: new Date() });
+    expect(dayKey((await RoutineSlot.findById(old._id).lean())!.effectiveTo as Date)).toBe("2026-12-05");
+
+    const dry = await planUndoPrepare(RUN);
+    expect(dry.counts.routineEndsSkipped).toBe(1);
+    expect(dry.notes.some((n) => n.includes("SUN পিরিয়ড 1") && n.includes("যেমন আছে তেমন"))).toBe(true);
+    await undoPrepare(RUN, w.principal);
+    // the edited (closed) row stays closed; the replacement - the cell as it is now - is open-ended again
+    expect(dayKey((await RoutineSlot.findById(old._id).lean())!.effectiveTo as Date)).toBe("2026-12-05");
+    const live = await RoutineSlot.find({ groupId: w.c4Boys.sectionId, dayOfWeek: "SUN", periodNumber: 1, effectiveTo: { $exists: false } }).lean();
+    expect(live).toHaveLength(1);
+    expect(String(live[0].teacherId)).toBe(tU.toString());
+    // a row nobody touched is back to open-ended
+    expect((await cell(w.c4Boys.sectionId, "THU", 1)).effectiveTo).toBeFalsy();
+  });
+
+  it("the grant lapse survives a December routine edit, and a new 2026 slot ends 2027-01-02 (E)", async () => {
+    await prepare();
+    const lapse = "2027-01-02T18:00:00.000Z";
+    const made = await createRoutineSlot({ groupType: "section", groupId: w.c4Boys.sectionId.toString(), dayOfWeek: "MON", periodNumber: 3, subject: "MATH", track: "general", isBreak: false, teacherId: w.tMath.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    expect(dayKey(made.slot.effectiveTo as Date)).toBe("2027-01-02");
+    // the bind ran for the existing grant and left the run's lapse alone
+    expect(new Date((await ScopeGrant.findById(w.grants.routine).lean() as unknown as { expiresAt: Date }).expiresAt).toISOString()).toBe(lapse);
+    // the undo takes the new row's stamped end back (it recorded it)
+    await undoPrepare(RUN, w.principal);
+    expect((await RoutineSlot.findById(made.slot._id).lean())!.effectiveTo).toBeFalsy();
+  });
+
+  it("the cut-over ends a 2026 row and lapses a grant that a December edit left open (E)", async () => {
+    await prepare();
+    // a 2026 row somebody re-opened after the prepare, and its grant's lapse removed
+    const row = await cell(w.c5Boys.sectionId, "THU", 1);
+    await RoutineSlot.updateOne({ _id: row._id }, { $unset: { effectiveTo: 1 } });
+    await ScopeGrant.updateOne({ _id: w.grants.routine }, { $unset: { expiresAt: 1 } });
+    const dry = await planCutover(RUN, undefined, { allowEarly: true });
+    expect(dry.copy.endsToStamp).toBe(1);
+    expect(dry.copy.lapsesToStamp).toBeGreaterThan(0);
+    expect(printCutover(dry)).toContain("পুরোনো রুটিন সারি শেষ করা হবে: 1");
+    const cut = await applyCutover(RUN, w.principal, { allowEarly: true });
+    expect(cut.writes.copyEnds).toBe(1);
+    expect(dayKey((await RoutineSlot.findById(row._id).lean())!.effectiveTo as Date)).toBe("2027-01-02");
+    expect(new Date((await ScopeGrant.findById(w.grants.routine).lean() as unknown as { expiresAt: Date }).expiresAt).toISOString()).toBe("2027-01-02T18:00:00.000Z");
+  });
+
+  it("an unmapped 2026 section's slots end 2027-01-02, and the second row of a duplicated cell ends and is listed (G)", async () => {
+    // a 2026 class-3 "Main" section (the 2027 shape has no Main for class 3) with a slot
+    const c3 = await Class.create({ level: 3, nameBn: "Class 3 (2026)", academicYearId: w.years.y2026 });
+    const orphanSec = await Section.create({ classId: c3._id, code: "Main", nameBn: "মূল", active: true });
+    const orphan = await RoutineSlot.create({ groupType: "section", groupId: orphanSec._id, classId: c3._id, dayOfWeek: "MON", periodNumber: 1, subject: "ENG", track: "general", isBreak: false, teacherId: w.tEng, effectiveFrom: D2026_START, createdBy: w.teacher4 });
+    // a duplicate of C4 Boys SUN P1 with a later start
+    const dup = await RoutineSlot.create({ groupType: "section", groupId: w.c4Boys.sectionId, classId: w.c4Boys.classId, dayOfWeek: "SUN", periodNumber: 1, subject: "ENG", track: "general", isBreak: false, teacherId: w.tEng, effectiveFrom: new Date("2026-03-01"), createdBy: w.teacher4 });
+    const plan = await planYearChange(input());
+    expect(plan.refusals).toEqual([]);
+    expect(plan.scheduleCopy.routine.unmapped).toHaveLength(1);
+    expect(plan.scheduleCopy.routine.notes.some((n) => n.includes("duplicate, ended"))).toBe(true);
+    expect(plan.scheduleCopy.routine.pastToEnd).toBe(10);
+    await prepare();
+    expect(dayKey((await RoutineSlot.findById(orphan._id).lean())!.effectiveTo as Date)).toBe("2027-01-02");
+    expect(dayKey((await RoutineSlot.findById(dup._id).lean())!.effectiveTo as Date)).toBe("2027-01-02");
+    // the copy is the OLDEST row (MATH), deterministically
+    const c4b27 = await sec2027(4, "Boys");
+    expect((await cell(c4b27, "SUN", 1)).subject).toBe("MATH");
+    expect(await RoutineSlot.countDocuments({ groupId: { $in: [orphanSec._id, w.c4Boys.sectionId, w.c5Boys.sectionId, w.c5Girls.sectionId, w.c2Main.sectionId] }, effectiveTo: { $exists: false } })).toBe(0);
+  });
+
+  it("a bell window that crosses the year boundary is clipped to the new year and warned about (H)", async () => {
+    await ScheduleWindow.create({ academicYearId: w.years.y2026, fromDate: new Date("2026-12-25"), toDate: new Date("2027-01-05"), season: "winter", dayStartMinutes: 450, label: "Late winter" });
+    const plan = await planYearChange(input());
+    expect(plan.scheduleCopy.bellWindows.warnings.some((x) => x.includes("Late winter"))).toBe(true);
+    expect(printPlan(plan)).toContain("সতর্কতা");
+    await prepare();
+    const wins = await ScheduleWindow.find({ academicYearId: w.years.y2027 }).sort({ fromDate: 1 }).lean();
+    expect(wins).toHaveLength(3);
+    const late = wins.find((x) => x.label === "Late winter")!;
+    expect([dayKey(late.fromDate), dayKey(late.toDate)]).toEqual(["2027-12-25", "2027-12-31"]);
+    expect(wins.every((x) => dayKey(x.fromDate).startsWith("2027") && dayKey(x.toDate).startsWith("2027"))).toBe(true);
+    // a window that is entirely outside the new year after the shift is dropped
+    await ScheduleWindow.create({ academicYearId: w.years.y2026, fromDate: new Date("2025-12-20"), toDate: new Date("2025-12-30"), season: "winter", dayStartMinutes: 450, label: "Before" });
+    const again = await planYearChange(input());
+    expect(again.scheduleCopy.bellWindows.warnings.some((x) => x.includes("Before"))).toBe(true);
+  });
+
+  it("a clash found at the apply writes nothing: no classes, sections, enrolments or run rows (I)", async () => {
+    const plan = await planYearChange(input());
+    expect(plan.refusals).toEqual([]); // the plan was clean
+    // after the plan: a hand-made 2027 slot books Math T at SUN P1 too
+    const cls = await Class.create({ level: 3, nameBn: "x", academicYearId: w.years.y2027 });
+    const sec = await Section.create({ classId: cls._id, code: "Boys", nameBn: "বালক", active: true });
+    await RoutineSlot.create({ groupType: "section", groupId: sec._id, classId: cls._id, dayOfWeek: "SUN", periodNumber: 1, subject: "MATH", track: "general", isBreak: false, teacherId: w.tMath, effectiveFrom: new Date("2027-01-03"), createdBy: w.teacher4 });
+    const before = { classes: await Class.countDocuments(), sections: await Section.countDocuments(), enrolments: await Enrolment.countDocuments(), students: await Student.countDocuments() };
+    await expect(applyPrepare(plan, RUN, w.principal)).rejects.toBeInstanceOf(YearChangeRefusal);
+    expect({ classes: await Class.countDocuments(), sections: await Section.countDocuments(), enrolments: await Enrolment.countDocuments(), students: await Student.countDocuments() }).toEqual(before);
+    expect(await YearChangeRun.countDocuments({})).toBe(0);
+    expect(await Audit.countDocuments({ eventKind: "YEAR_CHANGE_PREPARED" })).toBe(0);
+  });
+
+  it("a Class 6 slot added in December with 'today' as its date starts 2027-01-03, and grants nothing until the cut-over (B, A)", async () => {
+    await prepare();
+    const c6 = await sec2027(6, "Boys");
+    const made = await createRoutineSlot({ groupType: "section", groupId: c6.toString(), dayOfWeek: "MON", periodNumber: 2, subject: "MATH", track: "general", isBreak: false, teacherId: w.tEng.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    expect(dayKey(made.slot.effectiveFrom)).toBe("2027-01-03");
+    expect(made.slot.effectiveTo).toBeFalsy();
+    expect(made.warnings).toEqual([]);
+    expect(await ScopeGrant.countDocuments({ sectionId: c6 })).toBe(0);
+    // an edit with 'today' stays in place too (no yesterday-close: effectiveTo would sit before effectiveFrom)
+    await updateRoutineSlot({ slotId: made.slot._id.toString(), subject: "MATH", track: "general", teacherId: w.tBan.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: new Date() });
+    const row = (await RoutineSlot.find({ groupId: c6 }).lean());
+    expect(row).toHaveLength(1);
+    expect(row[0].effectiveTo).toBeFalsy();
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    expect(await teachingOf(w.tBan, jan3)).toContain(c6.toString());
+  });
+
+  it("no chat group is made for a 2027 section in December; the cut-over makes them (F)", async () => {
+    await prepare();
+    const c4b27 = await sec2027(4, "Boys");
+    const tU = await newTeacher("New T", "01700000424");
+    const sun = await cell(c4b27, "SUN", 1);
+    await updateRoutineSlot({ slotId: sun._id.toString(), subject: "MATH", track: "general", teacherId: tU.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: new Date() });
+    const secGroups = async () => Conversation.countDocuments({ kind: "SECTION", refId: { $in: [c4b27.toString(), (await sec2027(5, "Boys")).toString()] } });
+    expect(await secGroups()).toBe(0);
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    expect(await secGroups()).toBe(2);
+  });
+
+  it("the unbind does not orphan a teacher who has a row starting later in the same section + subject (A)", async () => {
+    // tMath has MATH in C4 Boys from 2026 and a copy from 3 Jan; retiring the 2026 SUN row from today keeps the grant
+    const future = await RoutineSlot.create({ groupType: "section", groupId: w.c4Boys.sectionId, classId: w.c4Boys.classId, dayOfWeek: "MON", periodNumber: 4, subject: "MATH", track: "general", isBreak: false, teacherId: w.tMath, effectiveFrom: new Date("2026-12-20"), createdBy: w.teacher4 });
+    expect(future._id).toBeDefined();
+    await deleteRoutineSlot((await cell(w.c4Boys.sectionId, "SUN", 1))._id.toString(), w.teacher4.toString());
+    await deleteRoutineSlot((await cell(w.c4Boys.sectionId, "THU", 1))._id.toString(), w.teacher4.toString());
+    expect((await ScopeGrant.findById(w.grants.routine).lean())!.active).toBe(true); // the MON row starting 20 Dec still justifies it
   });
 });
 

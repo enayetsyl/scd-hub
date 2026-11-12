@@ -10,19 +10,22 @@
  *   bell windows        the year's `ScheduleWindow` rows, dates shifted into the new year
  *   assignment schedule the new year's `AssignmentSchedule` (term start 2027-01-03, the rotation entries
  *                       mapped to the 2027 sections, dated)
- *   grants              routine teaching grants for the 2027 slots (the existing routine binding);
- *                       2026 routine grants lapse 2027-01-03; supervisory + delegation grants on a 2026
- *                       class are re-pointed to the same-level 2027 class (a 2027 copy + a lapse on the
- *                       2026 one, so nothing changes before the cut-over)
+ *   grants              2026 routine grants lapse 2027-01-03 and the supervisory/delegation originals too
+ *                       (at prepare). The 2027 routine teaching grants and the supervisory/delegation clones
+ *                       are CREATED AT THE CUT-OVER from the 2027 rows as they stand then (decision A), so
+ *                       nothing in 2027 grants write during the December editing window.
  *   mastery switches    `MasteryEnablement` rows for the new year, only where the tree is LOCKED
  *
+ * Re-running prepare keeps the Principal's December edits: every copy stores `copiedFromSlotId` + `copyHash`;
+ * an edited copy, a hand-made cell and a copy the Principal deleted are kept and reported, not overwritten.
  * Every row created carries the run's `runId`; `undoPrepare` removes them and puts the `effectiveTo` /
- * `expiresAt` it stamped back (recorded on the run). Nothing a "today" reader looks at changes: the
- * copies are future-dated or sit on next-year sections, and the stamped ends fall on the first day.
+ * `expiresAt` it stamped back, but only where the row still holds the value the run stamped (decision D).
+ * Nothing a "today" reader looks at changes: the copies are future-dated or sit on next-year sections,
+ * and the stamped ends fall on the first day.
  *
- * Idempotent: a re-run of the same plan writes 0, and a changed 2026 routine is reconciled (copies
- * updated, added, or removed).
+ * Idempotent: a re-run of the same plan writes 0.
  */
+import { createHash } from "node:crypto";
 import { Types } from "mongoose";
 import { AcademicYear } from "../foundation/models/AcademicYear";
 import { Class } from "../foundation/models/Class";
@@ -41,7 +44,7 @@ import { routineGrantPlan, ROUTINE_GRANT_SUBJECTS } from "../routine/binding";
 import { endOfDay, endOfDayBefore, liveWindow, startOfDay } from "../routine/liveWindow";
 import { atMidnight, entryActiveOn } from "../trackers/assignmentCalendar";
 import { dhakaDayKey } from "../../lib/dhakaDay";
-import { YearChangeRun } from "./models/YearChangeRun";
+import { YearChangeRun, type IYearChangeRun } from "./models/YearChangeRun";
 import {
   LEVEL_NAME_BN,
   SECTION_LABEL_BN,
@@ -77,9 +80,9 @@ export function emptyScheduleCopy(o?: CopyOptions): ScheduleCopyPlan {
     options: resolveCopyOptions(o),
     fromKey: "",
     endKey: "",
-    routine: { slotsToCreate: 0, slotsExisting: 0, slotsToUpdate: 0, slotsToRemove: 0, pastToEnd: 0, sections: [], unmapped: [], conflicts: [] },
-    bellWindows: { toCreate: 0, existing: 0, toRemove: 0, skipped: null },
-    assignment: { entries: 0, existing: false, skipped: null },
+    routine: { slotsToCreate: 0, slotsExisting: 0, slotsToUpdate: 0, slotsToRemove: 0, pastToEnd: 0, sections: [], unmapped: [], conflicts: [], notes: [] },
+    bellWindows: { toCreate: 0, existing: 0, toRemove: 0, skipped: null, warnings: [] },
+    assignment: { entries: 0, existing: false, skipped: null, keptEdit: false },
     grants: { routineTeachingToCreate: 0, routineTeachingExisting: 0, pastRoutineToExpire: 0, repointToCreate: 0, repointExisting: 0, pastRepointedToExpire: 0 },
     mastery: { toCreate: 0, existing: 0, skippedUnlocked: [] },
   };
@@ -91,12 +94,30 @@ interface YearLite {
   startDate: Date;
 }
 
+/** The two instants a run stamps on old-year rows: `effectiveTo` of a slot, `expiresAt` of a grant. */
+export function yearChangeStamps(toYearStart: Date): { endDate: Date; expiryAt: Date } {
+  const fromKey = `${dhakaDayKey(toYearStart).slice(0, 4)}-01-03`;
+  return { endDate: endOfDayBefore(keyDate(fromKey)), expiryAt: new Date(`${fromKey}T00:00:00+06:00`) };
+}
+
+/** Hash of the fields a copy carries; a stored copy whose fields no longer hash to this was edited by hand. */
+export function slotCopyHash(r: { groupId: unknown; dayOfWeek: string; periodNumber: number; subject: string; track: string; isBreak?: boolean; teacherId?: unknown; roomId?: unknown }): string {
+  return createHash("sha1")
+    .update([sid(r.groupId), r.dayOfWeek, r.periodNumber, r.subject, r.track, r.isBreak ? 1 : 0, sid(r.teacherId ?? ""), sid(r.roomId ?? "")].join("|"))
+    .digest("hex")
+    .slice(0, 16);
+}
+
 const keyDate = (key: string): Date => new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, Number(key.slice(8, 10)));
 const labelOf = (level: number, code: string): string => `${LEVEL_NAME_BN[level] ?? `শ্রেণি ${level}`} ${SECTION_LABEL_BN[code as SectionCode] ?? code}`;
 
+
 /** Everything the plan and the apply both need, computed once per call from the live rows. */
+type CopyState = "create" | "update" | "same" | "kept" | "deleted" | "foreign";
 interface Computed {
+  mode: "prepare" | "cutover";
   opts: Required<CopyOptions>;
+  run: { copiedSources: string[]; assignmentHash?: string } | null;
   fromKey: string;
   endKey: string;
   /** Instant a 2026 grant lapses: the first routine day at Dhaka midnight. */
@@ -120,8 +141,11 @@ interface Computed {
     code: string;
     targetSectionId: string;
     src: IRoutineSlot;
+    state: CopyState;
   }>;
   ownCopies: Map<string, IRoutineSlot>;
+  /** Own copies whose source is gone and which nobody edited: deleted by the apply. */
+  removeOwn: IRoutineSlot[];
   toEnd: IRoutineSlot[];
   // bell windows
   windowsDesired: Array<{ fromDate: Date; toDate: Date; season: string; dayStartMinutes: number; label: string }>;
@@ -131,6 +155,7 @@ interface Computed {
   assignmentEntries: Array<{ cycleWeek: number; classId: string; classLevel: number; sectionId: string; subject: string; teacherId: string; effectiveFrom: string; effectiveTo: null }>;
   fromSchedule: { termStartDate: Date; deliveryDayOfWeek: number; dueDayOfWeek: number } | null;
   toScheduleDoc: { _id: Types.ObjectId; runId?: string } | null;
+  assignmentKept: boolean;
   // grants
   routineGrantsDesired: Array<{ teacherId: string; sectionId: string; classId: string; subjectId: Types.ObjectId; subjectCode: string }>;
   pastRoutineGrants: Array<{ _id: Types.ObjectId; previous: Date | null }>;
@@ -142,7 +167,28 @@ interface Computed {
 
 const dayName = (d: string): string => d;
 
-async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fromYear: YearLite, toYear: YearLite, runId: string | null): Promise<Computed> {
+/** Order-independent signature of an AssignmentSchedule's content (entries + term anchors). */
+function scheduleSig(s: {
+  termStartDate: Date;
+  deliveryDayOfWeek: number;
+  dueDayOfWeek: number;
+  entries: Array<{ cycleWeek: number; sectionId: unknown; subject: string; teacherId: unknown; classId: unknown; effectiveFrom?: string | null; effectiveTo?: string | null }>;
+}): string {
+  const list = s.entries
+    .map((e) => `${e.cycleWeek}|${sid(e.sectionId)}|${e.subject}|${sid(e.teacherId)}|${sid(e.classId)}|${e.effectiveFrom ?? ""}|${e.effectiveTo ?? ""}`)
+    .sort()
+    .join(",");
+  return createHash("sha1").update(`${new Date(s.termStartDate).getTime()}|${s.deliveryDayOfWeek}|${s.dueDayOfWeek}|${list}`).digest("hex").slice(0, 16);
+}
+
+async function compute(
+  plan: YearChangePlan | null,
+  optsIn: CopyOptions | undefined,
+  fromYear: YearLite,
+  toYear: YearLite,
+  runId: string | null,
+  mode: "prepare" | "cutover" = "prepare",
+): Promise<Computed> {
   const opts = resolveCopyOptions(optsIn);
   const toYearNum = dhakaDayKey(toYear.startDate).slice(0, 4);
   const fromKey = `${toYearNum}-01-03`;
@@ -153,6 +199,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
   const summary = emptyScheduleCopy(optsIn);
   summary.fromKey = fromKey;
   summary.endKey = endKey;
+  const runDoc = runId ? ((await YearChangeRun.findOne({ runId }).select("copiedSources assignmentHash").lean()) as { copiedSources?: string[]; assignmentHash?: string } | null) : null;
 
   const fromClasses = (await Class.find({ academicYearId: fromYear._id }).select("level").lean()) as Array<{ _id: Types.ObjectId; level: number }>;
   const fromLevelOf = new Map(fromClasses.map((c) => [sid(c._id), c.level]));
@@ -164,10 +211,13 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
   const toSections = await Section.find({ classId: { $in: toClasses.map((c) => c._id) } }).select("classId code").lean();
   const levelOfTo = new Map(toClasses.map((c) => [sid(c._id), c.level]));
   const toSectionBy = new Map(toSections.map((s) => [`${levelOfTo.get(sid(s.classId))}:${s.code}`, sid(s._id)]));
-  const shape = new Map<number, Set<string>>(plan.classes.map((c) => [c.level, new Set(c.sections.map((s) => s.code))]));
+  const toSectionInfo = new Map(toSections.map((s) => [sid(s._id), { level: levelOfTo.get(sid(s.classId)) as number, code: s.code as string, classId: s.classId as Types.ObjectId }]));
+  const shape = plan ? new Map<number, Set<string>>(plan.classes.map((c) => [c.level, new Set(c.sections.map((s) => s.code))])) : null;
 
   const c: Computed = {
+    mode,
     opts,
+    run: runDoc ? { copiedSources: runDoc.copiedSources ?? [], assignmentHash: runDoc.assignmentHash } : null,
     fromKey,
     endKey,
     expiryAt,
@@ -180,10 +230,11 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
     toClassId: (level) => toClassByLevel.get(level) ?? null,
     toSectionId: (level, code) => toSectionBy.get(`${level}:${code}`) ?? `pending:${level}:${code}`,
     toSectionExists: (level, code) => toSectionBy.has(`${level}:${code}`),
-    shapeHas: (level, code) => !!shape.get(level)?.has(code),
+    shapeHas: (level, code) => (shape ? !!shape.get(level)?.has(code) : toSectionBy.has(`${level}:${code}`)),
     summary,
     desired: [],
     ownCopies: new Map(),
+    removeOwn: [],
     toEnd: [],
     windowsDesired: [],
     windowsOwned: [],
@@ -191,6 +242,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
     assignmentEntries: [],
     fromSchedule: null,
     toScheduleDoc: null,
+    assignmentKept: false,
     routineGrantsDesired: [],
     pastRoutineGrants: [],
     repoints: [],
@@ -198,6 +250,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
     masteryDesired: [],
   };
   const classIdFor = (level: number): string => toClassByLevel.get(level) ?? `pending:${level}`;
+  const where = (day: string, period: number, level: number, code: string): string => `${dayName(day)} ${period}ম পিরিয়ড ${labelOf(level, code)}`;
 
   // ---- routine -------------------------------------------------------------------------------
   if (opts.routine) {
@@ -208,6 +261,12 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       active: true,
       ...liveWindow(closeDate),
     }).lean()) as unknown as IRoutineSlot[];
+    // deterministic choice among duplicates of one cell: oldest effectiveFrom, then _id (decision G)
+    srcs.sort((a, b) => new Date(a.effectiveFrom).getTime() - new Date(b.effectiveFrom).getTime() || sid(a._id).localeCompare(sid(b._id)));
+    const endsAfter = (s: IRoutineSlot): boolean => {
+      const to = s.effectiveTo ? new Date(s.effectiveTo) : null;
+      return !to || to.getTime() > endOfDay(closeDate).getTime();
+    };
     const perSection = new Map<string, number>();
     const unmapped = new Set<string>();
     const seen = new Set<string>();
@@ -216,16 +275,23 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       if (!info) continue;
       if (!c.shapeHas(info.level, info.code)) {
         unmapped.add(labelOf(info.level, info.code));
+        if (endsAfter(s)) c.toEnd.push(s); // no 2027 match: the 2026 row still ends (decision G)
         continue;
       }
       const targetSectionId = c.toSectionId(info.level, info.code);
       const key = `${targetSectionId}|${s.dayOfWeek}|${s.periodNumber}`;
-      if (seen.has(key)) continue; // an overlapping duplicate in 2026 is copied once
+      if (seen.has(key)) {
+        // an overlapping duplicate in 2026: copied once (the first), the other one ends
+        if (endsAfter(s)) {
+          c.toEnd.push(s);
+          summary.routine.notes.push(`${where(s.dayOfWeek, s.periodNumber, info.level, info.code)}: একই ঘরে দ্বিতীয় সারি — কপি হবে না, পুরোনোটি শেষ হবে (duplicate, ended)`);
+        }
+        continue;
+      }
       seen.add(key);
-      c.desired.push({ key, level: info.level, code: info.code, targetSectionId, src: s });
+      c.desired.push({ key, level: info.level, code: info.code, targetSectionId, src: s, state: "create" });
       perSection.set(`${info.level}:${info.code}`, (perSection.get(`${info.level}:${info.code}`) ?? 0) + 1);
-      const to = s.effectiveTo ? new Date(s.effectiveTo) : null;
-      if (!to || to.getTime() > endOfDay(closeDate).getTime()) c.toEnd.push(s);
+      if (endsAfter(s)) c.toEnd.push(s);
     }
     summary.routine.sections = [...perSection.entries()]
       .map(([k, slots]) => ({ level: Number(k.split(":")[0]), code: k.split(":")[1] as SectionCode, slots }))
@@ -237,6 +303,19 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       const own = (await RoutineSlot.find({ runId }).lean()) as unknown as IRoutineSlot[];
       for (const o of own) c.ownCopies.set(`${sid(o.groupId)}|${o.dayOfWeek}|${o.periodNumber}`, o);
     }
+    // hand-made (non-run) rows already sitting in a target cell
+    const realTargets = [...new Set(c.desired.map((d) => d.targetSectionId).filter((x) => !x.startsWith("pending:")))].map(oid);
+    const foreign = new Map<string, IRoutineSlot>();
+    if (realTargets.length) {
+      const rows = (await RoutineSlot.find({
+        groupType: "section",
+        groupId: { $in: realTargets },
+        active: true,
+        ...(runId ? { runId: { $ne: runId } } : {}),
+        $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: startOfDay(fromDate) } }],
+      }).lean()) as unknown as IRoutineSlot[];
+      for (const f of rows) foreign.set(`${sid(f.groupId)}|${f.dayOfWeek}|${f.periodNumber}`, f);
+    }
     const sameRow = (o: IRoutineSlot, d: Computed["desired"][number]): boolean =>
       o.subject === d.src.subject &&
       o.track === d.src.track &&
@@ -245,19 +324,53 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       sid(o.roomId ?? "") === sid(d.src.roomId ?? "") &&
       new Date(o.effectiveFrom).getTime() === fromDate.getTime() &&
       !o.effectiveTo;
+    const copiedBefore = new Set(c.run?.copiedSources ?? []);
     const wanted = new Set<string>();
+    const notes = summary.routine.notes;
     for (const d of c.desired) {
       wanted.add(d.key);
       const o = c.ownCopies.get(d.key);
-      if (!o) summary.routine.slotsToCreate++;
-      else if (sameRow(o, d)) summary.routine.slotsExisting++;
-      else summary.routine.slotsToUpdate++;
+      const at = where(d.src.dayOfWeek, d.src.periodNumber, d.level, d.code);
+      if (!o) {
+        if (foreign.has(d.key)) {
+          d.state = "foreign";
+          notes.push(`${at}: আপনার হাতে বানানো পিরিয়ড আছে — আপনার ঘরই রাখা হলো (kept your cell)`);
+        } else if (copiedBefore.has(sid(d.src._id))) {
+          d.state = "deleted";
+          notes.push(`${at}: আপনি এটি মুছেছেন — আবার বানানো হবে না (you deleted it)`);
+        } else {
+          d.state = "create";
+          summary.routine.slotsToCreate++;
+        }
+        continue;
+      }
+      if (o.copyHash && o.copyHash !== slotCopyHash(o)) {
+        d.state = "kept";
+        summary.routine.slotsExisting++;
+        notes.push(`${at}: আপনি বদলেছেন — আপনার বদল রাখা হলো (kept your edit)`);
+      } else if (sameRow(o, d)) {
+        d.state = "same";
+        summary.routine.slotsExisting++;
+      } else {
+        d.state = "update";
+        summary.routine.slotsToUpdate++;
+      }
     }
-    summary.routine.slotsToRemove = [...c.ownCopies.keys()].filter((k) => !wanted.has(k)).length;
+    for (const [k, o] of c.ownCopies) {
+      if (wanted.has(k)) continue;
+      const info = fromSectionInfo.get(sid(o.groupId)) ?? toSectionInfo.get(sid(o.groupId));
+      const at = `${dayName(o.dayOfWeek)} ${o.periodNumber}ম পিরিয়ড ${info ? labelOf(info.level, info.code) : ""}`;
+      if (o.copyHash && o.copyHash !== slotCopyHash(o)) {
+        notes.push(`${at}: ২০২৬-এর উৎস নেই, কিন্তু আপনি বদলেছেন — রাখা হলো (kept your edit)`);
+        continue;
+      }
+      c.removeOwn.push(o);
+    }
+    summary.routine.slotsToRemove = c.removeOwn.length;
 
-    // ---- the conflict engine over the copied set (2026 rows modelled as ended on endKey) ----
-    const copying = new Set(c.desired.map((d) => sid(d.src._id)));
-    const own = new Set([...c.ownCopies.values()].map((o) => sid(o._id)));
+    // ---- the conflict engine over the copied set (every 2026 row modelled as ended on endKey) ----
+    const ending = new Set(srcs.map((x) => sid(x._id)));
+    const replaced = new Set([...c.removeOwn, ...c.desired.filter((d) => d.state === "update").map((d) => c.ownCopies.get(d.key) as IRoutineSlot)].map((o) => sid(o._id)));
     const others = (await RoutineSlot.find({
       active: true,
       $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: startOfDay(fromDate) } }],
@@ -270,7 +383,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       else bySpot.set(k, [l]);
     };
     for (const o of others) {
-      if (own.has(sid(o._id))) continue;
+      if (replaced.has(sid(o._id))) continue;
       push({
         id: sid(o._id),
         dayOfWeek: o.dayOfWeek,
@@ -280,21 +393,25 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
         teacherId: o.teacherId ? sid(o.teacherId) : null,
         roomId: o.roomId ? sid(o.roomId) : null,
         effectiveFrom: new Date(o.effectiveFrom),
-        effectiveTo: copying.has(sid(o._id)) ? endDate : o.effectiveTo ? new Date(o.effectiveTo) : null,
+        effectiveTo: ending.has(sid(o._id)) ? endDate : o.effectiveTo ? new Date(o.effectiveTo) : null,
       });
     }
-    const cands: Array<SlotLite & { label: string }> = c.desired.map((d, i) => ({
-      id: `copy:${i}`,
-      dayOfWeek: d.src.dayOfWeek,
-      periodNumber: d.src.periodNumber,
-      groupType: "section",
-      groupId: d.targetSectionId,
-      teacherId: d.src.teacherId ? sid(d.src.teacherId) : null,
-      roomId: d.src.roomId ? sid(d.src.roomId) : null,
-      effectiveFrom: fromDate,
-      effectiveTo: null,
-      label: labelOf(d.level, d.code),
-    }));
+    const cands: Array<SlotLite & { label: string }> = [];
+    for (const d of c.desired) {
+      if (d.state !== "create" && d.state !== "update") continue;
+      cands.push({
+        id: `copy:${cands.length}`,
+        dayOfWeek: d.src.dayOfWeek,
+        periodNumber: d.src.periodNumber,
+        groupType: "section",
+        groupId: d.targetSectionId,
+        teacherId: d.src.teacherId ? sid(d.src.teacherId) : null,
+        roomId: d.src.roomId ? sid(d.src.roomId) : null,
+        effectiveFrom: fromDate,
+        effectiveTo: null,
+        label: labelOf(d.level, d.code),
+      });
+    }
     for (const x of cands) push(x);
     const teacherIds = new Set<string>();
     const found: Array<{ day: string; period: number; what: "teacher" | "group" | "room"; label: string; teacherId: string | null; otherId: string }> = [];
@@ -302,6 +419,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
     const labelByCand = new Map(cands.map((x) => [x.id, x.label]));
     const groupLabel = new Map<string, string>();
     for (const [gid, info] of fromSectionInfo) groupLabel.set(gid, labelOf(info.level, info.code));
+    for (const [gid, info] of toSectionInfo) groupLabel.set(gid, labelOf(info.level, info.code));
     for (const x of cands) {
       const r = detectConflicts(x, bySpot.get(`${x.dayOfWeek}|${x.periodNumber}`) ?? []);
       for (const what of ["teacher", "group", "room"] as const) {
@@ -326,7 +444,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
   }
 
   // ---- bell windows ----------------------------------------------------------------------------
-  if (opts.bellWindows) {
+  if (mode === "prepare" && opts.bellWindows) {
     const fromWins = await ScheduleWindow.find({ academicYearId: fromYear._id, active: true }).sort({ fromDate: 1 }).lean();
     const diff = Number(toYearNum) - Number(dhakaDayKey(fromYear.startDate).slice(0, 4));
     const shift = (d: Date): Date => {
@@ -334,14 +452,30 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       x.setUTCFullYear(x.getUTCFullYear() + diff);
       return x;
     };
-    c.windowsDesired = fromWins.map((w) => ({ fromDate: shift(w.fromDate), toDate: shift(w.toDate), season: w.season as string, dayStartMinutes: w.dayStartMinutes as number, label: w.label as string }));
+    // decision H: a copied window never leaves the new year
+    const yStart = new Date(`${toYearNum}-01-01`);
+    const yEnd = new Date(`${toYearNum}-12-31`);
+    for (const w of fromWins) {
+      const f = shift(w.fromDate);
+      const t = shift(w.toDate);
+      const crosses = f.getTime() < yStart.getTime() || t.getTime() > yEnd.getTime();
+      const fk = new Date(Math.max(f.getTime(), yStart.getTime()));
+      const tk = new Date(Math.min(t.getTime(), yEnd.getTime()));
+      if (crosses) {
+        summary.bellWindows.warnings.push(
+          `${w.label as string} (${dhakaDayKey(w.fromDate)} – ${dhakaDayKey(w.toDate)}) বছরের সীমা পার হয় — ${tk.getTime() < fk.getTime() ? "ছাঁটার পরে কিছু বাকি থাকে না, বাদ" : `${dhakaDayKey(fk)} – ${dhakaDayKey(tk)}-এ ছাঁটা হবে`}`,
+        );
+      }
+      if (tk.getTime() < fk.getTime()) continue;
+      c.windowsDesired.push({ fromDate: fk, toDate: tk, season: w.season as string, dayStartMinutes: w.dayStartMinutes as number, label: w.label as string });
+    }
     const toWins = await ScheduleWindow.find({ academicYearId: toYear._id }).lean();
     const winKey = (w: { fromDate: Date; toDate: Date; season: string; dayStartMinutes: number; label: string }): string => `${new Date(w.fromDate).getTime()}|${new Date(w.toDate).getTime()}|${w.season}|${w.dayStartMinutes}|${w.label}`;
     c.windowsOwned = toWins.filter((w) => runId && w.runId === runId).map((w) => ({ _id: w._id, k: winKey(w as never) }));
-    const foreign = toWins.filter((w) => !(runId && w.runId === runId));
-    if (c.windowsOwned.length === 0 && foreign.length > 0) {
+    const foreignWins = toWins.filter((w) => !(runId && w.runId === runId));
+    if (c.windowsOwned.length === 0 && foreignWins.length > 0) {
       c.windowsBlocked = true;
-      summary.bellWindows.skipped = `${toYear.label} বর্ষে ${foreign.length}টি ঘণ্টার সময়সূচি আগে থেকেই আছে — কপি হবে না।`;
+      summary.bellWindows.skipped = `${toYear.label} বর্ষে ${foreignWins.length}টি ঘণ্টার সময়সূচি আগে থেকেই আছে — কপি হবে না।`;
     } else if (fromWins.length === 0) {
       summary.bellWindows.skipped = `${fromYear.label} বর্ষে কপি করার ঘণ্টার সময়সূচি নেই।`;
     } else {
@@ -354,9 +488,9 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
   }
 
   // ---- assignment schedule ---------------------------------------------------------------------
-  if (opts.assignmentSchedule) {
+  if (mode === "prepare" && opts.assignmentSchedule) {
     const fromSched = await AssignmentSchedule.findOne({ academicYearId: fromYear._id }).lean();
-    const toSched = await AssignmentSchedule.findOne({ academicYearId: toYear._id }).select("runId").lean();
+    const toSched = await AssignmentSchedule.findOne({ academicYearId: toYear._id }).lean();
     c.toScheduleDoc = toSched ? { _id: toSched._id, runId: toSched.runId } : null;
     if (!fromSched) summary.assignment.skipped = `${fromYear.label} বর্ষের অ্যাসাইনমেন্ট সূচি নেই।`;
     else if (toSched && !(runId && toSched.runId === runId)) {
@@ -386,34 +520,59 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
       summary.assignment.entries = c.assignmentEntries.length;
       summary.assignment.existing = !!toSched;
       if (dropped) summary.assignment.skipped = `${dropped}টি এন্ট্রির শাখা নতুন বছরে নেই — বাদ।`;
+      // modified since the run wrote it: keep the Principal's version
+      if (toSched && c.run?.assignmentHash && scheduleSig(toSched as never) !== c.run.assignmentHash) {
+        c.assignmentKept = true;
+        summary.assignment.keptEdit = true;
+      }
     }
   }
 
   // ---- grants ----------------------------------------------------------------------------------
   if (opts.grants) {
-    // routine teaching grants for the copied 2027 slots (the existing binding rules)
-    if (opts.routine) {
-      const codes = [...new Set(c.desired.map((d) => d.src.subject as string))];
-      const subjects = await Subject.find({ code: { $in: codes } }).select("code").lean();
-      const subjectOf = new Map(subjects.map((s) => [s.code as string, s._id as Types.ObjectId]));
-      const seen = new Set<string>();
+    // The 2027 routine teaching grants (decision A): planned here, CREATED at the cut-over from the
+    // 2027 rows as they stand then. At prepare the planned copies are overlaid on what is there.
+    const effective = new Map<string, { teacherId: string | null; subject: string; isBreak: boolean; sectionId: string; level: number }>();
+    const realToSec = [...toSectionInfo.keys()].map(oid);
+    if (realToSec.length) {
+      const rows = (await RoutineSlot.find({
+        groupType: "section",
+        groupId: { $in: realToSec },
+        active: true,
+        $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: startOfDay(fromDate) } }],
+      }).lean()) as unknown as IRoutineSlot[];
+      for (const r of rows) {
+        effective.set(`${sid(r.groupId)}|${r.dayOfWeek}|${r.periodNumber}`, { teacherId: r.teacherId ? sid(r.teacherId) : null, subject: r.subject, isBreak: !!r.isBreak, sectionId: sid(r.groupId), level: (toSectionInfo.get(sid(r.groupId)) as { level: number }).level });
+      }
+    }
+    if (mode === "prepare" && opts.routine) {
+      for (const o of c.removeOwn) effective.delete(`${sid(o.groupId)}|${o.dayOfWeek}|${o.periodNumber}`);
       for (const d of c.desired) {
-        const gp = routineGrantPlan({ groupType: "section", isBreak: !!d.src.isBreak, teacherId: d.src.teacherId ? sid(d.src.teacherId) : null, subject: d.src.subject }, ROUTINE_GRANT_SUBJECTS);
-        if (!gp.bind || !d.src.teacherId) continue;
-        const subjectId = subjectOf.get(d.src.subject);
-        if (!subjectId) continue;
-        const k = `${sid(d.src.teacherId)}|${d.targetSectionId}|${sid(subjectId)}`;
-        if (seen.has(k)) continue;
-        seen.add(k);
-        c.routineGrantsDesired.push({ teacherId: sid(d.src.teacherId), sectionId: d.targetSectionId, classId: classIdFor(d.level), subjectId, subjectCode: d.src.subject });
+        if (d.state !== "create" && d.state !== "update") continue;
+        effective.set(d.key, { teacherId: d.src.teacherId ? sid(d.src.teacherId) : null, subject: d.src.subject, isBreak: !!d.src.isBreak, sectionId: d.targetSectionId, level: d.level });
       }
-      const realIds = c.routineGrantsDesired.filter((g) => !g.sectionId.startsWith("pending:")).map((g) => oid(g.sectionId));
-      const have = (realIds.length ? await ScopeGrant.find({ kind: "teaching", source: "routine", sectionId: { $in: realIds } }).select("teacherId sectionId subjectId").lean() : []) as unknown as GrantLite[];
-      const haveKeys = new Set(have.map((g) => `${sid(g.teacherId)}|${sid(g.sectionId)}|${sid(g.subjectId)}`));
-      for (const g of c.routineGrantsDesired) {
-        if (haveKeys.has(`${g.teacherId}|${g.sectionId}|${sid(g.subjectId)}`)) summary.grants.routineTeachingExisting++;
-        else summary.grants.routineTeachingToCreate++;
-      }
+    }
+    const codes = [...new Set([...effective.values()].map((e) => e.subject))];
+    const subjects = await Subject.find({ code: { $in: codes } }).select("code").lean();
+    const subjectOf = new Map(subjects.map((s) => [s.code as string, s._id as Types.ObjectId]));
+    const seenG = new Set<string>();
+    for (const e of effective.values()) {
+      const gp = routineGrantPlan({ groupType: "section", isBreak: e.isBreak, teacherId: e.teacherId, subject: e.subject as RoutineSubject }, ROUTINE_GRANT_SUBJECTS);
+      if (!gp.bind || !e.teacherId) continue;
+      const subjectId = subjectOf.get(e.subject);
+      if (!subjectId) continue;
+      const k = `${e.teacherId}|${e.sectionId}|${sid(subjectId)}`;
+      if (seenG.has(k)) continue;
+      seenG.add(k);
+      c.routineGrantsDesired.push({ teacherId: e.teacherId, sectionId: e.sectionId, classId: classIdFor(e.level), subjectId, subjectCode: e.subject });
+    }
+    const realIds = c.routineGrantsDesired.filter((g) => !g.sectionId.startsWith("pending:")).map((g) => oid(g.sectionId));
+    // only ACTIVE grants count as "already have it" (an inactive one is switched back on, decision A)
+    const have = (realIds.length ? await ScopeGrant.find({ kind: "teaching", source: "routine", active: true, sectionId: { $in: realIds } }).select("teacherId sectionId subjectId").lean() : []) as unknown as GrantLite[];
+    const haveKeys = new Set(have.map((g) => `${sid(g.teacherId)}|${sid(g.sectionId)}|${sid(g.subjectId)}`));
+    for (const g of c.routineGrantsDesired) {
+      if (haveKeys.has(`${g.teacherId}|${g.sectionId}|${sid(g.subjectId)}`)) summary.grants.routineTeachingExisting++;
+      else summary.grants.routineTeachingToCreate++;
     }
 
     // 2026 routine teaching grants lapse on the first routine day
@@ -478,7 +637,7 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
   }
 
   // ---- mastery switches ------------------------------------------------------------------------
-  if (opts.mastery) {
+  if (mode === "prepare" && opts.mastery) {
     const fromRows = await MasteryEnablement.find({ academicYearId: fromYear._id, enabled: true }).lean();
     const toRows = await MasteryEnablement.find({ academicYearId: toYear._id }).lean();
     const toKeys = new Map(toRows.map((r) => [`${r.classToken}|${r.subject}`, r]));
@@ -503,10 +662,56 @@ async function compute(plan: YearChangePlan, optsIn: CopyOptions | undefined, fr
   return c;
 }
 
+async function loadYears(fromYearId: unknown, toYearId: unknown): Promise<[YearLite, YearLite]> {
+  return (await Promise.all([AcademicYear.findById(fromYearId).select("label startDate").lean(), AcademicYear.findById(toYearId).select("label startDate").lean()])) as [YearLite, YearLite];
+}
+
 /** The dry run: reads only. */
 export async function planScheduleCopy(plan: YearChangePlan, optsIn: CopyOptions | undefined, fromYear: YearLite, toYear: YearLite): Promise<ScheduleCopyPlan> {
   const c = await compute(plan, optsIn, fromYear, toYear, plan.runId);
   return c.summary;
+}
+
+/** Conflicts the copy would hit right now. applyPrepare calls this BEFORE its first write (decision I). */
+export async function precheckScheduleCopy(plan: YearChangePlan, runId: string): Promise<string[]> {
+  const [fromYear, toYear] = await loadYears(plan.fromYearId, plan.toYearId);
+  const c = await compute(plan, plan.scheduleCopy.options, fromYear, toYear, runId);
+  return c.summary.routine.conflicts.map((x) => `রুটিন কপি: ${x}`);
+}
+
+export interface CopyDrift {
+  /** Blocks the cut-over (a clash among the 2027 rows). */
+  refusals: string[];
+  /** Lines for the cut-over dry run. */
+  lines: string[];
+  endsToStamp: number;
+  lapsesToStamp: number;
+  grantsToCreate: number;
+}
+
+/** The cut-over dry run's view of the copy: what drifted since the prepare and what the cut-over will stamp/create. */
+export async function planCopyDrift(runId: string): Promise<CopyDrift> {
+  const run = await YearChangeRun.findOne({ runId }).select("fromYearId toYearId copyOptions").lean();
+  if (!run) return { refusals: [], lines: [], endsToStamp: 0, lapsesToStamp: 0, grantsToCreate: 0 };
+  const [fromYear, toYear] = await loadYears(run.fromYearId, run.toYearId);
+  const c = await compute(null, run.copyOptions as CopyOptions | undefined, fromYear, toYear, runId, "cutover");
+  const s = c.summary;
+  const lines: string[] = [];
+  if (s.routine.pastToEnd) lines.push(`পুরোনো রুটিন সারি শেষ করা হবে: ${s.routine.pastToEnd}`);
+  const lapses = s.grants.pastRoutineToExpire + s.grants.pastRepointedToExpire;
+  if (lapses) lines.push(`পুরোনো অনুমতি ${c.fromKey}-এ শেষ করা হবে: ${lapses}`);
+  if (s.grants.routineTeachingToCreate || s.grants.repointToCreate) lines.push(`${toYear.label} বর্ষের অনুমতি তৈরি হবে: রুটিন-শিক্ষকতা ${s.grants.routineTeachingToCreate}, তত্ত্বাবধান/অর্পণ ${s.grants.repointToCreate}`);
+  if (s.routine.slotsToCreate || s.routine.slotsToUpdate || s.routine.slotsToRemove) {
+    lines.push(`প্রস্তুতির পরে ২০২৬ রুটিন বদলেছে — কপিতে মেলেনি: নতুন ${s.routine.slotsToCreate}, বদলাবে ${s.routine.slotsToUpdate}, মুছবে ${s.routine.slotsToRemove} (প্রস্তুতি আবার চালালে মিলবে)`);
+  }
+  for (const n of s.routine.notes) lines.push(n);
+  return {
+    refusals: s.routine.conflicts.map((x) => `রুটিন কপি: ${x}`),
+    lines,
+    endsToStamp: s.routine.pastToEnd,
+    lapsesToStamp: lapses,
+    grantsToCreate: s.grants.routineTeachingToCreate + s.grants.repointToCreate,
+  };
 }
 
 export interface ScheduleCopyWrites {
@@ -526,31 +731,71 @@ export class ScheduleCopyRefusal extends Error {
   }
 }
 
-/** The write. Runs after the next year's classes + sections exist. Idempotent. */
+type RunDoc = IYearChangeRun;
+
+/** End the 2026 rows: record the previous value on the run FIRST (undo restores it), then stamp. */
+async function stampEnds(c: Computed, run: RunDoc, w: ScheduleCopyWrites): Promise<void> {
+  if (!c.toEnd.length) return;
+  const known = new Set(run.routineEnds.map((e) => e.slotId));
+  const add = c.toEnd.filter((s) => !known.has(sid(s._id))).map((s) => ({ slotId: sid(s._id), previous: s.effectiveTo ? new Date(s.effectiveTo).toISOString() : null }));
+  if (add.length) {
+    run.routineEnds = [...run.routineEnds, ...add];
+    run.markModified("routineEnds");
+    await run.save();
+  }
+  for (const s of c.toEnd) {
+    await RoutineSlot.updateOne({ _id: s._id }, { $set: { effectiveTo: c.endDate } });
+    w.routineEnded++;
+  }
+}
+
+/** Lapse the 2026 routine grants and the re-pointed originals on the first routine day (previous value recorded first). */
+async function stampLapses(c: Computed, runId: string, w: ScheduleCopyWrites): Promise<void> {
+  const stamp = [...c.pastRoutineGrants, ...c.pastRepointExpire];
+  if (!stamp.length) return;
+  const fresh = await YearChangeRun.findOne({ runId });
+  if (fresh) {
+    const known = new Set(fresh.grantExpiries.map((e) => e.grantId));
+    const add = stamp.filter((g) => !known.has(sid(g._id))).map((g) => ({ grantId: sid(g._id), previous: g.previous ? g.previous.toISOString() : null }));
+    if (add.length) {
+      fresh.grantExpiries = [...fresh.grantExpiries, ...add];
+      fresh.markModified("grantExpiries");
+      await fresh.save();
+    }
+  }
+  for (const g of stamp) {
+    await ScopeGrant.updateOne({ _id: g._id }, { $set: { expiresAt: c.expiryAt } });
+    w.grantsExpired++;
+  }
+}
+
+/** The write at PREPARE. Runs after the next year's classes + sections exist. Idempotent. */
 export async function applyScheduleCopy(plan: YearChangePlan, runId: string, actorId: Types.ObjectId): Promise<ScheduleCopyWrites> {
   const w: ScheduleCopyWrites = { ...NO_COPY_WRITES };
-  const [fromYear, toYear] = (await Promise.all([
-    AcademicYear.findById(plan.fromYearId).select("label startDate").lean(),
-    AcademicYear.findById(plan.toYearId).select("label startDate").lean(),
-  ])) as [YearLite, YearLite];
+  const [fromYear, toYear] = await loadYears(plan.fromYearId, plan.toYearId);
   const c = await compute(plan, plan.scheduleCopy.options, fromYear, toYear, runId);
   if (c.summary.routine.conflicts.length) throw new ScheduleCopyRefusal(c.summary.routine.conflicts.map((x) => `রুটিন কপি: ${x}`));
   const run = await YearChangeRun.findOne({ runId });
   if (!run) throw new ScheduleCopyRefusal([`রান ${runId} পাওয়া যায়নি।`]);
+  if (JSON.stringify(run.copyOptions ?? null) !== JSON.stringify(c.opts)) {
+    run.copyOptions = { ...c.opts };
+    run.markModified("copyOptions");
+    await run.save();
+  }
 
   // ---- routine ---------------------------------------------------------------------------------
   if (c.opts.routine) {
-    const wanted = new Set<string>();
     for (const d of c.desired) {
-      wanted.add(d.key);
-      const o = c.ownCopies.get(d.key);
+      if (d.state !== "create" && d.state !== "update") continue;
       const fields = {
         subject: d.src.subject as RoutineSubject,
         track: d.src.track as PeriodTrack,
         isBreak: !!d.src.isBreak,
         effectiveFrom: c.fromDate,
+        copiedFromSlotId: d.src._id,
+        copyHash: slotCopyHash({ groupId: d.targetSectionId, dayOfWeek: d.src.dayOfWeek, periodNumber: d.src.periodNumber, subject: d.src.subject, track: d.src.track, isBreak: !!d.src.isBreak, teacherId: d.src.teacherId, roomId: d.src.roomId }),
       };
-      if (!o) {
+      if (d.state === "create") {
         await RoutineSlot.create({
           groupType: "section",
           groupId: oid(d.targetSectionId),
@@ -564,46 +809,30 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
           createdBy: actorId,
           runId,
         });
-        w.routineSlots++;
-        continue;
+      } else {
+        const o = c.ownCopies.get(d.key) as IRoutineSlot;
+        await RoutineSlot.updateOne(
+          { _id: o._id },
+          {
+            $set: { ...fields, ...(d.src.teacherId ? { teacherId: d.src.teacherId } : {}), ...(d.src.roomId ? { roomId: d.src.roomId } : {}) },
+            $unset: { effectiveTo: 1, ...(d.src.teacherId ? {} : { teacherId: 1 }), ...(d.src.roomId ? {} : { roomId: 1 }) },
+          },
+        );
       }
-      const same =
-        o.subject === d.src.subject &&
-        o.track === d.src.track &&
-        !!o.isBreak === !!d.src.isBreak &&
-        sid(o.teacherId ?? "") === sid(d.src.teacherId ?? "") &&
-        sid(o.roomId ?? "") === sid(d.src.roomId ?? "") &&
-        new Date(o.effectiveFrom).getTime() === c.fromDate.getTime() &&
-        !o.effectiveTo;
-      if (same) continue;
-      await RoutineSlot.updateOne(
-        { _id: o._id },
-        {
-          $set: { ...fields, ...(d.src.teacherId ? { teacherId: d.src.teacherId } : {}), ...(d.src.roomId ? { roomId: d.src.roomId } : {}) },
-          $unset: { effectiveTo: 1, ...(d.src.teacherId ? {} : { teacherId: 1 }), ...(d.src.roomId ? {} : { roomId: 1 }) },
-        },
-      );
       w.routineSlots++;
     }
-    for (const [k, o] of c.ownCopies) {
-      if (wanted.has(k)) continue;
+    for (const o of c.removeOwn) {
       await RoutineSlot.deleteOne({ _id: o._id, runId });
       w.routineSlots++;
     }
-    // End the copied 2026 rows: record the previous value on the run FIRST (undo restores it).
-    if (c.toEnd.length) {
-      const known = new Set(run.routineEnds.map((e) => e.slotId));
-      const add = c.toEnd.filter((s) => !known.has(sid(s._id))).map((s) => ({ slotId: sid(s._id), previous: s.effectiveTo ? new Date(s.effectiveTo).toISOString() : null }));
-      if (add.length) {
-        run.routineEnds = [...run.routineEnds, ...add];
-        run.markModified("routineEnds");
-        await run.save();
-      }
-      for (const s of c.toEnd) {
-        await RoutineSlot.updateOne({ _id: s._id }, { $set: { effectiveTo: c.endDate } });
-        w.routineEnded++;
-      }
+    // remember which sources were copied: a copy that is gone later was deleted by the Principal
+    const copied = new Set(run.copiedSources);
+    for (const d of c.desired) if (d.state === "create" || d.state === "update" || d.state === "same" || d.state === "kept") copied.add(sid(d.src._id));
+    if (copied.size !== run.copiedSources.length) {
+      run.copiedSources = [...copied];
+      await run.save();
     }
+    await stampEnds(c, run, w);
   }
 
   // ---- bell windows ----------------------------------------------------------------------------
@@ -624,90 +853,29 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
   }
 
   // ---- assignment schedule ---------------------------------------------------------------------
-  if (c.opts.assignmentSchedule && c.fromSchedule) {
+  if (c.opts.assignmentSchedule && c.fromSchedule && !c.assignmentKept) {
     const entries = c.assignmentEntries.map((e) => ({ ...e, classId: oid(e.classId), sectionId: oid(e.sectionId), teacherId: oid(e.teacherId) }));
     const termStartDate = atMidnight(keyDate(c.fromKey));
+    const wanted = { termStartDate, deliveryDayOfWeek: c.fromSchedule.deliveryDayOfWeek, dueDayOfWeek: c.fromSchedule.dueDayOfWeek, entries };
+    const wantedSig = scheduleSig(wanted);
     if (!c.toScheduleDoc) {
-      await AssignmentSchedule.create({
-        academicYearId: c.toYear._id,
-        termStartDate,
-        deliveryDayOfWeek: c.fromSchedule.deliveryDayOfWeek,
-        dueDayOfWeek: c.fromSchedule.dueDayOfWeek,
-        entries,
-        runId,
-      });
+      await AssignmentSchedule.create({ academicYearId: c.toYear._id, ...wanted, runId });
       w.assignmentSchedule++;
     } else {
       const cur = await AssignmentSchedule.findById(c.toScheduleDoc._id);
-      const sig = (list: Array<{ cycleWeek: number; sectionId: unknown; subject: string; teacherId: unknown; classId: unknown }>): string =>
-        list
-          .map((e) => `${e.cycleWeek}|${sid(e.sectionId)}|${e.subject}|${sid(e.teacherId)}|${sid(e.classId)}`)
-          .sort()
-          .join(",");
-      if (cur && (sig(cur.entries) !== sig(entries) || cur.termStartDate.getTime() !== termStartDate.getTime() || cur.deliveryDayOfWeek !== c.fromSchedule.deliveryDayOfWeek || cur.dueDayOfWeek !== c.fromSchedule.dueDayOfWeek)) {
-        await AssignmentSchedule.updateOne(
-          { _id: cur._id },
-          { $set: { termStartDate, deliveryDayOfWeek: c.fromSchedule.deliveryDayOfWeek, dueDayOfWeek: c.fromSchedule.dueDayOfWeek, entries } },
-        );
+      if (cur && scheduleSig(cur as never) !== wantedSig) {
+        await AssignmentSchedule.updateOne({ _id: cur._id }, { $set: wanted });
         w.assignmentSchedule++;
       }
     }
+    if (run.assignmentHash !== wantedSig) {
+      run.assignmentHash = wantedSig;
+      await run.save();
+    }
   }
 
-  // ---- grants ----------------------------------------------------------------------------------
-  if (c.opts.grants) {
-    if (c.opts.routine) {
-      const wantKeys = new Set<string>();
-      for (const g of c.routineGrantsDesired) {
-        wantKeys.add(`${g.teacherId}|${g.sectionId}|${sid(g.subjectId)}`);
-        const have = await ScopeGrant.findOne({ teacherId: oid(g.teacherId), kind: "teaching", sectionId: oid(g.sectionId), subjectId: g.subjectId, source: "routine" }).select("_id").lean();
-        if (have) continue;
-        await ScopeGrant.create({ teacherId: oid(g.teacherId), kind: "teaching", classId: oid(g.classId), sectionId: oid(g.sectionId), subjectId: g.subjectId, source: "routine", active: true, createdBy: actorId, runId });
-        w.grants++;
-      }
-      for (const old of (await ScopeGrant.find({ runId, kind: "teaching", source: "routine" }).select("teacherId sectionId subjectId").lean()) as unknown as GrantLite[]) {
-        if (wantKeys.has(`${sid(old.teacherId)}|${sid(old.sectionId)}|${sid(old.subjectId)}`)) continue;
-        await ScopeGrant.deleteOne({ _id: old._id, runId });
-        w.grants++;
-      }
-    }
-    // record the previous expiries on the run BEFORE stamping (undo restores them)
-    const stamp = [...c.pastRoutineGrants, ...c.pastRepointExpire];
-    if (stamp.length) {
-      const fresh = await YearChangeRun.findOne({ runId });
-      if (fresh) {
-        const known = new Set(fresh.grantExpiries.map((e) => e.grantId));
-        const add = stamp.filter((g) => !known.has(sid(g._id))).map((g) => ({ grantId: sid(g._id), previous: g.previous ? g.previous.toISOString() : null }));
-        if (add.length) {
-          fresh.grantExpiries = [...fresh.grantExpiries, ...add];
-          fresh.markModified("grantExpiries");
-          await fresh.save();
-        }
-      }
-      for (const g of stamp) {
-        await ScopeGrant.updateOne({ _id: g._id }, { $set: { expiresAt: c.expiryAt } });
-        w.grantsExpired++;
-      }
-    }
-    // the 2027 copies of re-pointed supervisory / delegation grants
-    const keep = new Set<string>();
-    for (const r of c.repoints) {
-      keep.add(sid(r.orig._id));
-      if (!r.clone) continue;
-      const have = await ScopeGrant.findOne({ runId, repointedFrom: r.orig._id }).select("_id").lean();
-      if (have) continue;
-      const doc = { ...r.clone } as Record<string, unknown>;
-      if (typeof doc.classId === "string") doc.classId = oid(doc.classId);
-      if (Array.isArray(doc.explicitSet)) doc.explicitSet = (doc.explicitSet as Array<{ classId: unknown; subjectId: unknown }>).map((p) => ({ classId: typeof p.classId === "string" ? oid(p.classId) : p.classId, subjectId: p.subjectId }));
-      await ScopeGrant.create({ ...doc, active: true, source: "manual", createdBy: actorId, runId, repointedFrom: r.orig._id });
-      w.grants++;
-    }
-    for (const old of await ScopeGrant.find({ runId, repointedFrom: { $exists: true } }).select("repointedFrom").lean()) {
-      if (keep.has(sid(old.repointedFrom))) continue;
-      await ScopeGrant.deleteOne({ _id: old._id, runId });
-      w.grants++;
-    }
-  }
+  // ---- grants: only the old-year lapses now; the 2027 grants are made at the cut-over ----------
+  if (c.opts.grants) await stampLapses(c, runId, w);
 
   // ---- mastery switches ------------------------------------------------------------------------
   if (c.opts.mastery) {
@@ -725,4 +893,92 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
     }
   }
   return w;
+}
+
+export interface CutoverCopyWrites {
+  ends: number;
+  lapses: number;
+  grants: number;
+}
+
+/**
+ * The cut-over's share of the copy (decision A + E): re-check the copy, finish any 2026 end or lapse that
+ * a December edit left open (idempotent, tagged with the run), then create the 2027 grants from the 2027
+ * rows as they stand NOW - routine teaching grants plus the supervisory/delegation clones.
+ */
+export async function applyCutoverCopy(runId: string, actorId: Types.ObjectId): Promise<CutoverCopyWrites> {
+  const out: CutoverCopyWrites = { ends: 0, lapses: 0, grants: 0 };
+  const run = await YearChangeRun.findOne({ runId });
+  if (!run) return out;
+  const [fromYear, toYear] = await loadYears(run.fromYearId, run.toYearId);
+  const c = await compute(null, run.copyOptions as CopyOptions | undefined, fromYear, toYear, runId, "cutover");
+  if (c.summary.routine.conflicts.length) throw new ScheduleCopyRefusal(c.summary.routine.conflicts.map((x) => `রুটিন কপি: ${x}`));
+  const w: ScheduleCopyWrites = { ...NO_COPY_WRITES };
+  if (c.opts.routine) {
+    await stampEnds(c, run, w);
+    out.ends = w.routineEnded;
+  }
+  if (!c.opts.grants) return out;
+  await stampLapses(c, runId, w);
+  out.lapses = w.grantsExpired;
+
+  // 2027 routine teaching grants
+  const wantKeys = new Set<string>();
+  const reactivated = new Set(run.grantReactivated);
+  for (const g of c.routineGrantsDesired) {
+    wantKeys.add(`${g.teacherId}|${g.sectionId}|${sid(g.subjectId)}`);
+    const have = await ScopeGrant.findOne({ teacherId: oid(g.teacherId), kind: "teaching", sectionId: oid(g.sectionId), subjectId: g.subjectId, source: "routine" }).select("_id active").lean();
+    if (have?.active) continue;
+    if (have) {
+      // an inactive grant for the same teacher + section + subject: switch it back on, stamped with the run
+      await ScopeGrant.updateOne({ _id: have._id }, { $set: { active: true, runId }, $unset: { expiresAt: 1 } });
+      reactivated.add(sid(have._id));
+      out.grants++;
+      continue;
+    }
+    await ScopeGrant.create({ teacherId: oid(g.teacherId), kind: "teaching", classId: oid(g.classId), sectionId: oid(g.sectionId), subjectId: g.subjectId, source: "routine", active: true, createdBy: actorId, runId });
+    out.grants++;
+  }
+  for (const old of (await ScopeGrant.find({ runId, kind: "teaching", source: "routine" }).select("teacherId sectionId subjectId").lean()) as unknown as GrantLite[]) {
+    if (wantKeys.has(`${sid(old.teacherId)}|${sid(old.sectionId)}|${sid(old.subjectId)}`)) continue;
+    if (reactivated.has(sid(old._id))) {
+      await ScopeGrant.updateOne({ _id: old._id }, { $set: { active: false }, $unset: { runId: 1 } });
+      reactivated.delete(sid(old._id));
+    } else await ScopeGrant.deleteOne({ _id: old._id, runId });
+    out.grants++;
+  }
+  if (reactivated.size !== run.grantReactivated.length) {
+    run.grantReactivated = [...reactivated];
+    await run.save();
+  }
+
+  // the 2027 copies of re-pointed supervisory / delegation grants
+  const keep = new Set<string>();
+  for (const r of c.repoints) {
+    keep.add(sid(r.orig._id));
+    if (!r.clone) continue;
+    const have = await ScopeGrant.findOne({ runId, repointedFrom: r.orig._id }).select("_id").lean();
+    if (have) continue;
+    const doc = { ...r.clone } as Record<string, unknown>;
+    if (typeof doc.classId === "string") doc.classId = oid(doc.classId);
+    if (Array.isArray(doc.explicitSet)) doc.explicitSet = (doc.explicitSet as Array<{ classId: unknown; subjectId: unknown }>).map((p) => ({ classId: typeof p.classId === "string" ? oid(p.classId) : p.classId, subjectId: p.subjectId }));
+    await ScopeGrant.create({ ...doc, active: true, source: "manual", createdBy: actorId, runId, repointedFrom: r.orig._id });
+    out.grants++;
+  }
+  for (const old of await ScopeGrant.find({ runId, repointedFrom: { $exists: true } }).select("repointedFrom").lean()) {
+    if (keep.has(sid(old.repointedFrom))) continue;
+    await ScopeGrant.deleteOne({ _id: old._id, runId });
+    out.grants++;
+  }
+  return out;
+}
+
+/** Take back the grants a cut-over made: created ones are deleted, reactivated ones switched off again. */
+export async function releaseRunGrants(runId: string, reactivatedIds: string[]): Promise<number> {
+  let n = 0;
+  if (reactivatedIds.length) {
+    n += (await ScopeGrant.updateMany({ runId, _id: { $in: reactivatedIds.map(oid) } }, { $set: { active: false }, $unset: { runId: 1 } })).modifiedCount;
+  }
+  n += (await ScopeGrant.deleteMany({ runId })).deletedCount ?? 0;
+  return n;
 }

@@ -66,17 +66,21 @@ function printScheduleCopy(p: YearChangePlan): string[] {
   if (s.options.routine) {
     for (const r of s.routine.sections) out.push(`    ${levelBn(r.level)} ${SECTION_LABEL_BN[r.code]}: ${r.slots}টি পিরিয়ড`);
     out.push(`    নতুন ${s.routine.slotsToCreate}, আগে থেকে ${s.routine.slotsExisting}, বদলাবে ${s.routine.slotsToUpdate}, মুছবে ${s.routine.slotsToRemove}; পুরোনো সারি শেষ হবে ${s.routine.pastToEnd}`);
-    for (const u of s.routine.unmapped) out.push(`    কপি হবে না (নতুন বছরে শাখা নেই): ${u}`);
+    for (const u of s.routine.unmapped) out.push(`    কপি হবে না (নতুন বছরে শাখা নেই; পুরোনো সারি শেষ হবে): ${u}`);
+    for (const n of s.routine.notes) out.push(`    ${n}`);
     for (const x of s.routine.conflicts) out.push(`    সংঘাত: ${x}`);
   }
   out.push(`  ঘণ্টার সময়সূচি: ${on(s.options.bellWindows)}`);
-  if (s.options.bellWindows) out.push(`    নতুন ${s.bellWindows.toCreate}, আগে থেকে ${s.bellWindows.existing}, মুছবে ${s.bellWindows.toRemove}${s.bellWindows.skipped ? ` — ${s.bellWindows.skipped}` : ""}`);
+  if (s.options.bellWindows) {
+    out.push(`    নতুন ${s.bellWindows.toCreate}, আগে থেকে ${s.bellWindows.existing}, মুছবে ${s.bellWindows.toRemove}${s.bellWindows.skipped ? ` — ${s.bellWindows.skipped}` : ""}`);
+    for (const x of s.bellWindows.warnings) out.push(`    সতর্কতা: ${x}`);
+  }
   out.push(`  অ্যাসাইনমেন্ট সূচি: ${on(s.options.assignmentSchedule)}`);
-  if (s.options.assignmentSchedule) out.push(`    এন্ট্রি ${s.assignment.entries}${s.assignment.existing ? " (সূচি আছে)" : ""}${s.assignment.skipped ? ` — ${s.assignment.skipped}` : ""}`);
+  if (s.options.assignmentSchedule) out.push(`    এন্ট্রি ${s.assignment.entries}${s.assignment.existing ? " (সূচি আছে)" : ""}${s.assignment.skipped ? ` — ${s.assignment.skipped}` : ""}${s.assignment.keptEdit ? " — আপনি সূচি বদলেছেন, আপনারটিই রাখা হলো (kept your edit)" : ""}`);
   out.push(`  অনুমতি (গ্রান্ট): ${on(s.options.grants)}`);
   if (s.options.grants) {
     const g = s.grants;
-    out.push(`    ২০২৭ রুটিন-শিক্ষকতা: নতুন ${g.routineTeachingToCreate} (আগে থেকে ${g.routineTeachingExisting}); পুরোনো রুটিন-অনুমতি ${s.fromKey} এ শেষ: ${g.pastRoutineToExpire}`);
+    out.push(`    ২০২৭ রুটিন-শিক্ষকতা (কাট-ওভারে তৈরি হবে): নতুন ${g.routineTeachingToCreate} (আগে থেকে ${g.routineTeachingExisting}); পুরোনো রুটিন-অনুমতি ${s.fromKey} এ শেষ: ${g.pastRoutineToExpire}`);
     out.push(`    তত্ত্বাবধান/অর্পণ অনুমতি নতুন শ্রেণিতে: নতুন ${g.repointToCreate} (আগে থেকে ${g.repointExisting}); পুরোনোটি শেষ হবে ${g.pastRepointedToExpire}`);
   }
   out.push(`  দক্ষতা (মাস্টারি) সুইচ: ${on(s.options.mastery)}`);
@@ -95,6 +99,7 @@ export function printCutover(p: CutoverPlan): string {
   out.push(`নতুন তালিকাভুক্তি চালু হবে ${p.startKey} (${p.activating} টি; ভর্তি ${p.admitted})`);
   out.push(`শিক্ষার্থীর শ্রেণি/শাখা বদলাবে: ${p.studentsChanged}; পঞ্চম শ্রেণির বৃত্তি চিহ্ন মুছবে: ${p.scholarshipCleared}`);
   out.push(`শ্রেণিভিত্তিক উন্নতি-কাজ শেষ হবে: ${p.improvementToEnd}`);
+  for (const l of p.copy.lines) out.push(`রুটিন কপি: ${l}`);
   out.push(`চলতি বর্ষ হবে: ${p.toLabel}`);
   const OUT: Record<string, string> = { PROMOTED: "উত্তীর্ণ", REPEATED: "পুনরায়", LEFT: "চলে গেছে", ADMITTED: "নতুন ভর্তি" };
   const lvl = (l: number | null, c: string | null): string => (l === null ? "—" : `${levelBn(l)}${c ? " " + (SECTION_LABEL_BN[c as keyof typeof SECTION_LABEL_BN] ?? c) : ""}`);
@@ -116,11 +121,14 @@ const UNDO_LABELS_BN: Record<string, string> = {
   classTeachersRestored: "ফিরবে: আগের শ্রেণি শিক্ষক",
   routineSlots: "মুছবে: কপি করা রুটিন পিরিয়ড",
   routineEndsCleared: "ফিরবে: পুরোনো রুটিন সারির শেষ তারিখ",
+  routineEndsSkipped: "যেমন আছে তেমন থাকবে (প্রস্তুতির পরে বদলেছে): রুটিন সারি",
   scheduleWindows: "মুছবে: ঘণ্টার সময়সূচি",
   assignmentSchedules: "মুছবে: অ্যাসাইনমেন্ট সূচি",
   masteryEnablements: "মুছবে: দক্ষতা সুইচ",
   grantsCreated: "মুছবে: অনুমতি (গ্রান্ট)",
   grantExpiriesCleared: "ফিরবে: পুরোনো অনুমতির শেষ তারিখ",
+  grantExpiriesSkipped: "যেমন আছে তেমন থাকবে (প্রস্তুতির পরে বদলেছে): অনুমতি",
+  grantsRemoved: "মুছবে: কাট-ওভারে তৈরি অনুমতি (গ্রান্ট)",
   studentsRestored: "ফিরবে: শিক্ষার্থীর আগের অবস্থা",
   pastEnrolmentsReopened: "আবার চালু হবে: পুরোনো বছরের তালিকাভুক্তি",
   newEnrolmentsToPlanned: "আবার প্ল্যান করা হবে: নতুন বছরের তালিকাভুক্তি",

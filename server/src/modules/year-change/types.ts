@@ -140,9 +140,11 @@ export interface ScheduleCopyPlan {
     unmapped: string[];
     /** Every clash the conflict engine found for the copied set (blocks the prepare). */
     conflicts: string[];
+    /** Re-run reconciliation lines: "kept your edit", "you deleted it", "kept your cell", duplicates ended. */
+    notes: string[];
   };
-  bellWindows: { toCreate: number; existing: number; toRemove: number; skipped: string | null };
-  assignment: { entries: number; existing: boolean; skipped: string | null };
+  bellWindows: { toCreate: number; existing: number; toRemove: number; skipped: string | null; warnings: string[] };
+  assignment: { entries: number; existing: boolean; skipped: string | null; keptEdit: boolean };
   grants: {
     routineTeachingToCreate: number;
     routineTeachingExisting: number;

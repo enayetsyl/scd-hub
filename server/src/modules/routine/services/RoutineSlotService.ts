@@ -9,6 +9,10 @@ import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
+import { AcademicYear } from "../../foundation/models/AcademicYear";
+import { currentAcademicYearId } from "../../foundation/services/currentYear";
+import { YearChangeRun, type IYearChangeRun } from "../../year-change/models/YearChangeRun";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { SubjectGroup } from "../models/SubjectGroup";
 import { Subject } from "../../foundation/models/Subject";
 import { User } from "../../foundation/models/User";
@@ -65,6 +69,75 @@ function toLite(s: {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Year-change awareness (YC-6 fixes): a section of a NEXT year is edited in place and grants nothing until
+// the cut-over; a section of the year being closed ends where the run ends it.
+// ---------------------------------------------------------------------------
+
+interface SectionYearInfo {
+  id: Types.ObjectId;
+  startDate: Date;
+}
+
+async function sectionYear(sectionId: string | Types.ObjectId): Promise<SectionYearInfo | null> {
+  const section = (await Section.findById(sectionId).select("classId").lean()) as { classId?: Types.ObjectId } | null;
+  if (!section?.classId) return null;
+  const klass = (await Class.findById(section.classId).select("academicYearId").lean()) as { academicYearId?: Types.ObjectId } | null;
+  if (!klass?.academicYearId) return null;
+  const year = (await AcademicYear.findById(klass.academicYearId).select("startDate").lean()) as { _id: Types.ObjectId; startDate: Date } | null;
+  return year ? { id: year._id, startDate: year.startDate } : null;
+}
+
+/** True when a year is flagged current and this section belongs to a different one (no grant work happens there). */
+async function sectionOutsideCurrentYear(sectionId: string | Types.ObjectId): Promise<boolean> {
+  const cur = await currentAcademicYearId();
+  if (!cur) return false;
+  const y = await sectionYear(sectionId);
+  return !!y && !y.id.equals(cur);
+}
+
+/**
+ * Decision B: for a section of a year that starts in the future, the first day a routine row may take
+ * effect - the run's new-routine start (the 3rd of January) when a year-change run exists, else the
+ * year's own start. Null for every other section.
+ */
+async function futureRoutineStart(sectionId: string | Types.ObjectId): Promise<Date | null> {
+  const cur = await currentAcademicYearId();
+  if (!cur) return null;
+  const y = await sectionYear(sectionId);
+  if (!y || y.id.equals(cur)) return null;
+  if (dhakaDayKey(y.startDate) <= dhakaDayKey(new Date())) return null;
+  const run = await YearChangeRun.findOne({ toYearId: y.id }).select("_id").lean();
+  const yearNum = dhakaDayKey(y.startDate).slice(0, 4);
+  return new Date(run ? `${yearNum}-01-03` : dhakaDayKey(y.startDate));
+}
+
+/** Decision E: for a section of the year a run is closing, the instant that run ends the old routine. */
+async function closingRunEnd(sectionId: string | Types.ObjectId): Promise<{ runId: string; endDate: Date } | null> {
+  if (!(await YearChangeRun.exists({}))) return null; // no year change was ever prepared: nothing to look up
+  const y = await sectionYear(sectionId);
+  if (!y) return null;
+  const run = await YearChangeRun.findOne({ fromYearId: y.id }).select("runId toYearId").lean();
+  if (!run) return null;
+  const to = (await AcademicYear.findById(run.toYearId).select("startDate").lean()) as { startDate: Date } | null;
+  if (!to) return null;
+  return { runId: run.runId, endDate: endOfDayBefore(new Date(Number(dhakaDayKey(to.startDate).slice(0, 4)), 0, 3)) };
+}
+
+/** A new row (or a replacement) that carries the run's stamped end is recorded on the run so an undo can take it back. */
+async function recordYearChangeEnd(slotId: Types.ObjectId, runId: string | null, inheritFrom?: Types.ObjectId): Promise<void> {
+  const run: IYearChangeRun | null = runId
+    ? await YearChangeRun.findOne({ runId })
+    : inheritFrom
+      ? await YearChangeRun.findOne({ "routineEnds.slotId": String(inheritFrom) })
+      : null;
+  if (!run) return;
+  const prev = inheritFrom ? (run.routineEnds.find((e) => e.slotId === String(inheritFrom))?.previous ?? null) : null;
+  run.routineEnds = [...run.routineEnds, { slotId: String(slotId), previous: prev }];
+  run.markModified("routineEnds");
+  await run.save();
+}
+
 /** Create a routine slot (R2.1–R2.6): validate the day admits the track, run the
  *  conflict engine, persist, then bind the routine teaching grant (+ warn). */
 export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateSlotResult> {
@@ -79,10 +152,23 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
 
   // Resolve the group + (for sections) the classId the scope binding needs.
   let classId: Types.ObjectId | undefined;
+  let effectiveFrom = input.effectiveFrom;
+  let effectiveTo: Date | null = input.effectiveTo ?? null;
+  let stampedByRun: string | null = null;
   if (input.groupType === "section") {
     const section = await Section.findById(input.groupId).lean();
     if (!section) throw new Error("Section not found");
     classId = section.classId as Types.ObjectId;
+    // Decision B: a next-year row never starts before the new routine does.
+    const floor = await futureRoutineStart(input.groupId);
+    if (floor && effectiveFrom.getTime() < floor.getTime()) effectiveFrom = floor;
+    // Decision E: a row added to the year being closed, after a prepare, ends where the run ends the old routine
+    // (clamped BEFORE the conflict check, so it no longer collides with its 2027 copy).
+    const closing = await closingRunEnd(input.groupId);
+    if (closing && (!effectiveTo || effectiveTo.getTime() > closing.endDate.getTime())) {
+      effectiveTo = closing.endDate;
+      stampedByRun = closing.runId;
+    }
     const klass = (await Class.findById(classId).select("level").lean()) as { level: number } | null;
     if (klass && !subjectAllowedForClassLevel(input.subject, klass.level)) {
       throw new Error("এই বিষয়টি ষষ্ঠ শ্রেণি থেকে চালু; নিচের শ্রেণির জন্য নেওয়া যাবে না");
@@ -101,8 +187,8 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
     groupId: input.groupId,
     teacherId: input.teacherId ?? null,
     roomId: input.roomId ?? null,
-    effectiveFrom: input.effectiveFrom,
-    effectiveTo: input.effectiveTo ?? null,
+    effectiveFrom,
+    effectiveTo,
   };
   const existingDocs = await RoutineSlot.find({
     dayOfWeek: input.dayOfWeek,
@@ -125,10 +211,11 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
     isBreak: input.isBreak,
     teacherId: input.teacherId ? new Types.ObjectId(input.teacherId) : undefined,
     roomId: input.roomId ? new Types.ObjectId(input.roomId) : undefined,
-    effectiveFrom: input.effectiveFrom,
-    effectiveTo: input.effectiveTo ?? undefined,
+    effectiveFrom,
+    effectiveTo: effectiveTo ?? undefined,
     createdBy: new Types.ObjectId(input.createdBy),
   });
+  if (stampedByRun) await recordYearChangeEnd(slot._id, stampedByRun);
 
   // R2.5/R2.6 — bind the routine teaching grant (+ authority warning).
   const warnings: string[] = [];
@@ -153,7 +240,7 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
   if (input.teacherId) {
     await announceRoutineTeachersChanged({
       teacherIds: [input.teacherId],
-      from: input.effectiveFrom,
+      from: effectiveFrom,
       actorId: input.createdBy,
       cells: sectionCells(input.groupType, input.groupId, [input.subject]),
     });
@@ -241,7 +328,10 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
   const existing = await RoutineSlot.findById(input.slotId).lean();
   if (!existing) throw new Error("Routine slot not found");
 
-  const changeFrom = startOfDay(input.effectiveFrom ?? new Date());
+  let changeFrom = startOfDay(input.effectiveFrom ?? new Date());
+  // Decision B: a row of a next year that has not started is edited in place, and never "from" before the new routine.
+  const futureStart = existing.groupType === "section" ? await futureRoutineStart(existing.groupId) : null;
+  if (futureStart && changeFrom < startOfDay(futureStart)) changeFrom = startOfDay(futureStart);
   // Editing a row that has already been retired would rewrite history — the caller
   // wants whichever row is in force on that date instead.
   if (existing.effectiveTo && startOfDay(new Date(existing.effectiveTo)) < changeFrom)
@@ -250,7 +340,7 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
         `edit the slot in force on the change date instead`,
     );
   // Nothing to preserve when the change starts at or before the row's own start.
-  const inPlace = changeFrom <= startOfDay(new Date(existing.effectiveFrom));
+  const inPlace = changeFrom <= startOfDay(new Date(existing.effectiveFrom)) || (!!futureStart && startOfDay(new Date(existing.effectiveFrom)) > startOfDay(new Date()));
 
   // R2.1 — the weekday must admit the new track; a break takes no teacher.
   const idx = DAYS_OF_WEEK.indexOf(existing.dayOfWeek as DayOfWeek);
@@ -337,6 +427,8 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
       createdBy: new Types.ObjectId(input.actorId),
     });
     liveId = replacement._id;
+    // the replacement inherits the run's stamped end; an undo-prepare must be able to take it back too
+    if (existing.effectiveTo) await recordYearChangeEnd(replacement._id, null, existing._id);
   }
   await writeAudit({
     eventKind: "ROUTINE_SLOT_REVISED",
@@ -396,6 +488,8 @@ async function bindRoutineGrant(
   subjectCode: string,
   createdBy: string,
 ): Promise<string | null> {
+  // Decision A: a section of a year that is not the current one grants nothing; the cut-over makes its grants.
+  if (await sectionOutsideCurrentYear(sectionId)) return null;
   const subject = await Subject.findOne({ code: subjectCode }).lean();
   if (!subject) return null;
   const subjectId = subject._id;
@@ -420,10 +514,12 @@ async function bindRoutineGrant(
   }).lean();
   if (existing) {
     // A slot justifies the grant again, so any lapse a future-dated retirement
-    // stamped on it is void.
+    // stamped on it is void - except the lapse a year-change run stamped (decision E): the old
+    // year's grant still ends on the first day of the new routine.
+    const runStamped = (existing as { expiresAt?: Date }).expiresAt ? !!(await YearChangeRun.exists({ "grantExpiries.grantId": String(existing._id) })) : false;
     await ScopeGrant.updateOne(
       { _id: existing._id },
-      { $set: { active: true, classId: new Types.ObjectId(classId) }, $unset: { expiresAt: "" } },
+      { $set: { active: true, classId: new Types.ObjectId(classId) }, ...(runStamped ? {} : { $unset: { expiresAt: "" } }) },
     );
   } else {
     await ScopeGrant.create({
@@ -464,8 +560,11 @@ export async function deleteRoutineSlot(
   const slot = await RoutineSlot.findById(slotId).lean();
   if (!slot) throw new Error("Routine slot not found");
 
-  const changeFrom = startOfDay(effectiveFrom ?? new Date());
-  const neverApplied = changeFrom <= startOfDay(new Date(slot.effectiveFrom));
+  let changeFrom = startOfDay(effectiveFrom ?? new Date());
+  const futureStart = slot.groupType === "section" ? await futureRoutineStart(slot.groupId) : null;
+  if (futureStart && changeFrom < startOfDay(futureStart)) changeFrom = startOfDay(futureStart);
+  const neverApplied =
+    changeFrom <= startOfDay(new Date(slot.effectiveFrom)) || (!!futureStart && startOfDay(new Date(slot.effectiveFrom)) > startOfDay(new Date()));
   if (neverApplied) {
     await RoutineSlot.deleteOne({ _id: slotId });
   } else {
@@ -517,13 +616,16 @@ async function unbindIfOrphaned(
   actorId: string,
   on: Date = new Date(),
 ): Promise<void> {
+  if (await sectionOutsideCurrentYear(sectionId)) return; // decision A: nothing to revoke there
+  // Still justified by a row live on `on` OR one that starts after it (decision A): only a row that has
+  // already ended before `on` stops justifying the grant.
   const remaining = await RoutineSlot.findOne({
     groupType: "section",
     groupId: sectionId,
     teacherId,
     subject: subjectCode,
     active: true,
-    ...liveWindow(on),
+    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: startOfDay(on) } }],
   }).lean();
   if (remaining) return; // still justified by another slot
 

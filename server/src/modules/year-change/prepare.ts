@@ -19,7 +19,7 @@ import { ClassTeacherAssignment } from "../foundation/models/ClassTeacherAssignm
 import { openEnrolment, placeOfSection } from "../foundation/services/EnrolmentService";
 import { writeAudit } from "../platform/services/AuditService";
 import { normSchoolId } from "./plan";
-import { applyScheduleCopy, NO_COPY_WRITES, ScheduleCopyRefusal } from "./copy";
+import { applyScheduleCopy, NO_COPY_WRITES, precheckScheduleCopy, ScheduleCopyRefusal } from "./copy";
 import { assertYearChangeRight } from "./authz";
 import { YearChangeRun } from "./models/YearChangeRun";
 import { YearChangeRefusal, SECTION_LABEL_BN, type YearChangeActor, type YearChangePlan } from "./types";
@@ -64,6 +64,11 @@ export async function applyPrepare(plan: YearChangePlan, runId: string, actor: Y
   const other = await YearChangeRun.findOne({ fromYearId: oid(plan.fromYearId), toYearId, runId: { $ne: runId } }).select("runId").lean();
   if (other) throw new YearChangeRefusal([`এই শিক্ষাবর্ষ জোড়ার জন্য রান ${other.runId} আগেই আছে — সেটিই ব্যবহার করুন বা আগে বাতিল করুন।`]);
   if (plan.runId && plan.runId !== runId) throw new YearChangeRefusal([`রান আইডি ${plan.runId} হতে হবে।`]);
+
+  // Decision I: the routine copy must be clean BEFORE the first write. A clash found now (a changed 2026 or
+  // 2027 routine since the plan was made) refuses with the list and leaves nothing written.
+  const clash = await precheckScheduleCopy(plan, runId);
+  if (clash.length) throw new YearChangeRefusal(clash);
 
   // The run record first: a crash later leaves a run the next call picks up and finishes.
   let run = await YearChangeRun.findOne({ runId });

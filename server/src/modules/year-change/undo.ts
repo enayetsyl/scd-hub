@@ -34,6 +34,7 @@ import { dayBefore } from "../foundation/services/EnrolmentService";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import { writeAudit } from "../platform/services/AuditService";
 import { assertYearChangeRight } from "./authz";
+import { releaseRunGrants, yearChangeStamps } from "./copy";
 import { improvementStopReason } from "./cutover";
 import { YearChangeRun, type StudentBefore } from "./models/YearChangeRun";
 import { YearChangeRefusal, type YearChangeActor } from "./types";
@@ -60,7 +61,12 @@ const oid = (id: string): Types.ObjectId => new Types.ObjectId(id);
 // undo prepare
 // ---------------------------------------------------------------------------------------------
 
-async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; sectionIds: Types.ObjectId[]; classIds: Types.ObjectId[]; admissionIds: Types.ObjectId[] }> {
+interface RestoreSet {
+  ends: Array<{ slotId: string; previous: string | null }>;
+  grants: Array<{ grantId: string; previous: string | null }>;
+}
+
+async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; sectionIds: Types.ObjectId[]; classIds: Types.ObjectId[]; admissionIds: Types.ObjectId[]; restore: RestoreSet }> {
   const refusals: string[] = [];
   const notes: string[] = [];
   const run = await YearChangeRun.findOne({ runId }).lean();
@@ -78,15 +84,39 @@ async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; section
   const admissionIds = admissions.map((a) => a._id);
   const links = admissionIds.length ? await GuardianLink.countDocuments({ studentId: { $in: admissionIds } }) : 0;
   const teacherRestores = new Set((run?.teacherSets ?? []).map((t) => t.sectionId)).size;
+  // YC-6 (decision D): a stamped end/expiry goes back only where the row still holds the value the run
+  // stamped. A row changed after the prepare (a December edit) is left as it is and listed.
+  const restore: RestoreSet = { ends: [], grants: [] };
+  const toYear = run ? await AcademicYear.findById(run.toYearId).select("startDate").lean() : null;
+  const stamps = toYear ? yearChangeStamps(toYear.startDate) : null;
+  for (const e of run?.routineEnds ?? []) {
+    const slot = await RoutineSlot.findById(e.slotId).select("effectiveTo dayOfWeek periodNumber subject").lean();
+    if (!slot) continue;
+    if (stamps && slot.effectiveTo && new Date(slot.effectiveTo).getTime() === stamps.endDate.getTime()) restore.ends.push(e);
+    else notes.push(`রুটিন ${slot.dayOfWeek} পিরিয়ড ${slot.periodNumber} (${slot.subject}): প্রস্তুতির পরে বদলেছে — যেমন আছে তেমন রাখা হলো`);
+  }
+  let grantSkipped = 0;
+  for (const e of run?.grantExpiries ?? []) {
+    const g = (await ScopeGrant.findById(e.grantId).select("expiresAt").lean()) as { expiresAt?: Date } | null;
+    if (!g) continue;
+    if (stamps && g.expiresAt && new Date(g.expiresAt).getTime() === stamps.expiryAt.getTime()) restore.grants.push(e);
+    else {
+      grantSkipped++;
+      notes.push(`অনুমতি ${e.grantId}: প্রস্তুতির পরে শেষ-তারিখ বদলেছে — যেমন আছে তেমন রাখা হলো`);
+    }
+  }
+  const endsSkipped = (run?.routineEnds?.length ?? 0) - restore.ends.length;
   // YC-6: the routine + schedule copy
   const copyCounts = {
     routineSlots: await RoutineSlot.countDocuments({ runId }),
-    routineEndsCleared: run?.routineEnds?.length ?? 0,
+    routineEndsCleared: restore.ends.length,
+    routineEndsSkipped: Math.max(0, endsSkipped),
     scheduleWindows: await ScheduleWindow.countDocuments({ runId }),
     assignmentSchedules: await AssignmentSchedule.countDocuments({ runId }),
     masteryEnablements: await MasteryEnablement.countDocuments({ runId }),
     grantsCreated: await ScopeGrant.countDocuments({ runId }),
-    grantExpiriesCleared: run?.grantExpiries?.length ?? 0,
+    grantExpiriesCleared: restore.grants.length,
+    grantExpiriesSkipped: grantSkipped,
   };
   if (classes.length) notes.push("ক্লাস মুছবে শুধু যেগুলোতে অন্য শাখা নেই।");
   return {
@@ -100,6 +130,7 @@ async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; section
     sectionIds,
     classIds: classes.map((c) => c._id),
     admissionIds,
+    restore,
   };
 }
 
@@ -110,7 +141,7 @@ export async function planUndoPrepare(runId: string, actor?: YearChangeActor): P
 
 export async function undoPrepare(runId: string, actor: YearChangeActor, opts: { dryRun?: boolean } = {}): Promise<UndoResult> {
   assertYearChangeRight(actor, "undo");
-  const { plan, sectionIds, classIds, admissionIds } = await planPrepareUndo(runId);
+  const { plan, sectionIds, classIds, admissionIds, restore } = await planPrepareUndo(runId);
   if (opts.dryRun) return { plan, total: 0 };
   if (plan.refusals.length) throw new YearChangeRefusal(plan.refusals);
   const run = await YearChangeRun.findOne({ runId });
@@ -132,15 +163,15 @@ export async function undoPrepare(runId: string, actor: YearChangeActor, opts: {
   }
   // YC-6: delete the copies, put the stamped ends back
   total += (await RoutineSlot.deleteMany({ runId })).deletedCount ?? 0;
-  for (const e of run?.routineEnds ?? []) {
+  for (const e of restore.ends) {
     const r = await RoutineSlot.updateOne({ _id: oid(e.slotId) }, e.previous ? { $set: { effectiveTo: new Date(e.previous) } } : { $unset: { effectiveTo: 1 } });
     total += r.modifiedCount;
   }
   total += (await ScheduleWindow.deleteMany({ runId })).deletedCount ?? 0;
   total += (await AssignmentSchedule.deleteMany({ runId })).deletedCount ?? 0;
   total += (await MasteryEnablement.deleteMany({ runId })).deletedCount ?? 0;
-  total += (await ScopeGrant.deleteMany({ runId })).deletedCount ?? 0;
-  for (const e of run?.grantExpiries ?? []) {
+  total += await releaseRunGrants(runId, run?.grantReactivated ?? []);
+  for (const e of restore.grants) {
     const r = await ScopeGrant.updateOne({ _id: oid(e.grantId) }, e.previous ? { $set: { expiresAt: new Date(e.previous) } } : { $unset: { expiresAt: 1 } });
     total += r.modifiedCount;
   }
@@ -206,6 +237,7 @@ async function planCutoverUndo(runId: string) {
     notes.push(`নতুন শাখায় তৈরি কাজ থেকে যাবে: বাড়ির কাজ ${homework}, অ্যাসাইনমেন্ট ${assignments}, উপস্থিতির দিন ${attendance}।`);
   }
   const stopped = run ? await ImprovementAction.countDocuments({ stopReason: improvementStopReason(runId) }) : 0;
+  const grantsMade = run ? await ScopeGrant.countDocuments({ runId }) : 0;
   // (a) pointer / active changed after the cut-over; (b) created on next-year sections after it
   const changedAfter: string[] = [];
   const createdAfter: string[] = [];
@@ -241,6 +273,7 @@ async function planCutoverUndo(runId: string) {
       pastEnrolmentsReopened: reopen,
       newEnrolmentsToPlanned: newRows.length,
       improvementRestarted: stopped,
+      grantsRemoved: grantsMade,
       homeworkOnNewSections: homework,
       assignmentsOnNewSections: assignments,
       attendanceDaysOnNewSections: attendance,
@@ -309,8 +342,10 @@ export async function undoCutover(runId: string, actor: YearChangeActor, opts: {
   total += (
     await ImprovementAction.updateMany({ stopReason: improvementStopReason(runId) }, { $set: { stoppedAt: null, stoppedBy: null, stopReason: null } })
   ).modifiedCount;
+  // 5b. the 2027 grants the cut-over made go away (decision A); the prepare's stamps on the 2026 rows stay
+  total += await releaseRunGrants(runId, run.grantReactivated ?? []);
   // 6. the run is a prepared run again (a new cut-over captures a fresh before-state)
-  await YearChangeRun.updateOne({ _id: run._id }, { $set: { status: "PREPARED", improvementEndedIds: [] }, $unset: { before: 1, cutOverBy: 1, cutOverAt: 1 } });
+  await YearChangeRun.updateOne({ _id: run._id }, { $set: { status: "PREPARED", improvementEndedIds: [], grantReactivated: [] }, $unset: { before: 1, cutOverBy: 1, cutOverAt: 1 } });
   total++;
   await writeAudit({
     eventKind: "YEAR_CHANGE_CUT_OVER_UNDONE",
