@@ -56,6 +56,11 @@ export type AuditEventKind =
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
+  | "YEAR_CHANGE_PREPARED"   // year change step 1: next-year classes/sections/PLANNED enrolments/admissions written (YC-4) - meta.runId + counts
+  | "YEAR_CHANGE_CUT_OVER"   // year change step 2: children moved, current year flipped (YC-4) - meta.runId + before-state of every changed Student
+  | "YEAR_CHANGE_PREPARE_UNDONE" // step 1 cancelled, every row of the run deleted (YC-4) - meta.runId + counts
+  | "YEAR_CHANGE_CUT_OVER_UNDONE" // step 2 reversed from the audit before-state (YC-4) - meta.runId + work left on next-year sections
+  | "YEAR_CHANGE_SECTIONS_RETIRED" // the past year's sections set inactive after the grace date (YC-4) - meta.yearId + counts
   | "ENROLMENT_MOVED"     // one child moved to another section from a date (YC-1 moveStudent); meta: from/to section, onKey
   | "ATTENDANCE_DAYS_COPIED" // a retired Quran/Arabic group's attendance days copied to the groups its children moved to (D-#865)
   | "ACADEMIC_YEAR_CREATED"     // a new academic year added (Principal/Office)

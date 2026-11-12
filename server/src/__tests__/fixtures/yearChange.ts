@@ -20,6 +20,7 @@ import { SubjectGroupMembership } from "../../modules/routine/models/SubjectGrou
 import { StudentAttendanceDay } from "../../modules/attendance/models/StudentAttendanceDay";
 import { Subject } from "../../modules/foundation/models/Subject";
 import { ScopeGrant } from "../../modules/foundation/models/ScopeGrant";
+import { User } from "../../modules/foundation/models/User";
 
 export interface YearFixture {
   y2026: Types.ObjectId;
@@ -382,4 +383,110 @@ export async function seedProdSplitWorld(): Promise<ProdSplitWorld> {
   // The original combined-section day of 14 Sept (the split copied it to the halves, it was not moved).
   await day(combined, "2026-09-14", [kids[0], kids[3]]);
   return { years, classId, combined, boys, girls, girlsTeacher, marker, kids, dayKeys };
+}
+
+// ---------------------------------------------------------------------------
+// YC-4: the year-change engine world
+// ---------------------------------------------------------------------------
+
+export interface EngineWorld {
+  years: YearFixture;
+  /** 2026 places: C2 Main, C4 Boys, C5 Boys, C5 Girls. */
+  c2Main: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c4Boys: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c5Boys: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c5Girls: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  /** Teacher of the 2026 C4 Boys section; a second teacher for manual picks. */
+  teacher4: Types.ObjectId;
+  teacherOther: Types.ObjectId;
+  /** C2 boy, moves up to C3 Boys. */
+  c2Up: Types.ObjectId;
+  /** C2 girl, REPEATS (stays in C2 Main). */
+  c2Repeat: Types.ObjectId;
+  /** C4 boy, moves up to C5 Boys. */
+  c4Up: Types.ObjectId;
+  /** C4 girl, LEFT. */
+  c4Leaver: Types.ObjectId;
+  /** C5 girl (scholarship flag set), moves up to C6 Girls. */
+  c5Girl: Types.ObjectId;
+  /** C5 boy (scholarship flag set), moves up to C6 Boys. */
+  c5Boy: Types.ObjectId;
+  /** C5 boy (scholarship flag set), LEFT. */
+  c5Leaver: Types.ObjectId;
+  /** The default decisions: everyone promoted except these. */
+  promotions: Array<{ studentId: string; decision: "PROMOTE" | "REPEAT" | "LEFT" }>;
+  /** Two Class 6 admissions: a boy and a girl. */
+  admissions: Array<{ schoolId: string; name: string; gender: "male" | "female"; level: number; guardianPhone: string }>;
+  principal: { userId: string; role: "PRINCIPAL" };
+  office: { userId: string; role: "OFFICE" };
+}
+
+/**
+ * Years 2026 (current) / 2027 / 2029 and a small 2026 school: seven children (T-E1..T-E7) each with
+ * ONE ACTIVE 2026 enrolment from 2026-01-01, a class teacher on C4 Boys, and the planned outcome
+ * list of the brief (one repeater in C2, one leaver in C4, one more in C5, two C6 admissions).
+ * The 2027 side is empty: `applyPrepare` creates it.
+ */
+export async function seedEngineWorld(): Promise<EngineWorld> {
+  const years = await seedYears();
+  const teacher4 = (await User.create({ name: "Test Teacher Four", phone: "01700000401", passwordHash: "x", role: "TEACHER" }))._id;
+  const teacherOther = (await User.create({ name: "Test Teacher Other", phone: "01700000402", passwordHash: "x", role: "TEACHER" }))._id;
+  const place = async (level: number, code: string, nameBn: string, ct?: Types.ObjectId) => {
+    const classId = (await Class.create({ level, nameBn: `Class ${level} (2026)`, academicYearId: years.y2026 }))._id;
+    const sectionId = (await Section.create({ classId, code, nameBn, active: true, ...(ct ? { classTeacherId: ct } : {}) }))._id;
+    return { classId, sectionId };
+  };
+  const c2Main = await place(2, "Main", "মূল");
+  const c4Boys = await place(4, "Boys", "বালক", teacher4);
+  const c5Boys = await place(5, "Boys", "বালক");
+  const c5Girls = await place(5, "Girls", "বালিকা");
+
+  const kid = async (n: number, gender: "male" | "female", p: { classId: Types.ObjectId; sectionId: Types.ObjectId }, level: number, flag = false) => {
+    const s = await Student.create({
+      schoolId: `T-E${n}`,
+      name: `Engine Child ${n}`,
+      gender,
+      classId: p.classId,
+      sectionId: p.sectionId,
+      active: true,
+      ...(flag ? { scholarshipExcluded: true } : {}),
+    });
+    await Enrolment.create({ studentId: s._id, academicYearId: years.y2026, classId: p.classId, classLevel: level, sectionId: p.sectionId, status: "ACTIVE", startKey: "2026-01-01" });
+    return s._id;
+  };
+  const c2Up = await kid(1, "male", c2Main, 2);
+  const c2Repeat = await kid(2, "female", c2Main, 2);
+  const c4Up = await kid(3, "male", c4Boys, 4);
+  const c4Leaver = await kid(4, "female", c4Boys, 4);
+  const c5Girl = await kid(5, "female", c5Girls, 5, true);
+  const c5Boy = await kid(6, "male", c5Boys, 5, true);
+  const c5Leaver = await kid(7, "male", c5Boys, 5, true);
+
+  return {
+    years,
+    c2Main,
+    c4Boys,
+    c5Boys,
+    c5Girls,
+    teacher4,
+    teacherOther,
+    c2Up,
+    c2Repeat,
+    c4Up,
+    c4Leaver,
+    c5Girl,
+    c5Boy,
+    c5Leaver,
+    promotions: [
+      { studentId: c2Repeat.toString(), decision: "REPEAT" },
+      { studentId: c4Leaver.toString(), decision: "LEFT" },
+      { studentId: c5Leaver.toString(), decision: "LEFT" },
+    ],
+    admissions: [
+      { schoolId: "T-A1", name: "Admission Boy", gender: "male", level: 6, guardianPhone: "01800000001" },
+      { schoolId: "T-A2", name: "Admission Girl", gender: "female", level: 6, guardianPhone: "01800000002" },
+    ],
+    principal: { userId: new Types.ObjectId().toString(), role: "PRINCIPAL" },
+    office: { userId: new Types.ObjectId().toString(), role: "OFFICE" },
+  };
 }
