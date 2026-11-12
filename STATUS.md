@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-11-12: **YC-6 built (D-#1494–#1498)** — Prepare now copies the routine, bell windows, assignment schedule and mastery switches into 2027 (from 3 Jan; 2026 ends 2 Jan); the Principal can edit the 2027 draft and fill Class 6 in December and a re-run keeps those edits; 2027 grants and section chat groups appear at the cut-over; undo restores only what it still owns. Verified: server typecheck + 22 suites / 431 tests (`--runInBand`). **Next:** YC-5 screens (brief 13, D-#1500+, live by 17 Dec), then the dev rehearsal (prepare → December edits → re-run → cut-over → undo) by 20 Dec.
 - 2026-11-12: **BUILT — PR-I exam pool (D-#1408)**, branch `feat/bank-exampool-i`, PR to dev. Brief 5 complete with PR-G (D-#1400) and PR-H (D-#1405). To use: in the bank tap "পরীক্ষার জন্য রাখা" and paste the ids from each pack's `out/*_exam_pool.md`.
 - 2026-11-12: **BUILT — PR-G bank question types (D-#1400)**, branch `feat/bank-qt-g`, PR to dev. Next: PR-H (REF-19 optional, contract sync), PR-I (exam pool). After PR-G reaches prod: set QT-WORD marks = 3 in the C1 MATH question-type table (owner ruling) so story sums can be picked.
 - 2026-11-12: **BUILT — YC-4 year-change engine (D-#1490–#1493)** on `feat/yc4-engine`, PR to dev. Not run anywhere yet; first run = the dev rehearsal after YC-5 (screens) and YC-6 (routine/schedule copy).
