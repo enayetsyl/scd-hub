@@ -17,9 +17,16 @@ import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { MASTERY_SECTION_HEATMAP_QUERY, type MasteryHeatColumn, type MasteryHeatmap } from "../../graphql/mastery";
+import {
+  MASTERY_EARLIER_CLASS_SUMMARY_QUERY,
+  MASTERY_SECTION_HEATMAP_QUERY,
+  type MasteryEarlierClassRow,
+  type MasteryHeatColumn,
+  type MasteryHeatmap,
+} from "../../graphql/mastery";
+import { Pager } from "../../components/Pager";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice, H2 } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, masteryActionLabel, masteryStateLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, masteryActionLabel, masteryClassLabel, masteryStateLabel } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
@@ -267,6 +274,46 @@ export default function MasteryHeatmapScreen({ navigation, route }: Props): Reac
           </Card>
         </>
       )}
+      <EarlierClassSteps sectionId={sectionId} subject={subject} />
     </Screen>
+  );
+}
+
+/**
+ * PR-B (D-#1315): "আগের শ্রেণির ধাপ" — the earlier-class codes this section was checked on (a baseline
+ * sheet): class, how many were assessed, how many are weak and who. Hidden when there are none.
+ */
+function EarlierClassSteps({ sectionId, subject }: { sectionId: string; subject: string }): React.ReactElement | null {
+  const lv = useMasteryLevelLabels();
+  const [page, setPage] = useState(1);
+  const [{ data }] = useQuery({
+    query: MASTERY_EARLIER_CLASS_SUMMARY_QUERY,
+    variables: { sectionId, subject, page, pageSize: 20 },
+    requestPolicy: "cache-and-network",
+  });
+  const pg = data?.masteryEarlierClassSummary as
+    | { rows: MasteryEarlierClassRow[]; total: number; page: number; pageSize: number }
+    | undefined;
+  if (!pg || pg.total === 0) return null;
+  return (
+    <Card>
+      <H2>{STR.msEarlierTitle}</H2>
+      <Muted>{levelFill(STR.msEarlierIntro, lv)}</Muted>
+      {pg.rows.map((r) => (
+        <View key={r.code} style={{ gap: space(1), paddingVertical: space(1) }}>
+          <View style={{ flexDirection: "row", gap: space(2), alignItems: "center", flexWrap: "wrap" }}>
+            <Badge text={masteryClassLabel(r.classToken)} tone="info" />
+            <Body style={{ fontWeight: "700", flexShrink: 1 }}>{r.labelBn}</Body>
+          </View>
+          <Muted>
+            {shortLo(r.code)} · {fill(STR.msEarlierAssessed, { n: bnNum(r.assessed) })} · {fill(STR.msEarlierWeak, { n: bnNum(r.weak) })}
+          </Muted>
+          {r.weakStudents.length > 0 ? (
+            <Body>{r.weakStudents.map((s) => (s.rollNumber ? `${bnNum(s.rollNumber)}. ${s.name}` : s.name)).join(", ")}</Body>
+          ) : null}
+        </View>
+      ))}
+      <Pager page={pg.page} pageSize={pg.pageSize} total={pg.total} onPage={setPage} />
+    </Card>
   );
 }

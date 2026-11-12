@@ -1,0 +1,21 @@
+{
+ "format": "scd-objective-domains/1",
+ "subject": "ICT",
+ "status": "DRAFT",
+ "domains": [
+  {
+   "code": "DOM-ICT-DEVICE",
+   "labelBn": "যন্ত্র ও ব্যবহার",
+   "labelEn": "Devices and use",
+   "order": 1,
+   "note": "TEST FIXTURE (D-#1312) — not curriculum content."
+  },
+  {
+   "code": "DOM-ICT-SAFE",
+   "labelBn": "নিরাপদ ব্যবহার",
+   "labelEn": "Safe use",
+   "order": 2,
+   "note": "TEST FIXTURE (D-#1312)."
+  }
+ ]
+}

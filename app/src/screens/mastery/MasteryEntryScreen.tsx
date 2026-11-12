@@ -16,6 +16,7 @@ import {
   MASTERY_PAPER_QUERY,
   MASTERY_TAGS_QUERY,
   SAVE_MASTERY_RESULTS,
+  type MasteryClassTestMismatch,
   type MasteryPaperRow,
   type MasteryRosterEntry,
   type MasteryTagRow,
@@ -27,6 +28,7 @@ import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
+import { fill } from "./masteryStateUi";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryEntry">;
 
@@ -94,6 +96,10 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
   const [error, setError] = useState<string | null>(null);
 
   const paper = data?.masteryPaper?.paper as MasteryPaperRow | undefined;
+  // PR-C: a sheet linked to a class test — no "not submitted", and a warning when another class-test
+  // flow (recheck / hold / published correction) left a mark that differs from the sheet total.
+  const linkedTest = data?.masteryPaper?.classTest as { ctId: string; totalMarks: number } | null | undefined;
+  const mismatches = (data?.masteryPaper?.classTestMismatches ?? []) as MasteryClassTestMismatch[];
   const roster = (data?.masteryPaper?.roster ?? []) as MasteryRosterEntry[];
 
   useEffect(() => {
@@ -189,7 +195,19 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
         <Badge text={paper.paperId} tone="muted" />
         <Badge text={confirmed ? STR.msConfirmed : STR.msOpen} tone={confirmed ? "ok" : "gold"} />
         {!isRubric ? <Badge text={`${bnNum(paper.items.length)} · ${bnNum(paper.totalMarks)}`} tone="brand" /> : null}
+        {linkedTest ? <Badge text={fill(STR.msCtLinkedBadge, { ct: linkedTest.ctId })} tone="info" /> : null}
       </View>
+      {mismatches.map((m) => (
+        <Notice
+          key={m.studentId}
+          tone="warn"
+          message={fill(STR.msCtMismatch, {
+            name: m.name,
+            sheet: m.sheetStatus === "ABSENT" ? STR.msStatusAbsent : bnNum(m.sheetMarks ?? 0),
+            ct: m.classTestStatus === "ABSENT" ? STR.msStatusAbsent : m.classTestMarks === null ? "—" : bnNum(m.classTestMarks),
+          })}
+        />
+      ))}
       <Notice message={confirmed ? STR.msCorrectionNote : STR.msEntryHint} tone="info" />
       {error ? <Notice message={error} tone="danger" /> : null}
 
@@ -216,7 +234,7 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
               {!isRubric ? <Badge text={off ? "—" : `${bnNum(earned)}/${bnNum(outOf)}`} tone={off ? "muted" : "brand"} /> : null}
             </View>
             <ChipRow>
-              {STATUSES.map(([code, label]) => (
+              {STATUSES.filter(([code]) => !(paper.classTestId && code === "NOT_SUBMITTED")).map(([code, label]) => (
                 <Chip key={code} label={label()} selected={status === code} onPress={() => edit(s.studentId, (x) => ({ ...x, status: code === s.defaultStatus ? null : code }))} />
               ))}
             </ChipRow>

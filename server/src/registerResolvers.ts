@@ -162,6 +162,7 @@ import "./modules/exams/resolvers/examRoutine";
 import "./modules/scholarship/resolvers/scholarship";
 import "./modules/mastery/resolvers/masteryCatalogue";
 import "./modules/mastery/resolvers/masteryWork";
+import "./modules/mastery/resolvers/masteryHomework";
 import "./modules/mastery/resolvers/masteryDiagnosis";
 import "./modules/mastery/resolvers/masteryAssignment";
 import "./modules/mastery/resolvers/masteryGuardian";

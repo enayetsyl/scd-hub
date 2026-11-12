@@ -10,7 +10,6 @@ import React, { useCallback, useState } from "react";
 import { Platform, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useMutation, useQuery } from "urql";
-import { CLASS_LEVELS } from "@scd/shared";
 import { ENGLISH_DRIVE_DOCS, UPLOAD_ENGLISH_DRIVE_DOC } from "../../graphql/englishDrive";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Select, Divider, Loader } from "../../components/ui";
 import { UploadDropZone } from "../../components/UploadDropZone";
@@ -31,6 +30,9 @@ import {
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+
+/** The English drive serves Classes 1–5 (server ENGLISH_DRIVE_CLASS_LEVELS); the content axis widened to 6 (D-#1310). */
+const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
 
 interface StagedDoc {
   filename: string;
@@ -325,7 +327,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
             <Select
               label={STR.class}
               value={s.classLevel}
-              options={CLASS_LEVELS.map((l) => ({ label: classLevelLabel(l), value: String(l) }))}
+              options={ENGLISH_DRIVE_CLASS_LEVELS.map((l) => ({ label: classLevelLabel(l), value: String(l) }))}
               onChange={(v) => patchStaged(s.filename, { classLevel: v })}
               placeholder={STR.vbPickClass}
             />

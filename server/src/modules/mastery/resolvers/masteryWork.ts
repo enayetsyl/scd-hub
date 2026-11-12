@@ -8,6 +8,8 @@
  *   deleteMasteryPaper       — mastery:create; an OPEN sheet with no results
  *   saveMasteryResults       — mastery:enter_results; exceptions only (a correction after confirm)
  *   confirmMasteryPaper      — mastery:enter_results; "সব ঠিক আছে" — evidence written
+ *   masteryClassTestOptions  — mastery:create; PR-C: the section's class tests a CT sheet can own
+ *   masteryClassTestSheet    — mastery:view; PR-C: switch on here? which sheet owns this test's totals
  *
  * The catalogue action is the gate; the ROW rule (routine holder, or `mastery:edit_all`) and
  * the add-on switch are checked in the service so no caller can skip them.
@@ -16,6 +18,8 @@ import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import type { MasterySubject } from "@scd/shared";
 import {
+  classTestLinkOptions,
+  classTestSheetLink,
   confirmPaper,
   createPaper,
   deletePaper,
@@ -24,6 +28,8 @@ import {
   paperDetail,
   saveResults,
   type Auth,
+  type ClassTestLinkOption,
+  type ClassTestSheetLink,
   type ConfirmSummary,
   type HomeworkLinkOption,
   type PaperDetail,
@@ -70,6 +76,8 @@ PaperRef.implement({
     subject: t.exposeString("subject"),
     date: t.exposeString("date"),
     hwItemId: t.string({ nullable: true, resolve: (p) => p.hwItemId }),
+    classTestId: t.string({ nullable: true, description: "PR-C: the class test whose totals this sheet writes.", resolve: (p) => p.classTestId }),
+    extra: t.boolean({ description: "PR-D: an extra homework for weak children (per-child items).", resolve: (p) => p.extra }),
     entryState: t.exposeString("entryState"),
     totalMarks: t.exposeFloat("totalMarks"),
     items: t.field({ type: [PaperItemRef], resolve: (p) => p.items }),
@@ -125,6 +133,54 @@ PaperDetailRef.implement({
   fields: (t) => ({
     paper: t.field({ type: PaperRef, resolve: (d) => d.paper }),
     roster: t.field({ type: [RosterRowRef], resolve: (d) => d.roster }),
+    classTest: t.field({ type: LinkedTestRef, nullable: true, resolve: (d) => d.classTest }),
+    classTestMismatches: t.field({ type: [MismatchRef], resolve: (d) => d.classTestMismatches }),
+  }),
+});
+
+const LinkedTestRef = builder.objectRef<NonNullable<PaperDetail["classTest"]>>("MasteryLinkedClassTest");
+LinkedTestRef.implement({
+  fields: (t) => ({
+    classTestId: t.exposeString("classTestId"),
+    ctId: t.exposeString("ctId"),
+    totalMarks: t.exposeFloat("totalMarks"),
+    examDate: t.exposeString("examDate"),
+    status: t.exposeString("status"),
+  }),
+});
+
+const MismatchRef = builder.objectRef<PaperDetail["classTestMismatches"][number]>("MasteryClassTestMismatch");
+MismatchRef.implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
+    sheetStatus: t.exposeString("sheetStatus"),
+    sheetMarks: t.float({ nullable: true, resolve: (m) => m.sheetMarks }),
+    classTestStatus: t.string({ nullable: true, resolve: (m) => m.classTestStatus }),
+    classTestMarks: t.float({ nullable: true, resolve: (m) => m.classTestMarks }),
+  }),
+});
+
+const CtOptionRef = builder.objectRef<ClassTestLinkOption>("MasteryClassTestOption");
+CtOptionRef.implement({
+  fields: (t) => ({
+    classTestId: t.exposeString("classTestId"),
+    ctId: t.exposeString("ctId"),
+    testNumber: t.exposeInt("testNumber"),
+    examDate: t.exposeString("examDate"),
+    totalMarks: t.exposeFloat("totalMarks"),
+    status: t.exposeString("status"),
+  }),
+});
+
+const CtSheetLinkRef = builder.objectRef<ClassTestSheetLink>("MasteryClassTestSheetLink");
+CtSheetLinkRef.implement({
+  fields: (t) => ({
+    enabled: t.exposeBoolean("enabled"),
+    paperId: t.string({ nullable: true, resolve: (l) => l.paperId }),
+    entryState: t.string({ nullable: true, resolve: (l) => l.entryState }),
+    sectionId: t.string({ nullable: true, resolve: (l) => l.sectionId }),
+    classLevel: t.int({ nullable: true, resolve: (l) => l.classLevel }),
   }),
 });
 
@@ -230,6 +286,29 @@ builder.queryFields((t) => ({
     },
     resolve: async (_r, args, ctx) => homeworkLinkOptions(args.sectionId, args.subject as MasterySubject, authOf(ctx)),
   }),
+
+  masteryClassTestOptions: t.field({
+    type: [CtOptionRef],
+    description:
+      "PR-C (D-#1317): the section × subject's section-anchored class tests (REQUESTED / PRINTED) from the last 30 days " +
+      "onwards that have no question sheet yet — to link a CT sheet to.",
+    authScopes: { hasPermission: "mastery:create" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => classTestLinkOptions(args.sectionId, args.subject as MasterySubject, authOf(ctx)),
+  }),
+
+  masteryClassTestSheet: t.field({
+    type: CtSheetLinkRef,
+    description:
+      "PR-C (D-#1319): for the class-test screens — is mastery on for this test's class × subject × year, and which " +
+      "question sheet (if any) owns its totals. No student data.",
+    authScopes: { hasPermission: "mastery:view" },
+    args: { classTestId: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => classTestSheetLink(args.classTestId),
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -250,6 +329,7 @@ builder.mutationFields((t) => ({
       date: t.arg.string({ required: true }),
       title: t.arg.string({ required: false }),
       hwItemId: t.arg.string({ required: false }),
+      classTestId: t.arg.string({ required: false, description: "PR-C: CT sheets only — the class test whose totals this sheet will write." }),
       items: t.arg({ type: [PaperItemInput], required: true }),
       rubricLoCodes: t.arg.stringList({ required: false }),
     },
@@ -262,6 +342,7 @@ builder.mutationFields((t) => ({
           date: args.date,
           title: args.title,
           hwItemId: args.hwItemId,
+          classTestId: args.classTestId,
           items: args.items.map((i) => ({
             origin: i.origin as "BANK" | "TEACHER" | "TEACHER_AI",
             artifactId: i.artifactId,

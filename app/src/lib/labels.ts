@@ -398,6 +398,11 @@ const MASTERY_POLICY_FIELD_LABELS: Record<string, [string, string]> = {
   assignmentMixWeak: ["অংশ খ: দুর্বল (%)", "Part B: weak (%)"],
   assignmentMixImproving: ["অংশ খ: উন্নতি (%)", "Part B: improving (%)"],
   assignmentMixRevision: ["অংশ খ: রিভিশন (%)", "Part B: revision (%)"],
+  // PR-D (D-#1321/#1322)
+  homeworkDraftQuestionsPerObjective: ["পাঠ থেকে বাড়ির কাজ: প্রতি ধাপে প্রশ্ন", "Lesson homework: questions per step"],
+  homeworkDraftMaxItems: ["পাঠ থেকে বাড়ির কাজ: সর্বোচ্চ প্রশ্ন", "Lesson homework: most questions"],
+  extraHomeworkMaxQuestions: ["বাড়তি বাড়ির কাজ: প্রতি জনে সর্বোচ্চ প্রশ্ন", "Extra homework: most questions per child"],
+  extraHomeworkIncludeImproving: ["বাড়তি বাড়ির কাজ: উন্নতি-হচ্ছেও ধরা", "Extra homework: include improving"],
 };
 export const masteryPolicyLabel = (key: string): string => {
   const l = MASTERY_POLICY_FIELD_LABELS[key];
@@ -472,6 +477,7 @@ const MASTERY_ACTION_LABELS: Record<string, [string, string]> = {
   REJECTED: ["ফেরত", "Rejected"],
   EXTRA_CLASS: ["অতিরিক্ত ক্লাস", "Extra class"],
   RETEACH: ["রি-টিচ (নিয়মিত ক্লাসে)", "Re-teach (in the normal period)"],
+  EXTRA_HOMEWORK: ["বাড়তি বাড়ির কাজ", "Extra homework"],
   SUCCESS: ["সফল", "Success"],
   PARTIAL: ["আংশিক", "Partial"],
   NOT_RESOLVED: ["সফল নয়", "Not resolved"],
@@ -832,7 +838,9 @@ export const hrCategoryLabel = (v?: string | null): string =>
 
 // Homework tracker (HW-T1..T4)
 export const hwSubjectLabel = (v?: string | null): string =>
-  (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) || v || DASH;
+  (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) ||
+  // D-#1310: the mastery screens also name the Class 6 content subjects (ICT, BAN2, ENG2).
+  (v && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[v as Subject]) || v || DASH;
 
 /** Subject names where space is tight (grids, chips): BGS shortened as on the guardian
  *  Class Test tab (owner, 2026-10-13). Everything else is the full name. */
@@ -7698,6 +7706,42 @@ const STR_BN = {
   // --- Mastery M-2: work sheets + exceptions-only entry ---
   msWork: "প্রশ্নভিত্তিক নম্বর",
   msNewSheet: "নতুন কাজ",
+  // PR-B (D-#1314/#1315): earlier-class steps on a sheet and on the heat-map.
+  msEarlierTitle: "আগের শ্রেণির ধাপ",
+  msEarlierIntro: "আগের শ্রেণির যেসব {objective} এই শাখায় যাচাই হয়েছে (প্রতিটি সেই শ্রেণির নিয়মে বিচার করা)।",
+  msEarlierAssessed: "যাচাই: {n} জন",
+  msEarlierWeak: "দুর্বল: {n} জন",
+  msEarlierAdd: "আগের শ্রেণির {objective} যোগ করুন",
+  msEarlierPickClass: "কোন শ্রেণি?",
+  msEarlierOnlyTitle: "ভিত্তি যাচাই",
+  // PR-C (D-#1317–#1320): the class test and its question sheet are one entry.
+  // PR-D (D-#1321–#1326): homework from the lesson + extra homework for weak children.
+  msDraftFromLesson: "আজকের পাঠ থেকে খসড়া",
+  msDraftNoLesson: "এই দিনে কোনো পাঠ চিহ্নিত হয়নি — নিজে প্রশ্ন যোগ করুন।",
+  msDraftNoCodes: "চিহ্নিত পাঠের পরিকল্পনায় কোনো {objective} নেই — নিজে প্রশ্ন যোগ করুন।",
+  msDraftGaps: "প্রশ্ন বা বইয়ের অনুশীলনী নেই: {codes}",
+  msDraftLeftOut: "সর্বোচ্চ প্রশ্নের পর বাদ: {codes}",
+  msDraftRubric: "রুব্রিকে যাচাই হয় (প্রশ্নে নয়): {codes}",
+  msDraftFromBook: "বই",
+  msExtraButton: "দুর্বলদের বাড়তি বাড়ির কাজ",
+  msExtraTitle: "বাড়তি বাড়ির কাজ",
+  msExtraIntro: "দুর্বল প্রত্যেক শিক্ষার্থীর জন্য অ্যাপ প্রশ্ন বেছেছে (আগে দেখা প্রশ্ন নয়)। দরকার না হলে টিক তুলে দিন, তারপর পাঠান।",
+  msExtraNotWeak: "দুর্বল কিছু নেই",
+  msExtraNoUnseen: "না-দেখা প্রশ্ন নেই",
+  msExtraSend: "পাঠান",
+  msExtraBadge: "বাড়তি",
+  msExtraSent: "বাড়তি বাড়ির কাজ তৈরি হয়েছে",
+  ctnHomeworkFromLesson: "এই পাঠের বাড়ির কাজ তৈরি করুন",
+  msCtLinkPick: "কোন ক্লাস টেস্টের শিট?",
+  msCtLinkNone: "কোনো ক্লাস টেস্টের সাথে যুক্ত নয়",
+  msCtLinkNeedTotal: "প্রশ্নের মোট {have} — ক্লাস টেস্টের পূর্ণ নম্বর {need}",
+  msCtLinkedBadge: "ক্লাস টেস্ট {ct}",
+  msCtMismatch: "{name}: শিটে {sheet}, ক্লাস টেস্টে {ct} — নম্বর মেলেনি।",
+  ctSheetRow: "প্রশ্নভিত্তিক শিট",
+  ctSheetOpen: "শিট খুলুন",
+  ctSheetCreate: "শিট তৈরি করুন",
+  ctSheetConfirmFirst: "আগে প্রশ্নভিত্তিক শিট নিশ্চিত করুন",
+  ctSheetOwnsMarks: "নম্বর ও উপস্থিতি প্রশ্নভিত্তিক শিট থেকে আসে — এখানে শুধু মন্তব্য লেখা যায়।",
   msSourceHW: "বাড়ির কাজ",
   msSourceCT: "ক্লাস টেস্ট",
   msSourceRubric: "রুব্রিক",
@@ -7846,6 +7890,7 @@ const STR_BN = {
   gpMsAssignmentsSent: "সাপ্তাহিক অ্যাসাইনমেন্ট: {n}টি",
   gpMsExtraClass: "অতিরিক্ত ক্লাস",
   gpMsReteach: "ক্লাসে আবার পড়ানো",
+  gpMsExtraHomework: "বাড়তি বাড়ির কাজ",
   gpMsMissed: "আসেনি",
   gpMsRetest: "রি-টেস্ট",
   gpMsNothingYet: "এখনো কিছু নেই।",
@@ -15767,6 +15812,39 @@ const STR_EN: StrTable = {
   // --- Mastery M-2: work sheets + exceptions-only entry ---
   msWork: "Per-question marks",
   msNewSheet: "New sheet",
+  msEarlierTitle: "Earlier-class steps",
+  msEarlierIntro: "Earlier-class {objective} rows assessed in this section (each judged by that class's rules).",
+  msEarlierAssessed: "Assessed: {n}",
+  msEarlierWeak: "Weak: {n}",
+  msEarlierAdd: "Add an earlier class's {objective}",
+  msEarlierPickClass: "Which class?",
+  msEarlierOnlyTitle: "Baseline check",
+  msDraftFromLesson: "Draft from today's lesson",
+  msDraftNoLesson: "No lesson was marked that day — add questions yourself.",
+  msDraftNoCodes: "The marked lesson's plan names no {objective} — add questions yourself.",
+  msDraftGaps: "No question or book exercise: {codes}",
+  msDraftLeftOut: "Left out after the most questions: {codes}",
+  msDraftRubric: "Assessed by rubric (not a question): {codes}",
+  msDraftFromBook: "Book",
+  msExtraButton: "Extra homework for weak students",
+  msExtraTitle: "Extra homework",
+  msExtraIntro: "The app picked questions for each weak student (none seen before). Untick what is not needed, then send.",
+  msExtraNotWeak: "Nothing weak",
+  msExtraNoUnseen: "No unseen question",
+  msExtraSend: "Send",
+  msExtraBadge: "Extra",
+  msExtraSent: "Extra homework created",
+  ctnHomeworkFromLesson: "Make this lesson's homework",
+  msCtLinkPick: "Which class test is this sheet for?",
+  msCtLinkNone: "Not linked to a class test",
+  msCtLinkNeedTotal: "Questions total {have} — the class test is out of {need}",
+  msCtLinkedBadge: "Class test {ct}",
+  msCtMismatch: "{name}: sheet {sheet}, class test {ct} — the marks differ.",
+  ctSheetRow: "Question sheet",
+  ctSheetOpen: "Open the sheet",
+  ctSheetCreate: "Create the sheet",
+  ctSheetConfirmFirst: "Confirm the question sheet first",
+  ctSheetOwnsMarks: "Marks and attendance come from the question sheet — only the comments are typed here.",
   msSourceHW: "Homework",
   msSourceCT: "Class test",
   msSourceRubric: "Rubric",
@@ -15915,6 +15993,7 @@ const STR_EN: StrTable = {
   gpMsAssignmentsSent: "Weekly assignments: {n}",
   gpMsExtraClass: "Extra class",
   gpMsReteach: "Taught again in class",
+  gpMsExtraHomework: "Extra homework",
   gpMsMissed: "did not attend",
   gpMsRetest: "re-test",
   gpMsNothingYet: "Nothing yet.",
