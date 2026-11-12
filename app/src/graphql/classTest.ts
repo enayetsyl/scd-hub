@@ -231,13 +231,16 @@ export interface ClassTestResultT {
   weakness: string | null;
   teacherAction: string | null;
   guardianAction: string | null;
+  /** D-#1360: the picked weak objective codes, and each with its label (staff read). */
+  weakLoCodes: string[];
+  weakObjectives: { code: string; labelBn: string }[];
   submittedAt: string | null;
   sendBackReason: string | null;
   publishedAt: string | null;
   publishedVersion: number;
 }
 
-const CLASS_TEST_RESULT_FIELDS = `id testId studentId status marks totalMarks percent pass weakness teacherAction guardianAction submittedAt sendBackReason publishedAt publishedVersion`;
+const CLASS_TEST_RESULT_FIELDS = `id testId studentId status marks totalMarks percent pass weakness teacherAction guardianAction weakLoCodes weakObjectives { code labelBn } submittedAt sendBackReason publishedAt publishedVersion`;
 
 export const CLASS_TEST_RESULTS_QUERY = gql<{ classTestResults: ClassTestResultT[] }, { testId: string }>`
   query ClassTestResults($testId: String!) { classTestResults(testId: $testId) { ${CLASS_TEST_RESULT_FIELDS} } }
@@ -253,6 +256,8 @@ export const ENTER_CLASS_TEST_RESULT = gql<
     weakness?: string | null;
     teacherAction?: string | null;
     guardianAction?: string | null;
+    /** D-#1360: omitted keeps the stored picks; [] clears. */
+    weakLoCodes?: string[] | null;
     aiCheckToken?: string | null;
     aiIssuesAccepted?: number | null;
     aiTeacherOverrode?: boolean | null;
@@ -260,12 +265,36 @@ export const ENTER_CLASS_TEST_RESULT = gql<
 >`
   mutation EnterClassTestResult(
     $testId: String!, $studentId: String!, $status: String!, $marks: Float,
-    $weakness: String, $teacherAction: String, $guardianAction: String, $aiCheckToken: String, $aiIssuesAccepted: Int, $aiTeacherOverrode: Boolean
+    $weakness: String, $teacherAction: String, $guardianAction: String, $aiCheckToken: String, $aiIssuesAccepted: Int, $aiTeacherOverrode: Boolean,
+    $weakLoCodes: [String!]
   ) {
     enterClassTestResult(
       testId: $testId, studentId: $studentId, status: $status, marks: $marks,
-      weakness: $weakness, teacherAction: $teacherAction, guardianAction: $guardianAction, aiCheckToken: $aiCheckToken, aiIssuesAccepted: $aiIssuesAccepted, aiTeacherOverrode: $aiTeacherOverrode
+      weakness: $weakness, teacherAction: $teacherAction, guardianAction: $guardianAction, aiCheckToken: $aiCheckToken, aiIssuesAccepted: $aiIssuesAccepted, aiTeacherOverrode: $aiTeacherOverrode,
+      weakLoCodes: $weakLoCodes
     ) { ${CLASS_TEST_RESULT_FIELDS} }
+  }
+`;
+
+/** D-#1360: the weak-objective picker's list for one test (`available: false` → no picker). */
+export interface CtWeakLoOptionT {
+  code: string;
+  labelBn: string;
+  level: string;
+  chapterNumber: number | null;
+  chapterTitleBn: string | null;
+  strand: string | null;
+}
+
+export const CT_WEAK_LO_OPTIONS_QUERY = gql<
+  { classTestWeakObjectiveOptions: { available: boolean; max: number; options: CtWeakLoOptionT[] } },
+  { testId: string }
+>`
+  query ClassTestWeakObjectiveOptions($testId: String!) {
+    classTestWeakObjectiveOptions(testId: $testId) {
+      available max
+      options { code labelBn level chapterNumber chapterTitleBn strand }
+    }
   }
 `;
 
@@ -651,6 +680,9 @@ export interface GuardianClassTestResultT {
   pass: boolean | null;
   weakness: string | null;
   guardianAction: string | null;
+  /** D-#1360: weak objectives at objective grain (labels only) + the level word to name them. */
+  weakObjectives: string[];
+  weakObjectivesWordBn: string | null;
   publishedAt: string | null;
   /** CS-3 (D-#716): the child's scanned script — empty until the Office publishes it. */
   scriptPages: { fileId: string; mime: string }[];
@@ -664,7 +696,7 @@ export const CHILD_TEST_RESULTS_QUERY = gql<
 >`
   query ChildTestResults($studentId: String!) {
     childTestResults(studentId: $studentId) {
-      testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction publishedAt
+      testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction weakObjectives weakObjectivesWordBn publishedAt
       scriptPages { fileId mime } scriptPending
     }
   }
@@ -678,7 +710,7 @@ export const CHILD_TEST_RESULTS_PAGE_QUERY = gql<
   query ChildTestResultsPage($studentId: String!, $subject: String, $page: Int, $pageSize: Int) {
     childTestResultsPage(studentId: $studentId, subject: $subject, page: $page, pageSize: $pageSize) {
       rows {
-        testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction publishedAt
+        testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction weakObjectives weakObjectivesWordBn publishedAt
         scriptPages { fileId mime } scriptPending
       }
       total page pageSize

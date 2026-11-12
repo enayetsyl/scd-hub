@@ -283,7 +283,8 @@ describe("enterResult", () => {
     // their AI check stamp (AI-5, D-#1133).
     expect(mockResUpsert).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "", aiCheck: "" } }),
+      // D-#1360: the weak objective picks go with the comments (a no-op where none were picked).
+      expect.objectContaining({ $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "", aiCheck: "", weakLoCodes: "" } }),
       expect.anything(),
     );
     const update = mockResUpsert.mock.calls[0][1] as { $set: Record<string, unknown> };

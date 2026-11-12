@@ -310,6 +310,7 @@ import MasteryTagsScreen from "../screens/mastery/MasteryTagsScreen";
 import MasteryPolicyScreen from "../screens/mastery/MasteryPolicyScreen";
 import MasteryWorkHomeScreen from "../screens/mastery/MasteryWorkHomeScreen";
 import MasteryNewPaperScreen from "../screens/mastery/MasteryNewPaperScreen";
+import MasteryExtraHomeworkScreen from "../screens/mastery/MasteryExtraHomeworkScreen";
 import MasteryEntryScreen from "../screens/mastery/MasteryEntryScreen";
 import MasteryHeatmapScreen from "../screens/mastery/MasteryHeatmapScreen";
 import MasteryStudentScreen from "../screens/mastery/MasteryStudentScreen";
@@ -1464,6 +1465,7 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryPolicy" component={MasteryPolicyScreen} options={{ title: STR.msPolicy }} />
       <MasteryStack.Screen name="MasteryWork" component={MasteryWorkHomeScreen} options={{ title: STR.msWork }} />
       <MasteryStack.Screen name="MasteryNewPaper" component={MasteryNewPaperScreen} options={{ title: STR.msNewSheet }} />
+      <MasteryStack.Screen name="MasteryExtraHomework" component={MasteryExtraHomeworkScreen} options={{ title: STR.msExtraTitle }} />
       <MasteryStack.Screen name="MasteryEntry" component={MasteryEntryScreen} options={{ title: STR.msEntry }} />
       <MasteryStack.Screen name="MasteryHeatmap" component={MasteryHeatmapScreen} options={{ title: STR.msHeatmap }} />
       <MasteryStack.Screen name="MasteryStudent" component={MasteryStudentScreen} options={{ title: STR.msStudent }} />

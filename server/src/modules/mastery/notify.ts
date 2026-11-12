@@ -5,6 +5,7 @@
  *  - MASTERY_EXTRA_CLASS     → the routine teacher (extra class or re-teach) and — for an extra
  *                              class — each planned student's guardians
  *  - MASTERY_ASSIGNMENT_SENT → each student's guardians when the weekly assignment is sent
+ *  - MASTERY_EXTRA_HOMEWORK  → each child's guardians when an extra tailored homework is given (PR-D)
  *
  * Every dedupe key carries the RECIPIENT (and the student for guardians): an entity-only key would
  * silently swallow the second person's notice (the WC-7 lesson). Callers never let a failure here
@@ -63,6 +64,7 @@ export const masteryDedupe = {
   extraClassTeacher: (actionId: string, userId: string) => `MSECT:${actionId}:${userId}`,
   extraClassGuardian: (actionId: string, studentId: string, guardianId: string) => `MSECG:${actionId}:${studentId}:${guardianId}`,
   assignmentSent: (assignmentId: string, studentId: string, guardianId: string) => `MSAS:${assignmentId}:${studentId}:${guardianId}`,
+  extraHomework: (paperId: string, studentId: string, guardianId: string) => `MSXH:${paperId}:${studentId}:${guardianId}`,
 };
 
 /** studentId → its active guardians' ids. */
@@ -174,6 +176,34 @@ export async function notifyAssignmentSent(n: AssignmentNotice): Promise<number>
         bodyBn: `${s.name} · ${subjectBn(n.subject)} · জমা ${bn(n.dueYmd)}`,
         refs: { studentId: s.studentId, subject: n.subject },
         dedupeKey: masteryDedupe.assignmentSent(n.assignmentId, s.studentId, guardianId),
+      });
+      if (r.created) sent++;
+    }
+  }
+  return sent;
+}
+
+/** PR-D (D-#1325): "বাড়তি বাড়ির কাজ দেওয়া হয়েছে" to each given child's guardians. */
+export async function notifyExtraHomework(paper: {
+  paperId: string;
+  subject: string;
+  date: Date;
+  perStudentItems: { studentId: Types.ObjectId; itemNos: number[] }[];
+}): Promise<number> {
+  const ids = paper.perStudentItems.map((p) => String(p.studentId));
+  const g = await guardiansOf(ids);
+  const ymd = new Date(paper.date).toISOString().slice(0, 10);
+  let sent = 0;
+  for (const p of paper.perStudentItems) {
+    const sid = String(p.studentId);
+    for (const guardianId of g.get(sid) ?? []) {
+      const r = await emit({
+        recipientGuardianId: guardianId,
+        kind: "MASTERY_EXTRA_HOMEWORK",
+        titleBn: "বাড়তি বাড়ির কাজ দেওয়া হয়েছে",
+        bodyBn: `${subjectBn(paper.subject)} · ${bn(p.itemNos.length)}টি প্রশ্ন · ${bn(ymd)}`,
+        refs: { studentId: sid, subject: paper.subject },
+        dedupeKey: masteryDedupe.extraHomework(paper.paperId, sid, guardianId),
       });
       if (r.created) sent++;
     }

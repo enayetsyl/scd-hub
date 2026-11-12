@@ -14,6 +14,7 @@ import {
   MASTERY_CLASS_TOKENS,
   MASTERY_DOMAIN_CODE_RE,
   MASTERY_LO_CODE_RE,
+  MASTERY_SUBJECTS,
   parseMasteryLoCode,
 } from "./vocab";
 
@@ -323,6 +324,7 @@ export function readTreeFile(raw: unknown): { ok: true; tree: TreeFile } | { ok:
   const subject = s(r.subject);
   if (!(MASTERY_CLASS_TOKENS as readonly string[]).includes(classToken)) errors.push(`unknown classToken "${classToken}"`);
   if (!subject) errors.push("subject missing");
+  else if (!(MASTERY_SUBJECTS as readonly string[]).includes(subject)) errors.push(`unknown subject "${subject}"`);
   const src = (r.source ?? {}) as Record<string, unknown>;
   const chapters: TreeFile["chapters"] = [];
   for (const c of Array.isArray(r.chapters) ? r.chapters : []) {
@@ -410,6 +412,7 @@ export function readDomainsFile(raw: unknown): { ok: true; domains: DomainsFile 
   if (r.format !== OBJECTIVE_DOMAINS_FORMAT) return { ok: false, errors: [`domains format must be "${OBJECTIVE_DOMAINS_FORMAT}"`] };
   const errors: string[] = [];
   const subject = s(r.subject);
+  if (!(MASTERY_SUBJECTS as readonly string[]).includes(subject)) errors.push(`unknown subject "${subject}"`);
   const seen = new Set<string>();
   const domains: DomainsFile["domains"] = [];
   for (const d of Array.isArray(r.domains) ? r.domains : []) {

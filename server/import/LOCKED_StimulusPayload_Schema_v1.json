@@ -12,7 +12,7 @@
   "properties": {
     "stimulus_id": {
       "type": "string",
-      "pattern": "^STIM-[A-Z]+-C[1-5]-U\\d+(-L\\d+)?-\\d{2,}$",
+      "pattern": "^STIM-[A-Z][A-Z0-9]*-C[1-6]-U\\d+(-L\\d+)?-\\d{2,}$",
       "description": "Stable stimulus id, the target of question.stimulus_ref. PROPOSED scheme (confirm): STIM-{SUBJECT}-C{class}-U{unit}[-L{lesson}]-{nn}, e.g. STIM-ENG-C5-U09-01. Permanent, never reused."
     },
     "stimulus_type": {

@@ -239,6 +239,9 @@ export function notificationTarget(
         : refs?.masteryActionId
           ? { tab: "MasteryTab", screen: "MasteryAction", params: { actionId: refs.masteryActionId } }
           : { tab: "MasteryTab", screen: "MasteryWork" };
+    case "MASTERY_EXTRA_HOMEWORK":
+      // PR-D: the guardian's child progress page lists it under "what the school did".
+      return guardian ? { tab: "GuardianHomeTab", screen: "ChildMastery" } : { tab: "MasteryTab", screen: "MasteryWork" };
     case "MASTERY_ASSIGNMENT_SENT":
       // Guardian-only: the week's assignment sits on the Assignments tab (M-4b).
       return guardian

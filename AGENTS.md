@@ -78,6 +78,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 |---|---|
 | Shared vocab/RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` |
 | Mastery LO-code import conformance | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes` — same pass_/fail_ convention; run after any edit to `topic_tag`/`lo_codes` in the payload or envelope schema |
+| 2027 subjects / Class 6 import conformance | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/subjects-2027` — run after any edit to `subject` / `class_level` / id patterns / `ref19_topic_id` (D-#1310–#1313) |
 | Objective-tree structural verifier | `node skills/_tools/verify_objective_tree.mjs <tree.json> <domains.json> [--inventory <inv.json>]` — e.g. `docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json`; needs `npm run build --workspace=shared` first. Same `checkTreeInvariants` (shared/objectiveTree.ts) the app import runs; green before a tree file is offered for upload |
 | Mastery catalogue check (md → import JSON) | `npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue` (one file: `… <file.md> --out <file.json>`) — validates with the server's own import rules |
 | Descriptive answer-carrier conformance | `node skills/_tools/verify_descriptive_carriers.mjs` — runs the harness over `server/import/cases/descriptive/` (`pass_*` must import, `fail_*` must be rejected). Run after any edit to the question payload schema. |

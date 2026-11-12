@@ -332,6 +332,7 @@ export type AuditEventKind =
   | "MASTERY_PAPER_CREATED"      // a work sheet (HW / CT / rubric) created with its items (M-2)
   | "MASTERY_PAPER_DELETED"      // an OPEN sheet with no results removed
   | "MASTERY_RESULTS_SAVED"      // exceptions saved; meta.correction = after confirmation (evidence rewritten)
+  | "MASTERY_EXTRA_HOMEWORK_CREATED" // PR-D: an extra tailored homework sheet for weak children (D-#1323)
   | "MASTERY_PAPER_CONFIRMED"    // "সব ঠিক আছে" — evidence written for the whole roster (D-#778)
   | "MASTERY_ITEM_EXCLUDED"      // a teacher took an item (or a bank question, scope QID) out of diagnosis for their section (D-#782)
   | "MASTERY_EXCLUSION_REVOKED"  // that exclusion undone; the evidence counts again

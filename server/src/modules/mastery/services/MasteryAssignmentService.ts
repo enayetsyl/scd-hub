@@ -675,7 +675,7 @@ export function pdfCodeLine(
   copy: "STAFF" | "GUARDIAN",
   objectiveOf: (code: string) => string | null,
 ): string {
-  const short = (c: string) => c.replace(/^LO-[A-Z0-9]+-[A-Z]+-/, "");
+  const short = (c: string) => c.replace(/^LO-[A-Z0-9]+-[A-Z][A-Z0-9]*-/, "");
   const list = copy === "GUARDIAN" ? codes.map((c) => objectiveOf(c)).filter((c): c is string => Boolean(c)) : codes;
   const uniq = [...new Set(list)];
   if (uniq.length === 0) return "";
