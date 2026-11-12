@@ -381,7 +381,7 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
         $set: {
           items: built.items.map(toDoc),
           warnings: built.warnings,
-          status: built.warnings.some((w) => w.code === "NO_UNSEEN_QUESTION") ? "NEEDS_REVIEW" : "DRAFT",
+          status: built.warnings.some((w) => w.code === "NO_UNSEEN_QUESTION" || w.code === "TYPE_HAS_NO_MARKS") ? "NEEDS_REVIEW" : "DRAFT",
           edited: false,
         },
         $unset: { approvedBy: 1 },
@@ -525,7 +525,7 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
     }
     sheet.edited = true;
     sheet.approvedBy = undefined;
-    sheet.status = sheet.warnings.some((w) => w.code === "NO_UNSEEN_QUESTION") ? "NEEDS_REVIEW" : "DRAFT";
+    sheet.status = sheet.warnings.some((w) => w.code === "NO_UNSEEN_QUESTION" || w.code === "TYPE_HAS_NO_MARKS") ? "NEEDS_REVIEW" : "DRAFT";
   }
   await sheet.save();
   return sheetDetailOf(a, sheet);

@@ -29,6 +29,7 @@ CellRef.implement({
     goldCount: t.exposeInt("goldCount"),
     pendingCount: t.exposeInt("pendingCount"),
     zero: t.exposeBoolean("zero"),
+    noMarks: t.exposeBoolean("noMarks"),
   }),
 });
 
@@ -78,6 +79,7 @@ ViewRef.implement({
     rows: t.field({ type: [RowRef], resolve: (v) => v.rows }),
     totals: t.field({ type: TotalsRef, resolve: (v) => v.totals }),
     brief: t.exposeString("brief", { description: "The rows with no gold question, as a brief for the next question batch." }),
+    noMarksTypes: t.exposeStringList("noMarksTypes", { description: "PR-G: active types with no marks in the table." }),
     typeCsv: t.exposeString("typeCsv", { description: "PR-G: objective, type, gold, pending per cell as CSV." }),
   }),
 });

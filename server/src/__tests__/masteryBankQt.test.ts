@@ -36,6 +36,7 @@ import { masteryImportCheck, questionTypeCodeOf } from "../modules/mastery/bank"
 import {
   buildPartA,
   buildPartB,
+  hasNoMarksType,
   pickTyped,
   typeOfQuestion,
   type BankQuestion,
@@ -123,11 +124,65 @@ describe("typed pickers (pure)", () => {
 
   it("Part A: the type travels with the question, and hardAvoid (open extra sheet) still wins", () => {
     const l = layout({ partAOn: true, partAMarks: 5, partALoCodes: ["LO-1"], partBMarks: 0 });
-    const c = ctx([q("Q-LONG", "QT-LONG5"), q("Q-FILL", "QT-FILL")], l);
+    const c = ctx([q("A-LONG", "QT-LONG5"), q("B-FILL", "QT-FILL")], l);
     const a = buildPartA([], 30, new Set(), c);
-    expect(a.map((i) => [i.qid, i.questionTypeCode])).toContainEqual(["Q-LONG", "QT-LONG5"]);
-    const avoided = buildPartA([], 30, new Set(), c, new Set(["Q-LONG"]));
-    expect(avoided.map((i) => i.qid)).not.toContain("Q-LONG");
+    expect(a.map((i) => [i.qid, i.questionTypeCode])).toContainEqual(["A-LONG", "QT-LONG5"]);
+    const avoided = buildPartA([], 30, new Set(), c, new Set(["A-LONG"]));
+    expect(avoided.map((i) => i.qid)).not.toContain("A-LONG");
+  });
+
+  it("pin (old output): two 2-mark QT-SOLVE objectives, a 3-mark target → one item, no warnings, nothing typed involved", () => {
+    const outcomes = new Map([
+      ["A", { code: "A", chapterNumber: 1, questionTypeCodes: ["QT-SOLVE"] }],
+      ["B", { code: "B", chapterNumber: 1, questionTypeCodes: ["QT-SOLVE"] }],
+    ]);
+    const bank = ["A", "B"].map((lo) => ({ artifactId: lo + "-a", qid: lo + "-Q1", loCodes: [lo], textBn: lo }));
+    const c: BuilderContext = {
+      outcomes, taught: new Set(["A", "B"]), bank, marksOf: new Map([["QT-SOLVE", 2]]), exposure: new Map(),
+      layout: layout({ partBMarks: 3 }),
+    };
+    const st = (state: string) => ({ state, lastEvidenceAt: new Date("2027-03-01"), seenQids: [] as string[] });
+    const out = buildPartB(new Map([["A", st("WEAK")], ["B", st("WEAK")]]), c);
+    expect(out.items.map((i) => [i.loCode, i.qid, i.questionTypeCode, i.marks, i.band])).toEqual([["A", "A-Q1", "QT-SOLVE", 2, "WEAK"]]);
+    expect(out.warnings).toEqual([]);
+    // Part A (no room rule for untyped): the first usable type, as before.
+    const a = buildPartA([{ loCode: "A", weakPct: 80 }], 50, new Set(), { ...c, layout: layout({ partAOn: true, partAMarks: 1, partBMarks: 0 }) });
+    expect(a.map((i) => [i.qid, i.questionTypeCode, i.marks])).toEqual([["A-Q1", "QT-SOLVE", 2]]);
+  });
+
+  it("Part B, 2-mark target, bank [A-LONG(QT-LONG5), B-FILL, C-FILL]: a fitting FILL beats the least-exposed oversize one", () => {
+    const r = buildPartB(weak, ctx([q("A-LONG", "QT-LONG5"), q("B-FILL", "QT-FILL"), q("C-FILL", "QT-FILL")], layout({ partBMarks: 2 })));
+    expect(r.items.map((i) => [i.qid, i.questionTypeCode, i.marks])).toEqual([["B-FILL", "QT-FILL", 1], ["C-FILL", "QT-FILL", 1]]);
+    expect(r.warnings).toEqual([]);
+    // Nothing fits but an oversize one and the sheet is empty: it may take that one item over.
+    const only = buildPartB(weak, ctx([q("A-LONG", "QT-LONG5")], layout({ partBMarks: 2 })));
+    expect(only.items.map((i) => [i.qid, i.marks])).toEqual([["A-LONG", 5]]);
+  });
+
+  it("Part A, 2-mark Part A never gets a 5-mark item when fitting ones exist", () => {
+    const l = layout({ partAOn: true, partAMarks: 2, partALoCodes: ["LO-1"], partBMarks: 0 });
+    const a = buildPartA([], 30, new Set(), ctx([q("A-LONG", "QT-LONG5"), q("B-FILL", "QT-FILL"), q("C-FILL", "QT-FILL")], l));
+    expect(a.map((i) => [i.qid, i.marks])).toEqual([["B-FILL", 1], ["C-FILL", 1]]);
+    // The room left shrinks as items go in: after a 1-mark FILL only another FILL fits.
+    const b = buildPartA([], 30, new Set(), ctx([q("A-FILL", "QT-FILL"), q("B-LONG", "QT-LONG5"), q("C-FILL", "QT-FILL")], l));
+    expect(b.map((i) => i.qid)).toEqual(["A-FILL", "C-FILL"]);
+  });
+
+  it("a typed question whose type has no marks is skipped with TYPE_HAS_NO_MARKS, not dropped silently", () => {
+    const lo: OutcomeInfo = { code: "LO-1", chapterNumber: 1, questionTypeCodes: ["QT-FILL", "QT-WORD"] };
+    const base = (bank: BankQuestion[], partBMarks = 1): BuilderContext => ({
+      outcomes: new Map([["LO-1", lo]]), taught: new Set(["LO-1"]), bank, marksOf: new Map([["QT-FILL", 1]]), exposure: new Map(),
+      layout: layout({ partBMarks }),
+    });
+    const mixed = buildPartB(weak, base([q("A-WORD", "QT-WORD"), q("B-FILL", "QT-FILL")]));
+    expect(mixed.items.map((i) => i.qid)).toEqual(["B-FILL"]);
+    expect(mixed.warnings).toEqual([{ code: "TYPE_HAS_NO_MARKS", loCode: "LO-1" }]);
+    const onlyWord = buildPartB(weak, base([q("A-WORD", "QT-WORD")]));
+    expect(onlyWord.items).toEqual([]);
+    expect(onlyWord.warnings).toEqual([{ code: "TYPE_HAS_NO_MARKS", loCode: "LO-1" }, { code: "NOTHING_TO_PRACTISE" }]);
+    expect(hasNoMarksType({ qtCode: "QT-WORD" }, lo, base([]))).toBe(true);
+    expect(hasNoMarksType({ qtCode: "QT-FILL" }, lo, base([]))).toBe(false);
+    expect(hasNoMarksType({ qtCode: null }, lo, base([]))).toBe(false);
   });
 
   it("pickTyped skips a candidate that cannot be offered and takes the next", () => {
@@ -258,6 +313,21 @@ describe("import check (acceptance 2)", () => {
   });
 });
 
+describe("a type with no marks in the table (QT-WORD, C1 MATH)", () => {
+  it("imports, with a warning before AND after lock that it cannot be picked until marks are set", async () => {
+    await importTree();
+    for (const lock of [false, true]) {
+      if (lock) await simulateLock();
+      const r = await masteryImportCheck(envelopeOf(REAL_WORD));
+      expect(r.refusals).toEqual([]);
+      expect(qtLines(r, "warnings").join("; ")).toMatch(/QT-WORD has no marks in the table — the question cannot be picked until marks are set/);
+    }
+    // A type that has marks is silent on this point.
+    const ok = await masteryImportCheck(envelopeOf(REAL_SOLVE_A));
+    expect(qtLines(ok, "warnings")).toEqual([]);
+  });
+});
+
 describe("real items from a produced bank", () => {
   async function importReal(payload: Record<string, any>) {
     return importEnvelope(envelopeOf(payload), PRINCIPAL.userId);
@@ -342,17 +412,21 @@ describe("coverage by objective × type (acceptance 4)", () => {
     const row = (code: string) => v.rows.find((r) => r.code === code)!;
     expect(row("LO-C1-MATH-07-01.2").goldCount).toBe(3); // unchanged total
     expect(row("LO-C1-MATH-07-01.2").cells).toEqual([
-      { typeCode: "QT-SOLVE", goldCount: 2, pendingCount: 1, zero: false },
-      { typeCode: null, goldCount: 1, pendingCount: 0, zero: false },
+      { typeCode: "QT-SOLVE", goldCount: 2, pendingCount: 1, zero: false, noMarks: false },
+      { typeCode: null, goldCount: 1, pendingCount: 0, zero: false, noMarks: false },
     ]);
     expect(row("LO-C1-MATH-07-04").cells).toEqual([
-      { typeCode: "QT-WORD", goldCount: 0, pendingCount: 0, zero: true },
-      { typeCode: null, goldCount: 1, pendingCount: 0, zero: false },
+      // QT-WORD has no numeric marks in the C1 MATH table: the cell says so.
+      { typeCode: "QT-WORD", goldCount: 0, pendingCount: 0, zero: true, noMarks: true },
+      { typeCode: null, goldCount: 1, pendingCount: 0, zero: false, noMarks: false },
     ]);
     // An allowed type nobody has written yet is a zero cell on a row with no questions at all.
     expect(row("LO-C1-MATH-07-02").cells[0]).toMatchObject({ typeCode: expect.any(String), goldCount: 0, zero: true });
 
-    const lines = v.typeCsv.split("\n");
+    expect(v.noMarksTypes).toEqual(expect.arrayContaining(["QT-WORD"]));
+    expect(v.noMarksTypes).not.toContain("QT-SOLVE");
+
+    const lines = v.typeCsv.split(/\r?\n/);
     expect(lines[0]).toBe("objective,type,gold,pending");
     expect(lines).toEqual(expect.arrayContaining([
       "LO-C1-MATH-07-01.2,QT-SOLVE,2,1",

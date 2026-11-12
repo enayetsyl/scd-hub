@@ -115,6 +115,7 @@ export async function masteryImportCheck(envelope: Record<string, unknown>): Pro
     for (const f of await questionTypeFindings(pair, codes[0] ?? null, payload)) {
       out.warnings.push(`[MASTERY-QT] ${f} — imported, but check it before the list is locked`);
     }
+    out.warnings.push(...(await questionTypeNoMarksNotes(pair, payload)));
   }
   if (codes.length === 0) return out;
   const rows = await MasteryOutcome.find({ code: { $in: codes } }).select("code status").lean();
@@ -181,7 +182,24 @@ async function lockedCheck(
   for (const f of await questionTypeFindings(pair, code, payload)) {
     out.refusals.push(`[MASTERY-QT] ${f} — set lesson_ref to a type ${code} allows, with the table's marks (the ${where} objective list is locked)`);
   }
+  out.warnings.push(...(await questionTypeNoMarksNotes(pair, payload)));
   return out;
+}
+
+/**
+ * A WARNING in both states (before and after lock): the question's type is a real, active type but
+ * has no numeric marks in the table (C1 MATH QT-WORD) — the question imports, but no picker can use
+ * it until the marks are set.
+ */
+export async function questionTypeNoMarksNotes(
+  pair: { classToken: MasteryClassToken; subject: MasterySubject },
+  payload: Record<string, unknown> | null,
+): Promise<string[]> {
+  const qt = questionTypeCodeOf(payload);
+  if (!qt) return [];
+  const type = await MasteryQuestionType.findOne({ classToken: pair.classToken, subject: pair.subject, code: qt, active: true }).select("marks").lean();
+  if (!type || typeof type.marks === "number") return [];
+  return [`[MASTERY-QT] ${qt} has no marks in the table — the question cannot be picked until marks are set`];
 }
 
 /**

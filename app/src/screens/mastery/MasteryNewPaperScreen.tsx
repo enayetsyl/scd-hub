@@ -174,6 +174,15 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   const lockedQt = mode === "BANK" ? bank.find((x) => x.id === artifactId)?.qtCode ?? null : null;
   const effQt = lockedQt ?? qt;
   const shownQtChoices = lockedQt ? qts.filter((q) => q.code === lockedQt) : qtChoices;
+  // The locked type must be usable: in the class's list, active, with marks. Say why when it is not.
+  const lockedRow = lockedQt ? ((catData?.masteryCatalogue?.questionTypes ?? []) as MasteryQuestionTypeRow[]).find((q) => q.code === lockedQt) : null;
+  const lockedProblem = !lockedQt
+    ? null
+    : !lockedRow || !lockedRow.active
+      ? fill(STR.msQtNotActive, { qt: lockedQt })
+      : lockedRow.marks === null
+        ? fill(STR.msQtNoMarks, { qt: lockedQt })
+        : null;
   const total = items.reduce((s, i) => s + i.marks, 0);
   const chosenCodes = source === "RUBRIC" ? rubric : items.map((i) => i.loCode);
   const earlierOnly = chosenCodes.length > 0 && chosenCodes.every((c) => tokenOfCode(c) !== classToken);
@@ -381,10 +390,8 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
                         key={b.id}
                         label={`${b.qtCode ? `${b.qtCode} · ` : ""}${questionText(b.payloadJson) || (b.qid ?? b.id)}`}
                         selected={artifactId === b.id}
-                        onPress={() => {
-                          setArtifactId(b.id);
-                          if (b.qtCode) setQt(b.qtCode);
-                        }}
+                        // Tap again to deselect; the locked type follows the selection (it is never carried to the next item).
+                        onPress={() => setArtifactId(artifactId === b.id ? null : b.id)}
                       />
                     ))}
                   </View>
@@ -393,6 +400,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
                 <Field label={STR.msQuestionText} value={text} onChangeText={setText} multiline />
               )}
               <Muted>{STR.msQType}</Muted>
+              {lockedProblem ? <Notice message={lockedProblem} tone="warn" /> : null}
               <ChipRow>
                 {shownQtChoices.map((q) => (
                   <Chip key={q.code} label={`${q.labelBn} · ${bnNum(q.marks ?? 0)}`} selected={effQt === q.code} onPress={() => setQt(q.code)} />
@@ -402,7 +410,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
                 title={STR.msAddItem}
                 variant="secondary"
                 onPress={addItem}
-                disabled={!effQt || (mode === "BANK" ? !artifactId : !text.trim())}
+                disabled={!effQt || Boolean(lockedProblem) || (mode === "BANK" ? !artifactId : !text.trim())}
               />
             </>
           ) : null}

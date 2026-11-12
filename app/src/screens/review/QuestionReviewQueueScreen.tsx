@@ -73,6 +73,12 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   const [questionType, setQuestionType] = useState<string | null>(null);
   /** PR-G: the school question type (QT-…) the question carries. */
   const [qtCode, setQtCode] = useState<string | null>(null);
+  /** What is typed in the field; it reaches `qtCode` (and so the query) after a short pause. */
+  const [qtInput, setQtInput] = useState("");
+  useEffect(() => {
+    const h = setTimeout(() => setQtCode(qtInput.trim() === "" ? null : qtInput.trim().toUpperCase()), 400);
+    return () => clearTimeout(h);
+  }, [qtInput]);
   const [important, setImportantOnly] = useState(false);
   const [undecided, setUndecided] = useState(false);
 
@@ -372,8 +378,8 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         </ChipRow>
         <Field
           label={STR.qbQtCode}
-          value={qtCode ?? ""}
-          onChangeText={(t) => setQtCode(t.trim() === "" ? null : t.trim().toUpperCase())}
+          value={qtInput}
+          onChangeText={setQtInput}
           placeholder="QT-FILL"
           autoCapitalize="characters"
         />

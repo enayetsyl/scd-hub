@@ -37,6 +37,7 @@ export const MASTERY_BANK_COVERAGE_QUERY = gql`
           goldCount
           pendingCount
           zero
+          noMarks
         }
       }
       totals {
@@ -47,12 +48,13 @@ export const MASTERY_BANK_COVERAGE_QUERY = gql`
       }
       brief
       typeCsv
+      noMarksTypes
     }
   }
 `;
 
 /** PR-G: one objective × school-question-type cell; typeCode null = questions carrying no type. */
-export type BankCoverageCell = { typeCode: string | null; goldCount: number; pendingCount: number; zero: boolean };
+export type BankCoverageCell = { typeCode: string | null; goldCount: number; pendingCount: number; zero: boolean; noMarks: boolean };
 
 export type BankCoverageRow = {
   code: string;
@@ -81,4 +83,6 @@ export type BankCoverage = {
   brief: string;
   /** PR-G: objective,type,gold,pending per cell, as CSV ("-" = no type). */
   typeCsv: string;
+  /** PR-G: active types with no marks in the table. */
+  noMarksTypes: string[];
 };

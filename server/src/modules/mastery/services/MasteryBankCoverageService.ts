@@ -16,6 +16,7 @@ import { MasteryOutcome, outcomeBookRef, treeShapeOf, type IMasteryOutcome } fro
 import { MasteryChapter } from "../models/MasteryChapter";
 import { MasteryCatalogueReview } from "../models/MasteryCatalogueReview";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
+import { MasteryQuestionType } from "../models/MasteryQuestionType";
 import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../bank";
 import { masteryLevelLabels } from "./MasteryReviewService";
 
@@ -33,6 +34,8 @@ export interface BankCoverageCell {
   pendingCount: number;
   /** An allowed type of the objective with no gold question — the screen highlights it. */
   zero: boolean;
+  /** The type is active but has no marks in the table — its questions cannot be picked yet. */
+  noMarks: boolean;
 }
 
 export interface BankCoverageRow {
@@ -64,6 +67,8 @@ export interface BankCoverageView {
   totals: { rows: number; zeroRows: number; gold: number; rubricRows: number };
   /** The gaps as a brief for the next question batch (plain text, ready to paste). */
   brief: string;
+  /** PR-G: active types of this class × subject with no marks in the table (questions of these types cannot be picked). */
+  noMarksTypes: string[];
   /** PR-G: the objective × type table as CSV (objective,type,gold,pending) — "-" is the no-type cell. */
   typeCsv: string;
 }
@@ -112,16 +117,18 @@ export async function bankCoverage(
   const pick = classToken && subject ? pairs.find((p) => p.classToken === classToken && p.subject === subject) : pairs[0];
   const empty: BankCoverageView = {
     pairs, classToken: pick?.classToken ?? classToken ?? null, subject: pick?.subject ?? subject ?? null, locked: pick?.locked ?? false,
-    chapters: [], rows: [], totals: { rows: 0, zeroRows: 0, gold: 0, rubricRows: 0 }, brief: "", typeCsv: "",
+    chapters: [], rows: [], totals: { rows: 0, zeroRows: 0, gold: 0, rubricRows: 0 }, brief: "", typeCsv: "", noMarksTypes: [],
   };
   if (!pick) return empty;
   const ct = pick.classToken as MasteryClassToken;
   const subj = pick.subject as MasterySubject;
 
-  const [outcomes, chapters] = await Promise.all([
+  const [outcomes, chapters, typeRows] = await Promise.all([
     MasteryOutcome.find({ classToken: ct, subject: subj }).lean(), // bounded: one class × subject list
     MasteryChapter.find({ classToken: ct, subject: subj }).sort({ order: 1, number: 1 }).lean(),
+    MasteryQuestionType.find({ classToken: ct, subject: subj, active: true }).select("code marks").lean(),
   ]);
+  const noMarks = new Set(typeRows.filter((t) => typeof t.marks !== "number").map((t) => t.code));
   const live = outcomes.filter(isLiveRow);
   const labelOf = new Map(live.map((o) => [o.code, o.labelBn]));
   const tagged = live.filter((o) => treeShapeOf(o).tagged);
@@ -164,6 +171,7 @@ export async function bankCoverage(
       goldCount: goldByType.get(`${code}|${t}`) ?? 0,
       pendingCount: pendingByType.get(`${code}|${t}`) ?? 0,
       zero: t !== "" && allowed.includes(t) && (goldByType.get(`${code}|${t}`) ?? 0) === 0,
+      noMarks: t !== "" && noMarks.has(t),
     });
     return [...types.map(cell), cell("")];
   };
@@ -201,6 +209,7 @@ export async function bankCoverage(
       rubricRows,
     },
   };
+  view.noMarksTypes = [...noMarks].sort();
   view.brief = await coverageBrief(view, now);
   view.typeCsv = coverageTypeCsv(view);
   return view;

@@ -157,6 +157,8 @@ export default function MasteryBankCoverageScreen({ route }: { route: { params?:
             </Card>
           ))}
 
+          {v.noMarksTypes.length > 0 ? <Notice tone="warn" message={fill(STR.bcNoMarksNote, { types: v.noMarksTypes.join(", ") })} /> : null}
+
           {rows.length > 0 ? (
             <Card>
               <Body style={{ fontWeight: "700" }}>{STR.bcTypeTableTitle}</Body>

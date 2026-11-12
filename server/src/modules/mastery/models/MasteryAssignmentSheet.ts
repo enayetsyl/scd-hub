@@ -9,7 +9,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { QuestionSchema, type MasteryAssignmentQuestion } from "./MasteryAssignment";
 
-export const MASTERY_SHEET_WARNINGS = ["NO_UNSEEN_QUESTION", "NOTHING_TO_PRACTISE"] as const;
+export const MASTERY_SHEET_WARNINGS = ["NO_UNSEEN_QUESTION", "NOTHING_TO_PRACTISE", "TYPE_HAS_NO_MARKS"] as const;
 export type MasterySheetWarning = (typeof MASTERY_SHEET_WARNINGS)[number];
 
 export interface IMasteryAssignmentSheet extends Document {
