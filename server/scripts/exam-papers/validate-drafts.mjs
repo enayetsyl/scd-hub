@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const SOURCES = new Set(["MP2026", "MP2026_ADAPTED", "MP_OTHER", "MP_OTHER_ADAPTED", "NEW"]);
-const SUBJECTS = new Set(["BAN", "ENG", "MATH", "ISLAM", "SCI", "BGS", "ARABIC"]);
+const SUBJECTS = new Set(["BAN", "ENG", "MATH", "ISLAM", "SCI", "BGS", "ARABIC", "ICT", "BAN2", "ENG2"]);
 const KINDS = new Set(["WRITTEN", "ORAL"]);
 
 function listFiles(args) {

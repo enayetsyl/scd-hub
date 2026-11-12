@@ -300,7 +300,7 @@ export async function uploadEnglishDriveDoc(
   input: UploadEnglishDriveDocInput,
 ): Promise<EnglishDriveUploadResult> {
   if (!Number.isInteger(input.classLevel) || input.classLevel < 1 || input.classLevel > ED_MAX_LEVEL) {
-    throw new Error("শ্রেণি ১ থেকে ৫ এর মধ্যে দিন");
+    throw new Error("শ্রেণি ১ থেকে ৬ এর মধ্যে দিন");
   }
   if (!(ENGLISH_DRIVE_KINDS as readonly string[]).includes(input.kind)) {
     throw new Error(`ডকুমেন্টের ধরন সঠিক নয় (${ENGLISH_DRIVE_KINDS.join("/")})`);

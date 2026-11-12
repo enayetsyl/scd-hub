@@ -10,7 +10,7 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { OBSERVATION_FORMS, HW_SUBJECTS } from "@scd/shared";
+import { OBSERVATION_FORMS, HW_SUBJECTS, subjectsForClassLevel } from "@scd/shared";
 import {
   UPLOAD_CLASSROOM_OBSERVATION,
   RECORD_SESSION_FOOTAGE,
@@ -60,9 +60,9 @@ function extractYoutubeId(input: string): string | null {
 }
 
 /** Subject options filtered by selected form. */
-function subjectOptions(form: string | null) {
+function subjectOptions(form: string | null, level?: number | null) {
   if (form === "QURAN") return [{ label: "কুরআন / Quran", value: "QURAN" }];
-  return (HW_SUBJECTS as readonly string[]).map((s) => ({
+  return subjectsForClassLevel(HW_SUBJECTS as readonly string[], level).map((s) => ({
     label: hwSubjectLabel(s),
     value: s,
   }));
@@ -111,6 +111,11 @@ export default function UploadObservationScreen(): React.ReactElement {
   // Flatten the pickable sections into Select options "ClassName — SectionCode".
   // D-#770: pickableSections, not every active one — the emptied সম্মিলিত beside a
   // split class's বালক/বালিকা stays active (past attendance) but holds no children.
+  // The picked section's class level, so Class 6-only subjects stay off lower sections.
+  const sectionLevel = useMemo(
+    () => (classesQ.data?.classes ?? []).find((c) => c.sections.some((s) => s.id === sectionId))?.level ?? null,
+    [classesQ.data, sectionId],
+  );
   const sectionOptions = useMemo(() => {
     const classes = classesQ.data?.classes ?? [];
     return classes.flatMap((c) =>
@@ -263,7 +268,7 @@ export default function UploadObservationScreen(): React.ReactElement {
             <Select
               label={STR.obsSubject}
               value={subject}
-              options={subjectOptions(form)}
+              options={subjectOptions(form, anchor === "SECTION" ? sectionLevel : null)}
               onChange={handleSubjectChange}
               placeholder={STR.obsPickForm}
             />

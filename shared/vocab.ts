@@ -383,8 +383,8 @@ export const SUBJECT_LABELS_BN: Record<FoundationSubjectCode, string> = {
   BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
   ISLAM: "ইসলাম শিক্ষা",
   ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
-  BAN2: "বাংলা ২য় পত্র",
-  ENG2: "ইংরেজি ২য় পত্র",
+  BAN2: "বাংলা দ্বিতীয় পত্র",
+  ENG2: "ইংরেজি দ্বিতীয় পত্র",
 };
 
 export const DOC_TYPE_LABELS_BN: Record<DocType, string> = {
@@ -1376,6 +1376,13 @@ export function subjectLabel(code: string, level?: number | null, lang: "bn" | "
 export function subjectsForClassLevel<T extends string>(list: readonly T[], level?: number | null): T[] {
   if (level == null || level >= PAPER_SPLIT_FROM_LEVEL) return [...list];
   return list.filter((s) => !(CLASS6_PLUS_SUBJECTS as readonly string[]).includes(s));
+}
+
+/** True when `code` may be taught/declared for a class at `level`: the Class 6+ subjects are
+ *  refused below Class 6. An unknown level (a group spanning classes) allows everything. */
+export function subjectAllowedForClassLevel(code: string, level?: number | null): boolean {
+  if (level == null || level >= PAPER_SPLIT_FROM_LEVEL) return true;
+  return !(CLASS6_PLUS_SUBJECTS as readonly string[]).includes(code);
 }
 
 // --- A.9 ATTENDANCE ENUMS (app-native; Attendance module — prd-attendance, ------
@@ -5441,8 +5448,8 @@ export const MASTERY_SUBJECT_LABELS_BN: Record<MasterySubject, string> = {
   ARABIC: "আরবি",
   ISLAM: "ইসলাম শিক্ষা",
   ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
-  BAN2: "বাংলা ২য় পত্র",
-  ENG2: "ইংরেজি ২য় পত্র",
+  BAN2: "বাংলা দ্বিতীয় পত্র",
+  ENG2: "ইংরেজি দ্বিতীয় পত্র",
 };
 export const MASTERY_SUBJECT_LABELS_EN: Record<MasterySubject, string> = {
   BAN: "Bangla",

@@ -1135,8 +1135,8 @@ function subjectFromText(raw: string): string | null {
   if (/bangladesh|\bBGS\b|বিশ্বপরিচয়/i.test(text)) return "BGS";
   // Class 6 (YC-3): the 2nd papers BEFORE Bangla/English, ICT before anything else.
   if (/\bICT\b|তথ্য ও যোগাযোগ/i.test(text)) return "ICT";
-  if (/\bban2\b|\bbangla[ -]?2nd\b|বাংলা (২য়|দ্বিতীয়)/i.test(text)) return "BAN2";
-  if (/\beng2\b|\benglish[ -]?2nd\b|ইংরেজি (২য়|দ্বিতীয়)/i.test(text)) return "ENG2";
+  if (/\bban2\b|\bbangla[ -]?(2nd|second)[ -]?paper\b|বাংলা\s*(২য়|দ্বিতীয়)\s*পত্র/i.test(text)) return "BAN2";
+  if (/\beng2\b|\benglish[ -]?(2nd|second)[ -]?paper\b|ইংরেজি\s*(২য়|দ্বিতীয়)\s*পত্র/i.test(text)) return "ENG2";
   if (/\bban(gla)?\b|বাংলা/i.test(text)) return "BAN";
   if (/\beng(lish)?\b|ইংরেজি/i.test(text)) return "ENG";
   if (/\bmath(s|ematics)?\b|গণিত/i.test(text)) return "MATH";

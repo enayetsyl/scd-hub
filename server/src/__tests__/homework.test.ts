@@ -296,6 +296,12 @@ describe("T1.1 — HW_ID generation (year-continuous, per class+subject)", () =>
 });
 
 describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
+  test("YC-3: Class 3 refuses BAN2; Class 6 accepts it", async () => {
+    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 3, subject: "BAN2" }))).rejects.toThrow(/ষষ্ঠ শ্রেণি/);
+    // Class 3 BAN is not refused by the Class 6 guard (any other outcome is fine here).
+    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 3, subject: "BAN" }))).rejects.not.toThrow(/ষষ্ঠ শ্রেণি/);
+  });
+
   test("happy path: defaults TIME_DECL=20, status=declared, returns HW_ID", async () => {
     const res = await declareHomeworkItem(validDeclareInput());
     expect(res.hwId).toBe("HW-C1-MATH-0001");

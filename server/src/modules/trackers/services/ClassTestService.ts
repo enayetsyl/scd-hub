@@ -24,6 +24,7 @@ import {
   HW_SUBJECTS,
   CLASS_TEST_SOURCES,
   classToken,
+  subjectAllowedForClassLevel,
 } from "@scd/shared";
 import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
@@ -308,6 +309,9 @@ export async function createRequest(
       .lean()) as { level: number; academicYearId: Types.ObjectId } | null;
     if (!klass) throw new Error("Class not found for this section");
     classLevel = klass.level;
+    if (!subjectAllowedForClassLevel(subject, klass.level)) {
+      throw new Error("এই বিষয়টি ষষ্ঠ শ্রেণি থেকে চালু; নিচের শ্রেণির জন্য নেওয়া যাবে না");
+    }
     classId = section.classId;
     academicYearId = klass.academicYearId;
   } else {

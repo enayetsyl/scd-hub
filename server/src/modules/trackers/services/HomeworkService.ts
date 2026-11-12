@@ -20,6 +20,7 @@ import {
   ROSTER_CLASS_LEVEL_MAX,
   CLASS_TOKEN_PATTERN,
   classToken,
+  subjectAllowedForClassLevel,
 } from "@scd/shared";
 import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { Types } from "mongoose";
@@ -208,6 +209,10 @@ export async function declareHomeworkItem(
     throw new Error(
       `Homework is for roster classes Nursery/KG/C1–C${ROSTER_CLASS_LEVEL_MAX} only (classLevel must be ${ROSTER_CLASS_LEVEL_MIN}..${ROSTER_CLASS_LEVEL_MAX})`,
     );
+  }
+
+  if (!subjectAllowedForClassLevel(subject, input.classLevel)) {
+    throw new Error("এই বিষয়টি ষষ্ঠ শ্রেণি থেকে চালু; নিচের শ্রেণির জন্য নেওয়া যাবে না");
   }
 
   const dateGiven = new Date(input.dateGiven);
