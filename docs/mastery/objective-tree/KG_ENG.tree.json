@@ -1,0 +1,1149 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "KG",
+ "subject": "ENG",
+ "status": "DRAFT",
+ "source": {
+  "book": "KG - ENGLISH (2026) — English (KG), Session 2026 (Mohammadpur branch printed workbook; printed pages 1–110)",
+  "files": [
+   "Mohammadpur Materials/KG Books (Session 2026)…/KG (English) 2026/KG - ENGLISH  (2026).pdf (112-page PDF; only a few headings extract as text, so every page was read as an image)",
+   "Annual Exam Syllabus-2026 (SCD Sylhet).md (কেজি — English: Written, Oral ও Revision-এর বিষয়, পৃষ্ঠা নম্বরসহ)",
+   "repo: server/assets/exam-papers/annual-2026/L0-ENG.json (অ্যাপে প্রকাশিত ২০২৬ বার্ষিক মানবন্টন — ১১ সারি, নম্বরসহ)",
+   "repo: docs/prd-worksheets.md, docs/prd-viva.md (worksheet-এর প্রশ্নের ধরন ও মৌখিক পরীক্ষা)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "Alphabet revision: chart, letter shapes, missing letters, letter order, vowels"
+  },
+  {
+   "number": 2,
+   "titleBn": "Words starting with each letter"
+  },
+  {
+   "number": 3,
+   "titleBn": "Rhyming words"
+  },
+  {
+   "number": 4,
+   "titleBn": "Articles: a or an"
+  },
+  {
+   "number": 5,
+   "titleBn": "Word meanings: Bengali to English and English to Bengali"
+  },
+  {
+   "number": 6,
+   "titleBn": "Spelling: missing letters and jumbled letters"
+  },
+  {
+   "number": 7,
+   "titleBn": "Opposite words"
+  },
+  {
+   "number": 8,
+   "titleBn": "Topic words: fruits, vegetables, animals, body parts, colours, family, directions, shapes, birds, flowers"
+  },
+  {
+   "number": 9,
+   "titleBn": "Sentences: he, she, it; I am; this and that; make sentences; questions; you are"
+  },
+  {
+   "number": 10,
+   "titleBn": "Seasons, months and days"
+  },
+  {
+   "number": 11,
+   "titleBn": "Commands and instructions"
+  },
+  {
+   "number": 12,
+   "titleBn": "Myself"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-LETTERWORDS",
+   "labelBn": "Write three words with the given letter (6 letters)",
+   "marksBn": "৩ (প্রতি অক্ষর)",
+   "examUse": "বার্ষিক প্র. ১ (প্রকাশিত ৯×৩ = ২৭) · worksheet kind LETTER_WORDS · syllabus: \"Words with M-Z: Three words for each letter\""
+  },
+  {
+   "code": "QT-MISSING",
+   "labelBn": "Fill in the missing letters",
+   "marksBn": "০.৫",
+   "examUse": "বার্ষিক প্র. ২ (০.৫ × ১০ = ৫) · worksheet kind WORD_GAP · syllabus: pages 54, 55"
+  },
+  {
+   "code": "QT-JUMBLED",
+   "labelBn": "Rearrange the jumbled letters to make words",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৩ (৫×১) · worksheet kind JUMBLED_WORD · syllabus: pages 57, 58"
+  },
+  {
+   "code": "QT-MEANING-EN",
+   "labelBn": "Write the English meaning of the Bangla words",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৪ (৮×১) · worksheet kind MEANING_TO_EN · syllabus: \"Word meaning: Bengali to English (Page: 34-39)\""
+  },
+  {
+   "code": "QT-MEANING-BN",
+   "labelBn": "Write the Bangla meaning of the English words",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৫ (৮×১) · worksheet kind MEANING_TO_BN · syllabus: \"Word meaning: English to Bengali (Page: 46-51)\""
+  },
+  {
+   "code": "QT-OPPOSITE",
+   "labelBn": "Write the opposite",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৬ (৫×১) · worksheet kind OPPOSITES · syllabus: pages 62, 63, 64"
+  },
+  {
+   "code": "QT-ARTICLE",
+   "labelBn": "Fill in the blanks with a / an",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৭ (৫×১) · worksheet kind ARTICLE_A_AN · syllabus: pages 25, 26, 27"
+  },
+  {
+   "code": "QT-NAMEFIVE",
+   "labelBn": "Name five — set A (Animal/Bird Names) and set B (fruits / vegetables)",
+   "marksBn": "৫ (প্রতি সেট)",
+   "examUse": "বার্ষিক প্র. ৮ (২×৫ = ১০) · worksheet kind NAME_FIVE · syllabus: \"Names of Family members, Shapes, Fruits, Animals, Vegetables\""
+  },
+  {
+   "code": "QT-DAYS",
+   "labelBn": "Write the days of the week",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৯ (৭×১) · worksheet kind WRITE_LIST"
+  },
+  {
+   "code": "QT-MONTHS",
+   "labelBn": "Write the months of the year",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ১০ (১২×১) · worksheet kind WRITE_LIST"
+  },
+  {
+   "code": "QT-MYSELF",
+   "labelBn": "Myself — complete the six framed sentences",
+   "marksBn": "২",
+   "examUse": "বার্ষিক প্র. ১১ (প্রকাশিত ৪×২ = ৮) · worksheet kind FRAMED_SENTENCES · syllabus: \"Write about Myself\""
+  },
+  {
+   "code": "QT-THISTHAT",
+   "labelBn": "Concepts of This/That (pages: 96, 97)",
+   "marksBn": "— (মানবন্টনে আলাদা সারি নেই)",
+   "examUse": "সিলেবাসের Written অংশ; প্রকাশিত ২০২৬ মানবন্টনে নেই — শ্রেণি-পরীক্ষা"
+  },
+  {
+   "code": "QT-MAKESENT",
+   "labelBn": "Verb (sentence-making pages: 98, 99, 100)",
+   "marksBn": "— (মানবন্টনে আলাদা সারি নেই)",
+   "examUse": "সিলেবাসের Written অংশ; প্রকাশিত ২০২৬ মানবন্টনে নেই — শ্রেণি-পরীক্ষা"
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "Class work in the form of the book page (not in the annual syllabus)",
+   "marksBn": "— (লিখিত নম্বর নেই)",
+   "examUse": "বার্ষিক সিলেবাস ও মানবন্টনে নেই: alphabet revision, he / she / it, \"I am\" sentences — শ্রেণির কাজ ও শ্রেণি-পরীক্ষা"
+  },
+  {
+   "code": "QT-ORAL",
+   "labelBn": "Oral (rubric, 4 steps)",
+   "marksBn": "— (সিলেবাসে Oral ১০)",
+   "examUse": "সিলেবাস: \"Written-90, Oral-10\" — Question-answer (page 100), Months of the year, Seasons, Five Flowers name, Five birds name; অ্যাপের মৌখিক পরীক্ষা (viva)"
+  },
+  {
+   "code": "QT-RUBRIC",
+   "labelBn": "Seen in class (handwriting rubric) — outside the paper",
+   "marksBn": "— (লিখিত নম্বর নেই)",
+   "examUse": "শ্রেণির ভিতরেই; বার্ষিক মানবন্টনে নেই"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-KG-ENG-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Alphabet revision: write the missing letters and put letters in order",
+   "sourceText": "\"Write the missing letters\" (pages 3–4), \"Re-arrange the letters\" (page 5), \"Alphabet Chart\" (page 1) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/Write the missing letters/3",
+     "1/Write the missing letters/4",
+     "1/Re-arrange the letters/5",
+     "1/Alphabet Chart/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "বছরের শুরুতে A থেকে Z ও a থেকে z না দেখে লিখতে দিন। কয়েকটি অক্ষর বাদ দিয়ে লিখে দিন (A _ C _ E) — শিক্ষার্থী ফাঁকা ঘর পূরণ করুক; ছয়টি এলোমেলো অক্ষর ক্রমে সাজাক।",
+   "prereqCodes": [
+    "LO-NUR-ENG-02-01",
+    "LO-NUR-ENG-02-02.1",
+    "LO-NUR-ENG-02-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Revision of the Nursery alphabet rows (worksheet kinds FILL_MISSING and REARRANGE). One row, because it only checks that the Nursery skills are still there; a child who fails here is retaught from the Nursery rows. Not in the KG annual mark rows — class work."
+  },
+  {
+   "code": "LO-KG-ENG-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Name the five vowels: a, e, i, o, u",
+   "sourceText": "Page 6: \"vowel\" — a e i o u, and the alphabet grid with the five vowels in colour. No instruction is printed.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/vowel — a e i o u/6"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "পাঁচটি vowel (a, e, i, o, u) মুখে বলান। যে কোনো শব্দ দেখিয়ে জিজ্ঞেস করুন \"প্রথম অক্ষরটি vowel কি না?\" (apple — হ্যাঁ; ball — না)।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Needed for a / an (04-01): the child must know that apple, egg, ice-cream, orange, umbrella begin with a vowel. One page in the book; next step is C1 01-01.2 (find the vowels in words)."
+  },
+  {
+   "code": "LO-KG-ENG-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Three words for each letter: say them and write them",
+   "sourceText": "\"Words starting with Aa and Bb\" … \"Words starting with Yy and Zz\" [বইয়ের নির্দেশনা] — pages 7–19, three picture words for each letter.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORAL",
+    "QT-LETTERWORDS"
+   ],
+   "homeTipBn": "একটি অক্ষর বলুন (M); শিক্ষার্থী তিনটি শব্দ বলুক (Mango, Moon, Milk), তারপর খাতায় লিখুক। বানান ভুল হলে বইয়ের পৃষ্ঠা দেখে মিলিয়ে নিক।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Saying and writing fail apart: many children can say the three words but cannot spell them. Writing is the biggest question of the annual paper (27 marks). Nursery had two words per letter, oral only."
+  },
+  {
+   "code": "LO-KG-ENG-02-01.1",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-02-01",
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Say three words for a given letter",
+   "sourceText": "\"Words starting with …\" (pages 7–19) [বইয়ের নির্দেশনা] [ভাগ: say]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/Words starting with Aa and Bb/7",
+     "2/Words starting with Cc and Dd/8",
+     "2/Words starting with Ee and Ff/9",
+     "2/Words starting with Gg and Hh/10",
+     "2/Words starting with Ii and Jj/11",
+     "2/Words starting with Kk and Ll/12",
+     "2/Words starting with Mm and Nn/13",
+     "2/Words starting with Oo and Pp/14",
+     "2/Words starting with Qq and Rr/15",
+     "2/Words starting with Ss and Tt/16",
+     "2/Words starting with Uu and Vv/17",
+     "2/Words starting with Ww and Xx/18",
+     "2/Words starting with Yy and Zz/19"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-ENG-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The oral exam's letter question. Hard or unusual words in the book (Xebec, Xerox, Quill, Quilt, Vine, Yolk) need a picture or the Bengali meaning."
+  },
+  {
+   "code": "LO-KG-ENG-02-01.2",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-02-01",
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write three words for a given letter with the correct spelling",
+   "sourceText": "\"Words starting with …\" — three rows of boxes under each set of pictures [বইয়ের নির্দেশনা] [ভাগ: write]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/Words starting with Aa and Bb/7",
+     "2/Words starting with Cc and Dd/8",
+     "2/Words starting with Ee and Ff/9",
+     "2/Words starting with Gg and Hh/10",
+     "2/Words starting with Ii and Jj/11",
+     "2/Words starting with Kk and Ll/12",
+     "2/Words starting with Mm and Nn/13",
+     "2/Words starting with Oo and Pp/14",
+     "2/Words starting with Qq and Rr/15",
+     "2/Words starting with Ss and Tt/16",
+     "2/Words starting with Uu and Vv/17",
+     "2/Words starting with Ww and Xx/18",
+     "2/Words starting with Yy and Zz/19"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTERWORDS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-KG-ENG-02-01.1",
+    "LO-NUR-ENG-02-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind LETTER_WORDS (Q1). The syllabus sets M–Z for the annual exam and A–L as revision; the book's own words are the answer key."
+  },
+  {
+   "code": "LO-KG-ENG-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Read rhyming words and say another word that rhymes (-at, -en, -in, -ot, -un)",
+   "sourceText": "\"Rhyming words with 'at'\" (Cat, Rat, Bat), 'en' (Hen, Pen, Ten), 'in' (Bin, Pin, Tin), 'ot' (Hot, Pot, Not), 'un' (Fun, Bun, Run) [বইয়ের নির্দেশনা] — pages 20–24",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/Rhyming words with 'at'/20",
+     "3/Rhyming words with 'en'/21",
+     "3/Rhyming words with 'in'/22",
+     "3/Rhyming words with 'ot'/23",
+     "3/Rhyming words with 'un'/24"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "একটি শব্দ বলুন (cat); শিক্ষার্থী একই শেষ-ধ্বনির আরেকটি শব্দ বলুক (rat, bat, mat)। শব্দটি অক্ষর ধরে ভেঙে পড়ান: c-a-t, cat।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "First step of sounding out three-letter words (the reading chart of C1 01-06 builds on it). Rubric: the child reads the three words of a family alone and adds one more. The six rows of boxes are for copying — handwriting strand."
+  },
+  {
+   "code": "LO-KG-ENG-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Use a or an before a word",
+   "sourceText": "\"Articles \"A\" or \"An\"\" (page 25); \"Fill in the blanks with \"A\" or \"An\"\" (pages 26–27) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/Articles \"A\" or \"An\"/25",
+     "4/Fill in the blanks with \"A\" or \"An\"/26",
+     "4/Fill in the blanks with \"A\" or \"An\"/27"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ARTICLE"
+   ],
+   "homeTipBn": "বাড়ির জিনিস দেখিয়ে বলান: \"a book\", \"an egg\"। নিয়ম সহজ করে বলুন: শব্দের শুরুতে a, e, i, o, u থাকলে an, নইলে a।",
+   "prereqCodes": [
+    "LO-KG-ENG-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind ARTICLE_A_AN (Q7, 5×1). The book uses only twelve words; next step is C1 04-02."
+  },
+  {
+   "code": "LO-KG-ENG-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Word meanings: Bengali to English and English to Bengali",
+   "sourceText": "\"Learn the meaning of the words in English\" / \"Write the meaning of the words in English\" (pages 28–39); \"Learn the meaning of the words in Bengali\" / \"Write the meaning of the words in Bengali\" (pages 40–51) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING-EN",
+    "QT-MEANING-BN"
+   ],
+   "homeTipBn": "বইয়ের এক পৃষ্ঠার সাতটি শব্দ একদিনে: আপনি বাংলা বলুন (মাছ), শিক্ষার্থী ইংরেজি বলুক ও লিখুক (Fish); পরদিন উল্টো — ইংরেজি শুনে বাংলা অর্থ।",
+   "prereqCodes": [
+    "LO-KG-ENG-02-01.1"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Two exam questions (Q4, Q5) that fail apart: Bengali → English also needs the English spelling; English → Bengali only needs the meaning. The same split as C1 SK-VOC-01 / SK-VOC-02."
+  },
+  {
+   "code": "LO-KG-ENG-05-01.1",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-05-01",
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Write the English word for a Bengali word",
+   "sourceText": "\"Learn the meaning of the words in English\", \"Write the meaning of the words in English\" [বইয়ের নির্দেশনা] — pages 28–39, 41 words [ভাগ: Bengali → English]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/Learn the meaning of the words in English/28",
+     "5/Write the meaning of the words in English/29",
+     "5/Learn the meaning of the words in English/30",
+     "5/Write the meaning of the words in English/31",
+     "5/Learn the meaning of the words in English/32",
+     "5/Write the meaning of the words in English/33",
+     "5/Learn the meaning of the words in English/34",
+     "5/Write the meaning of the words in English/35",
+     "5/Learn the meaning of the words in English/36",
+     "5/Write the meaning of the words in English/37",
+     "5/Learn the meaning of the words in English/38",
+     "5/Write the meaning of the words in English/39"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING-EN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-KG-ENG-02-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind MEANING_TO_EN (Q4, 8×1). The syllabus sets pages 34–39 for the annual exam."
+  },
+  {
+   "code": "LO-KG-ENG-05-01.2",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-05-01",
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Write the Bengali meaning of an English word",
+   "sourceText": "\"Learn the meaning of the words in Bengali\", \"Write the meaning of the words in Bengali\" [বইয়ের নির্দেশনা] — pages 40–51, 40 words [ভাগ: English → Bengali]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/Learn the meaning of the words in Bengali/40",
+     "5/Write the meaning of the words in Bengali/41",
+     "5/Learn the meaning of the words in Bengali/42",
+     "5/Write the meaning of the words in Bengali/43",
+     "5/Learn the meaning of the words in Bengali/44",
+     "5/Write the meaning of the words in Bengali/45",
+     "5/Learn the meaning of the words in Bengali/46",
+     "5/Write the meaning of the words in Bengali/47",
+     "5/Learn the meaning of the words in Bengali/48",
+     "5/Write the meaning of the words in Bengali/49",
+     "5/Learn the meaning of the words in Bengali/50",
+     "5/Write the meaning of the words in Bengali/51"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING-BN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind MEANING_TO_BN (Q5, 8×1). The syllabus sets pages 46–51 for the annual exam."
+  },
+  {
+   "code": "LO-KG-ENG-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPELL",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Spell words: fill in the missing letters and rearrange jumbled letters",
+   "sourceText": "\"Fill in the missing letters\", \"More missing letters\" (pages 52–55); \"Jumbled Letters — Re-arrange the Jumbled letters\" (pages 56–58) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MISSING",
+    "QT-JUMBLED"
+   ],
+   "homeTipBn": "বইয়ের চেনা শব্দের একটি অক্ষর বাদ দিয়ে লিখে দিন (Mi_k); শিক্ষার্থী অক্ষরটি বসাক। পরে শব্দের অক্ষর এলোমেলো করে দিন (dukc) — সে সাজিয়ে লিখুক (duck)।",
+   "prereqCodes": [
+    "LO-KG-ENG-02-01.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Two exam questions (Q2, Q3) that fail apart: one missing letter is recall of a spelling with help; a jumble needs the whole spelling. The step before C1 SK-SPELL-01."
+  },
+  {
+   "code": "LO-KG-ENG-06-01.1",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-06-01",
+   "domainCode": "DOM-ENG-SPELL",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Fill in the missing letters of a word",
+   "sourceText": "\"Fill in the missing letters\" (pages 52, 54), \"More missing letters\" (pages 53, 55) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/Fill in the missing letters/52",
+     "6/More missing letters/53",
+     "6/Fill in the missing letters/54",
+     "6/More missing letters/55"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MISSING"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WORD_GAP over the book's own gapped words (Q2, 0.5 × 10). The syllabus sets pages 54–55 for the annual exam."
+  },
+  {
+   "code": "LO-KG-ENG-06-01.2",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-06-01",
+   "domainCode": "DOM-ENG-SPELL",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Rearrange jumbled letters to make a word",
+   "sourceText": "\"Jumbled Letters — Re-arrange the Jumbled letters\" (pages 56–58) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/Jumbled Letters — Re-arrange the Jumbled letters/56",
+     "6/Jumbled Letters — Re-arrange the Jumbled letters/57",
+     "6/Jumbled Letters — Re-arrange the Jumbled Letters/58"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-JUMBLED"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-KG-ENG-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind JUMBLED_WORD (Q3, 5×1). Five of the book's jumbles unscramble two ways (era, roes, noes, stra, cra) and are left out of the worksheet bank — see Flags."
+  },
+  {
+   "code": "LO-KG-ENG-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Say and write the opposite word (twelve pairs)",
+   "sourceText": "\"Opposite words\" (page 59), \"Opposites\" (page 62), \"Match the opposite words\" (pages 60, 63), \"Write down the opposite words\" (pages 61, 64) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/Opposite words/59",
+     "7/Match the opposite words/60",
+     "7/Write down the opposite words/61",
+     "7/Opposites/62",
+     "7/Match the opposite words/63",
+     "7/Write down the opposite words/64"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-OPPOSITE"
+   ],
+   "homeTipBn": "একটি শব্দ বলুন (hot), শিক্ষার্থী উল্টোটি বলুক (cold) ও লিখুক। হাত দিয়ে দেখান: up–down, big–small, open–close।",
+   "prereqCodes": [
+    "LO-KG-ENG-05-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind OPPOSITES (Q6, 5×1). The same twelve pairs come back in C1 01-05.2. The syllabus sets pages 62–64 for the annual exam."
+  },
+  {
+   "code": "LO-KG-ENG-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Topic words: name them and write them (fruits, vegetables, animals, birds, flowers, body parts, colours, family, shapes, directions)",
+   "sourceText": "\"FRUITS\", \"Vegetables\", \"Animals\", \"BODY PARTS\", \"COLOURS\", \"Family Members\", \"Directions\", \"Shapes\", \"Birds\", \"Flowers\"; \"Write down the names of fruits\" … \"Write the names of Birds\" [বইয়ের নির্দেশনা] — pages 65–91",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORAL",
+    "QT-NAMEFIVE"
+   ],
+   "homeTipBn": "একটি দলের নাম বলুন (\"Tell me five fruits\") — শিক্ষার্থী পাঁচটি নাম ইংরেজিতে বলুক, তারপর লিখুক। ঘরের জিনিস, শরীরের অঙ্গ ও পরিবারের সদস্য দেখিয়ে ইংরেজি নাম জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-KG-ENG-05-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Ten topics in one objective with two rows, by how it is checked: saying (oral exam: five flowers, five birds) and writing (Q8: name five). A row per topic would repeat one skill ten times; the topic a child is weak in shows from the question."
+  },
+  {
+   "code": "LO-KG-ENG-08-01.1",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-08-01",
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Say the names of a topic and match a name to its picture",
+   "sourceText": "The ten word pages (\"FRUITS\" … \"Flowers\"), \"Match the fruits with the names\", \"Match the name of the birds with their pictures\"; the colouring and drawing pages [বইয়ের নির্দেশনা] [ভাগ: say]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/FRUITS/65",
+     "8/Match the fruits with the names/66",
+     "8/Draw the pictures of the fruits you like. Make a poster./67",
+     "8/Vegetables/68",
+     "8/Draw the picture of the vegetable you like/69",
+     "8/Animals/71",
+     "8/BODY PARTS/73",
+     "8/COLOURS/75",
+     "8/Colour the picture/77",
+     "8/Family Members/78",
+     "8/Directions/80",
+     "8/Shapes/83",
+     "8/Color the Shapes/84",
+     "8/Color the Shapes (house)/85",
+     "8/Birds/87",
+     "8/Match the name of the birds with their pictures/88",
+     "8/Flowers/90",
+     "8/Color the picture/91"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Syllabus, oral: \"Five Flowers name, Five birds name\". The six colouring and drawing pages (67, 69, 77, 84, 85, 91) are cited here only because the teacher names the fruit, colour or shape while the child draws — the drawing itself is not assessed."
+  },
+  {
+   "code": "LO-KG-ENG-08-01.2",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-08-01",
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Write five names of a topic with the correct spelling",
+   "sourceText": "\"Write down the names of fruits\", \"Write the names of vegetables\", \"Write the names of Animals\", \"Write the name of Body parts\", \"Write the names of colours and color the box\", \"Write the names of family members\", \"Write down the names of four directions\", \"What direction is the rocket pointing?\", \"Write the names of Shapes\", \"Write the names of Birds\" [বইয়ের নির্দেশনা] [ভাগ: write]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/Write down the names of fruits/67",
+     "8/Write the names of vegetables/70",
+     "8/Write the names of Animals/72",
+     "8/Write the name of Body parts/74",
+     "8/Write the names of colours and color the box/76",
+     "8/Write the names of family members/79",
+     "8/What direction is the rocket pointing?/81",
+     "8/Write down the names of four directions/82",
+     "8/Write the names of Shapes/86",
+     "8/Write the names of Birds/89"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NAMEFIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-KG-ENG-08-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind NAME_FIVE (Q8: set A animals / birds, set B fruits / vegetables, 2×5). The syllabus also lists family members and shapes as written; body parts, colours and directions are in the book but not in the annual syllabus."
+  },
+  {
+   "code": "LO-KG-ENG-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PRON",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Use he, she or it for a boy, a girl or a thing",
+   "sourceText": "\"Pronouns\" — \"He is a boy. She is a girl. It is a thing.\" (page 92); \"Fill in the Blanks with He, She or It\" (page 93) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/Pronouns/92",
+     "9/Fill in the Blanks with He, She or It/93"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "পরিবারের মানুষ ও ঘরের জিনিস দেখিয়ে জিজ্ঞেস করুন \"he, she না it?\" — বাবা he, মা she, বল it। তারপর বাক্য বলান: \"He is my father.\"",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Not in the annual syllabus or mark rows — class work. Next step: C1 07-01 (he, she, it, they in place of names)."
+  },
+  {
+   "code": "LO-KG-ENG-09-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Say and write short sentences about a person with \"I am\" and \"You are\"",
+   "sourceText": "Sentences with \"I am\" (page 94); \"Write four sentences with \"I am\"\", \"Say four sentences with \"I am\"\" (page 95); Sentences with \"You are\" (page 101) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/Sentences with \"I am\"/94",
+     "9/Write four sentences with \"I am\"/95",
+     "9/Say four sentences with \"I am\"/95",
+     "9/Sentences with \"You are\"/101"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "শিক্ষার্থী নিজের সম্পর্কে চারটি বাক্য বলুক: \"I am Ali. I am a boy. I am a Muslim. I am a student.\" তারপর আপনাকে দেখিয়ে: \"You are …\"। পরে খাতায় লিখুক।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The frame of the \"Myself\" question (12-01) and the first use of am / are (C1 08-02). Saying and writing are one row here: the four sentences are fixed and short. Not in the annual mark rows — class work."
+  },
+  {
+   "code": "LO-KG-ENG-09-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Use this for a near thing and that for a far thing",
+   "sourceText": "\"This or That\" (page 96); \"Circle the correct one\" (page 97) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/This or That/96",
+     "9/Circle the correct one/97"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-THISTHAT"
+   ],
+   "homeTipBn": "হাতের কাছের জিনিস ছুঁয়ে বলান \"This is a pen.\"; দূরের জিনিস আঙুল দিয়ে দেখিয়ে \"That is a fan.\"। দিনে পাঁচটি জিনিস।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Syllabus, written: \"Concepts of This/That (pages: 96, 97)\" — but there is no mark row for it in the published annual marks. Next step: C1 09-01 (this, that, these, those)."
+  },
+  {
+   "code": "LO-KG-ENG-09-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Make a short sentence with a given word",
+   "sourceText": "\"Make sentences\" — It, This, Read, He, Write, She, Run, That, Eat, Go [বইয়ের নির্দেশনা] (page 98)",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/Make sentences/98"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MAKESENT"
+   ],
+   "homeTipBn": "একটি শব্দ দিন (Read); শিক্ষার্থী প্রথমে মুখে একটি ছোট বাক্য বলুক (\"I read a book.\"), তারপর লিখুক। বাক্য বড় হাতের অক্ষরে শুরু ও full stop দিয়ে শেষ হয়েছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-KG-ENG-09-01",
+    "LO-KG-ENG-09-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Syllabus, written: \"Verb (sentence-making pages: 98, 99, 100)\" — no mark row in the published annual marks. Five of the ten words are doing words (Read, Write, Run, Eat, Go), which the book does not teach anywhere else — see Flags. Next step: C1 10-03."
+  },
+  {
+   "code": "LO-KG-ENG-09-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Ask and answer simple questions about yourself",
+   "sourceText": "\"Ask and Answer the Questions\" — \"What is your name? What is your father's name? … How old are you?\" (page 99); \"What class do you read in? … Where do you live?\" (page 100) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/Ask and Answer the Questions/99",
+     "9/Ask and Answer the Questions/100"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "প্রতিদিন দুটি প্রশ্ন ইংরেজিতে জিজ্ঞেস করুন (\"What is your name?\", \"How old are you?\"); শিক্ষার্থী পূর্ণ বাক্যে উত্তর দিক (\"My name is …\")। পরে সে আপনাকে প্রশ্ন করুক।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Syllabus, oral: \"Question-answer (Page: 100)\". Rubric with one child at a time; answering in chorus is a teaching method. Next step: C1 02-03."
+  },
+  {
+   "code": "LO-KG-ENG-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Days of the week and months of the year",
+   "sourceText": "\"Seven Days\", \"Complete the sequence\", \"Practice the name of Seven Days\"; \"Months of The Year\", \"Practice the name of Twelve Months\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-DAYS",
+    "QT-MONTHS"
+   ],
+   "homeTipBn": "প্রতিদিন সকালে জিজ্ঞেস করুন \"What day is it today?\"। সাত দিনের নাম ক্রমে বলান ও লেখান; মাসের নাম তিনটি করে শেখান (January, February, March …)।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Two exam questions (Q9, Q10) that fail apart — the months are longer and harder to spell. The same two rows as C1 01-04.1 / 01-04.2."
+  },
+  {
+   "code": "LO-KG-ENG-10-01.1",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-10-01",
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Write the seven days of the week in order",
+   "sourceText": "\"Seven Days\" (page 104), \"Complete the sequence\" (page 105), \"Practice the name of Seven Days\" (page 106) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/Seven Days/104",
+     "10/Complete the sequence/105",
+     "10/Practice the name of Seven Days/106"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-DAYS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_LIST (Q9, 7×1). The book's week starts on Saturday."
+  },
+  {
+   "code": "LO-KG-ENG-10-01.2",
+   "level": "SUB",
+   "parentCode": "LO-KG-ENG-10-01",
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Write the twelve months of the year in order",
+   "sourceText": "\"Months of The Year\" (page 103), \"Practice the name of Twelve Months\" (page 107) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/Months of The Year/103",
+     "10/Practice the name of Twelve Months/107"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MONTHS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_LIST (Q10, 12×1). Also in the oral syllabus (\"Months of the year\")."
+  },
+  {
+   "code": "LO-KG-ENG-10-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Name the six seasons of Bangladesh",
+   "sourceText": "\"Seasons of Bangladesh\" — Summer, The rainy-season, The autumn, Late-autumn, Winter, Spring [বইয়ের নির্দেশনা] (page 102)",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/Seasons of Bangladesh/102"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "বইয়ের ছয়টি ছবি দেখিয়ে ঋতুর ইংরেজি নাম বলান। জিজ্ঞেস করুন \"Which season is it now?\"",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Syllabus, oral: \"Seasons\". One page, names only; kept with days and months (the calendar words)."
+  },
+  {
+   "code": "LO-KG-ENG-11-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Follow and say classroom commands",
+   "sourceText": "\"Commands and Instructions\" — \"Raise your hand. Open your book. Close your book. Sit down. Stand up.\" (page 108); \"Come here. Go there. Touch your head. Touch your mouth.\" (page 109) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/Commands and Instructions/108",
+     "11/Commands and Instructions/109"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "খেলার মতো করে নির্দেশ দিন: \"Stand up.\", \"Touch your head.\", \"Open your book.\" — শিক্ষার্থী কাজটি করুক; পরে সে আপনাকে নির্দেশ দিক।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Rubric: the child does what is said, then gives a command. Not in the annual syllabus — class work. Next step: C1 02-02."
+  },
+  {
+   "code": "LO-KG-ENG-12-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "Myself: complete the framed sentences about yourself",
+   "sourceText": "\"My Self\" — \"My name is ……. I am six/seven years old. I am a boy/girl. I read in class KG. My school name is S.C.D. My father's name is ……. My mother's name is …….\" [বইয়ের নির্দেশনা] (page 110)",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/My Self/110"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MYSELF"
+   ],
+   "homeTipBn": "শিক্ষার্থী নিজের নাম, বয়স, শ্রেণি, বাবার নাম ও মায়ের নাম ইংরেজি বাক্যে মুখে বলুক, তারপর বইয়ের ছাঁচে লিখুক। নিজের ও বাবা-মায়ের নামের ইংরেজি বানান আলাদা করে লেখান।",
+   "prereqCodes": [
+    "LO-KG-ENG-09-02",
+    "LO-KG-ENG-09-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind FRAMED_SENTENCES (Q11, published as 4×2). The step before the C1 paragraph strand (SK-WRITE-01)."
+  },
+  {
+   "code": "LO-KG-ENG-SK-HW-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-HAND",
+   "chapterNumber": null,
+   "strand": "HW",
+   "labelBn": "Copy words neatly on the lines: small, tall and tail letters",
+   "sourceText": "\"Small Letters Are Like Animals — Some Are Small / Some Are Tall / Some have tails that Fall\" (page 2); the rows of boxes on pages 7–24; \"Practice the name of Seven Days\", \"Practice the name of Twelve Months\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/Small Letters Are Like Animals/2",
+     "2/Words starting with Aa and Bb/7",
+     "2/Words starting with Cc and Dd/8",
+     "2/Words starting with Ee and Ff/9",
+     "2/Words starting with Gg and Hh/10",
+     "2/Words starting with Ii and Jj/11",
+     "2/Words starting with Kk and Ll/12",
+     "2/Words starting with Mm and Nn/13",
+     "2/Words starting with Oo and Pp/14",
+     "2/Words starting with Qq and Rr/15",
+     "2/Words starting with Ss and Tt/16",
+     "2/Words starting with Uu and Vv/17",
+     "2/Words starting with Ww and Xx/18",
+     "2/Words starting with Yy and Zz/19",
+     "3/Rhyming words with 'at'/20",
+     "3/Rhyming words with 'en'/21",
+     "3/Rhyming words with 'in'/22",
+     "3/Rhyming words with 'ot'/23",
+     "3/Rhyming words with 'un'/24",
+     "10/Practice the name of Seven Days/106",
+     "10/Practice the name of Twelve Months/107"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "চার লাইনের খাতায় বইয়ের শব্দ দেখে লিখতে দিন। দেখুন: a c e-এর মতো ছোট অক্ষর মাঝের দুই লাইনে, b d h লম্বা হয়ে উপরে ওঠে, g j p q y নিচে নামে; শব্দের মাঝে ফাঁক।",
+   "prereqCodes": [
+    "LO-NUR-ENG-SK-HW-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Handwriting is a class rubric, not an exam question. Page 2 gives the rule (small / tall / tail letters); the copying boxes of the word pages are where it is seen."
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 112,
+  "mapped": 112,
+  "unmapped": [],
+  "note": "exercisesTotal = the book's activity blocks (112): the book numbers no exercises, so every headed activity on a page is one block (pages 67 and 95 have two). ref = section/page heading/printed page number."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "শিখনফলগুলো বইয়ের পৃষ্ঠা থেকে অনুমান করা — বইয়ে শিক্ষক-নোট, ছাপা শিখনফল বা নম্বর বণ্টনের পরিশিষ্ট নেই। তাই প্রতিটি সারির \"বইয়ের নির্দেশনা\" হলো পৃষ্ঠার শিরোনাম বা নির্দেশ ([বইয়ের নির্দেশনা] চিহ্নিত)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "বইয়ে অধ্যায় নেই। ১১০ পৃষ্ঠা বিষয় ধরে বারো অংশে ভাগ করা হয়েছে, বইয়ের ক্রমে: ১ Alphabet revision (পৃ. ১–৬) · ২ Words for each letter (৭–১৯) · ৩ Rhyming words (২০–২৪) · ৪ a / an (২৫–২৭) · ৫ Word meanings (২৮–৫১) · ৬ Spelling (৫২–৫৮) · ৭ Opposites (৫৯–৬৪) · ৮ Topic words (৬৫–৯১) · ৯ Sentences (৯২–১০১) · ১০ Seasons, months, days (১০২–১০৭) · ১১ Commands (১০৮–১০৯) · ১২ Myself (১১০)। কোডের \"অধ্যায়\" সংখ্যা এই অংশের নম্বর। কভারেজ: প্রতিটি পৃষ্ঠার প্রতিটি শিরোনাম-যুক্ত কাজ একটি ব্লক (১১২টি; পৃ. ৬৭ ও ৯৫-এ দুটি করে)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "প্রশ্নের ধরন ও নম্বর: সিলেট শাখার বার্ষিক সিলেবাস ২০২৬ (কেজি, English: \"Written-90, Oral-10\") বিষয় ও পৃষ্ঠা দেয়, প্রতি প্রশ্নের নম্বর দেয় না; নম্বর নেওয়া হয়েছে অ্যাপে প্রকাশিত মানবন্টন থেকে (repo: server/assets/exam-papers/annual-2026/L0-ENG.json-এর syllabusRows — ১১ সারি)। সেই ১১ সারির যোগফল ১০০ এবং তাতে Oral-এর সারি নেই — সিলেবাসের \"Written 90 + Oral 10\"-এর সঙ্গে মেলে না। আরও দুটি অমিল: প্র. ১-এর লেখা \"6 letters\" কিন্তু প্রকাশিত সংখ্যা ৯×৩ = ২৭; প্র. ১১-এর লেখা \"six framed sentences\" কিন্তু প্রকাশিত ৪×২ = ৮। মোহাম্মদপুরের \"Marks Distribution - Annual Exam 2026\" PDF প্রথম শ্রেণি থেকে শুরু — কেজি তাতে নেই।"
+  },
+  {
+   "code": "LO-KG-ENG-09-03",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "সিলেবাসের Written অংশে \"Concepts of This/That (pages: 96, 97)\" ও \"Verb (sentence-making pages: 98, 99, 100)\" আছে, কিন্তু প্রকাশিত মানবন্টনের ১১ সারিতে এদের কোনো নম্বর নেই (সারি ০৯-০৩, ০৯-০৪)। উল্টো দিকে সিলেবাসের \"Names of Family members, Shapes\" প্র. ৮-এর দুই সেটে (animals / birds; fruits / vegetables) নেই। মানবন্টন না সিলেবাস — কোনটি ঠিক, তা ঠিক করা দরকার। he / she / it (০৯-০১), \"I am\" (০৯-০২), commands (১১-০১), body parts, colours, directions বইয়ে আছে কিন্তু বার্ষিক সিলেবাসে নেই (অর্ধ-বার্ষিকের অংশ হতে পারে) — এগুলোর ধরন QT-CLASS বা মৌখিক।"
+  },
+  {
+   "code": "LO-KG-ENG-09-04",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: পৃ. ৯৮ \"Make sentences\"-এর দশটি শব্দের পাঁচটি doing word (Read, Write, Run, Eat, Go), আর সিলেবাস এই পৃষ্ঠাকে \"Verb\" বলে — কিন্তু বইয়ে doing word বা verb শেখানোর কোনো পৃষ্ঠা নেই, নমুনা বাক্যও নেই। শিশু \"Read\" দিয়ে কী বাক্য লিখবে তা বই থেকে শেখে না। একটি নমুনা পৃষ্ঠা (\"I read. I write. I run.\") দরকার।"
+  },
+  {
+   "code": "LO-KG-ENG-06-01.2",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: পৃ. ৫৬–৫৮-এর কয়েকটি এলোমেলো শব্দের দুটি উত্তর হয় — era (ear / are), roes (rose / sore), noes (nose / ones), stra (star / rats), cra (car / arc); অ্যাপের worksheet এই পাঁচটি বাদ দিয়েছে। পৃ. ৫৮-এ কয়েকটি শব্দ বড় হাতের অক্ষরে শুরু (Tmoato, Quarn, Clod, Smlal, Lmeon, Mokney) — প্রথম অক্ষর দেখেই উত্তর বোঝা যায়; পৃ. ৫৩-এ M__N বড় হাতের। শিরোনামের বানান দুই রকম (\"Jumbled letters\" / \"Jumbled Letters\")।"
+  },
+  {
+   "code": "LO-KG-ENG-11-01",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য — বানান ও শব্দ: পৃ. ১০৮ \"Be quite.\" (quiet); পৃ. ১০৯ \"Go to your sit.\" (seat); পৃ. ৮০ \"compus\" (compass); \"Lichi\" (পৃ. ৩৬, ৬৫ — প্রচলিত litchi / lychee); পৃ. ৩৮ ও ৬২-তে বন্ধ = \"Close\" এবং Open–Close (বিশেষণ হিসেবে closed); পৃ. ১১০ শিরোনাম \"My Self\" (Myself); একই বইয়ে Colour ও Color। কেজির পক্ষে কঠিন শব্দ: Xebec, Xerox, Quill, Quilt, Vine, Yolk, Late-autumn।"
+  },
+  {
+   "code": "LO-KG-ENG-12-01",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য (সিলেট শাখা): পৃ. ১১০ \"My Self\"-এ ছাপা বাক্য \"I live in Dhaka.\" — বইটি মোহাম্মদপুর শাখার; সিলেটের শিক্ষার্থীর জন্য এটি ভুল, পূরণের জায়গাও নেই। স্কুলের নাম সংক্ষেপে \"S.C.D.\"। পৃ. ১০০-এর প্রশ্ন \"Where do you live?\"-এর উত্তরও একই কারণে বদলাবে।"
+  },
+  {
+   "code": "LO-KG-ENG-08-01.1",
+   "kind": "OTHER",
+   "text": "ছয়টি রং করা ও আঁকার পৃষ্ঠা (পৃ. ৬৭ poster, ৬৯, ৭৭, ৮৪, ৮৫, ৯১) ইংরেজির দক্ষতা নয় — কভারেজের জন্য ০৮-০১.১-এ (নাম বলা) রাখা হয়েছে, কারণ শিক্ষক আঁকার সময় ফল, রং বা আকৃতির নাম জিজ্ঞেস করেন। পর্যালোচক চাইলে এগুলো \"এ বছর যাচাই নয়\" করে বাদ দিতে পারেন। পৃ. ৭১-এর \"Listen to the stories about these animals from the Qur'an\" শোনার কাজ — সারি করা হয়নি (বইয়ে গল্প নেই)।"
+  },
+  {
+   "code": "LO-KG-ENG-08-01",
+   "kind": "TOO_BROAD",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): দশটি বিষয়ের শব্দ এক শিখনফলে (বলা / লেখা)। খুব বড় মনে হলে তিন ভাগ করা যায়: (ক) fruits, vegetables, animals, birds, flowers — পরীক্ষার \"Name five\"; (খ) body parts ও family — প্রথম শ্রেণির ০৩-০১ ও ০৫-০১-এর আগের ধাপ; (গ) colours, shapes, directions। প্রথম শ্রেণিতে এগুলো তিনটি আলাদা শিখনফল।"
+  },
+  {
+   "code": "LO-KG-ENG-03-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): Rhyming words রুব্রিকে (পড়া ও আরেকটি শব্দ বলা) রাখা হয়েছে; বইয়ে ছয় সারি লেখার ঘর আছে, তাই চাইলে লিখিত প্রশ্ন (\"Write two words that rhyme with cat\") করা যায় — তখন ধরন QT-CLASS। সিলেবাস বা মানবন্টনে rhyming words নেই।"
+  },
+  {
+   "code": "LO-KG-ENG-09-02",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): \"I am\" ও \"You are\" এক সারি, বলা ও লেখা একসাথে — চারটি ছোট বাঁধা বাক্য। ক্ষেত্র \"ক্রিয়া ও কাল\" (am / are-এর প্রথম ব্যবহার); চাইলে \"শোনা ও বলা\"-তে সরানো যায়, কারণ কাজটি আসলে নিজের পরিচয় বলা।"
+  },
+  {
+   "code": "LO-KG-ENG-01-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): QT-CLASS পরীক্ষার প্রশ্নের ধরন নয় — যে লিখিত কাজ বইয়ে আছে কিন্তু বার্ষিক সিলেবাস-মানবন্টনে নেই (alphabet revision, he / she / it, \"I am\"), তার চিহ্ন। নতুন প্রশ্নের ধরন বানানো হয়নি; এই সারিগুলো শ্রেণি-পরীক্ষায় বইয়ের পৃষ্ঠার ছাঁচেই যাচাই হবে।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি দক্ষতা — worksheet-এর প্রশ্ন, মৌখিক পরীক্ষা ও রুব্রিক এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম (ইংরেজিতে) ও বাংলা টিপ দেখবেন। কেজির ইংরেজি বই মোহাম্মদপুর শাখার ছাপা কর্মপুস্তক — এতে শিখনফল ছাপা নেই, তাই সব শিখনফল পৃষ্ঠার কাজ দেখে অনুমান করা। ক্ষেত্র নতুন বানানো হয়নি: `domains/ENG.json`-এর এগারোটি ক্ষেত্র ব্যবহার হয়েছে; প্রথম শ্রেণির লক করা ক্ষেত্রে কোনো বদল নেই। \"আগের ধাপ\" নার্সারির সারিতে যায় (NUR·…); নোটে লেখা আছে প্রথম শ্রেণির কোন সারির আগের ধাপ এটি।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **অংশ ভাগ Claude-এর করা।** বইয়ে অধ্যায় নেই; ১১০ পৃষ্ঠা বারো অংশে ভাগ। ১১২টি কাজের সবগুলো কোনো না কোনো সারিতে।\n2. **অক্ষর দিয়ে তিনটি শব্দ: বলা ও লেখা আলাদা (০২-০১.১ / .২)।** লেখাটি প্রশ্নপত্রের সবচেয়ে বড় প্রশ্ন (২৭ নম্বর)।\n3. **শব্দের অর্থ দুই সারি (০৫-০১.১ বাংলা → English, .২ English → বাংলা)** — দুটি আলাদা প্রশ্ন (প্র. ৪, ৫); প্রথমটিতে ইংরেজি বানানও লাগে।\n4. **দশটি বিষয়ের শব্দ এক শিখনফল (০৮-০১), দুই সারি: বলা / লেখা।** খুব বড় হলে ভাগ করুন (ফ্ল্যাগে প্রস্তাব)। রং করা ও আঁকার ছয়টি পৃষ্ঠা \"বলা\"-র সারিতে রাখা — বাদ দিতে চাইলে জানান।\n5. **সিলেবাসে আছে কিন্তু মানবন্টনে নম্বর নেই:** This/That (০৯-০৩) ও Make sentences (০৯-০৪)। **বইয়ে আছে কিন্তু বার্ষিক সিলেবাসে নেই:** alphabet revision, he / she / it, \"I am / You are\", commands, rhyming words — এগুলো শ্রেণির কাজ (QT-CLASS) বা মৌখিক।\n6. **মৌখিকের সারি:** প্রশ্ন-উত্তর (০৯-০৫), ঋতু (১০-০২), বিষয়ের নাম বলা (০৮-০১.১), অক্ষরের শব্দ বলা (০২-০১.১), commands (১১-০১), vowels (০১-০২), rhyming words (০৩-০১)।\n7. **হাতের লেখা একটি ধারা (SK-HW-01);** পড়ার আলাদা ধারা নেই — বইয়ে পড়ার অনুচ্ছেদ নেই, শুধু শব্দ ও ছোট বাঁধা বাক্য।\n8. **বইয়ের সমস্যা বই-দলের জন্য (ফ্ল্যাগ দেখুন):** \"I live in Dhaka.\" (সিলেটের জন্য ভুল); বানান (Be quite, Go to your sit, compus, My Self); দুই উত্তরের jumbled words; \"Make sentences\"-এ doing word, অথচ বইয়ে verb শেখানো হয়নি; কঠিন শব্দ (Xebec, Xerox, Quill); সিলেবাসের \"Written 90 + Oral 10\" বনাম মানবন্টনের ১০০।\n\n**আরবি:** কেজির আরবি বই (রওদাতুল আতফাল ২য় ভাগ) এই খসড়ার বাইরে — আরবির বৃক্ষ হবে কি না মালিক ঠিক করবেন।\n"
+}

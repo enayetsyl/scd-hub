@@ -1,0 +1,903 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "NUR",
+ "subject": "MATH",
+ "status": "DRAFT",
+ "source": {
+  "book": "নার্সারি গণিত ২০২৬ — দুটি বই: \"গণিত বই (নার্সারি)\" Sabr Ver 1.2 (বাংলা অঙ্ক, ছাপা পৃ. ১–৫১) ও \"MATH (Nursery)\" Sabr Version 1.1 (English অঙ্ক, ছাপা পৃ. ১–৫১) — মোহাম্মদপুর শাখার ছাপা কর্মপুস্তক",
+  "files": [
+   "Mohammadpur Materials/Nursery Books (Session 2026)/Nursery (Math-B) 2026/Nursery - Math [B] 2026 Sabr Ver1.2 (Outlined).pdf (৫৩ পৃষ্ঠার PDF; প্রতিটি পৃষ্ঠা ছবি হিসেবে পড়া)",
+   "Mohammadpur Materials/Nursery Books (Session 2026)/Nursery (Math-E) 2026/Math (E) Nursery (2026) Sabr Version 1.1 (Outlined).pdf (৫৩ পৃষ্ঠার PDF; প্রতিটি পৃষ্ঠা ছবি হিসেবে পড়া)",
+   "Annual Exam Syllabus-2026 (SCD Sylhet).md (নার্সারি — গণিত: ১৬টি প্রশ্নের ধরন, পৃষ্ঠা নম্বরসহ)",
+   "repo: server/assets/exam-papers/annual-2026/L-1-MATH.json (অ্যাপে প্রকাশিত ২০২৬ বার্ষিক মানবন্টন — ৮ সারি, নম্বরসহ)",
+   "repo: docs/prd-worksheets.md (worksheet-এর প্রশ্নের ধরন)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "০ থেকে ১০: গোনা, পড়া ও লেখা (দুই বইয়ের পৃ. ১–১৪)"
+  },
+  {
+   "number": 2,
+   "titleBn": "১১ থেকে ২০: গোনা, পড়া ও লেখা (দুই বইয়ের পৃ. ১৫–২৭)"
+  },
+  {
+   "number": 3,
+   "titleBn": "২১ থেকে ৫০: গোনা, পড়া ও লেখা (দুই বইয়ের পৃ. ২৮–৪৬)"
+  },
+  {
+   "number": 4,
+   "titleBn": "সংখ্যার ক্রম: বাদ পড়া সংখ্যা, সাজিয়ে লেখা, আগের ও পরের সংখ্যা; বাংলা ও English অঙ্ক মেলানো (দুই বইয়ের পৃ. ৪৭–৫১)"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-WRITE-BN",
+   "labelBn": "সংখ্যা লেখ — বাংলা",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ১ (১৫×১) · worksheet kind WRITE_SEQUENCE · সিলেবাস: \"সংখ্যা লিখ (১-৫০)\""
+  },
+  {
+   "code": "QT-WRITE-EN",
+   "labelBn": "সংখ্যা লেখ — English",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ২ (১৫×১) · worksheet kind WRITE_SEQUENCE · সিলেবাস: \"Write the numbers (1-50)\""
+  },
+  {
+   "code": "QT-ORDER-BN",
+   "labelBn": "ছোট থেকে বড় সাজাও",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৩ (১০×১) · worksheet kind REARRANGE · সিলেবাস: \"সাজিয়ে লিখ (পৃষ্ঠা ৪৮)\""
+  },
+  {
+   "code": "QT-ORDER-EN",
+   "labelBn": "Rearrange",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৪ (১০×১) · worksheet kind REARRANGE · সিলেবাস: \"Re-arrange (page 48)\""
+  },
+  {
+   "code": "QT-MATCHNUM",
+   "labelBn": "Number ও সংখ্যা মিলিয়ে লেখ",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৫ (১০×১) · worksheet kind MATCH_NUMERAL · সিলেবাস: পৃষ্ঠা ৪৯"
+  },
+  {
+   "code": "QT-BEFOREAFTER",
+   "labelBn": "আগের ও পরের সংখ্যা লেখ",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৬ (১০×১) · worksheet kind BEFORE / AFTER · সিলেবাস: \"আগের সংখ্যা (পৃষ্ঠা ৫০)\", \"পরের সংখ্যা (পৃষ্ঠা ৫১)\", \"Before number\", \"After number\""
+  },
+  {
+   "code": "QT-COUNT",
+   "labelBn": "ছবি গণনা করে সংখ্যা লেখ",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৭ (১৫×১) · worksheet kind COUNT_PICTURES · সিলেবাস: (১-২০) (1-20)"
+  },
+  {
+   "code": "QT-MATCHCOUNT",
+   "labelBn": "ছবির সাথে সংখ্যার মিল কর",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৮ (১৫×১) · worksheet kind MATCH_COUNT · সিলেবাস: (১-২০) (1-20)"
+  },
+  {
+   "code": "QT-FILL",
+   "labelBn": "শূন্যস্থান পূরণ (পৃষ্ঠা ৪৭) · Write the missing numbers (page 47)",
+   "marksBn": "— (মানবন্টনে আলাদা সারি নেই)",
+   "examUse": "সিলেবাসের প্রশ্নের ধরন ৩ ও ৪; প্রকাশিত ২০২৬ মানবন্টনে নেই · worksheet kind FILL_MISSING"
+  },
+  {
+   "code": "QT-ORAL",
+   "labelBn": "মৌখিক (১-৫০) & (1-50) — রুব্রিক, ৪ ধাপ",
+   "marksBn": "— (মানবন্টনে নম্বর নেই)",
+   "examUse": "সিলেবাসের প্রশ্নের ধরন ১৫; শ্রেণিতে একক ভাবে শোনা"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-NUR-MATH-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "জিনিস গুনে কয়টি তা লেখা (১ থেকে ২০)",
+   "sourceText": "বাংলা বই: \"ছবি গণনা কর এবং খালি ঘরে সঠিক সংখ্যা লেখ।\" · English book: \"Count and write the number of fruits in each set\", \"How many caps? Write in the box.\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COUNT",
+    "QT-MATCHCOUNT"
+   ],
+   "homeTipBn": "বাড়ির জিনিস (চামচ, বোতাম, খেজুর) সামনে রেখে শিক্ষার্থীকে একটি একটি করে ছুঁয়ে গুনতে দিন, তারপর \"কয়টি?\" জিজ্ঞেস করে সংখ্যাটি লিখতে দিন। ১০ পর্যন্ত পারলে ২০ পর্যন্ত বাড়ান।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "১০ পর্যন্ত ও ১১–২০ আলাদা ভাবে আটকায়: দশের পরে অনেক শিশু একটি জিনিস দুই বার গোনে বা সংখ্যার নাম গুলিয়ে ফেলে। সিলেবাসে ছবি গণনা ও ছবির সাথে মিল দুটিই ১–২০।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-01.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-01",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "১ থেকে ১০টি জিনিস গুনে সংখ্যা লেখা",
+   "sourceText": "\"ছবি গণনা কর এবং খালি ঘরে সঠিক সংখ্যা লেখ।\" (পৃ. ৭), \"প্রতিটি দলে থাকা ফলের সংখ্যা গণনা করে লিখো।\" (পৃ. ১৩); সংখ্যার পৃষ্ঠায় \"১টি বৃত্ত রং কর\" [বইয়ের নির্দেশনা] [ভাগ: ১–১০]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বাংলা বই: ছবি গণনা কর এবং খালি ঘরে সঠিক সংখ্যা লেখ।/7",
+     "1/English book: count and write the correct number/7",
+     "1/বাংলা বই: গণনা করো এবং লেখ। প্রতিটি দলে থাকা ফলের সংখ্যা গণনা করে লিখো।/13",
+     "1/English book: Count and write — Count and write the number of fruits in each set/13",
+     "1/বাংলা বই: ১ (এক — একটি কাপ)/2",
+     "1/English book: 1 (ONE — One Sun)/2",
+     "1/বাংলা বই: ২ (দুই — দুইটি আপেল)/3",
+     "1/English book: 2 (TWO — Two Apples)/3",
+     "1/বাংলা বই: ৩ (তিন — তিনটি গাড়ি)/4",
+     "1/English book: 3 (THREE — Three Cars)/4",
+     "1/বাংলা বই: ৪ (চার — চারটি কাপ)/5",
+     "1/English book: 4 (FOUR — Four Oranges)/5",
+     "1/বাংলা বই: ৫ (পাঁচ — পাঁচটি গ্লাস)/6",
+     "1/English book: 5 (FIVE — Five Glasses)/6",
+     "1/বাংলা বই: ৬ (ছয় — ছয়টি টেবিল বাতি)/8",
+     "1/English book: 6 (SIX — Six Lamps)/8",
+     "1/বাংলা বই: ৭ (সাত — সাতটি টুপি)/9",
+     "1/English book: 7 (seven — Seven Hats)/9",
+     "1/বাংলা বই: ৮ (আট — আটটি ঘর)/10",
+     "1/English book: 8 (EIGHT — Eight Houses)/10",
+     "1/বাংলা বই: ৯ (নয় — নয়টি ডিম)/11",
+     "1/English book: 9 (NINE — Nine eggs)/11",
+     "1/বাংলা বই: ১০ (দশ — দশটি মাছ)/12",
+     "1/English book: 10 (TEN — Ten Fishes)/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COUNT",
+    "QT-MATCHCOUNT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind COUNT_PICTURES (প্র. ৭) ও MATCH_COUNT (প্র. ৮) — দুটি প্রশ্ন একই দক্ষতা; বইয়ে দাগ টেনে মেলানোর পৃষ্ঠা নেই। সংখ্যার পৃষ্ঠার \"বৃত্ত রং কর\" উল্টো কাজ (সংখ্যা দেখে ততটি জিনিস নেওয়া) — একই সারিতে।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-01.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-01",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "১১ থেকে ২০টি জিনিস গুনে সংখ্যা লেখা",
+   "sourceText": "\"ছবি গণনা কর এবং খালি ঘরে সঠিক সংখ্যা লেখ।\" (বাংলা বই পৃ. ২৬, ২৭) · \"How many caps? Write in the box.\" (English book পৃ. ২৭), \"Count the pictures and write the right number in the box\" (পৃ. ২৫) [বইয়ের নির্দেশনা] [ভাগ: ১১–২০]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/বাংলা বই: ছবি গণনা কর এবং খালি ঘরে সঠিক সংখ্যা লেখ।/26",
+     "2/বাংলা বই: ছবি গণনা কর এবং খালি ঘরে সঠিক সংখ্যা লেখ। (ঘড়ি)/27",
+     "2/English book: Count the pictures and write the right number in the box/25",
+     "2/English book: How many caps? Write in the box. (also Apples, Lamps)/27",
+     "2/বাংলা বই: ১১ (এগারো — এগারোটি আম)/15",
+     "2/English book: 11 (ELEVEN — Eleven mangoes)/15",
+     "2/বাংলা বই: ১২ (বারো — বারোটি লাটিম)/16",
+     "2/English book: 12 (TWELVE — Twelve Tops)/16",
+     "2/বাংলা বই: ১৩ (তেরো — তেরোটি পাতা)/17",
+     "2/English book: 13 (THIRTEEN — Thirteen Leaves)/17",
+     "2/বাংলা বই: ১৪ (চৌদ্দ — চৌদ্দটি বল)/18",
+     "2/English book: 14 (FOURTEEN — Fourteen Balls)/18",
+     "2/বাংলা বই: ১৫ (পনেরো — পনেরোটি ঘুড়ি)/19",
+     "2/English book: 15 (FIFTEEN — Fifteen Kites)/19",
+     "2/বাংলা বই: ১৬ (ষোল — ষোলটি পেঁপে)/20",
+     "2/English book: 16 (SIXTEEN — Sixteen papayas)/20",
+     "2/বাংলা বই: ১৭ (সতেরো — সতেরোটি কাপ)/21",
+     "2/English book: 17 (SEVENTEEN — Seventeen cups)/21",
+     "2/বাংলা বই: ১৮ (আঠারো — আঠারোটি বেলুন)/22",
+     "2/English book: 18 (EIGHTEEN — Eighteen Balloons)/22",
+     "2/বাংলা বই: ১৯ (উনিশ — উনিশটি টুপি)/23",
+     "2/English book: 19 (NINETEEN — Nineteen Caps)/23",
+     "2/বাংলা বই: ২০ (বিশ — বিশটি পেনসিল)/24",
+     "2/English book: 20 (TWENTY — Twenty Pencils)/24"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COUNT",
+    "QT-MATCHCOUNT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-MATH-01-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind COUNT_PICTURES / MATCH_COUNT। ১১–২০-এর পৃষ্ঠায় বাংলা বই বলে \"১১টি আম রং কর\", English book বলে \"Color the bigger one\" — দুটি আলাদা কাজ (ফ্ল্যাগ দেখুন)।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "৫০ পর্যন্ত মুখে গোনা ও সংখ্যা দেখে পড়া — বাংলায় ও ইংরেজিতে",
+   "sourceText": "প্রতিটি সংখ্যার পাশে তার নাম ছাপা (এক, দুই … পঞ্চাশ · ONE, TWO … FIFTY); বাংলা বই: \"বৃত্তগুলো গণনা কর।\" · English book: \"Say zero and write 0\", \"Say aloud, trace and write\", \"Count the dots.\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "বইয়ের যে কোনো সংখ্যায় আঙুল রেখে জিজ্ঞেস করুন \"এটি কত?\" — একবার বাংলায় (সাতাশ), একবার ইংরেজিতে (twenty-seven)। সিঁড়ি বা পা ফেলার সাথে ১ থেকে ৫০ গোনান।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "সিলেবাসের \"মৌখিক (১–৫০) & (1–50)\"। বাংলা ও ইংরেজি আলাদা সারি: শিশু ২৭ দেখে \"সাতাশ\" বলতে পারে কিন্তু 27 দেখে \"twenty-seven\" পারে না — বা উল্টো। প্রকাশিত মানবন্টনে মৌখিকের নম্বর নেই, তাই রুব্রিকে শ্রেণিতে।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-02.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-02",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "বাংলায় ১ থেকে ৫০ গোনা ও বাংলা অঙ্ক দেখে সংখ্যা বলা",
+   "sourceText": "বাংলা বইয়ের প্রতিটি সংখ্যার পৃষ্ঠা (০–৫০): অঙ্ক ও কথায় নাম; \"বৃত্তগুলো গণনা কর।\" [বইয়ের নির্দেশনা] [ভাগ: বাংলা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বাংলা বই: শূন্য সংখ্যাটি দেখ এবং সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।/1",
+     "1/বাংলা বই: ১ (এক — একটি কাপ)/2",
+     "1/বাংলা বই: ২ (দুই — দুইটি আপেল)/3",
+     "1/বাংলা বই: ৩ (তিন — তিনটি গাড়ি)/4",
+     "1/বাংলা বই: ৪ (চার — চারটি কাপ)/5",
+     "1/বাংলা বই: ৫ (পাঁচ — পাঁচটি গ্লাস)/6",
+     "1/বাংলা বই: ৬ (ছয় — ছয়টি টেবিল বাতি)/8",
+     "1/বাংলা বই: ৭ (সাত — সাতটি টুপি)/9",
+     "1/বাংলা বই: ৮ (আট — আটটি ঘর)/10",
+     "1/বাংলা বই: ৯ (নয় — নয়টি ডিম)/11",
+     "1/বাংলা বই: ১০ (দশ — দশটি মাছ)/12",
+     "2/বাংলা বই: ১১ (এগারো — এগারোটি আম)/15",
+     "2/বাংলা বই: ১২ (বারো — বারোটি লাটিম)/16",
+     "2/বাংলা বই: ১৩ (তেরো — তেরোটি পাতা)/17",
+     "2/বাংলা বই: ১৪ (চৌদ্দ — চৌদ্দটি বল)/18",
+     "2/বাংলা বই: ১৫ (পনেরো — পনেরোটি ঘুড়ি)/19",
+     "2/বাংলা বই: ১৬ (ষোল — ষোলটি পেঁপে)/20",
+     "2/বাংলা বই: ১৭ (সতেরো — সতেরোটি কাপ)/21",
+     "2/বাংলা বই: ১৮ (আঠারো — আঠারোটি বেলুন)/22",
+     "2/বাংলা বই: ১৯ (উনিশ — উনিশটি টুপি)/23",
+     "2/বাংলা বই: ২০ (বিশ — বিশটি পেনসিল)/24",
+     "3/বাংলা বই: ২১ ও ২২/28",
+     "3/বাংলা বই: ২৩ ও ২৪/29",
+     "3/বাংলা বই: ২৫ ও ২৬/30",
+     "3/বাংলা বই: ২৭ ও ২৮/31",
+     "3/বাংলা বই: ২৯ ও ৩০/32",
+     "3/বাংলা বই: ৩১ ও ৩২/34",
+     "3/বাংলা বই: ৩৩ ও ৩৪/35",
+     "3/বাংলা বই: ৩৫ ও ৩৬/36",
+     "3/বাংলা বই: ৩৭ ও ৩৮/37",
+     "3/বাংলা বই: ৩৯ ও ৪০/38",
+     "3/বাংলা বই: ৪১ ও ৪২/40",
+     "3/বাংলা বই: ৪৩ ও ৪৪/41",
+     "3/বাংলা বই: ৪৫ ও ৪৬/42",
+     "3/বাংলা বই: ৪৭ ও ৪৮/43",
+     "3/বাংলা বই: ৪৯ ও ৫০/44"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "একক ভাবে শোনা, সংখ্যা এলোমেলো করে — সবাই মিলে ১ থেকে ৫০ বলা শেখানোর পদ্ধতি, যাচাই নয়। কথায় লেখা (এক, দুই …) নার্সারিতে চাওয়া হয় না — শুধু পড়া ও বলা।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-02.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-02",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "ইংরেজিতে 1 থেকে 50 গোনা ও English অঙ্ক দেখে সংখ্যা বলা (one … fifty)",
+   "sourceText": "English book-এর প্রতিটি সংখ্যার পৃষ্ঠা (0–50): numeral ও number word; \"Say aloud, trace and write\", \"Count the dots.\" [বইয়ের নির্দেশনা] [ভাগ: English]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/English book: Say zero and write 0/1",
+     "1/English book: 1 (ONE — One Sun)/2",
+     "1/English book: 2 (TWO — Two Apples)/3",
+     "1/English book: 3 (THREE — Three Cars)/4",
+     "1/English book: 4 (FOUR — Four Oranges)/5",
+     "1/English book: 5 (FIVE — Five Glasses)/6",
+     "1/English book: 6 (SIX — Six Lamps)/8",
+     "1/English book: 7 (seven — Seven Hats)/9",
+     "1/English book: 8 (EIGHT — Eight Houses)/10",
+     "1/English book: 9 (NINE — Nine eggs)/11",
+     "1/English book: 10 (TEN — Ten Fishes)/12",
+     "2/English book: 11 (ELEVEN — Eleven mangoes)/15",
+     "2/English book: 12 (TWELVE — Twelve Tops)/16",
+     "2/English book: 13 (THIRTEEN — Thirteen Leaves)/17",
+     "2/English book: 14 (FOURTEEN — Fourteen Balls)/18",
+     "2/English book: 15 (FIFTEEN — Fifteen Kites)/19",
+     "2/English book: 16 (SIXTEEN — Sixteen papayas)/20",
+     "2/English book: 17 (SEVENTEEN — Seventeen cups)/21",
+     "2/English book: 18 (EIGHTEEN — Eighteen Balloons)/22",
+     "2/English book: 19 (NINETEEN — Nineteen Caps)/23",
+     "2/English book: 20 (TWENTY — Twenty Pencils)/24",
+     "3/English book: 21 - 22/28",
+     "3/English book: 23 - 24/29",
+     "3/English book: 25 - 26/30",
+     "3/English book: 27 - 28/31",
+     "3/English book: 29 - 30/32",
+     "3/English book: 31 - 32/34",
+     "3/English book: 33 - 34/35",
+     "3/English book: 35 - 36/36",
+     "3/English book: 37 - 38/37",
+     "3/English book: 39 - 40/38",
+     "3/English book: 41 - 42/40",
+     "3/English book: 43 - 44/41",
+     "3/English book: 45 - 46/42",
+     "3/English book: 47 - 48/43",
+     "3/English book: 49 - 50/44"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "thirteen–thirty, fourteen–forty-র মতো কাছাকাছি নাম এলোমেলো করে জিজ্ঞেস করা ভালো। Number word লেখা নার্সারিতে চাওয়া হয় না।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "বাংলা অঙ্কে সংখ্যা লেখা (০ থেকে ৫০)",
+   "sourceText": "বাংলা বই: \"… সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।\", \"১ থেকে ১০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।\", \"১ থেকে ২০ পর্যন্ত সংখ্যাগুলো লেখ।\", \"১ থেকে ৫০ পর্যন্ত সংখ্যাগুলো লেখ\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-BN"
+   ],
+   "homeTipBn": "প্রথমে বইয়ের বিন্দু-অঙ্কের উপর পেনসিল বোলাতে দিন, তারপর না দেখে ১ থেকে ১০ লিখতে দিন; পারলে ২০, তারপর ৫০ পর্যন্ত। ৩ ও ৬, ১ ও ৯, ৫ ও ৭-এর আকার মিলিয়ে দেখান।",
+   "prereqCodes": [
+    "LO-NUR-MATH-01-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "তিন ধাপ, বই যেভাবে এগোয়: ০–১০ → ১১–২০ → ২১–৫০। বিন্দু-অঙ্কে হাত ঘোরানো আর না দেখে লেখা এক সারিতে (প্রথম শ্রেণির ০৩-০২.১-এর মতো); হাত ঘোরানো শুধু শেখার ধাপ।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-03.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-03",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "০ থেকে ১০ বাংলা অঙ্কে ঠিক আকারে লেখা",
+   "sourceText": "\"শূন্য সংখ্যাটি দেখ এবং সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।\", \"১ সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।\" …, \"পাশের খালি ঘরে সংখ্যাগুলো অনুশীলন কর\", \"১ থেকে ১০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।\" [বইয়ের নির্দেশনা] [ভাগ: ০–১০]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বাংলা বই: শূন্য সংখ্যাটি দেখ এবং সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।/1",
+     "1/বাংলা বই: ১ (এক — একটি কাপ)/2",
+     "1/বাংলা বই: ২ (দুই — দুইটি আপেল)/3",
+     "1/বাংলা বই: ৩ (তিন — তিনটি গাড়ি)/4",
+     "1/বাংলা বই: ৪ (চার — চারটি কাপ)/5",
+     "1/বাংলা বই: ৫ (পাঁচ — পাঁচটি গ্লাস)/6",
+     "1/বাংলা বই: পাশের খালি ঘরে সংখ্যাগুলো অনুশীলন কর/7",
+     "1/বাংলা বই: ৬ (ছয় — ছয়টি টেবিল বাতি)/8",
+     "1/বাংলা বই: ৭ (সাত — সাতটি টুপি)/9",
+     "1/বাংলা বই: ৮ (আট — আটটি ঘর)/10",
+     "1/বাংলা বই: ৯ (নয় — নয়টি ডিম)/11",
+     "1/বাংলা বই: ১০ (দশ — দশটি মাছ)/12",
+     "1/বাংলা বই: ১ থেকে ১০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।/14"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-BN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE (বাংলা অঙ্ক)। শূন্য আলাদা সারি নয় — ফ্ল্যাগ দেখুন।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-03.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-03",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "১১ থেকে ২০ বাংলা অঙ্কে লেখা",
+   "sourceText": "\"১১ সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।\" …, \"১১ থেকে ২০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।\", \"১ থেকে ২০ পর্যন্ত সংখ্যাগুলো লেখ।\" [বইয়ের নির্দেশনা] [ভাগ: ১১–২০]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/বাংলা বই: ১১ (এগারো — এগারোটি আম)/15",
+     "2/বাংলা বই: ১২ (বারো — বারোটি লাটিম)/16",
+     "2/বাংলা বই: ১৩ (তেরো — তেরোটি পাতা)/17",
+     "2/বাংলা বই: ১৪ (চৌদ্দ — চৌদ্দটি বল)/18",
+     "2/বাংলা বই: ১৫ (পনেরো — পনেরোটি ঘুড়ি)/19",
+     "2/বাংলা বই: ১৬ (ষোল — ষোলটি পেঁপে)/20",
+     "2/বাংলা বই: ১৭ (সতেরো — সতেরোটি কাপ)/21",
+     "2/বাংলা বই: ১৮ (আঠারো — আঠারোটি বেলুন)/22",
+     "2/বাংলা বই: ১৯ (উনিশ — উনিশটি টুপি)/23",
+     "2/বাংলা বই: ২০ (বিশ — বিশটি পেনসিল)/24",
+     "2/বাংলা বই: ১১ থেকে ২০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।/25",
+     "2/বাংলা বই: ১ থেকে ২০ পর্যন্ত সংখ্যাগুলো লেখ।/27"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-BN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-MATH-01-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-03.3",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-03",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "২১ থেকে ৫০ বাংলা অঙ্কে লেখা",
+   "sourceText": "\"২১ ও ২২ সংখ্যাটির উপর হাত ঘুরিয়ে অনুশীলন কর।\" …, \"২১ থেকে ৩০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।\" …, \"১ থেকে ৫০ পর্যন্ত সংখ্যাগুলো লেখ\" [বইয়ের নির্দেশনা] [ভাগ: ২১–৫০]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "3/বাংলা বই: ২১ ও ২২/28",
+     "3/বাংলা বই: ২৩ ও ২৪/29",
+     "3/বাংলা বই: ২৫ ও ২৬/30",
+     "3/বাংলা বই: ২৭ ও ২৮/31",
+     "3/বাংলা বই: ২৯ ও ৩০/32",
+     "3/বাংলা বই: ২১ থেকে ৩০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।/33",
+     "3/বাংলা বই: ৩১ ও ৩২/34",
+     "3/বাংলা বই: ৩৩ ও ৩৪/35",
+     "3/বাংলা বই: ৩৫ ও ৩৬/36",
+     "3/বাংলা বই: ৩৭ ও ৩৮/37",
+     "3/বাংলা বই: ৩৯ ও ৪০/38",
+     "3/বাংলা বই: ৩১ থেকে ৪০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।/39",
+     "3/বাংলা বই: ৪১ ও ৪২/40",
+     "3/বাংলা বই: ৪৩ ও ৪৪/41",
+     "3/বাংলা বই: ৪৫ ও ৪৬/42",
+     "3/বাংলা বই: ৪৭ ও ৪৮/43",
+     "3/বাংলা বই: ৪৯ ও ৫০/44",
+     "3/বাংলা বই: ৪১ থেকে ৫০ পর্যন্ত সংখ্যাগুলো অনুশীলন কর।/45",
+     "3/বাংলা বই: ১ থেকে ৫০ পর্যন্ত অনুশীলন — ১ থেকে ৫০ পর্যন্ত সংখ্যাগুলো লেখ/46"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-BN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-MATH-01-03.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE। সিলেবাসের \"শ্রুতিলিখন (১–৫০)\" (শুনে লেখা) এই সারির প্রশ্ন হিসেবে নেওয়া যায় — বইয়ে তার আলাদা পৃষ্ঠা নেই।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "English অঙ্কে সংখ্যা লেখা (0 থেকে 50)",
+   "sourceText": "English book: \"Trace and write the number 1.\" …, \"Write the numbers from 1 to 10\", \"Write the numbers from 1 to 20\", \"write the numbers from 1 to 50.\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-EN"
+   ],
+   "homeTipBn": "English book-এর বিন্দু-অঙ্কের উপর পেনসিল বোলাতে দিন, তারপর না দেখে 1 থেকে 10 লিখতে দিন; পারলে 20, তারপর 50 পর্যন্ত। 6 ও 9, 2 ও 5 উল্টে যায় কি না দেখুন।",
+   "prereqCodes": [
+    "LO-NUR-MATH-01-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "বাংলা অঙ্কের সারির (০১-০৩) সমান্তরাল। আলাদা শিখনফল, কারণ প্রশ্নপত্রে দুটি আলাদা প্রশ্ন (প্র. ১ বাংলা, প্র. ২ English) আর শিশুরা এক লিপিতে পারে, অন্যটিতে আটকায় (৪ ও 8, ৭ ও 9 গুলিয়ে ফেলে)।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-04.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-04",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "0 থেকে 10 English অঙ্কে ঠিক আকারে লেখা",
+   "sourceText": "\"Say zero and write 0\", \"Trace and write the number 1. Colour one circle\" …, \"Say aloud, trace and write\", \"Write the numbers from 1 to 10\" [বইয়ের নির্দেশনা] [ভাগ: 0–10]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/English book: Say zero and write 0/1",
+     "1/English book: 1 (ONE — One Sun)/2",
+     "1/English book: 2 (TWO — Two Apples)/3",
+     "1/English book: 3 (THREE — Three Cars)/4",
+     "1/English book: 4 (FOUR — Four Oranges)/5",
+     "1/English book: 5 (FIVE — Five Glasses)/6",
+     "1/English book: Say aloud, trace and write/7",
+     "1/English book: 6 (SIX — Six Lamps)/8",
+     "1/English book: 7 (seven — Seven Hats)/9",
+     "1/English book: 8 (EIGHT — Eight Houses)/10",
+     "1/English book: 9 (NINE — Nine eggs)/11",
+     "1/English book: 10 (TEN — Ten Fishes)/12",
+     "1/English book: Write the numbers from 1 to 10/14"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-EN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE (English numerals)।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-04.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-04",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "11 থেকে 20 English অঙ্কে লেখা",
+   "sourceText": "\"Trace and write the number 11.\" …, \"Write the numbers from 11-20\", \"Write the numbers from 1 to 20\" [বইয়ের নির্দেশনা] [ভাগ: 11–20]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/English book: 11 (ELEVEN — Eleven mangoes)/15",
+     "2/English book: 12 (TWELVE — Twelve Tops)/16",
+     "2/English book: 13 (THIRTEEN — Thirteen Leaves)/17",
+     "2/English book: 14 (FOURTEEN — Fourteen Balls)/18",
+     "2/English book: 15 (FIFTEEN — Fifteen Kites)/19",
+     "2/English book: 16 (SIXTEEN — Sixteen papayas)/20",
+     "2/English book: 17 (SEVENTEEN — Seventeen cups)/21",
+     "2/English book: 18 (EIGHTEEN — Eighteen Balloons)/22",
+     "2/English book: 19 (NINETEEN — Nineteen Caps)/23",
+     "2/English book: 20 (TWENTY — Twenty Pencils)/24",
+     "2/English book: Write the numbers from 1 to 20/25",
+     "2/English book: Write the numbers from 11-20/26"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-EN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-MATH-01-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-04.3",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-01-04",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "21 থেকে 50 English অঙ্কে লেখা",
+   "sourceText": "\"Count the dots. Trace and write the numbers 21 - 22.\" …, \"Write the numbers from 21-30\" …, \"write the numbers from 1 to 50.\" [বইয়ের নির্দেশনা] [ভাগ: 21–50]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "3/English book: 21 - 22/28",
+     "3/English book: 23 - 24/29",
+     "3/English book: 25 - 26/30",
+     "3/English book: 27 - 28/31",
+     "3/English book: 29 - 30/32",
+     "3/English book: Write the numbers from 21-30/33",
+     "3/English book: 31 - 32/34",
+     "3/English book: 33 - 34/35",
+     "3/English book: 35 - 36/36",
+     "3/English book: 37 - 38/37",
+     "3/English book: 39 - 40/38",
+     "3/English book: Write the numbers from 31-40/39",
+     "3/English book: 41 - 42/40",
+     "3/English book: 43 - 44/41",
+     "3/English book: 45 - 46/42",
+     "3/English book: 47 - 48/43",
+     "3/English book: 49 - 50/44",
+     "3/English book: 41–50 (no heading)/45",
+     "3/English book: Numbers from 1 - 50 — write the numbers from 1 to 50./46"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITE-EN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-MATH-01-04.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "সংখ্যার ক্রম: বাদ পড়া, পরের ও আগের সংখ্যা লেখা (১ থেকে ৫০)",
+   "sourceText": "বাংলা বই: \"বাদ পড়া সংখ্যাগুলো খালি ঘরে লেখ।\", \"আগের সংখ্যা\", \"পরের সংখ্যা\" · English book: \"Write the missing numbers\", \"Letter Before .....\", \"Letter After.....\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-BEFOREAFTER"
+   ],
+   "homeTipBn": "একটি সংখ্যা বলে জিজ্ঞেস করুন \"১৯-এর পরে কত? ২০-এর আগে কত?\" দশক বদলানোর জায়গাগুলো (১৯–২০, ২৯–৩০, ৩৯–৪০) বেশি করে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-NUR-MATH-01-03",
+    "LO-NUR-MATH-01-04"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "তিনটি আলাদা ভাবে আটকায়: \"আগের সংখ্যা\" সবচেয়ে কঠিন (উল্টো দিকে গোনা)। বাংলা ও English অঙ্ক এক সারিতে — দক্ষতা সংখ্যার ক্রম, লিপি নয়; প্রশ্ন-ব্যাংকে দুই লিপির প্রশ্নই এই সারিতে।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-01.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-04-01",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "ক্রমের খালি ঘরে বাদ পড়া সংখ্যা লেখা",
+   "sourceText": "\"খালি ঘর গুলোতে সঠিক সংখ্যা বসিয়ে ১-২০ পর্যন্ত সম্পূর্ণ কর।\", \"বাদ পড়া সংখ্যাগুলো খালি ঘরে লেখ।\" · \"Fill in the missing numbers to complete from 1 to 20\", \"Write the missing numbers\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "2/বাংলা বই: খালি ঘর গুলোতে সঠিক সংখ্যা বসিয়ে ১-২০ পর্যন্ত সম্পূর্ণ কর।/27",
+     "2/English book: Fill in the missing numbers to complete from 1 to 20/25",
+     "4/বাংলা বই: বাদ পড়া সংখ্যাগুলো খালি ঘরে লেখ।/47",
+     "4/English book: Write the missing numbers/47"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind FILL_MISSING। সিলেবাসে প্রশ্নের ধরন ৩–৪ (\"শূন্যস্থান পূরণ (পৃষ্ঠা ৪৭)\", \"Write the missing numbers (page 47)\"), কিন্তু প্রকাশিত মানবন্টনে এর আলাদা সারি নেই — ফ্ল্যাগ দেখুন।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-01.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-04-01",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পরের সংখ্যা লেখা",
+   "sourceText": "\"পরের সংখ্যা\" · \"Letter After.....\" [বইয়ের নির্দেশনা] — পৃ. ৫১",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বাংলা বই: পরের সংখ্যা/51",
+     "4/English book: Letter After...../51"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-BEFOREAFTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind AFTER। প্র. ৬ \"আগের ও পরের সংখ্যা লেখ\" (১০×১) দুই সারিতে ভাগ হবে — প্রশ্ন-ব্যাংকে ক (পরের) / খ (আগের)।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-01.3",
+   "level": "SUB",
+   "parentCode": "LO-NUR-MATH-04-01",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "আগের সংখ্যা লেখা",
+   "sourceText": "\"আগের সংখ্যা\" · \"Letter Before .....\" [বইয়ের নির্দেশনা] — পৃ. ৫০",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বাংলা বই: আগের সংখ্যা/50",
+     "4/English book: Letter Before ...../50"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-BEFOREAFTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-MATH-04-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind BEFORE।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "এলোমেলো সংখ্যা ছোট থেকে বড় সাজিয়ে লেখা",
+   "sourceText": "\"সাজিয়ে লেখ।\" (বাংলা বই পৃ. ৪৮) · \"Re-arrange\" (English book পৃ. ৪৮) [বইয়ের নির্দেশনা] — প্রতি সারিতে পর পর দশটি সংখ্যা এলোমেলো।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বাংলা বই: সাজিয়ে লেখ।/48",
+     "4/English book: Re-arrange/48"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORDER-BN",
+    "QT-ORDER-EN"
+   ],
+   "homeTipBn": "পাঁচটি সংখ্যা এলোমেলো করে লিখে দিন (১৪ ১১ ১৫ ১২ ১৩); শিক্ষার্থী ছোট থেকে বড় সাজিয়ে লিখুক। পরে দশটি সংখ্যা দিন।",
+   "prereqCodes": [
+    "LO-NUR-MATH-01-03",
+    "LO-NUR-MATH-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind REARRANGE (প্র. ৩ \"ছোট থেকে বড় সাজাও\" বাংলা অঙ্কে, প্র. ৪ \"Rearrange\" English অঙ্কে)। বইয়ের সারিগুলো পর পর দশটি সংখ্যা — অর্থাৎ ক্রম সাজানো, দুটি দূরের সংখ্যার তুলনা নয়।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "বাংলা অঙ্ক ও English অঙ্ক মিলিয়ে লেখা (১ ↔ 1 … ৫০ ↔ 50)",
+   "sourceText": "\"মিল করে সাথে Number লিখি\" (বাংলা বই পৃ. ৪৯) · \"Number এর সাথে মিল করে সংখ্যা লিখি\" (English book পৃ. ৪৯) [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বাংলা বই: মিল করে সাথে Number লিখি/49",
+     "4/English book: Number এর সাথে মিল করে সংখ্যা লিখি/49"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCHNUM"
+   ],
+   "homeTipBn": "একটি সংখ্যা বাংলায় লিখে দিন (৩৭), শিক্ষার্থী পাশে English অঙ্কে লিখুক (37); পরে উল্টো। ৪–8, ৭–9, ৩–3, ৫–5 জোড়াগুলো বেশি করান।",
+   "prereqCodes": [
+    "LO-NUR-MATH-01-03",
+    "LO-NUR-MATH-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind MATCH_NUMERAL (প্র. ৫, ১০×১)। দুই দিক (বাংলা → English, English → বাংলা) এক সারি — প্রশ্নপত্রে একটিই প্রশ্ন।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 108,
+  "mapped": 108,
+  "unmapped": [],
+  "note": "exercisesTotal = দুই বইয়ের কাজের ব্লক (১০৮ = বাংলা বই ৫৪ + English book ৫৪): বইয়ে অনুশীলনী নম্বর নেই, তাই প্রতিটি পৃষ্ঠার প্রতিটি শিরোনাম-যুক্ত কাজ একটি ব্লক। ref = অংশ/বই: পৃষ্ঠার শিরোনাম/সেই বইয়ের ছাপা পৃষ্ঠা নম্বর।"
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "শিখনফলগুলো বইয়ের পৃষ্ঠা থেকে অনুমান করা — দুই বইয়ের কোনোটিতে শিক্ষক-নোট, ছাপা শিখনফল বা নম্বর বণ্টনের পরিশিষ্ট নেই। তাই প্রতিটি সারির \"বইয়ের নির্দেশনা\" হলো পৃষ্ঠার শিরোনাম বা নির্দেশ ([বইয়ের নির্দেশনা] চিহ্নিত)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "একটি বৃক্ষ, দুটি বই: নার্সারির গণিত বই দুটি — বাংলা-মাধ্যম (\"গণিত বই\", বাংলা অঙ্ক) ও ইংরেজি-মাধ্যম (\"MATH\", English অঙ্ক) — পৃষ্ঠা ধরে ধরে সমান্তরাল (দুটিই ৫১ পৃষ্ঠা, একই পৃষ্ঠায় একই সংখ্যা; শুধু পৃ. ২৫–২৭-এর ক্রম আলাদা)। বইয়ে অধ্যায় নেই; পৃষ্ঠাগুলো চার অংশে ভাগ করা হয়েছে, দুই বইয়ে একই: ১ শূন্য থেকে দশ (পৃ. ১–১৪) · ২ এগারো থেকে বিশ (১৫–২৭) · ৩ একুশ থেকে পঞ্চাশ (২৮–৪৬) · ৪ সংখ্যার ক্রম ও অঙ্ক মেলানো (৪৭–৫১)। প্রতিটি ref-এ বইয়ের নাম আছে (\"বাংলা বই: …\" / \"English book: …\")। কভারেজ: প্রতিটি পৃষ্ঠার প্রতিটি শিরোনাম-যুক্ত কাজ একটি ব্লক — বাংলা বই ৫৪টি + English book ৫৪টি = ১০৮টি।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "শিখনফল দক্ষতা ধরে সাজানো (গোনা · পড়া · বাংলা অঙ্কে লেখা · English অঙ্কে লেখা), তাদের উপ-শিখনফল সংখ্যার ধাপ ধরে (০–১০, ১১–২০, ২১–৫০)। ফলে অংশ ২ ও ৩-এর নিজস্ব কোড নেই — তাদের পৃষ্ঠা অংশ ১-এর শিখনফলের .২ ও .৩ উপ-শিখনফলে উদ্ধৃত। উল্টোটা (ধাপ ধরে শিখনফল: \"১–১০\", \"১১–২০\", \"২১–৫০\") করলে একই দক্ষতা তিন বার আসত। শিক্ষকের অধ্যায়-তালিকায় অংশ ২ ও ৩ ফাঁকা দেখালে পর্যালোচক জানাবেন — তখন কোড ধাপ ধরে সাজানো যাবে (লকের আগে কোড বদলানো যায়)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "প্রশ্নের ধরন ও নম্বর: সিলেট শাখার বার্ষিক সিলেবাস ২০২৬ (নার্সারি, গণিত) ১৬টি ধরনের নাম দেয়, নম্বর দেয় না; নম্বর নেওয়া হয়েছে অ্যাপে প্রকাশিত মানবন্টন থেকে (repo: server/assets/exam-papers/annual-2026/L-1-MATH.json-এর syllabusRows — ৮ সারি, মোট ১০০)। মোহাম্মদপুরের \"Marks Distribution - Annual Exam 2026\" PDF প্রথম শ্রেণি থেকে শুরু — নার্সারি তাতে নেই।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-01.1",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "সিলেবাসে \"শূন্যস্থান পূরণ (পৃষ্ঠা ৪৭)\" ও \"Write the missing numbers (page 47)\" প্রশ্নের ধরন হিসেবে আছে, বইয়ে তিনটি করে পৃষ্ঠার কাজ আছে, কিন্তু প্রকাশিত মানবন্টনের ৮ সারিতে (মোট ১০০) এর কোনো নম্বর নেই। একই ভাবে সিলেবাসের \"মৌখিক (১–৫০)\" ও \"শ্রুতিলিখন (১–৫০)\"-এর নম্বর মানবন্টনে নেই। মানবন্টন না সিলেবাস — কোনটি ঠিক, তা ঠিক করা দরকার। শ্রুতিলিখনের (শুনে সংখ্যা লেখা) বইয়ে কোনো পৃষ্ঠা নেই, তাই তার সারি করা হয়নি।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-01.3",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: English book পৃ. ৫০ ও ৫১-এর শিরোনাম \"Letter Before .....\" ও \"Letter After.....\" — পৃষ্ঠায় সংখ্যা, তাই হওয়া উচিত \"Number Before\" / \"Number After\" (সিলেবাসে \"Before number\", \"After number\")। English book পৃ. ৪৫-এ (41–50) কোনো শিরোনাম নেই। পৃ. ৪৯-এর শিরোনাম দুই বইয়েই মিশ্র ভাষায় (\"মিল করে সাথে Number লিখি\")।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-01.2",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: ১১–২০-এর পৃষ্ঠায় (পৃ. ১৫–২৪) বাংলা বইয়ের নির্দেশনা \"১১টি আম রং কর\" (সংখ্যা অনুযায়ী ছবি রং করা — গোনার কাজ), কিন্তু English book-এ \"Color the bigger one\" (বড় ছবিটি রং কর — আকারের তুলনা, গোনা নয়)। দুই বই একই কাজ চাইলে English book-এ \"Colour 11 mangoes\" হওয়া উচিত। একই বইয়ে Colour ও Color দুই বানান; পৃ. ৯-এ \"seven\" ছোট হাতের, বাকিগুলো বড় হাতের; \"Ten Fishes\"।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-03.1",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): শূন্য (০) আলাদা সারি করা হয়নি — দুই বইয়েই একটি করে পৃষ্ঠা (হাত ঘোরানো), English book-এ এক লাইন \"Zero means nothing\", গোনার কোনো কাজ নেই। শূন্যের ধারণা (\"কিছু নেই = ০\") আলাদা ভাবে দেখতে চাইলে ০১-০১-এ একটি উপ-শিখনফল যোগ করা যায়।"
+  },
+  {
+   "code": "LO-NUR-MATH-01-02",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): পড়া/বলা দুই সারি (বাংলা, ইংরেজি), ধাপ ধরে ভাগ নয় — রুব্রিকে শিক্ষক কোন সংখ্যা পর্যন্ত পারে তা ধাপ দিয়েই লেখেন (১: ১০ পর্যন্ত … ৪: ৫০ পর্যন্ত)। লেখার সারিগুলো ধাপ ধরে ভাগ, কারণ প্রশ্ন-ব্যাংকের প্রশ্ন ধাপ ধরে তৈরি হয়।"
+  },
+  {
+   "code": "LO-NUR-MATH-04-02",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): \"সাজিয়ে লেখ\" এক সারি (বাংলা + English অঙ্ক), যদিও প্রশ্নপত্রে দুটি প্রশ্ন (প্র. ৩, প্র. ৪)। লিপির দুর্বলতা লেখার সারিতে (০১-০৩ / ০১-০৪) ধরা পড়ে। \"আগের/পরের সংখ্যা\" ও \"বাদ পড়া সংখ্যা\"-ও একই কারণে লিপি ধরে ভাগ হয়নি।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি দক্ষতা — worksheet-এর প্রশ্ন ও রুব্রিক এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শুধু শিখনফলের নাম ও বাড়ির টিপস দেখবেন। নার্সারির গণিতের দুটি বই (বাংলা অঙ্কের ও English অঙ্কের) মিলিয়ে **একটি** বৃক্ষ — প্রতিটি পৃষ্ঠার উল্লেখে লেখা আছে কোন বই। বইয়ে শিক্ষক-নোট বা শিখনফল ছাপা নেই, তাই সব শিখনফল পৃষ্ঠার কাজ দেখে অনুমান করা। সব সারি একটি ক্ষেত্রে: \"সংখ্যা ও গণনা\" (`DOM-MATH-NUM`) — প্রথম শ্রেণির লক করা ক্ষেত্রে কোনো বদল নেই।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **শিখনফল দক্ষতা ধরে, উপ-শিখনফল ধাপ ধরে।** গোনা (১–১০, ১১–২০) · পড়া/বলা (বাংলা, ইংরেজি) · বাংলা অঙ্কে লেখা (০–১০, ১১–২০, ২১–৫০) · English অঙ্কে লেখা (একই তিন ধাপ)। ফলে অংশ ২ ও ৩-এর নিজস্ব কোড নেই। ধাপ ধরে শিখনফল চাইলে জানান।\n2. **বাংলা অঙ্ক ও English অঙ্কে লেখা আলাদা শিখনফল (০১-০৩, ০১-০৪)** — প্রশ্নপত্রে আলাদা প্রশ্ন, শিশুরা আলাদা ভাবে আটকায়। কিন্তু ক্রমের কাজগুলো (বাদ পড়া, আগের, পরের, সাজানো) লিপি ধরে ভাগ হয়নি।\n3. **বিন্দু-অঙ্কে হাত ঘোরানো আলাদা সারি নয়** — লেখার সারির ভেতরে (প্রথম শ্রেণির ০৩-০২.১-এর মতো)। বাংলা বইয়ে (NUR·BAN) হাতের লেখা আলাদা ধারা; গণিতে ক্ষেত্র নেই বলে মেশানো।\n4. **প্র. ৭ ও প্র. ৮ এক সারিতে:** \"ছবি গণনা করে সংখ্যা লেখ\" ও \"ছবির সাথে সংখ্যার মিল কর\" একই দক্ষতা; বইয়ে শুধু প্রথমটির পৃষ্ঠা।\n5. **প্র. ৬ দুই সারিতে ভাগ (০৪-০১.২ পরের, .৩ আগের)** — প্রশ্ন-ব্যাংকে ক/খ।\n6. **\"বাদ পড়া সংখ্যা\" (০৪-০১.১), মৌখিক ও শ্রুতিলিখন:** সিলেবাসে আছে, প্রকাশিত মানবন্টনে নম্বর নেই। শ্রুতিলিখনের বইয়ে পৃষ্ঠা নেই — সারি করা হয়নি; লেখার সারিতে (০১-০৩.৩) প্রশ্ন হিসেবে নেওয়া যায়।\n7. **শূন্য আলাদা সারি নয়** (ফ্ল্যাগ দেখুন); কথায় লেখা (এক, ONE) নার্সারিতে নেই — শুধু পড়া।\n8. **বইয়ের সমস্যা বই-দলের জন্য (ফ্ল্যাগ দেখুন):** English book-এ \"Letter Before / Letter After\" (সংখ্যার পৃষ্ঠায়); ১১–২০-এ \"Color the bigger one\" বনাম বাংলা বইয়ের \"১১টি আম রং কর\"; পৃ. ৪৫-এ শিরোনাম নেই; পৃ. ৪৯-এর শিরোনাম মিশ্র ভাষায়।\n\n**আরবি:** নার্সারির আরবি বই (রওদাতুল আতফাল ১ম ভাগ) এই খসড়ার বাইরে — আরবির বৃক্ষ হবে কি না মালিক ঠিক করবেন।\n"
+}
