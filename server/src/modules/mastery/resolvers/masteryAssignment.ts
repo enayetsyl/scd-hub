@@ -131,6 +131,11 @@ OutcomeChoiceRef.implement({
   fields: (t) => ({ loCode: t.exposeString("loCode"), labelBn: t.exposeString("labelBn"), questionTypeCodes: t.exposeStringList("questionTypeCodes") }),
 });
 
+const TypeChoiceRef = builder.objectRef<SheetDetail["typeChoices"][number]>("MasteryAssignmentTypeChoice");
+TypeChoiceRef.implement({
+  fields: (t) => ({ code: t.exposeString("code"), labelBn: t.exposeString("labelBn"), marks: t.exposeFloat("marks") }),
+});
+
 const SheetDetailRef = builder.objectRef<SheetDetail>("MasteryAssignmentSheet");
 SheetDetailRef.implement({
   fields: (t) => ({
@@ -145,6 +150,7 @@ SheetDetailRef.implement({
     items: t.field({ type: [QuestionRef], resolve: (s) => s.items }),
     warnings: t.field({ type: [WarningRef], resolve: (s) => s.warnings }),
     outcomeChoices: t.field({ type: [OutcomeChoiceRef], resolve: (s) => s.outcomeChoices }),
+    typeChoices: t.field({ type: [TypeChoiceRef], resolve: (s) => s.typeChoices }),
   }),
 });
 

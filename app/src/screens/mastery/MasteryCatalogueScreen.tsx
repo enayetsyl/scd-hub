@@ -152,7 +152,7 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
                 </ChipRow>
                 <Muted>{STR.msCatAssessHint}</Muted>
                 <Muted>
-                  {STR.msQuestionTypes} — {STR.msCatTypesHint}
+                  {STR.msQuestionTypesSuggested} — {STR.msCatTypesHint}
                 </Muted>
                 <ChipRow>
                   {offered.map((t) => (
@@ -177,7 +177,7 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
             {o.sourceText ? <Muted>{STR.msSourceText}: {o.sourceText}</Muted> : null}
             {o.tagged && o.questionTypeCodes.length > 0 ? (
               <Muted>
-                {STR.msQuestionTypes}: {o.questionTypeCodes.map((c) => qtLabel.get(c) ?? c).join(", ")}
+                {STR.msQuestionTypesSuggested}: {o.questionTypeCodes.map((c) => qtLabel.get(c) ?? c).join(", ")}
               </Muted>
             ) : null}
             {o.homeTipBn ? <Muted>{STR.msHomeTip}: {o.homeTipBn}</Muted> : null}

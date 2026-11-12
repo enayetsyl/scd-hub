@@ -204,13 +204,14 @@ export async function questionTypeNoMarksNotes(
 
 /**
  * PR-G: what is wrong with the question's `QT-` code, if it carries one. The code must be an
- * ACTIVE type of the question's class × subject and one of the objective's `questionTypeCodes`,
- * and the question's `marks` must equal the type's marks when the table has them. No `QT-` code
+ * ACTIVE type of the question's class × subject (the book's marks table) — it is NOT tied to the
+ * objective's `questionTypeCodes` (PR-K, owner ruling 2026-11-13: one objective can be assessed by
+ * many types; that list is only a suggestion) — and the question's `marks` must equal the type's marks when the table has them. No `QT-` code
  * (a QCAT- value, nothing) is no finding. Locked list: refusals; before lock: warnings.
  */
 export async function questionTypeFindings(
   pair: { classToken: MasteryClassToken; subject: MasterySubject },
-  loCode: string | null,
+  _loCode: string | null,
   payload: Record<string, unknown> | null,
 ): Promise<string[]> {
   const qt = questionTypeCodeOf(payload);
@@ -220,12 +221,6 @@ export async function questionTypeFindings(
   if (!type) return [`${qt} is not a question type of ${where}`];
   if (!type.active) return [`${qt} is an inactive question type of ${where}`];
   const out: string[] = [];
-  if (loCode) {
-    const o = await MasteryOutcome.findOne({ code: loCode, classToken: pair.classToken, subject: pair.subject }).select("questionTypeCodes").lean();
-    if (o && !(o.questionTypeCodes ?? []).includes(qt)) {
-      out.push(`${qt} is not one of the question types ${loCode} allows (${(o.questionTypeCodes ?? []).join(", ") || "none"})`);
-    }
-  }
   const marks = payload?.marks;
   if (typeof type.marks === "number" && typeof marks === "number" && marks !== type.marks) {
     out.push(`the question's marks (${marks}) differ from ${qt}'s marks in the table (${type.marks})`);
