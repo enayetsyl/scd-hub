@@ -1160,6 +1160,8 @@ export interface QuestionReviewRoundT {
   submittedAt: string | null;
   questionText: string | null;
   questionType: string | null;
+  /** PR-G: the school question type (QT-…) the question carries, or null. */
+  qtCode: string | null;
   marks: number | null;
   topicTag: string | null;
   payloadJson: string | null;
@@ -1173,7 +1175,7 @@ const QUESTION_ROUND_FIELDS = `
   id artifactId qid subject classLevel anchorWord addressNumber
   reviewerId reviewerName assignedAt roundNumber status
   verdict reason submittedAt
-  questionText questionType marks topicTag payloadJson
+  questionText questionType qtCode marks topicTag payloadJson
   artifactReviewStatus artifactSuperseded important
 `;
 
@@ -1192,6 +1194,8 @@ export interface MyReviewsVars {
   classLevel?: number | null;
   chapter?: number | null;
   questionType?: string | null;
+  /** PR-G: only questions carrying this school question type (QT-…). */
+  qtCode?: string | null;
   search?: string | null;
   important?: boolean | null;
   undecided?: boolean | null;
@@ -1201,9 +1205,9 @@ export interface MyReviewsVars {
 // filter and NOT limit/offset — bolting all of them into one string is the exact shape
 // that broke the Class-test dashboard in prod on 2026-08-03 (see graphqlDocuments.test).
 const MY_REVIEWS_FILTER_DEFS = `$subject: String, $classLevel: Int, $chapter: Int,
-  $questionType: String, $search: String, $important: Boolean, $undecided: Boolean`;
+  $questionType: String, $qtCode: String, $search: String, $important: Boolean, $undecided: Boolean`;
 const MY_REVIEWS_FILTER_USE = `subject: $subject, classLevel: $classLevel, chapter: $chapter,
-  questionType: $questionType, search: $search, important: $important, undecided: $undecided`;
+  questionType: $questionType, qtCode: $qtCode, search: $search, important: $important, undecided: $undecided`;
 
 export const MY_QUESTION_REVIEWS = gql<
   { myQuestionReviews: QuestionReviewRoundT[] },
@@ -1734,6 +1738,8 @@ export interface QuestionListItem {
   questionType: string | null;
   /** Exercise family code (D-#511), e.g. QCAT-SOBDARTH. Null on older imports. */
   category: string | null;
+  /** PR-G: the school question type (QT-…) the question carries, or null. */
+  qtCode: string | null;
   paperRole: string | null;
   bloomLevel: string | null;
   difficulty: string | null;
@@ -1755,6 +1761,8 @@ export interface QuestionsVars {
   questionTypes?: string[] | null;
   chapters?: number[] | null;
   category?: string | null;
+  /** PR-G: only questions carrying this school question type (QT-…). */
+  qtCode?: string | null;
   bloomLevel?: string | null;
   difficulty?: string | null;
   paperRole?: string | null;
@@ -1781,6 +1789,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $questionTypes: [String!]
     $chapters: [Int!]
     $category: String
+    $qtCode: String
     $bloomLevel: String
     $difficulty: String
     $paperRole: String
@@ -1801,6 +1810,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       questionTypes: $questionTypes
       chapters: $chapters
       category: $category
+      qtCode: $qtCode
       bloomLevel: $bloomLevel
       difficulty: $difficulty
       paperRole: $paperRole
@@ -1821,6 +1831,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       topicTag
       questionType
       category
+      qtCode
       paperRole
       bloomLevel
       difficulty

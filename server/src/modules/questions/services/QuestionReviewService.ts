@@ -28,6 +28,7 @@ import { User } from "../../foundation/models/User";
 import { writeAudit, writeAuditMany } from "../../platform/services/AuditService";
 import { emitQuestionReviewAssigned } from "../../notifications/services/emitters";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { questionTypeCodeOf } from "../../mastery/bank";
 import {
   ReviewError,
   addressKeyOf,
@@ -52,6 +53,8 @@ export interface QuestionReviewRoundDTO extends ReviewAssignmentDTO {
   /** From the artifact under review (null if it vanished). */
   questionText: string | null;
   questionType: string | null;
+  /** PR-G: the school question type the question carries (`lesson_ref` = QT-…), or null. */
+  qtCode: string | null;
   marks: number | null;
   topicTag: string | null;
   /** Full payload for a rich preview — the client deserialises it. */
@@ -689,6 +692,7 @@ async function decorate(rounds: RawAssignment[]): Promise<QuestionReviewRoundDTO
       ...toDTO(r),
       questionText: str(payload.question_text),
       questionType: str(payload.question_type),
+      qtCode: questionTypeCodeOf(payload),
       marks: typeof payload.marks === "number" ? payload.marks : null,
       topicTag: str(tags.topic_tag) ?? str(payload.topic_tag),
       payloadJson: a ? JSON.stringify(payload) : null,
@@ -895,6 +899,8 @@ export interface MyReviewsFilterArgs {
   classLevel?: number | null;
   chapter?: number | null;
   questionType?: string | null;
+  /** PR-G: only questions carrying this school question type (`lesson_ref`). */
+  qtCode?: string | null;
   search?: string | null;
   /** Only questions somebody marked IMPORTANT (D-#550). */
   important?: boolean | null;
@@ -923,6 +929,7 @@ function myReviewsRoundMatch(reviewerId: string, args: MyReviewsFilterArgs): Rec
 function myReviewsArtifactMatch(args: MyReviewsFilterArgs): Record<string, unknown> | null {
   const match: Record<string, unknown> = {};
   if (args.questionType) match["art.envelopeJson.payload.question_type"] = args.questionType;
+  if (args.qtCode) match["art.envelopeJson.payload.lesson_ref"] = args.qtCode;
   if (args.important === true) match["art.importantAt"] = { $ne: null };
   const term = args.search?.trim() ?? "";
   if (term !== "") {
@@ -942,6 +949,7 @@ export function noReviewerFilter(args: MyReviewsFilterArgs): boolean {
     args.classLevel == null &&
     args.chapter == null &&
     !args.questionType &&
+    !args.qtCode &&
     !(args.search?.trim()) &&
     args.important !== true &&
     args.undecided !== true

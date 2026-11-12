@@ -1,0 +1,80 @@
+{
+ "source": "C1_MATH_U07_bank_v1.json (Question Bank Production)",
+ "items": [
+  {
+   "qid": "QP-MATH-C1-U07-Q0001",
+   "topic_tag": "LO-C1-MATH-07-01.2",
+   "lo_codes": [
+    "LO-C1-MATH-07-01.2"
+   ],
+   "ref19_topic_id": "MATH-ADD",
+   "question_text": "শূন্যের যোগ — খাড়া করে যোগ করি: ০ + ০",
+   "question_type": "short_answer",
+   "paper_role": "short",
+   "bloom_level": "Remember",
+   "difficulty": "easy",
+   "tier": "tier1",
+   "marks": 1,
+   "chapter_ref": "অধ্যায় ৭: যোগ",
+   "lesson_ref": "QT-SOLVE",
+   "answer_key": {
+    "accepted": [
+     "০"
+    ],
+    "normalized_match": true,
+    "model_note": "খাড়া বিন্যাসে একক ঘরের নিচে একক, দশক ঘরের নিচে দশক; হিসাব খাতায় দেখাতে হবে (আংশিক নম্বর নেই)।"
+   }
+  },
+  {
+   "qid": "QP-MATH-C1-U07-Q0020",
+   "topic_tag": "LO-C1-MATH-07-01.3",
+   "lo_codes": [
+    "LO-C1-MATH-07-01.3"
+   ],
+   "ref19_topic_id": "MATH-ADD",
+   "question_text": "বাঁয়ের সংখ্যার সাথে যোগ করি (খাড়া করে): ৭ + ৩",
+   "question_type": "short_answer",
+   "paper_role": "short",
+   "bloom_level": "Remember",
+   "difficulty": "easy",
+   "tier": "tier1",
+   "marks": 1,
+   "chapter_ref": "অধ্যায় ৭: যোগ",
+   "lesson_ref": "QT-SOLVE",
+   "answer_key": {
+    "accepted": [
+     "১০"
+    ],
+    "normalized_match": true,
+    "model_note": "খাড়া বিন্যাসে একক ঘরের নিচে একক, দশক ঘরের নিচে দশক; হিসাব খাতায় দেখাতে হবে (আংশিক নম্বর নেই)।"
+   }
+  },
+  {
+   "qid": "QP-MATH-C1-U07-Q0118",
+   "topic_tag": "LO-C1-MATH-07-04",
+   "lo_codes": [
+    "LO-C1-MATH-07-04"
+   ],
+   "ref19_topic_id": "MATH-ADD",
+   "question_text": "বিলালের ১২টি পেনসিল, বাবা দিলেন ৪টি। এখন মোট কয়টি পেনসিল? — শুধু হিসাবটি লেখ।",
+   "question_type": "short_answer",
+   "paper_role": "structured",
+   "bloom_level": "Apply",
+   "difficulty": "easy",
+   "tier": "tier1",
+   "marks": 3,
+   "chapter_ref": "অধ্যায় ৭: যোগ",
+   "lesson_ref": "QT-WORD",
+   "answer_key": {
+    "accepted": [
+     "১২ + ৪ = ১৬",
+     "১২+৪=১৬",
+     "৪ + ১২ = ১৬",
+     "৪+১২=১৬"
+    ],
+    "normalized_match": true,
+    "model_note": "শিশু শুধু অঙ্কটি লিখবে (সিদ্ধান্ত ১৭) — বাংলা বাক্য লাগবে না, না লেখায় নম্বর কাটা যাবে না; খাড়া করে লিখলেও গ্রহণযোগ্য।"
+   }
+  }
+ ]
+}

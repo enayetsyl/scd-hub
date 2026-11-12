@@ -105,6 +105,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
       questionTypes: qb.filters.questionTypes,
       chapters: qb.filters.chapters,
       category: qb.filters.category,
+      qtCode: qb.filters.qtCode,
       paperRole: qb.filters.paperRole,
       difficulty: qb.filters.difficulty,
       bloomLevel: qb.filters.bloomLevel,
@@ -157,6 +158,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
     });
   }
   if (f.category) chips.push({ key: "category", label: questionCategoryLabel(f.category) });
+  if (f.qtCode) chips.push({ key: "qtCode", label: f.qtCode });
   if (f.paperRole) chips.push({ key: "paperRole", label: paperRoleLabel(f.paperRole) });
   if (f.difficulty) chips.push({ key: "difficulty", label: difficultyLabel(f.difficulty) });
   if (f.bloomLevel) chips.push({ key: "bloomLevel", label: f.bloomLevel });
@@ -231,8 +233,10 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
         </Body>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
           {q.topicTag ? <Badge text={q.topicTag} tone="muted" /> : null}
+          {/* PR-G: the school question type beside the objective code. */}
+          {q.qtCode ? <Badge text={q.qtCode} tone="gold" /> : null}
           {q.questionType ? <Badge text={prettyCode(q.questionType)} tone="muted" /> : null}
-          {q.category ? <Badge text={questionCategoryLabel(q.category)} tone="muted" /> : null}
+          {q.category && q.category !== q.qtCode ? <Badge text={questionCategoryLabel(q.category)} tone="muted" /> : null}
           {q.paperRole ? <Badge text={paperRoleLabel(q.paperRole)} tone="muted" /> : null}
           {q.difficulty ? <Badge text={difficultyLabel(q.difficulty)} tone="muted" /> : null}
         </View>

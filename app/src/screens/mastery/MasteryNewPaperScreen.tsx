@@ -169,23 +169,36 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
     return preferred.length > 0 ? qts.filter((q) => preferred.includes(q.code)) : qts;
   }, [loRow, qts]);
   const qtMarks = new Map(qts.map((q) => [q.code, q.marks ?? 0]));
-  const bank = (bankData?.questions ?? []) as { id: string; qid: string | null; payloadJson: string }[];
+  const bank = (bankData?.questions ?? []) as { id: string; qid: string | null; payloadJson: string; qtCode?: string | null }[];
+  // PR-G: a bank question that carries its school type is used as that type only.
+  const lockedQt = mode === "BANK" ? bank.find((x) => x.id === artifactId)?.qtCode ?? null : null;
+  const effQt = lockedQt ?? qt;
+  const shownQtChoices = lockedQt ? qts.filter((q) => q.code === lockedQt) : qtChoices;
+  // The locked type must be usable: in the class's list, active, with marks. Say why when it is not.
+  const lockedRow = lockedQt ? ((catData?.masteryCatalogue?.questionTypes ?? []) as MasteryQuestionTypeRow[]).find((q) => q.code === lockedQt) : null;
+  const lockedProblem = !lockedQt
+    ? null
+    : !lockedRow || !lockedRow.active
+      ? fill(STR.msQtNotActive, { qt: lockedQt })
+      : lockedRow.marks === null
+        ? fill(STR.msQtNoMarks, { qt: lockedQt })
+        : null;
   const total = items.reduce((s, i) => s + i.marks, 0);
   const chosenCodes = source === "RUBRIC" ? rubric : items.map((i) => i.loCode);
   const earlierOnly = chosenCodes.length > 0 && chosenCodes.every((c) => tokenOfCode(c) !== classToken);
 
   function addItem(): void {
-    if (!lo || !qt) return;
+    if (!lo || !effQt) return;
     if (mode === "BANK") {
       const b = bank.find((x) => x.id === artifactId);
       if (!b) return;
       setItems((xs) => [
         ...xs,
-        { origin: "BANK", artifactId: b.id, loCode: lo, questionTypeCode: qt, label: questionText(b.payloadJson) || (b.qid ?? b.id), marks: qtMarks.get(qt) ?? 0 },
+        { origin: "BANK", artifactId: b.id, loCode: lo, questionTypeCode: effQt, label: questionText(b.payloadJson) || (b.qid ?? b.id), marks: qtMarks.get(effQt) ?? 0 },
       ]);
     } else {
       if (!text.trim()) return;
-      setItems((xs) => [...xs, { origin: "TEACHER", textBn: text.trim(), loCode: lo, questionTypeCode: qt, label: text.trim(), marks: qtMarks.get(qt) ?? 0 }]);
+      setItems((xs) => [...xs, { origin: "TEACHER", textBn: text.trim(), loCode: lo, questionTypeCode: effQt, label: text.trim(), marks: qtMarks.get(effQt) ?? 0 }]);
       setText("");
     }
     setArtifactId(null);
@@ -373,7 +386,13 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
                 ) : (
                   <View style={{ gap: space(1) }}>
                     {bank.map((b) => (
-                      <Chip key={b.id} label={questionText(b.payloadJson) || (b.qid ?? b.id)} selected={artifactId === b.id} onPress={() => setArtifactId(b.id)} />
+                      <Chip
+                        key={b.id}
+                        label={`${b.qtCode ? `${b.qtCode} · ` : ""}${questionText(b.payloadJson) || (b.qid ?? b.id)}`}
+                        selected={artifactId === b.id}
+                        // Tap again to deselect; the locked type follows the selection (it is never carried to the next item).
+                        onPress={() => setArtifactId(artifactId === b.id ? null : b.id)}
+                      />
                     ))}
                   </View>
                 )
@@ -381,16 +400,17 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
                 <Field label={STR.msQuestionText} value={text} onChangeText={setText} multiline />
               )}
               <Muted>{STR.msQType}</Muted>
+              {lockedProblem ? <Notice message={lockedProblem} tone="warn" /> : null}
               <ChipRow>
-                {qtChoices.map((q) => (
-                  <Chip key={q.code} label={`${q.labelBn} · ${bnNum(q.marks ?? 0)}`} selected={qt === q.code} onPress={() => setQt(q.code)} />
+                {shownQtChoices.map((q) => (
+                  <Chip key={q.code} label={`${q.labelBn} · ${bnNum(q.marks ?? 0)}`} selected={effQt === q.code} onPress={() => setQt(q.code)} />
                 ))}
               </ChipRow>
               <Button
                 title={STR.msAddItem}
                 variant="secondary"
                 onPress={addItem}
-                disabled={!qt || (mode === "BANK" ? !artifactId : !text.trim())}
+                disabled={!effQt || Boolean(lockedProblem) || (mode === "BANK" ? !artifactId : !text.trim())}
               />
             </>
           ) : null}
