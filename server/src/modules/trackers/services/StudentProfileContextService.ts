@@ -42,6 +42,8 @@ import {
   type StudentCommentTimeline,
 } from "../../comments/services/MeetingCommentService";
 import { attendanceSplitOf } from "./WholePictureService";
+import { enrolmentOf, enrolmentsInUse, sectionRosterIdsOn } from "../../foundation/services/EnrolmentService";
+import { Enrolment } from "../../foundation/models/Enrolment";
 
 // ---------------------------------------------------------------------------
 // Header
@@ -82,6 +84,16 @@ export interface StudentProfileHeader {
   classTeacherName: string | null;
   guardians: ProfileGuardian[];
   academicYear: ProfileAcademicYear | null;
+  /** YC-2: the years the child has an enrolment in (newest first) — the year picker. */
+  enrolledYears?: ProfileYearOption[];
+  /** YC-2: true when `academicYear` is not the current year (the view is read-only). */
+  pastYear?: boolean;
+}
+
+export interface ProfileYearOption {
+  academicYearId: string;
+  label: string;
+  current: boolean;
 }
 
 /** The default profile window (D-#358): the current academic year to date. Falls
@@ -102,9 +114,49 @@ export async function defaultProfileWindow(now: Date = new Date()): Promise<Prof
   };
 }
 
+/**
+ * YC-2: the profile window for a NAMED year — its start to today, never past its end
+ * (a past year reads whole). Null when the id names no year.
+ */
+export async function profileWindowOfYear(academicYearId: string, now: Date = new Date()): Promise<ProfileAcademicYear | null> {
+  if (!Types.ObjectId.isValid(academicYearId)) return null;
+  const year = (await AcademicYear.findById(academicYearId)
+    .select("label startDate endDate")
+    .lean()) as unknown as { _id: Types.ObjectId; label: string; startDate: Date; endDate: Date } | null;
+  if (!year) return null;
+  const end = new Date(year.endDate);
+  const to = now.getTime() < end.getTime() ? now : end;
+  return {
+    academicYearId: year._id.toString(),
+    label: year.label,
+    fromKey: dateKeyOf(new Date(year.startDate)),
+    toKey: dateKeyOf(to),
+  };
+}
+
+/** YC-2: the years a child was enrolled in, newest first; the current year is always offered. */
+async function enrolledYearsOf(studentId: Types.ObjectId): Promise<ProfileYearOption[]> {
+  if (!(await enrolmentsInUse())) return [];
+  const ids = (await Enrolment.distinct("academicYearId", {
+    studentId,
+    status: { $in: ["ACTIVE", "CLOSED"] },
+  })) as Types.ObjectId[];
+  const years = (await AcademicYear.find({ $or: [{ _id: { $in: ids } }, { current: true }] })
+    .select("label startDate current")
+    .sort({ startDate: -1 })
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; label: string; current?: boolean }>;
+  return years.map((y) => ({ academicYearId: y._id.toString(), label: y.label, current: !!y.current }));
+}
+
+/**
+ * The profile header. With `academicYearId` (YC-2, the year picker) the section, class,
+ * class teacher and window are THAT year's — from the child's enrolment in it (today's
+ * pointer when they have none). Without it: today's section and the current year, as before.
+ */
 export async function studentProfileHeader(
   studentId: string,
   now: Date = new Date(),
+  academicYearId?: string | null,
 ): Promise<StudentProfileHeader> {
   const student = (await Student.findById(studentId)
     .select("schoolId name nameBn rollNumber gender dob bloodGroup phone address classId sectionId")
@@ -124,18 +176,27 @@ export async function studentProfileHeader(
   } | null;
   if (!student) throw new Error("Student not found");
 
-  const [section, klass, links, year] = await Promise.all([
-    Section.findById(student.sectionId).select("nameBn classTeacherId").lean() as Promise<
+  // YC-2: the named year's placement (a past year shows where the child sat then).
+  const ofYear = academicYearId && Types.ObjectId.isValid(academicYearId) && (await enrolmentsInUse())
+    ? await enrolmentOf(student._id, { academicYearId })
+    : null;
+  const placed = ofYear && ofYear.status !== "PLANNED"
+    ? { classId: ofYear.classId, sectionId: ofYear.sectionId }
+    : { classId: student.classId, sectionId: student.sectionId };
+
+  const [section, klass, links, year, enrolledYears] = await Promise.all([
+    Section.findById(placed.sectionId).select("nameBn classTeacherId").lean() as Promise<
       { nameBn: string; classTeacherId?: Types.ObjectId } | null
     >,
-    Class.findById(student.classId).select("level").lean() as Promise<{ level: number } | null>,
+    Class.findById(placed.classId).select("level").lean() as Promise<{ level: number } | null>,
     // Earliest-first so the FIRST active link is the primary one (the rule the
     // homework chase drill already uses — not a second notion of "primary").
     GuardianLink.find({ studentId: student._id, active: { $ne: false } })
       .select("guardianId relation createdAt")
       .sort({ createdAt: 1 })
       .lean() as Promise<Array<{ guardianId: Types.ObjectId; relation: string }>>,
-    defaultProfileWindow(now),
+    academicYearId ? profileWindowOfYear(academicYearId, now) : defaultProfileWindow(now),
+    enrolledYearsOf(student._id),
   ]);
 
   const guardianDocs = links.length
@@ -172,11 +233,13 @@ export async function studentProfileHeader(
     bloodGroup: student.bloodGroup ?? null,
     phone: student.phone ?? null,
     classLevel: klass?.level ?? 0,
-    sectionId: student.sectionId.toString(),
+    sectionId: placed.sectionId.toString(),
     sectionNameBn: section?.nameBn ?? null,
     classTeacherName: classTeacher?.name ?? null,
     guardians,
     academicYear: year,
+    enrolledYears,
+    pastYear: !!year && enrolledYears.some((y) => y.current) && !enrolledYears.some((y) => y.current && y.academicYearId === year.academicYearId),
   };
 }
 
@@ -342,7 +405,15 @@ export async function classAttendanceComparison(
 ): Promise<ClassAttendanceComparison> {
   const me = (await Student.findById(studentId).select("sectionId").lean()) as { sectionId: Types.ObjectId } | null;
   if (!me) throw new Error("Student not found");
-  const mates = (await Student.find({ sectionId: me.sectionId, active: true }).select("_id").lean()) as Array<{ _id: Types.ObjectId }>;
+  // YC-2 (D-#1461): the section the child sat in at the window's END, and who sat there
+  // that day — a 2026 window after the year change compares with the 2026 classmates.
+  // A child with no enrolment at all keeps today's section and today's roster.
+  const byEnrolment = await enrolmentsInUse();
+  const at = byEnrolment ? await enrolmentOf(studentId, { on: toKey }) : null;
+  const sectionId = at ? at.sectionId : me.sectionId;
+  const mates = byEnrolment
+    ? (await sectionRosterIdsOn(sectionId, toKey)).map((id) => ({ _id: new Types.ObjectId(id) }))
+    : ((await Student.find({ sectionId: me.sectionId, active: true }).select("_id").lean()) as Array<{ _id: Types.ObjectId }>);
   const histories = await Promise.all(mates.map((m) => studentAttendanceHistory(m._id.toString(), fromKey, toKey)));
   return summarisePresence(histories.filter((h) => h.markedDays > 0).map((h) => h.presentPct));
 }

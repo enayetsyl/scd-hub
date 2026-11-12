@@ -33,6 +33,8 @@ import { RevisionEntry } from "../../saturday-revision/models/RevisionEntry";
 import { Student } from "../../foundation/models/Student";
 import { StudentAttendanceDay } from "../../attendance/models/StudentAttendanceDay";
 import { dateKeyOf } from "../../attendance/dates";
+import { AcademicYear } from "../../foundation/models/AcademicYear";
+import { enrolmentsInUse, placementSpans, yearCoveringKey } from "../../foundation/services/EnrolmentService";
 import {
   studentProfileAttendance,
   studentProfileComments,
@@ -68,6 +70,66 @@ export function monthWindowOf(periodKey: string): { fromKey: string; toKey: stri
   // and February/leap years fall out for free.
   const last = new Date(y, m, 0);
   return { fromKey: `${periodKey}-01`, toKey: dateKeyOf(last) };
+}
+
+/** Where a child sat for a report month, and that month's academic year (YC-2). */
+export interface PeriodPlacement {
+  classId: Types.ObjectId;
+  sectionId: Types.ObjectId;
+  academicYearId: Types.ObjectId | null;
+  /** The year's first day — the start of the year-to-date fee window. */
+  yearFromKey: string | null;
+}
+
+/**
+ * YC-2 (D-#1461): the PERIOD's class / section / year — the child's latest enrolment
+ * overlapping the month (a December 2026 revision built after the year change keeps the
+ * 2026 section, class and year). A child with no enrolment at all keeps today's pointer,
+ * with the year whose dates hold the month's last day (else the current year).
+ * Before the year change, for the month being reported, this equals the live Student
+ * and the current year.
+ */
+export async function periodPlacement(
+  studentId: string,
+  periodKey: string,
+  now: Date = new Date(),
+): Promise<PeriodPlacement | null> {
+  const { fromKey, toKey } = monthWindowOf(periodKey);
+  const student = (await Student.findById(studentId).select("classId sectionId").lean()) as unknown as
+    | { classId: Types.ObjectId; sectionId: Types.ObjectId }
+    | null;
+  if (!student) return null;
+  if (!(await enrolmentsInUse())) {
+    // Pre-YC-2: today's pointer and the current year.
+    const live = await defaultProfileWindow(now);
+    return {
+      classId: student.classId,
+      sectionId: student.sectionId,
+      academicYearId: live ? new Types.ObjectId(live.academicYearId) : null,
+      yearFromKey: live ? live.fromKey : null,
+    };
+  }
+  const spans = await placementSpans({ studentIds: [studentId], includeInactive: true }, { from: fromKey, to: toKey });
+  const last = spans.length ? spans[spans.length - 1] : null;
+  if (last && last.fromEnrolment && last.academicYearId) {
+    const y = (await AcademicYear.findById(last.academicYearId).select("startDate").lean()) as { startDate: Date } | null;
+    return {
+      classId: new Types.ObjectId(last.classId),
+      sectionId: new Types.ObjectId(last.sectionId),
+      academicYearId: new Types.ObjectId(last.academicYearId),
+      yearFromKey: y ? dateKeyOf(new Date(y.startDate)) : null,
+    };
+  }
+  const covering = await yearCoveringKey(toKey);
+  const year = covering
+    ? { academicYearId: covering._id.toString(), fromKey: dateKeyOf(new Date(covering.startDate)) }
+    : await defaultProfileWindow(now);
+  return {
+    classId: student.classId,
+    sectionId: student.sectionId,
+    academicYearId: year ? new Types.ObjectId(year.academicYearId) : null,
+    yearFromKey: year ? year.fromKey : null,
+  };
 }
 
 export function previousPeriodKey(periodKey: string): string {
@@ -585,7 +647,7 @@ export async function studentMonthMetrics(
     Student.findById(studentId).select("phone sectionId").lean() as Promise<
       { phone?: string; sectionId: Types.ObjectId } | null
     >,
-    defaultProfileWindow(now),
+    periodPlacement(studentId, periodKey, now), // YC-2: the PERIOD's year and section
   ]);
 
   const monthStart = new Date(`${fromKey}T00:00:00.000Z`);
@@ -602,11 +664,11 @@ export async function studentMonthMetrics(
     FinancePosting.find({ studentId: oid, kind: "FEE_COLLECTION", date: { $gte: monthStart, $lte: monthEnd } })
       .select("date amount feeLines reversesPostingId")
       .lean() as Promise<Array<{ _id: Types.ObjectId; date: Date; amount: number; feeLines?: Array<{ head: string; amount: number }>; reversesPostingId?: Types.ObjectId }>>,
-    year
+    year?.yearFromKey
       ? (FinancePosting.find({
           studentId: oid,
           kind: "FEE_COLLECTION",
-          date: { $gte: new Date(`${year.fromKey}T00:00:00.000Z`), $lte: monthEnd },
+          date: { $gte: new Date(`${year.yearFromKey}T00:00:00.000Z`), $lte: monthEnd },
         })
           .select("amount reversesPostingId")
           .lean() as Promise<Array<{ _id: Types.ObjectId; amount: number; reversesPostingId?: Types.ObjectId }>>)
@@ -617,7 +679,7 @@ export async function studentMonthMetrics(
     student
       ? GuardianNotice.countDocuments({
           createdAt: { $gte: monthStart, $lte: monthEnd },
-          $or: [{ sectionId: student.sectionId }, { sectionId: { $exists: false } }, { sectionId: null }],
+          $or: [{ sectionId: year?.sectionId ?? student.sectionId }, { sectionId: { $exists: false } }, { sectionId: null }],
         })
       : Promise.resolve(0),
   ]);
@@ -729,9 +791,7 @@ export async function sectionMonthMetrics(
   periodKey: string,
   opts: { now?: Date } = {},
 ): Promise<SectionMonthMetrics> {
-  const students = (await Student.find({ sectionId: new Types.ObjectId(sectionId) })
-    .select("_id")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  const students = (await sectionMonthRoster(sectionId, periodKey)).map((id) => ({ _id: new Types.ObjectId(id) }));
 
   const rows: StudentMonthMetrics[] = [];
   for (const s of students) {
@@ -744,6 +804,31 @@ export async function sectionMonthMetrics(
     cohort: cohortOfRows(sectionId, periodKey, rows, students.length),
     rows,
   };
+}
+
+/**
+ * YC-2 (D-#1461): the children whose PERIOD placement (`periodPlacement`: the latest
+ * enrolment overlapping the month) is this section — so each child is reported once per
+ * month, in the section their report is stamped with. A child with no enrolment at all
+ * keeps today's pointer (the pre-YC-2 `Student.find({ sectionId })`, inactive included).
+ */
+export async function sectionMonthRoster(sectionId: string, periodKey: string): Promise<string[]> {
+  if (!(await enrolmentsInUse())) {
+    const live = (await Student.find({ sectionId: new Types.ObjectId(sectionId) })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+    return live.map((s) => s._id.toString());
+  }
+  const { fromKey, toKey } = monthWindowOf(periodKey);
+  const range = { from: fromKey, to: toKey };
+  const here = await placementSpans({ sectionIds: [sectionId], includeInactive: true }, range);
+  const ids = [...new Set(here.map((s) => s.studentId))];
+  if (ids.length === 0) return [];
+  const latest = new Map<string, string>();
+  for (const sp of await placementSpans({ studentIds: ids, includeInactive: true }, range)) {
+    latest.set(sp.studentId, sp.sectionId); // spans come sorted by fromKey per child
+  }
+  return ids.filter((id) => latest.get(id) === sectionId);
 }
 
 /** PURE. The comparators, from the section's own computed rows (D-#396). */

@@ -28,6 +28,7 @@ import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership
 import { routineForDate } from "../routine/services/RoutineSlotService";
 import { StaffCoverSlot } from "../hr/models/StaffCoverSlot";
 import { dateKeyOf } from "./dates";
+import { enrolmentsInUse, placementsOn, type PlacementFilter } from "../foundation/services/EnrolmentService";
 
 export type UnitType = "section" | "subjectgroup";
 
@@ -143,6 +144,15 @@ export async function unitForStudent(studentId: string): Promise<AttendanceUnit 
 }
 
 /**
+ * YC-2: the children placed on `dateKey` (enrolment of that date, else today's pointer
+ * for a child with no enrolment at all) as unit-resolution lites, sorted by id.
+ */
+export async function studentLitesOn(dateKey: string, filter: PlacementFilter = {}): Promise<StudentLite[]> {
+  const placed = await placementsOn(dateKey, filter);
+  return [...placed.values()].map((p) => ({ id: p.studentId, sectionId: p.sectionId, classId: p.classId }));
+}
+
+/**
  * The ACTIVE students a unit is responsible for — the marker's roster and the
  * validation set for a write.
  *   subjectgroup → its Quran members
@@ -161,7 +171,22 @@ export async function rosterForUnit(unit: AttendanceUnit, dateKey?: string): Pro
   if (dateKey && isLegacyAttendanceDate(dateKey) && unit.unitType === "subjectgroup") return [];
 
   let lites: StudentLite[];
-  if (unit.unitType === "subjectgroup") {
+  if (dateKey && (await enrolmentsInUse())) {
+    // YC-2 (D-#1461): a date reads WHO SAT WHERE THAT DAY - the enrolment covering it
+    // (a child with no enrolment at all falls back to today's pointer). Before the
+    // year change this equals the live roster; after it, a 2026 day keeps its 2026
+    // children, so amending it still accepts them.
+    if (unit.unitType === "subjectgroup") {
+      const rows = await SubjectGroupMembership.find({ groupId: unit.unitId, track: "quran" })
+        .select("studentId")
+        .lean();
+      const ids = rows.map((r) => r.studentId.toString());
+      if (ids.length === 0) return [];
+      lites = await studentLitesOn(dateKey, { studentIds: ids });
+    } else {
+      lites = await studentLitesOn(dateKey, { sectionIds: [unit.unitId] });
+    }
+  } else if (unit.unitType === "subjectgroup") {
     const rows = await SubjectGroupMembership.find({ groupId: unit.unitId, track: "quran" })
       .select("studentId")
       .lean();

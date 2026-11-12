@@ -30,7 +30,8 @@ import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { applicationCovers } from "./LeaveApplicationService";
 import { markerForUnit, AttendanceError } from "./StudentAttendanceService";
-import { resolveUnits, unitKey, type AttendanceUnit, type StudentLite } from "../attendanceUnit";
+import { resolveUnits, studentLitesOn, unitKey, type AttendanceUnit, type StudentLite } from "../attendanceUnit";
+import { enrolmentsInUse, placementSpans, spanOn, spansByStudent, type PlacementSpan } from "../../foundation/services/EnrolmentService";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
@@ -57,6 +58,38 @@ const toLite = (s: {
   sectionId: s.sectionId.toString(),
   classId: s.classId.toString(),
 });
+
+type PlacedStudent = {
+  _id: { toString(): string };
+  name: string;
+  nameBn?: string | null;
+  rollNumber?: string | null;
+  schoolId: string;
+  sectionId: { toString(): string };
+  classId: { toString(): string };
+};
+
+/**
+ * YC-2 (D-#1461): the children placed on `dateKey` with their identity fields, their
+ * class / section being THAT DAY's (the enrolment covering it; a child with no
+ * enrolment at all keeps today's pointer). Before the year change this is exactly
+ * `Student.find({ active: true, ... })`.
+ */
+async function studentsPlacedOn(
+  dateKey: string,
+  filter: { sectionIds?: string[] } = {},
+): Promise<PlacedStudent[]> {
+  const lites = await studentLitesOn(dateKey, filter);
+  if (lites.length === 0) return [];
+  const docs = (await Student.find({ _id: { $in: lites.map((l) => l.id) } })
+    .select("_id name nameBn rollNumber schoolId")
+    .lean()) as unknown as Array<Omit<PlacedStudent, "sectionId" | "classId">>;
+  const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+  return lites.flatMap((l) => {
+    const d = byId.get(l.id);
+    return d ? [{ ...d, sectionId: l.sectionId, classId: l.classId }] : [];
+  });
+}
 
 /** Mongo `$or` selecting every day record belonging to any of `units`. */
 const unitsQuery = (units: AttendanceUnit[]): Record<string, unknown>[] =>
@@ -110,7 +143,9 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
   const markedUnits = new Set(days.map(unitKeyOfDay));
   const absentIds = new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())));
 
-  const students = await Student.find({ active: true }).select("_id name nameBn rollNumber schoolId sectionId classId").lean();
+  const students = (await enrolmentsInUse())
+    ? await studentsPlacedOn(dateKey)
+    : await Student.find({ active: true }).select("_id name nameBn rollNumber schoolId sectionId classId").lean();
   const lites = students.map(toLite);
   const units = await resolveUnits(lites, dateKey); // D-#292: legacy dates are section-shaped
 
@@ -237,7 +272,10 @@ async function presenceTallies(
   parseDateKey(dateKey);
   const [days, students] = await Promise.all([
     StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId absentStudentIds").lean() as unknown as Promise<DayLike[]>,
-    Student.find({ active: true }).select("_id sectionId classId").lean(),
+    (async () =>
+      (await enrolmentsInUse())
+        ? studentsPlacedOn(dateKey)
+        : Student.find({ active: true }).select("_id sectionId classId").lean())(),
   ]);
   const rows = new Map<string, PresenceTally>();
   if (students.length === 0) return rows;
@@ -335,9 +373,12 @@ export async function sectionsAttendanceForDate(
   if (sectionIds.length === 0) return [];
   const [days, students, sections] = await Promise.all([
     StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId absentStudentIds").lean() as unknown as Promise<DayLike[]>,
-    Student.find({ sectionId: { $in: sectionIds }, active: true })
-      .select("_id name nameBn rollNumber schoolId sectionId classId")
-      .lean(),
+    (async () =>
+      (await enrolmentsInUse())
+        ? studentsPlacedOn(dateKey, { sectionIds })
+        : Student.find({ sectionId: { $in: sectionIds }, active: true })
+            .select("_id name nameBn rollNumber schoolId sectionId classId")
+            .lean())(),
     Section.find({ _id: { $in: sectionIds } }).select("nameBn classId").lean(),
   ]);
   if (students.length === 0) return [];
@@ -468,6 +509,53 @@ export async function studentAttendanceHistory(
   fromKey: string,
   toKey: string,
 ): Promise<StudentHistory> {
+  if (!(await enrolmentsInUse())) return studentAttendanceHistoryLive(studentId, fromKey, toKey);
+  parseDateKey(fromKey);
+  parseDateKey(toKey);
+  const student = await Student.findById(studentId).lean();
+  if (!student) throw new AttendanceError("Student not found");
+
+  // YC-2 (D-#1461): each day reads the unit of the section the child sat in THAT day
+  // (their enrolment; today's pointer only when they have no enrolment at all). A
+  // range across a split or the year change is read span by span.
+  const spans = await spanUnits(
+    await placementSpans({ studentIds: [studentId], includeInactive: true }, { from: fromKey, to: toKey }),
+  );
+  const lookup = [...new Map(spans.flatMap((sp) => [sp.unit, sp.sectionUnit]).map((u) => [unitKey(u), u])).values()];
+
+  const days = lookup.length
+    ? ((await StudentAttendanceDay.find({
+        $or: unitsQuery(lookup),
+        dateKey: { $gte: fromKey, $lte: toKey },
+      }).lean()) as unknown as DayLike[])
+    : [];
+
+  // Prefer the span's own unit's record when both eras have a row for the same day.
+  const byDate = new Map<string, DayLike>();
+  for (const d of days) {
+    const sp = spanOn(spans, d.dateKey);
+    if (!sp) continue;
+    const k = unitKeyOfDay(d);
+    if (k !== sp.unitKey && k !== unitKey(sp.sectionUnit)) continue;
+    const existing = byDate.get(d.dateKey);
+    if (!existing || k === sp.unitKey) byDate.set(d.dateKey, d);
+  }
+
+  const apps = await StudentLeaveApplication.find({
+    studentId,
+    fromKey: { $lte: toKey },
+    toKey: { $gte: fromKey },
+  }).lean();
+  const last = spans.length ? spans[spans.length - 1].sectionId : student.sectionId.toString();
+  return buildStudentHistory(studentId, last, [...byDate.values()], apps);
+}
+
+/** Pre-YC-2 history: today's unit and section (no enrolment rows in use). */
+async function studentAttendanceHistoryLive(
+  studentId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<StudentHistory> {
   parseDateKey(fromKey);
   parseDateKey(toKey);
   const student = await Student.findById(studentId).lean();
@@ -499,6 +587,21 @@ export async function studentAttendanceHistory(
   return buildStudentHistory(studentId, student.sectionId.toString(), [...byDate.values()], apps);
 }
 
+type UnitSpan = PlacementSpan & { unit: AttendanceUnit; unitKey: string; sectionUnit: AttendanceUnit };
+
+/** Each span with its (date-independent) unit + its section unit — the history read's
+ *  two candidates per day. One child per call site, so resolving per span is cheap. */
+async function spanUnits(spans: PlacementSpan[]): Promise<UnitSpan[]> {
+  const out: UnitSpan[] = [];
+  for (const sp of spans) {
+    const sectionUnit: AttendanceUnit = { unitType: "section", unitId: sp.sectionId };
+    const units = await resolveUnits([{ id: sp.studentId, sectionId: sp.sectionId, classId: sp.classId }]);
+    const unit = units.get(sp.studentId) ?? sectionUnit;
+    out.push({ ...sp, unit, unitKey: unitKey(unit), sectionUnit });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Absent & no application (AT3.2 / §8 row 4)
 // ---------------------------------------------------------------------------
@@ -517,6 +620,102 @@ export interface AbsentNoApplicationEntry {
  *  section (class teacher) or all (manage) via `sectionId`. Reads each student
  *  through their attendance unit; the payload stays section-shaped. */
 export async function absentNoApplication(
+  sectionId: string | null,
+  fromKey: string,
+  toKey: string,
+): Promise<AbsentNoApplicationEntry[]> {
+  if (!(await enrolmentsInUse())) return absentNoApplicationLive(sectionId, fromKey, toKey);
+  parseDateKey(fromKey);
+  parseDateKey(toKey);
+
+  // YC-2 (D-#1461): who sat in the section (or the school) on each day of the range -
+  // the enrolment spans; a child with no enrolment at all keeps today's pointer.
+  const spans = await placementSpans(sectionId ? { sectionIds: [sectionId] } : {}, { from: fromKey, to: toKey });
+  if (spans.length === 0) return [];
+  const spansOf = spansByStudent(spans);
+  const students = (await Student.find({ _id: { $in: [...spansOf.keys()] } })
+    .select("_id name nameBn rollNumber schoolId")
+    .lean()) as unknown as Array<Omit<PlacedStudent, "sectionId" | "classId">>;
+  if (students.length === 0) return [];
+
+  // One unit per (student, class, section) - batched by span shape.
+  const unitOfSpan = new Map<PlacementSpan, AttendanceUnit>();
+  const shapes = new Map<string, PlacementSpan[]>();
+  for (const sp of spans) {
+    const k = `${sp.classId}:${sp.sectionId}`;
+    shapes.set(k, [...(shapes.get(k) ?? []), sp]);
+  }
+  for (const group of shapes.values()) {
+    const units = await resolveUnits(group.map((sp) => ({ id: sp.studentId, sectionId: sp.sectionId, classId: sp.classId })));
+    for (const sp of group) unitOfSpan.set(sp, units.get(sp.studentId) ?? { unitType: "section", unitId: sp.sectionId });
+  }
+  const inScope = new Set(students.map((s) => s._id.toString()));
+  // Query BOTH shapes (the history approach): a range straddling the D-#292 cutover
+  // has pre-cutover days stored under the students' SECTIONS, not their Quran groups.
+  const legacySectionUnits: AttendanceUnit[] = [...new Set(spans.map((s) => s.sectionId))].map((id) => ({
+    unitType: "section",
+    unitId: id,
+  }));
+  const distinctUnits = [
+    ...new Map([...unitOfSpan.values(), ...legacySectionUnits].map((u) => [unitKey(u), u])).values(),
+  ];
+
+  const days = (await StudentAttendanceDay.find({
+    $or: unitsQuery(distinctUnits),
+    dateKey: { $gte: fromKey, $lte: toKey },
+  }).lean()) as unknown as DayLike[];
+  if (days.length === 0) return [];
+
+  const absentIds = [
+    ...new Set(
+      days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())).filter((id) => inScope.has(id)),
+    ),
+  ];
+  if (absentIds.length === 0) return [];
+
+  const apps = await StudentLeaveApplication.find({
+    studentId: { $in: absentIds },
+    fromKey: { $lte: toKey },
+    toKey: { $gte: fromKey },
+  }).lean();
+
+  const datesByStudent = new Map<string, string[]>();
+  for (const day of days) {
+    const dayUnit = unitKeyOfDay(day);
+    for (const id of day.absentStudentIds) {
+      const sid = id.toString();
+      if (!inScope.has(sid)) continue;
+      // Only count a student in the record of their OWN unit - of the span that day.
+      const sp = spanOn(spansOf.get(sid) ?? [], day.dateKey);
+      const own = sp ? unitOfSpan.get(sp) : undefined;
+      if (!own || unitKey(own) !== dayUnit) continue;
+      if (applicationCovers(apps, sid, day.dateKey)) continue;
+      const list = datesByStudent.get(sid);
+      if (list) list.push(day.dateKey);
+      else datesByStudent.set(sid, [day.dateKey]);
+    }
+  }
+  if (datesByStudent.size === 0) return [];
+
+  return students
+    .filter((s) => datesByStudent.has(s._id.toString()))
+    .map((s) => {
+      const own = spansOf.get(s._id.toString()) ?? [];
+      return {
+        studentId: s._id.toString(),
+        name: s.name,
+        nameBn: s.nameBn ?? null,
+        rollNumber: s.rollNumber ?? s.schoolId, // roll = ID (D-#80)
+        schoolId: s.schoolId,
+        sectionId: own[own.length - 1].sectionId,
+        dateKeys: (datesByStudent.get(s._id.toString()) ?? []).sort(),
+      };
+    })
+    .sort((a, b) => b.dateKeys.length - a.dateKeys.length || a.name.localeCompare(b.name));
+}
+
+/** Pre-YC-2 absent-without-application: today's section and unit. */
+async function absentNoApplicationLive(
   sectionId: string | null,
   fromKey: string,
   toKey: string,
@@ -749,11 +948,22 @@ export async function attendanceUnitsForDate(dateKey: string): Promise<AdminUnit
   const dayType = await resolveDayType(parseDateKey(dateKey));
   if (dayType !== "FULL") return [];
 
-  const [sections, marked, students] = await Promise.all([
+  const byEnrolment = await enrolmentsInUse();
+  const [currentSections, marked, students] = await Promise.all([
     Section.find({ active: true, ...(await currentYearSectionFilter()) }).lean(),
     StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId").lean(),
-    Student.find({ active: true }).select("_id sectionId classId").lean(),
+    byEnrolment
+      ? studentsPlacedOn(dateKey) // YC-2: a past day lists that day's sections
+      : Student.find({ active: true }).select("_id sectionId classId").lean(),
   ]);
+  // Labels for that day's sections too (a 2026 day after the year change).
+  const have = new Set(currentSections.map((s) => s._id.toString()));
+  const missing = byEnrolment
+    ? [...new Set(students.map((s) => s.sectionId.toString()))].filter((id) => !have.has(id))
+    : [];
+  const sections = missing.length
+    ? [...currentSections, ...(await Section.find({ _id: { $in: missing } }).lean())]
+    : currentSections;
   const markedUnits = new Set((marked as unknown as DayLike[]).map(unitKeyOfDay));
   const units = await resolveUnits(students.map(toLite), dateKey);
 

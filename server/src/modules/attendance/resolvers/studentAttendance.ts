@@ -515,13 +515,16 @@ async function lowestClassLevel(classIds: string[]): Promise<number> {
 
 /** The unit's roster, bucketed under each student's own class/section. Date-aware
  *  (D-#292): a pre-cutover section day rosters the FULL section, no group split. */
-async function rosterGroupedBySection(unit: AttendanceUnit, dateKey?: string): Promise<RosterSectionShape[]> {
+export async function rosterGroupedBySection(unit: AttendanceUnit, dateKey?: string): Promise<RosterSectionShape[]> {
   const roster = await rosterForUnit(unit, dateKey);
   if (roster.length === 0) return [];
   const students = await Student.find({ _id: { $in: roster.map((s) => s.id) } })
     .select("_id name nameBn rollNumber schoolId sectionId classId")
     .lean();
-  const sections = await Section.find({ _id: { $in: [...new Set(students.map((s) => s.sectionId.toString()))] } })
+  // D-#1476: bucket by the section the child sat in ON THE DATE - the roster lites already carry
+  // it (the date's enrolment; today's pointer when there is none), not the live pointer.
+  const sectionOf = new Map(roster.map((r) => [r.id, String(r.sectionId)]));
+  const sections = await Section.find({ _id: { $in: [...new Set(sectionOf.values())] } })
     .select("code nameBn classId")
     .lean();
   const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } })
@@ -532,7 +535,7 @@ async function rosterGroupedBySection(unit: AttendanceUnit, dateKey?: string): P
 
   const bySection = new Map<string, RosterSectionShape>();
   for (const student of students) {
-    const sectionId = student.sectionId.toString();
+    const sectionId = sectionOf.get(student._id.toString()) ?? student.sectionId.toString();
     const section = sectionById.get(sectionId);
     if (!section) continue;
     const cls = classById.get(section.classId.toString());

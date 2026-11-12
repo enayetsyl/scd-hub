@@ -38,6 +38,8 @@ import { SubjectGroup } from "../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership";
 import { Subject } from "../foundation/models/Subject";
 import { teachesSectionSubject, teachesSubjectGroup } from "./subjectTeacher";
+import { enrolmentsInUse, sectionRosterIdsOn } from "../foundation/services/EnrolmentService";
+import { dhakaDayKey } from "../../lib/dhakaDay";
 import type { DelegatedAction } from "@scd/shared";
 
 /** PM reach for the class-test feature (docs/prd-permission-matrix.md §5.4, D-#793):
@@ -79,6 +81,28 @@ export interface AnchoredTest {
   /** When it was sat — bounds an emptied section's reconstructed roster to the children
    *  enrolled by then (`emptiedSectionRoster`). Absent → no bound. */
   examDate?: string | Date | null;
+}
+
+/** The exam's Dhaka date key, or null when it has no date. */
+export function examKeyOf(examDate: string | Date | null | undefined): string | null {
+  if (!examDate) return null;
+  if (typeof examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(examDate)) return examDate;
+  const d = new Date(examDate);
+  return Number.isNaN(d.getTime()) ? null : dhakaDayKey(d);
+}
+
+/**
+ * YC-2 (D-#1461): who sat in the exam's section ON THE EXAM DATE - the enrolments
+ * covering it (a child with no enrolment at all keeps today's pointer). Empty when
+ * the exam has no date or nobody was placed there that day; callers then fall back
+ * to the live roster and the emptied-section reconstruction, exactly as before.
+ * With the backfill, a সম্মিলিত exam before the C3/C4/C5 split lists the same
+ * children the reconstruction did; after the year change a 2026 exam keeps them.
+ */
+async function sectionRosterOnExamDate(test: AnchoredTest): Promise<string[]> {
+  const key = examKeyOf(test.examDate);
+  if (!test.sectionId || !key || !(await enrolmentsInUse())) return [];
+  return sectionRosterIdsOn(test.sectionId, key);
 }
 
 /** The latest enrolment an exam's reconstructed roster admits: the end of its exam day. */
@@ -242,6 +266,15 @@ async function resolveRoster(test: AnchoredTest): Promise<{ ids: string[]; moved
       .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
     return { ids: students.map((s) => s._id.toString()), movedOn: false };
   }
+  const onDate = await sectionRosterOnExamDate(test);
+  if (onDate.length > 0) {
+    // The marks screen names each child's CURRENT section once any has moved on.
+    const moved = await Student.exists({
+      _id: { $in: onDate.map((id) => new Types.ObjectId(id)) },
+      sectionId: { $ne: test.sectionId ? new Types.ObjectId(test.sectionId) : null },
+    });
+    return { ids: onDate, movedOn: !!moved };
+  }
   const students = (await Student.find({ sectionId: test.sectionId, active: true })
     .select("_id")
     .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
@@ -366,6 +399,9 @@ export async function classTestRosterStudents(test: AnchoredTest): Promise<
 /** Just the count — the completion denominator, without shipping the ids. */
 export async function rosterCount(test: AnchoredTest): Promise<number> {
   if (test.subjectGroupId) return (await rosterStudentIds(test)).length;
+  // YC-2: the exam date's roster first, so an unfinished 2026 exam never reads 0.
+  const onDate = await sectionRosterOnExamDate(test);
+  if (onDate.length > 0) return onDate.length;
   const n = await Student.countDocuments({ sectionId: test.sectionId, active: true });
   if (n > 0 || !test.sectionId || !test.classId) return n;
   // An emptied section (the C4/C5 সম্মিলিত after the split): count the roster the marks

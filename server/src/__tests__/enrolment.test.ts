@@ -62,7 +62,7 @@ describe("backfillEnrolments", () => {
   it("dry run writes nothing", async () => {
     const r = await backfillEnrolments({ apply: false });
     expect(r.students).toBe(5);
-    expect(r.rowsPlanned).toBeGreaterThan(5);
+    expect(r.rowsPlanned).toBe(5);
     expect(await Enrolment.countDocuments({})).toBe(0);
   });
 
@@ -84,66 +84,52 @@ describe("backfillEnrolments", () => {
     expect(await Enrolment.countDocuments({})).toBe(before);
   });
 
-  it("rebuilds the split history: the combined section's roster before the split is the pre-split children", async () => {
+  it("D-#1476: a merged / split class gets ONE ACTIVE row per child in the current section from the year start (the enrolment follows the rehomed records)", async () => {
     const r = await backfillEnrolments({ apply: true });
-    expect(r.rebuiltHistory).toBe(4);
-    const before = await sectionRoster(h.combined, { on: "2026-04-15" });
-    expect(before.map((e) => e.studentId.toString()).sort()).toEqual(
-      [h.boy1, h.boy2, h.girl1, h.girl2].map((i) => i.toString()).sort(),
-    );
-    expect(await sectionRoster(h.combined, { on: "2026-02-01" })).toHaveLength(0);
-    expect(await sectionRoster(h.combined, { on: "2026-06-01" })).toHaveLength(0);
-    const boysEarly = await sectionRoster(h.boys, { on: "2026-02-01" });
-    expect(boysEarly).toHaveLength(2);
-    const boysNow = await sectionRoster(h.boys, { on: "2026-09-01" });
-    expect(boysNow).toHaveLength(2);
+    expect(r.couldNot).toEqual([]);
+    expect(await Enrolment.countDocuments({ status: "CLOSED" })).toBe(0);
+    expect(await sectionRoster(h.combined, { on: "2026-04-15" })).toHaveLength(0);
+    for (const on of ["2026-02-01", "2026-09-01"]) {
+      expect(await sectionRoster(h.boys, { on })).toHaveLength(2);
+      expect(await sectionRoster(h.girls, { on })).toHaveLength(2);
+    }
     const e = await enrolmentOf(h.girl1, { on: "2026-03-01" });
-    expect(e?.sectionId.toString()).toBe(h.combined.toString());
-    expect(e?.endKey).toBe("2026-05-31");
-    expect((await enrolmentOf(h.girl1, { academicYearId: y.y2026 }))?.status).toBe("ACTIVE");
+    expect(e).toMatchObject({ status: "ACTIVE", startKey: "2026-01-01" });
+    expect(e?.sectionId.toString()).toBe(h.girls.toString());
+    expect(await checkInvariant()).toEqual([]);
   });
 
-  it("reports a child the merge row does not name instead of guessing", async () => {
+  it("a child the merge row does not name still gets the plain row (nothing to rebuild, nothing to report)", async () => {
     await Student.create({ schoolId: "T-S7", name: "Late Joiner", classId: c.c3Y2026, sectionId: h.boys, active: true });
     const r = await backfillEnrolments({ apply: true });
-    expect(r.couldNot.some((l) => l.startsWith("T-S7"))).toBe(true);
+    expect(r.couldNot).toEqual([]);
     expect(await Enrolment.countDocuments({ studentId: (await Student.findOne({ schoolId: "T-S7" }))!._id })).toBe(1);
   });
 });
 
 describe("backfillEnrolments - prod split shape (no SectionMerge, one SECTIONS_SPLIT audit)", () => {
-  const ids = (p: { kids: mongoose.Types.ObjectId[] }): string[] => p.kids.map((k) => k.toString()).sort();
-
-  it("rebuilds the combined span from the audit: roster before the split = the moved children, empty on/after", async () => {
+  it("D-#1476: each moved child gets ONE ACTIVE row in the half from the year start; no CLOSED row, combined section never holds them", async () => {
     const p = await seedProdSplit(y);
     const r = await backfillEnrolments({ apply: true });
     expect(r.couldNot.filter((l) => l.startsWith("T-P"))).toEqual([]);
-    expect((await sectionRoster(p.combined, { on: "2026-09-30" })).map((e) => e.studentId.toString()).sort()).toEqual(ids(p));
-    expect(await sectionRoster(p.combined, { on: "2026-10-01" })).toHaveLength(0);
-    expect(await sectionRoster(p.combined, { on: "2026-12-01" })).toHaveLength(0);
-    expect(await sectionRoster(p.boys, { on: "2026-09-30" })).toHaveLength(0);
-    expect(await sectionRoster(p.boys, { on: "2026-10-01" })).toHaveLength(2);
-    const e = await enrolmentOf(p.kids[2], { on: "2026-02-01" });
-    expect(e).toMatchObject({ outcome: "MOVED", endKey: "2026-09-30", startKey: "2026-01-01" });
-    expect((await enrolmentOf(p.kids[2], { academicYearId: y.y2026 }))).toMatchObject({ status: "ACTIVE", startKey: "2026-10-01" });
+    expect(await Enrolment.countDocuments({ studentId: { $in: p.kids }, status: "CLOSED" })).toBe(0);
+    expect(await Enrolment.countDocuments({ studentId: { $in: p.kids } })).toBe(3);
+    for (const on of ["2026-02-01", "2026-09-30", "2026-10-01", "2026-12-01"]) {
+      expect(await sectionRoster(p.combined, { on })).toHaveLength(0);
+      expect(await sectionRoster(p.boys, { on })).toHaveLength(2);
+      expect(await sectionRoster(p.girls, { on })).toHaveLength(1);
+    }
+    expect(await enrolmentOf(p.kids[2], { academicYearId: y.y2026 })).toMatchObject({ status: "ACTIVE", startKey: "2026-01-01" });
     expect(await checkInvariant()).toEqual([]);
   });
 
-  it("count mismatch: plain single rows and every affected child listed in couldNot", async () => {
-    const p = await seedProdSplit(y, { movedStudents: 4 });
+  it("the audit's moved count or effective date no longer matter: same single rows", async () => {
+    const p = await seedProdSplit(y, { movedStudents: 4, effective: null });
     const r = await backfillEnrolments({ apply: true });
-    for (const n of [1, 2, 3]) expect(r.couldNot.some((l) => l.startsWith(`T-P${n}:`))).toBe(true);
+    expect(r.couldNot.filter((l) => l.startsWith("T-P"))).toEqual([]);
     expect(await Enrolment.countDocuments({ studentId: { $in: p.kids } })).toBe(3);
     expect(await sectionRoster(p.combined, { on: "2026-02-01" })).toHaveLength(0);
     expect(await checkInvariant()).toEqual([]);
-  });
-
-  it("missing meta.effective: plain single rows and the children listed", async () => {
-    const p = await seedProdSplit(y, { effective: null });
-    const r = await backfillEnrolments({ apply: true });
-    expect(r.couldNot.filter((l) => l.startsWith("T-P") && l.includes("effective"))).toHaveLength(3);
-    expect(await Enrolment.countDocuments({ studentId: { $in: p.kids } })).toBe(3);
-    expect(await sectionRoster(p.combined, { on: "2026-02-01" })).toHaveLength(0);
   });
 });
 
@@ -167,7 +153,7 @@ describe("moveStudent", () => {
   it("refuses a move into another year and a move on or before the start", async () => {
     await backfillEnrolments({ apply: true });
     await expect(moveStudent(h.boy1, s.s3Y2027, "2026-09-10")).rejects.toThrow(EnrolmentError);
-    await expect(moveStudent(h.boy1, s.s3Y2026, "2026-06-01")).rejects.toThrow(EnrolmentError);
+    await expect(moveStudent(h.boy1, s.s3Y2026, "2026-01-01")).rejects.toThrow(EnrolmentError);
   });
 });
 
