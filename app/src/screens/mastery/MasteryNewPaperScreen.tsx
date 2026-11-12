@@ -7,6 +7,9 @@
  * PR-B (D-#1314): a switch adds an EARLIER class's codes (same subject) — pick the class, then the
  * same picker for that class; marks come from that class's table, and the item chips show the class.
  * A sheet made only of earlier-class codes is titled "ভিত্তি যাচাই" unless the teacher names it.
+ *
+ * PR-C (D-#1317): a class-test sheet may name its class test (pre-picked when opened from the class
+ * test); the sheet then writes that test's totals, so the required total is shown beside the running one.
  */
 import React, { useMemo, useState } from "react";
 import { Switch, View } from "react-native";
@@ -16,13 +19,15 @@ import {
   CREATE_MASTERY_PAPER,
   MASTERY_BANK_QUESTIONS_QUERY,
   MASTERY_CATALOGUE_QUERY,
+  MASTERY_CLASS_TEST_OPTIONS_QUERY,
   MASTERY_HOMEWORK_OPTIONS_QUERY,
+  type MasteryClassTestOption,
   type MasteryOutcomeRow,
   type MasteryQuestionTypeRow,
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, H2 } from "../../components/ui";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
-import { levelFill } from "./masteryStateUi";
+import { fill, levelFill } from "./masteryStateUi";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -62,7 +67,8 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   const { sectionId, subject, classLevel } = route.params;
   const classToken = tokenFor(classLevel);
   const toast = useToast();
-  const [source, setSource] = useState<"HW" | "CT" | "RUBRIC">("HW");
+  const [source, setSource] = useState<"HW" | "CT" | "RUBRIC">(route.params.classTestId ? "CT" : "HW");
+  const [classTestId, setClassTestId] = useState<string | null>(route.params.classTestId ?? null);
   const [date, setDate] = useState(todayDhaka());
   const [title, setTitle] = useState("");
   const [hwItemId, setHwItemId] = useState<string | null>(null);
@@ -86,6 +92,9 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
     variables: { classToken: pickToken, subject },
   });
   const [{ data: hwData }] = useQuery({ query: MASTERY_HOMEWORK_OPTIONS_QUERY, variables: { sectionId, subject } });
+  const [{ data: ctData }] = useQuery({ query: MASTERY_CLASS_TEST_OPTIONS_QUERY, variables: { sectionId, subject }, pause: source !== "CT" });
+  const ctOptions = (ctData?.masteryClassTestOptions ?? []) as MasteryClassTestOption[];
+  const linkedTest = ctOptions.find((c) => c.classTestId === classTestId) ?? null;
   const [{ data: bankData, fetching: bankFetching }] = useQuery({
     query: MASTERY_BANK_QUESTIONS_QUERY,
     variables: { loCodes: lo ? [lo] : [], subject, classLevel: levelFor(pickToken) },
@@ -134,6 +143,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
       date,
       title: title.trim() || null,
       hwItemId: source === "HW" ? hwItemId : null,
+      classTestId: source === "CT" ? classTestId : null,
       items: source === "RUBRIC" ? [] : items.map(({ label: _l, marks: _m, ...i }) => i),
       rubricLoCodes: source === "RUBRIC" ? rubric : [],
     });
@@ -158,6 +168,25 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
         <Chip label={STR.msSourceCT} selected={source === "CT"} onPress={() => setSource("CT")} />
         <Chip label={STR.msSourceRubric} selected={source === "RUBRIC"} onPress={() => setSource("RUBRIC")} />
       </ChipRow>
+      {source === "CT" && ctOptions.length > 0 ? (
+        <>
+          <Muted>{STR.msCtLinkPick}</Muted>
+          <ChipRow>
+            <Chip label={STR.msCtLinkNone} selected={!classTestId} onPress={() => setClassTestId(null)} />
+            {ctOptions.map((c) => (
+              <Chip
+                key={c.classTestId}
+                label={`${c.examDate} · ${c.ctId} · ${bnNum(c.totalMarks)}`}
+                selected={classTestId === c.classTestId}
+                onPress={() => {
+                  setClassTestId(c.classTestId);
+                  setDate(c.examDate); // the sheet's date is the test's exam date
+                }}
+              />
+            ))}
+          </ChipRow>
+        </>
+      ) : null}
       <Field label={STR.msDate} value={date} onChangeText={setDate} />
       <Field label={STR.msTitleOpt} value={title} onChangeText={setTitle} />
       {earlierOnly && !title.trim() ? <Muted>{`${STR.msTitleOpt}: ${STR.msEarlierOnlyTitle}`}</Muted> : null}
@@ -313,6 +342,12 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
             <Body style={{ fontWeight: "700" }}>{STR.msItems}</Body>
             <Badge text={`${bnNum(items.length)} · ${bnNum(total)}`} tone="brand" />
           </View>
+          {source === "CT" && linkedTest ? (
+            <Notice
+              tone={total === linkedTest.totalMarks ? "ok" : "warn"}
+              message={fill(STR.msCtLinkNeedTotal, { have: bnNum(total), need: bnNum(linkedTest.totalMarks) })}
+            />
+          ) : null}
           {items.map((i, idx) => (
             <View key={idx} style={{ flexDirection: "row", gap: space(2), alignItems: "center", flexWrap: "wrap" }}>
               <Body style={{ flexShrink: 1 }}>

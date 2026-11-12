@@ -38,6 +38,17 @@ import { groupStimulusParts, printPlan, stimulusRefOf } from "../parts";
 import { computeEvidence, isoWeekKey, type ResultLike, type TagLike } from "../evidence";
 import { reapplyExclusions } from "../exclusions";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { ClassTest } from "../../trackers/models/ClassTest";
+import {
+  classTestMismatches,
+  ctOutcomeOf,
+  linkedTestOf,
+  lockedChangeMessage,
+  storedOutcomes,
+  syncClassTestResults,
+  testNotReadyMessage,
+  type CtOutcome,
+} from "../classTestLink";
 
 export type Auth = AccessProfile & { userId: string; role: string };
 
@@ -141,6 +152,8 @@ export interface CreatePaperInput {
   date: string;
   title?: string | null;
   hwItemId?: string | null;
+  /** PR-C (D-#1317): link a CT sheet to its class test — the sheet then owns the test's totals. */
+  classTestId?: string | null;
   items: PaperItemInput[];
   rubricLoCodes?: string[] | null;
 }
@@ -153,7 +166,9 @@ export async function nextPaperId(classToken: string, subject: string): Promise<
 
 export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<PaperView> {
   const ctx = await sectionContext(input.sectionId);
-  const date = dayOf(input.date);
+  // PR-C: a linked class test fixes the sheet's date (its exam date) — validated below.
+  const test = input.classTestId ? await classTestToLink(input.classTestId, ctx.sectionId, input) : null;
+  const date = test ? new Date(test.examDate) : dayOf(input.date);
   await assertEnabled(ctx, input.subject);
   await assertMayWork(auth, ctx.sectionId, input.subject, date);
 
@@ -232,6 +247,15 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   const labels = printPlan(grouped).map((l) => l.partLabel);
   const items: IMasteryPaperItem[] = grouped.map((x, i) => ({ ...x, itemNo: i + 1, ...(labels[i] ? { partLabel: labels[i]! } : {}) }));
 
+  if (test) {
+    const sum = items.reduce((t, i) => t + i.marks, 0);
+    if (Math.abs(sum - test.totalMarks) > 1e-9) {
+      throw new MasteryWorkError(
+        `প্রশ্নগুলোর মোট নম্বর ${bn(sum)}, কিন্তু ক্লাস টেস্টের পূর্ণ নম্বর ${bn(test.totalMarks)} — দুটো সমান হতে হবে।`,
+      );
+    }
+  }
+
   let hwItemId: Types.ObjectId | undefined;
   if (input.hwItemId) {
     const hw = Types.ObjectId.isValid(input.hwItemId)
@@ -252,11 +276,15 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     classToken: ctx.classToken,
     subject: input.subject,
     date,
-    links: { hwItemId },
+    links: { hwItemId, ...(test ? { classTestId: test._id } : {}) },
     items,
     rubricLoCodes: rubricCodes,
     entryState: "OPEN",
     createdBy: Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined,
+  }).catch((err: unknown) => {
+    // The unique index on links.classTestId closes the race of two sheets for one test.
+    if ((err as { code?: number }).code === 11000 && test) throw new MasteryWorkError(ONE_SHEET_PER_TEST);
+    throw err;
   });
   void writeAudit({
     eventKind: "MASTERY_PAPER_CREATED",
@@ -264,9 +292,33 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     actorRole: auth.role,
     targetKind: "MasteryPaper",
     targetId: paper._id,
-    meta: { paperId: paper.paperId, source: paper.source, items: items.length, rubric: rubricCodes.length },
+    meta: {
+      paperId: paper.paperId, source: paper.source, items: items.length, rubric: rubricCodes.length,
+      ...(test ? { classTestId: String(test._id), ctId: test.ctId } : {}),
+    },
   });
   return paperView(paper);
+}
+
+const ONE_SHEET_PER_TEST = "এই ক্লাস টেস্টের প্রশ্নভিত্তিক শিট আগেই তৈরি হয়েছে।";
+
+/**
+ * PR-C (D-#1317): the class test a CT sheet may name — it exists, is REQUESTED or PRINTED, is
+ * section-anchored (a group test is refused), has the sheet's section and subject, and no other sheet.
+ */
+async function classTestToLink(classTestId: string, sectionId: Types.ObjectId, input: CreatePaperInput) {
+  if (input.source !== "CT") throw new MasteryWorkError("শুধু ক্লাস টেস্টের শিট একটি ক্লাস টেস্টের সাথে যুক্ত করা যায়।");
+  const test = Types.ObjectId.isValid(classTestId) ? await ClassTest.findById(classTestId).lean() : null;
+  if (!test) throw new MasteryWorkError("ক্লাস টেস্টটি পাওয়া যায়নি।");
+  if (test.status !== "REQUESTED" && test.status !== "PRINTED") throw new MasteryWorkError("বাতিল বা অন্য অবস্থার ক্লাস টেস্টে শিট যুক্ত করা যায় না।");
+  if (test.subjectGroupId || !test.sectionId) {
+    throw new MasteryWorkError("দলভিত্তিক (গ্রুপ) ক্লাস টেস্টে প্রশ্নভিত্তিক শিট যুক্ত করা যায় না — শাখার ক্লাস টেস্ট বাছুন।");
+  }
+  if (String(test.sectionId) !== String(sectionId) || test.subject !== input.subject) {
+    throw new MasteryWorkError("ক্লাস টেস্টটি এই শাখা ও বিষয়ের নয়।");
+  }
+  if (await MasteryPaper.exists({ "links.classTestId": test._id })) throw new MasteryWorkError(ONE_SHEET_PER_TEST);
+  return test;
 }
 
 /** An OPEN sheet with no results yet may be removed (a mistake); a confirmed one never. */
@@ -300,6 +352,8 @@ export interface PaperView {
   subject: string;
   date: string;
   hwItemId: string | null;
+  /** PR-C: the class test this sheet owns the totals of (null when none). */
+  classTestId: string | null;
   entryState: string;
   totalMarks: number;
   items: {
@@ -328,6 +382,7 @@ export function paperView(p: IMasteryPaper): PaperView {
     subject: p.subject,
     date: p.date.toISOString().slice(0, 10),
     hwItemId: p.links?.hwItemId ? String(p.links.hwItemId) : null,
+    classTestId: p.links?.classTestId ? String(p.links.classTestId) : null,
     entryState: p.entryState,
     totalMarks: p.items.reduce((s, i) => s + i.marks, 0),
     items: p.items.map((i) => ({
@@ -373,6 +428,11 @@ export interface RosterRow {
 export interface PaperDetail {
   paper: PaperView;
   roster: RosterRow[];
+  /** PR-C: the linked class test (null when none). */
+  classTest: { classTestId: string; ctId: string; totalMarks: number; examDate: string; status: string } | null;
+  /** PR-C: confirmed linked sheet — students whose class-test mark differs from the sheet total
+   *  (left by the recheck / hold / published-correction flows); the page shows a warning line. */
+  classTestMismatches: { studentId: string; name: string; sheetStatus: string; sheetMarks: number | null; classTestStatus: string | null; classTestMarks: number | null }[];
 }
 
 export async function rosterOf(sectionId: Types.ObjectId) {
@@ -411,7 +471,17 @@ export async function paperDetail(paperId: string, auth: Auth): Promise<PaperDet
   ]);
   const byStudent = new Map(results.map((r) => [String(r.studentId), r]));
   const given = studentItemsOf(paper);
+  const test = await linkedTestOf(paper);
+  const nameOf = new Map(students.map((s) => [String(s._id), personName(s)]));
+  const mismatches = test ? await classTestMismatches(paper, students.map((s) => String(s._id))) : [];
   return {
+    classTest: test
+      ? {
+          classTestId: String(test._id), ctId: test.ctId, totalMarks: test.totalMarks,
+          examDate: new Date(test.examDate).toISOString().slice(0, 10), status: test.status,
+        }
+      : null,
+    classTestMismatches: mismatches.map((m) => ({ ...m, name: nameOf.get(m.studentId) ?? "" })),
     paper: paperView(paper),
     roster: students.filter((s) => !given || given.has(String(s._id))).map((s) => {
       const r = byStudent.get(String(s._id));
@@ -475,6 +545,8 @@ function validateResult(
   tags: Map<string, TagLike & { appliesTo: string }>,
 ): string | null {
   if (!rosterIds.has(r.studentId)) return "শিক্ষার্থী এই শাখার তালিকায় নেই।";
+  // PR-C: a class test has no "not submitted" — a child sat it or was absent.
+  if (paper.links?.classTestId && r.status === "NOT_SUBMITTED") return "ক্লাস টেস্টের শিটে \"জমা দেয়নি\" দেওয়া যায় না — উপস্থিত বা অনুপস্থিত দিন।";
   const given = studentItemsOf(paper)?.get(r.studentId);
   if (studentItemsOf(paper) && !given) return "এই কাজে এই শিক্ষার্থীর কোনো প্রশ্ন নেই।";
   for (const it of r.items ?? []) {
@@ -611,6 +683,14 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
     const bad = validateResult(paper, r, roster, tags);
     if (bad) throw new MasteryWorkError(bad);
   }
+  // PR-C: after confirmation a linked sheet's correction re-writes the class-test total — refuse first
+  // when that would change a submitted / published result (a total-neutral change is fine).
+  let ctNext: Map<string, CtOutcome> | null = null;
+  if (paper.links?.classTestId && paper.entryState === "CONFIRMED") {
+    ctNext = new Map(rows.map((r) => [r.studentId, ctOutcomeOf(paper, isEmptyResult(r) ? null : r)]));
+    const locked = await lockedChangeMessage(paper.links.classTestId, ctNext);
+    if (locked) throw new MasteryWorkError(locked);
+  }
   const by = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   // D-#954: after confirmation, whoever entered each changed result owns the correction.
   const priorEntrants =
@@ -645,6 +725,7 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
   if (paper.entryState === "CONFIRMED") {
     evidenceRows = (await writeEvidenceFor(paper, rows.map((r) => r.studentId))).rows;
     await afterEvidence(paper);
+    if (ctNext && paper.links?.classTestId) await syncClassTestResults(paper.links.classTestId, ctNext, auth.userId);
   }
   void writeAudit({
     eventKind: "MASTERY_RESULTS_SAVED",
@@ -682,19 +763,32 @@ export async function confirmPaper(paperId: string, auth: Auth): Promise<Confirm
   const paper = await loadPaperFor(paperId, auth);
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("এই কাজটি আগেই নিশ্চিত করা হয়েছে।");
   const ids = (await rosterOf(paper.sectionId)).map((s) => String(s._id));
+  // PR-C: a linked sheet first checks the test is printed and its day has come, and that no submitted /
+  // published result would change; after confirming it writes every roster student's total.
+  let ctNext: Map<string, CtOutcome> | null = null;
+  if (paper.links?.classTestId) {
+    const test = await linkedTestOf(paper);
+    if (!test) throw new MasteryWorkError("যুক্ত ক্লাস টেস্টটি পাওয়া যায়নি।");
+    const notReady = testNotReadyMessage(test);
+    if (notReady) throw new MasteryWorkError(notReady);
+    ctNext = await storedOutcomes(paper, ids);
+    const locked = await lockedChangeMessage(paper.links.classTestId, ctNext);
+    if (locked) throw new MasteryWorkError(locked);
+  }
   const res = await writeEvidenceFor(paper, ids);
   paper.entryState = "CONFIRMED";
   paper.confirmedAt = new Date();
   paper.confirmedBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await paper.save();
   await afterEvidence(paper);
+  const ctWritten = ctNext && paper.links?.classTestId ? await syncClassTestResults(paper.links.classTestId, ctNext, auth.userId) : 0;
   void writeAudit({
     eventKind: "MASTERY_PAPER_CONFIRMED",
     actorId: auth.userId,
     actorRole: auth.role,
     targetKind: "MasteryPaper",
     targetId: paper._id,
-    meta: { paperId, students: ids.length, evidenceRows: res.rows, skipped: res.skipped, behaviourNotes: res.behaviour },
+    meta: { paperId, students: ids.length, evidenceRows: res.rows, skipped: res.skipped, behaviourNotes: res.behaviour, classTestResults: ctWritten },
   });
   return { paperId, students: ids.length, evidenceRows: res.rows, skipped: res.skipped, behaviourNotes: res.behaviour };
 }
@@ -725,4 +819,73 @@ export async function homeworkLinkOptions(sectionId: string, subject: MasterySub
     date: new Date(h.dateGiven).toISOString().slice(0, 10),
     description: h.description ?? null,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// PR-C — class tests a CT sheet can be linked to (D-#1317)
+// ---------------------------------------------------------------------------
+
+export interface ClassTestLinkOption {
+  classTestId: string;
+  ctId: string;
+  testNumber: number;
+  examDate: string;
+  totalMarks: number;
+  status: string;
+}
+
+/**
+ * The section × subject's section-anchored class tests (REQUESTED or PRINTED) dated from 30 days ago
+ * onwards that have no sheet yet — to link a CT sheet to (mirrors `homeworkLinkOptions`).
+ */
+export async function classTestLinkOptions(sectionId: string, subject: MasterySubject, auth: Auth): Promise<ClassTestLinkOption[]> {
+  const ctx = await sectionContext(sectionId);
+  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  const since = new Date(Date.now() - 30 * 86_400_000);
+  const tests = await ClassTest.find({
+    sectionId: ctx.sectionId, subjectGroupId: null, subject, status: { $in: ["REQUESTED", "PRINTED"] }, examDate: { $gte: since },
+  })
+    .select("ctId testNumber examDate totalMarks status")
+    .sort({ examDate: -1 })
+    .lean(); // bounded by the window: a few tests per section × subject × month
+  const taken = new Set(
+    (await MasteryPaper.find({ "links.classTestId": { $in: tests.map((t) => t._id) } }).select("links.classTestId").lean()).map((p) =>
+      String(p.links?.classTestId),
+    ),
+  );
+  return tests
+    .filter((t) => !taken.has(String(t._id)))
+    .map((t) => ({
+      classTestId: String(t._id), ctId: t.ctId, testNumber: t.testNumber,
+      examDate: new Date(t.examDate).toISOString().slice(0, 10), totalMarks: t.totalMarks, status: t.status,
+    }));
+}
+
+export interface ClassTestSheetLink {
+  /** Mastery is switched on for the test's class × subject × year — the row shows only then. */
+  enabled: boolean;
+  paperId: string | null;
+  entryState: string | null;
+  sectionId: string | null;
+  classLevel: number | null;
+}
+
+/** The class-test screens' read: is mastery on here, and which sheet (if any) owns this test's totals. */
+export async function classTestSheetLink(classTestId: string): Promise<ClassTestSheetLink> {
+  const none: ClassTestSheetLink = { enabled: false, paperId: null, entryState: null, sectionId: null, classLevel: null };
+  if (!Types.ObjectId.isValid(classTestId)) return none;
+  const test = await ClassTest.findById(classTestId).select("sectionId subjectGroupId subject").lean();
+  if (!test || !test.sectionId || test.subjectGroupId) return none;
+  const ctx = await sectionContext(String(test.sectionId)).catch(() => null);
+  if (!ctx) return none;
+  const cls = await Class.findById(ctx.classId).select("level").lean();
+  const enabled = await isMasteryEnabled(ctx.academicYearId, ctx.classToken, test.subject as MasterySubject);
+  const paper = await MasteryPaper.findOne({ "links.classTestId": test._id }).select("paperId entryState").lean();
+  return {
+    enabled,
+    paperId: paper?.paperId ?? null,
+    entryState: paper?.entryState ?? null,
+    sectionId: String(ctx.sectionId),
+    classLevel: (cls?.level as number | undefined) ?? null,
+  };
 }
