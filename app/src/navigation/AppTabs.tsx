@@ -86,6 +86,7 @@ import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import AllClassNotesScreen from "../screens/classnotes/AllClassNotesScreen";
 import LessonProgressScreen from "../screens/lessonprogress/LessonProgressScreen";
 import LessonTrackerScreen from "../screens/lessonprogress/LessonTrackerScreen";
+import HomeworkIntegrityScreen from "../screens/trackers/HomeworkIntegrityScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
 import TaskDetailScreen from "../screens/workboard/TaskDetailScreen";
@@ -1677,6 +1678,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="StudentProgressStudent" component={StudentProgressStudentScreen} options={{ title: STR.impNavTitle }} />
       <ReportsStack.Screen name="RevisionDashboard" component={RevisionDashboardScreen} options={{ title: STR.revDashTitle }} />
       <ReportsStack.Screen name="LessonProgress" component={LessonProgressScreen} options={{ title: STR.lpNavTitle }} />
+      {/* GH-3 (D-#1522): the Office homework-honesty queue. */}
+      <ReportsStack.Screen name="HomeworkIntegrity" component={HomeworkIntegrityScreen} options={{ title: STR.hiNavTitle }} />
       <ReportsStack.Screen name="QuestionReviewProgress" component={QuestionReviewProgressScreen} options={{ title: STR.qpTitle }} />
       <ReportsStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
       <ReportsStack.Screen name="TeachingNoteOpenComments" component={TeachingNoteOpenCommentsScreen} options={{ title: STR.tnOpenComments }} />

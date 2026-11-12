@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
+import { CHILD_HINT_STEPS } from "../../graphql/homeworkIntegrity";
 import { EDIT_MASTERY_ASSIGNMENT_SHEET, MASTERY_ASSIGNMENT_SHEET_QUERY, type MasteryAssignmentSheetData } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Select, H2 } from "../../components/ui";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
@@ -36,6 +37,15 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
   const [editState, edit] = useMutation(EDIT_MASTERY_ASSIGNMENT_SHEET);
   const fresh = editState.data?.editMasteryAssignmentSheet as MasteryAssignmentSheetData | undefined;
   const s = (fresh && fresh.studentId === studentId ? fresh : undefined) ?? (data?.masteryAssignmentSheet as MasteryAssignmentSheetData | undefined);
+  // GH-1 follow-up: how many hint steps this child's family opened per question (read-only).
+  const sheetQids = (s?.items ?? []).map((q) => q.qid).filter((x): x is string => !!x);
+  const [{ data: hintData }] = useQuery({
+    query: CHILD_HINT_STEPS,
+    variables: { studentId, assignmentId, qids: sheetQids },
+    pause: sheetQids.length === 0,
+    requestPolicy: "cache-and-network",
+  });
+  const hintSteps = new Map<string, number>(((hintData?.childHintSteps ?? []) as { qid: string; step: number }[]).map((h) => [h.qid, h.step]));
   const [msg, setMsg] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [lo, setLo] = useState<string | null>(null);
@@ -109,6 +119,7 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
             {q.qid ? ` · ${q.qid}` : ""}
           </Muted>
           <Body>{q.textBn ?? q.qid}</Body>
+          {q.qid && (hintSteps.get(q.qid) ?? 0) > 0 ? <Muted>{STR.hiHints.replace("{n}", bnNum(hintSteps.get(q.qid) ?? 0))}</Muted> : null}
         </Card>
       ))}
 

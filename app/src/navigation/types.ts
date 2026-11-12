@@ -820,6 +820,8 @@ export type ReportsStackParamList = {
   StudentProgressStudent: { studentId: string; name: string };
   RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date?: string } | undefined;
   LessonProgress: undefined;
+  /** GH-3 (D-#1522): the Office homework-honesty queue. */
+  HomeworkIntegrity: undefined;
   QuestionReviewProgress: undefined;
   ReviewerEffectiveness: undefined;
   TeachingNoteOpenComments: undefined;

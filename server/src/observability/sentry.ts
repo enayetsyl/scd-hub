@@ -137,6 +137,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // Mastery M-2: a sheet outside the caller's routine, an unlocked outcome, marks above the
   // item, a tag that does not apply — sentences for the teacher.
   "MasteryWorkError",
+  // Homework-honesty flag (GH-3, D-#1522): a case not found, an outcome already recorded - sentences for the Office.
+  "IntegrityError",
   // Parents'-meeting comment chain (MC-1..MC-4, D-#752..#756): a note by the wrong teacher,
   // a summary before every subject note is in, a frozen layer — sentences for the person.
   "MeetingBriefError",

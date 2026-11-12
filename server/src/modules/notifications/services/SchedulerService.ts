@@ -55,6 +55,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { dispatchAttendanceReminders } from "../../attendance/services/AttendanceReminderService";
 import { dispatchLibraryReminders } from "../../library/services/LibraryReminderService";
 import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
+import { sweepYear as sweepHomeworkIntegrity } from "../../homework-integrity/services/IntegrityService";
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
@@ -347,6 +348,14 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("observation escalation", async () => {
     summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
       await runObservationEscalation(now);
+    });
+  });
+
+  // --- Homework-honesty sweep (GH-3, D-#1522): once per calendar day, the first tick after midnight.
+  // Idempotent; Office-only cases, NO message to anyone. Best-effort like every family.
+  await family("homework integrity sweep", async () => {
+    await runOnce(dateKey, "HWINT", async () => {
+      await sweepHomeworkIntegrity();
     });
   });
 

@@ -242,3 +242,10 @@ Inventory A1 names none for homework, assignment or gift (a grep of `server/src/
 - The four `server/src/routes/files.ts` rows in (c) were not in inventory A1; they were added from a read of the live file.
 
 Listed elsewhere: `server/src/modules/foundation/resolvers/classes.ts:305` assignHomeworkConfirmer and `:346` setHomeworkSupervisor (designation setters, `teaching_assignments:assign_homework_checker`) → foundation-platform.md. `server/src/modules/trackers/resolvers/studentProfile.ts:158` studentProfileHomework and `:181` studentProfileAssignment (`student_profile:view`) → trackers-classtest.md. A2 §6 `app/src/screens/home/TodayScreen.tsx:128, :569, :775` (ungated myWorkClaims / ResultEntryTargetCard, self-service) and `app/src/screens/admin/AccessControlEditScreen.tsx:69-73` (comment listing canWorkClaims, canReports) → trackers-classtest.md. A2's copies of the workClaim.ts, reconReport.ts and AppTabs.tsx:1762 rows are merged into this file; trackers-classtest.md only cross-references them. Out of the inventory: `server/src/modules/routine/resolvers/myDay.ts:156` myDay.assignmentHandout shares the handout board read (→ attendance-routine-library.md).
+
+### GH-3 (2026-11-13, D-#1522) — homework-honesty flag
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/homework-integrity/resolvers/homeworkIntegrity.ts | homeworkIntegrityCases, homeworkIntegrityCase | `homework_integrity:view` (Office, Principal) |
+| server/src/modules/homework-integrity/resolvers/homeworkIntegrity.ts | recordHomeworkIntegrityOutcome, recomputeHomeworkIntegrity | `homework_integrity:record` (Office, Principal); audited, sends nothing |
+| server/src/modules/homework-integrity/resolvers/homeworkIntegrity.ts | childHintSteps | `mastery:view` + `assertMayWork` on the assignment's section x subject; read-only hint count per question |

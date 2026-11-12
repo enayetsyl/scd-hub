@@ -275,6 +275,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "ctDashboardTitle", icon: "🧮", screen: "ClassTestDashboard", perms: REPORT_LEAF_ACTIONS.ClassTestDashboard },
       { route: "ReportsTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: REPORT_LEAF_ACTIONS.StudentProgress },
       { route: "ReportsTab", labelKey: "lpNavTitle", icon: "📗", screen: "LessonProgress", perms: REPORT_LEAF_ACTIONS.LessonProgress },
+      // GH-3 (D-#1522): children whose homework runs 20+ points above their class tests (Office only).
+      { route: "ReportsTab", labelKey: "hiNavTitle", icon: "🔎", screen: "HomeworkIntegrity", perms: REPORT_LEAF_ACTIONS.HomeworkIntegrity },
       { route: "ReportsTab", labelKey: "revDashTitle", icon: "🕌", screen: "RevisionDashboard", perms: REPORT_LEAF_ACTIONS.RevisionDashboard },
       { route: "ReportsTab", labelKey: "qpTitle", icon: "🔍", screen: "QuestionReviewProgress", perms: REPORT_LEAF_ACTIONS.QuestionReviewProgress },
       { route: "ReportsTab", labelKey: "obsReviewerEffTitle", icon: "👁️", screen: "ReviewerEffectiveness", perms: REPORT_LEAF_ACTIONS.ReviewerEffectiveness },
