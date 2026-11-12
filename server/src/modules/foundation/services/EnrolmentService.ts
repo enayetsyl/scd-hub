@@ -458,7 +458,7 @@ export async function placementSpans(filter: PlacementFilter, range: { from: str
     startKey: string;
     endKey?: string | null;
   }>;
-  const out: PlacementSpan[] = rows.map((r) => ({
+  let out: PlacementSpan[] = rows.map((r) => ({
     studentId: r.studentId.toString(),
     classId: r.classId.toString(),
     sectionId: r.sectionId.toString(),
@@ -467,6 +467,25 @@ export async function placementSpans(filter: PlacementFilter, range: { from: str
     toKey: r.endKey && r.endKey < range.to ? r.endKey : range.to,
     fromEnrolment: true,
   }));
+
+  // D-#1476: from TODAY on, only active children are placed (the pointer readers this replaces
+  // all filter `active: true`); a deactivated child's enrolment row still answers for the PAST.
+  // A by-id read (`includeInactive`) is never narrowed.
+  const todayKey = dhakaDayKey(new Date());
+  if (!filter.includeInactive && range.to >= todayKey && out.length > 0) {
+    const ids = [...new Set(out.map((sp) => sp.studentId))];
+    const activeIds = new Set(
+      ((await Student.find({ _id: { $in: ids.map(oid) }, active: true }).select("_id").lean()) as unknown as Array<{ _id: Types.ObjectId }>).map((x) =>
+        x._id.toString(),
+      ),
+    );
+    const yesterday = dayBefore(todayKey);
+    out = out.flatMap((sp) => {
+      if (activeIds.has(sp.studentId) || sp.toKey < todayKey) return [sp];
+      if (sp.fromKey > yesterday) return [];
+      return [{ ...sp, toKey: yesterday }];
+    });
+  }
 
   // Pointer fallback: children the filter names (by id or by their CURRENT section /
   // class) who have no enrolment row at all.

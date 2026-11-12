@@ -322,3 +322,64 @@ export async function simulateCutover(w: PastReadersFixture): Promise<void> {
   await AcademicYear.updateMany({}, { $set: { current: false } });
   await AcademicYear.updateOne({ _id: w.years.y2027 }, { $set: { current: true } });
 }
+
+// ---------------------------------------------------------------------------
+// D-#1476: the prod split shape AFTER the enrolment reshape
+// ---------------------------------------------------------------------------
+
+export interface ProdSplitWorld {
+  years: YearFixture;
+  classId: Types.ObjectId;
+  /** The emptied সম্মিলিত section, and the two halves. */
+  combined: Types.ObjectId;
+  boys: Types.ObjectId;
+  girls: Types.ObjectId;
+  /** Class teacher of the Girls half only. */
+  girlsTeacher: Types.ObjectId;
+  marker: Types.ObjectId;
+  /** T-X1, T-X2 (Boys) and T-X3, T-X4 (Girls). */
+  kids: Types.ObjectId[];
+  /** Attendance days: before and after the 2026-10-01 split. */
+  dayKeys: string[];
+}
+
+/**
+ * A C4 as prod has it after the gender split and the lead's enrolment reshape (D-#1476): the
+ * combined section holds nobody; the four children sit in the halves; each has exactly ONE
+ * ACTIVE 2026 enrolment from 2026-01-01 in their half (written by `Enrolment.create`, the
+ * shape `backfillEnrolments` now produces); attendance days sit on the halves (copied by the
+ * split, D-#872) and also on the old combined section. Created Jan 2026.
+ */
+export async function seedProdSplitWorld(): Promise<ProdSplitWorld> {
+  const years = await seedYears();
+  const classId = (await Class.create({ level: 4, nameBn: "Class 4 (split)", academicYearId: years.y2026 }))._id;
+  const girlsTeacher = new Types.ObjectId();
+  const marker = new Types.ObjectId();
+  const mk = async (code: string, nameBn: string, ct?: Types.ObjectId): Promise<Types.ObjectId> =>
+    (await Section.create({ classId, code, nameBn, active: true, ...(ct ? { classTeacherId: ct } : {}) }))._id;
+  const combined = await mk("ALL", "সম্মিলিত");
+  const boys = await mk("Boys", "বালক");
+  const girls = await mk("Girls", "বালিকা", girlsTeacher);
+  const kid = async (n: number, gender: "male" | "female", sectionId: Types.ObjectId): Promise<Types.ObjectId> => {
+    const s = await Student.create({ schoolId: `T-X${n}`, name: `Split Child ${n}`, gender, classId, sectionId, active: true });
+    await Student.collection.updateOne({ _id: s._id }, { $set: { createdAt: new Date("2026-01-05T06:00:00Z") } });
+    await Enrolment.create({ studentId: s._id, academicYearId: years.y2026, classId, classLevel: 4, sectionId, status: "ACTIVE", startKey: "2026-01-01" });
+    return s._id;
+  };
+  const kids = [await kid(1, "male", boys), await kid(2, "male", boys), await kid(3, "female", girls), await kid(4, "female", girls)];
+  // The Girls class teacher also teaches MATH there (a routine grant, as in prod).
+  const math = (await Subject.findOne({ code: "MATH" })) ?? (await Subject.create({ code: "MATH", nameBn: "গণিত" }));
+  await ScopeGrant.create({ teacherId: girlsTeacher, kind: "teaching", source: "routine", classId, sectionId: girls, subjectId: math._id, createdBy: marker });
+
+  const marker2 = marker;
+  const day = (sectionId: Types.ObjectId, dateKey: string, absent: Types.ObjectId[]) =>
+    StudentAttendanceDay.create({ sectionId, dateKey, absentStudentIds: absent, markedBy: marker2, markedAt: new Date(`${dateKey}T03:00:00.000Z`) });
+  const dayKeys = ["2026-09-14", "2026-09-15", "2026-10-12"];
+  for (const k of dayKeys) {
+    await day(boys, k, [kids[0]]);
+    await day(girls, k, k === "2026-09-15" ? [] : [kids[3]]);
+  }
+  // The original combined-section day of 14 Sept (the split copied it to the halves, it was not moved).
+  await day(combined, "2026-09-14", [kids[0], kids[3]]);
+  return { years, classId, combined, boys, girls, girlsTeacher, marker, kids, dayKeys };
+}

@@ -72,21 +72,32 @@ export async function assertStudentProfileRead(
     classId: Types.ObjectId;
   } | null;
   if (!student) throw new ForbiddenError("শিক্ষার্থী পাওয়া যায়নি");
-  // YC-2 (D-#1461/#1472): the gate follows the WINDOW's year — the section the child sat
-  // in that year (or on the window's last day). The 2026 class teacher then passes on a
-  // 2026 window through the read-only past-year rule (authz `pastYearSectionTie`).
-  // No window, or no enrolment for it: today's section, exactly as before.
+  // YC-2 (D-#1461/#1472, D-#1476): the gate passes when the caller may read the section the child
+  // sat in for the WINDOW (the 2026 class teacher on a 2026 window, through the read-only past-year
+  // rule - authz `pastYearSectionTie`) OR the section the child is in TODAY. Either is enough.
+  // No window, or no enrolment for it: today's section only, exactly as before.
   const placed = await profilePlacement(studentId, window);
-  const sectionId = (placed?.sectionId ?? student.sectionId).toString();
-  const classId = (placed?.classId ?? student.classId).toString();
-  // PM: `student_profile:view` scoped, `student_profile:view_all` unscoped (tier 1) and
-  // un-narrowed (tier 2); the class-teacher / confirmer / supervisor designations stay.
-  await assertReportRead(ctx, sectionId, { gate: STUDENT_PROFILE_REPORT_GATE });
-  const allowed = await allowedSubjectCodesForSection(ctx, sectionId, classId, {
-    classTeacherOversight: true,
-    viewAll: STUDENT_PROFILE_REPORT_GATE.viewAll,
-  });
-  return { subjects: allowed === null ? null : [...allowed], sectionId, classId };
+  const candidates: Array<{ sectionId: string; classId: string }> = [];
+  if (placed) candidates.push({ sectionId: placed.sectionId.toString(), classId: placed.classId.toString() });
+  if (!placed || !placed.sectionId.equals(student.sectionId)) {
+    candidates.push({ sectionId: student.sectionId.toString(), classId: student.classId.toString() });
+  }
+  let firstError: unknown = null;
+  for (const { sectionId, classId } of candidates) {
+    try {
+      // PM: `student_profile:view` scoped, `student_profile:view_all` unscoped (tier 1) and
+      // un-narrowed (tier 2); the class-teacher / confirmer / supervisor designations stay.
+      await assertReportRead(ctx, sectionId, { gate: STUDENT_PROFILE_REPORT_GATE });
+      const allowed = await allowedSubjectCodesForSection(ctx, sectionId, classId, {
+        classTeacherOversight: true,
+        viewAll: STUDENT_PROFILE_REPORT_GATE.viewAll,
+      });
+      return { subjects: allowed === null ? null : [...allowed], sectionId, classId };
+    } catch (e) {
+      firstError ??= e;
+    }
+  }
+  throw firstError;
 }
 
 /** The child's enrolment for a profile window (null = use today's pointer). */

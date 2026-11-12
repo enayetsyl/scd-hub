@@ -15,8 +15,13 @@
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import type { AppContext } from "../context";
-import { seedPastReadersWorld, simulateCutover, type PastReadersFixture } from "./fixtures/yearChange";
+import { seedPastReadersWorld, seedProdSplitWorld, simulateCutover, type PastReadersFixture } from "./fixtures/yearChange";
 import { Enrolment } from "../modules/foundation/models/Enrolment";
+import { Student } from "../modules/foundation/models/Student";
+import { Section } from "../modules/foundation/models/Section";
+import { dayBefore, placementSpans } from "../modules/foundation/services/EnrolmentService";
+import { dhakaDayKey } from "../lib/dhakaDay";
+import { rosterGroupedBySection } from "../modules/attendance/resolvers/studentAttendance";
 import { StudentAttendanceDay } from "../modules/attendance/models/StudentAttendanceDay";
 import {
   absenteeReport,
@@ -286,5 +291,198 @@ describe("after a simulated cut-over", () => {
     await expect(
       assertStudentProfileRead(ctxOf(new Types.ObjectId()), w.boys[0].toString(), { academicYearId: w.years.y2026.toString() }),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#1476 - review fixes: the prod split shape (one ACTIVE enrolment per child in the half)
+// ---------------------------------------------------------------------------
+
+describe("prod split shape: the enrolment path equals the pre-YC-2 path", () => {
+  let p: Awaited<ReturnType<typeof seedProdSplitWorld>>;
+  beforeEach(async () => {
+    await mongoose.connection.db!.dropDatabase();
+    p = await seedProdSplitWorld();
+  });
+
+  const ct = (examDate: string, sectionId: Types.ObjectId, testNumber: number, subject = "MATH") =>
+    ClassTest.create({
+      ctId: `CT-C4-${subject}-${testNumber}`,
+      academicYearId: p.years.y2026,
+      classLevel: 4,
+      classId: p.classId,
+      sectionId,
+      subject,
+      testNumber,
+      examDate: new Date(`${examDate}T06:00:00Z`),
+      totalMarks: 20,
+      passMark: 8,
+      source: "UPLOADED_PAPER",
+      status: "PRINTED",
+      requestedBy: p.girlsTeacher,
+      teacherId: p.girlsTeacher,
+    });
+
+  const NOW = new Date("2026-11-12T06:00:00Z");
+
+  /** Every screen the YC-2 switch touches, for the split's before and after dates. */
+  async function screens(): Promise<Record<string, unknown>> {
+    const out: Record<string, unknown> = {};
+    const [k0, , k2] = p.dayKeys;
+    // The amend calls below write; snapshot the days so the second run reads the same data.
+    const daysBefore = await StudentAttendanceDay.find({}).lean();
+    const sec = (id: Types.ObjectId): { unitType: "section"; unitId: string } => ({ unitType: "section", unitId: id.toString() });
+    for (const key of p.dayKeys) {
+      out[`absentees:${key}`] = await absenteeReport(key);
+      out[`classPresence:${key}`] = await classPresenceForDate(key);
+      out[`sectionPresence:${key}`] = await sectionPresenceForDate(key);
+      for (const [name, id] of [["boys", p.boys], ["girls", p.girls], ["combined", p.combined]] as const) {
+        out[`roster:${name}:${key}`] = await rosterForUnit(sec(id), key);
+        out[`grouped:${name}:${key}`] = await rosterGroupedBySection(sec(id), key);
+      }
+    }
+    out.register = await sectionsAttendanceForDate([p.boys, p.girls, p.combined].map(String), k0);
+    out.registerAfter = await sectionsAttendanceForDate([p.boys, p.girls, p.combined].map(String), k2);
+    for (const id of p.kids) out[`history:${id}`] = await studentAttendanceHistory(id.toString(), "2026-09-01", "2026-10-31");
+    out.absentNoApplication = await absentNoApplication(null, "2026-09-01", "2026-10-31");
+    out.absentNoApplicationBoys = await absentNoApplication(p.boys.toString(), "2026-09-01", "2026-10-31");
+    out.rankSchool = await rankStudents({ window: "month", anchorKey: k2, axis: "school" });
+    out.rankSchoolSep = await rankStudents({ window: "month", anchorKey: k0, axis: "school" });
+    out.rankClass = await rankStudents({ window: "month", anchorKey: k0, axis: "class", axisValue: p.classId.toString() });
+    out.rankSection = await rankStudents({ window: "month", anchorKey: k0, axis: "section", axisValue: p.girls.toString() });
+    // Amend validation: a member passes, a child of the other half is refused.
+    const amend = async (id: Types.ObjectId, kid: Types.ObjectId, key: string): Promise<unknown> => {
+      try {
+        return (await amendAttendanceUnit(sec(id), key, [kid.toString()], p.marker.toString(), NOW)).absentStudentIds.map(String);
+      } catch (e) {
+        return `refused: ${(e as Error).message}`;
+      }
+    };
+    out.amendOk = await amend(p.boys, p.kids[1], k0);
+    out.amendOther = await amend(p.boys, p.kids[2], k0);
+    out.amendAfterOk = await amend(p.girls, p.kids[2], k2);
+    out.amendAfterOther = await amend(p.girls, p.kids[0], k2);
+    await StudentAttendanceDay.deleteMany({});
+    await StudentAttendanceDay.insertMany(daysBefore);
+    // Class tests: one sat before the split on the emptied combined section, one on each half.
+    for (const [name, exam] of [
+      ["preSplitCombined", { sectionId: p.combined, examDate: "2026-09-10" }],
+      ["boysAfter", { sectionId: p.boys, examDate: "2026-10-15" }],
+      ["girlsBefore", { sectionId: p.girls, examDate: "2026-09-10" }],
+    ] as const) {
+      const e = { sectionId: exam.sectionId.toString(), classId: p.classId.toString(), subjectGroupId: null, subject: "MATH", examDate: new Date(`${exam.examDate}T06:00:00Z`) };
+      out[`ct:${name}:ids`] = (await rosterStudentIds(e)).sort();
+      out[`ct:${name}:count`] = await rosterCount(e);
+      out[`ct:${name}:marks`] = await classTestRosterStudents(e);
+    }
+    out.ctStatus = await reportsStatus({ academicYearId: p.years.y2026.toString(), asOf: new Date("2026-11-20T06:00:00Z") });
+    // Monthly report: stamp, period placement and the section-month roster, September and October.
+    for (const month of ["2026-09", "2026-10"]) {
+      out[`period:${month}`] = await periodPlacement(p.kids[0].toString(), month, NOW);
+      out[`periodGirl:${month}`] = await periodPlacement(p.kids[2].toString(), month, NOW);
+      for (const [name, id] of [["boys", p.boys], ["girls", p.girls], ["combined", p.combined]] as const) {
+        out[`monthRoster:${name}:${month}`] = (await sectionMonthRoster(id.toString(), month)).slice().sort();
+      }
+      await MonthlyReport.deleteMany({});
+      const built = await buildMonthlyReport(p.kids[3].toString(), month, { now: NOW });
+      const r = built.report as unknown as Record<string, unknown>;
+      out[`report:${month}`] = { sectionId: r.sectionId, classId: r.classId, academicYearId: r.academicYearId, revision: r.revision, created: built.created };
+    }
+    // Profile gate: the Girls class teacher, window 2026-08-01..09-15 (before the split).
+    const gate = ctxOf(p.girlsTeacher);
+    const tryGate = async (kid: Types.ObjectId, win: { academicYearId?: string; onKey?: string }): Promise<unknown> => {
+      try {
+        return await assertStudentProfileRead(gate, kid.toString(), win);
+      } catch (e) {
+        return `refused: ${(e as Error).constructor.name}`;
+      }
+    };
+    out.gateGirl = await tryGate(p.kids[2], { onKey: "2026-09-15" });
+    out.gateGirlYear = await tryGate(p.kids[2], { academicYearId: p.years.y2026.toString() });
+    out.gateBoy = await tryGate(p.kids[0], { onKey: "2026-09-15" });
+    out.header = await studentProfileHeader(p.kids[2].toString(), NOW);
+    out.classmates = await classAttendanceComparison(p.kids[2].toString(), "2026-08-01", "2026-09-15");
+    return JSON.parse(JSON.stringify(out));
+  }
+
+  test("attendance report/history/ranking/register/amend, class tests, monthly report and the profile gate give the same output with the enrolment path on and off", async () => {
+    await ct("2026-09-10", p.combined, 1);
+    await ct("2026-10-15", p.boys, 2);
+    await ct("2026-09-10", p.girls, 3);
+    const on = await screens();
+    expect(await Enrolment.countDocuments({ status: "CLOSED" })).toBe(0);
+    await Enrolment.deleteMany({});
+    const off = await screens();
+    const a = on as Record<string, Record<string, unknown>>;
+    const b = off as Record<string, Record<string, unknown>>;
+    // The year picker is the one new field (it lists the enrolled year only when rows exist).
+    delete a.header.enrolledYears;
+    delete b.header.enrolledYears;
+    expect(a).toEqual(b);
+
+    // Not trivially empty: the pre-split combined test lists all four children (reconstruction fallback),
+    // the halves list their own, and the gate lets the Girls class teacher in.
+    expect((on["ct:preSplitCombined:ids"] as string[]).length).toBe(4);
+    expect(on["ct:preSplitCombined:count"]).toBe(4);
+    expect(on["ct:boysAfter:count"]).toBe(2);
+    expect(on["ct:girlsBefore:count"]).toBe(2);
+    expect((on["absentees:2026-09-14"] as unknown[]).length).toBeGreaterThan(0);
+    expect(on.amendOk).toEqual([p.kids[1].toString()]);
+    expect(String(on.amendOther)).toMatch(/^refused/);
+    expect(on.gateGirl).toMatchObject({ sectionId: p.girls.toString() });
+    expect(String(on.gateBoy)).toMatch(/^refused/);
+    expect((on["monthRoster:girls:2026-09"] as string[]).length).toBe(2);
+    expect(on["monthRoster:combined:2026-09"]).toEqual([]);
+    expect((on["report:2026-09"] as { sectionId: string }).sectionId).toBe(p.girls.toString());
+  });
+});
+
+describe("D-#1476 review fixes", () => {
+  test("profile gate: a window placement the caller cannot read falls back to today's section (either passes)", async () => {
+    await mongoose.connection.db!.dropDatabase();
+    const p = await seedProdSplitWorld();
+    // The OLD backfill shape for one child: CLOSED in the combined section up to the day before the split.
+    const girl = p.kids[2];
+    await Enrolment.deleteMany({ studentId: girl });
+    const base = { studentId: girl, academicYearId: p.years.y2026, classId: p.classId, classLevel: 4 };
+    await Enrolment.create({ ...base, sectionId: p.combined, status: "CLOSED", startKey: "2026-01-01", endKey: "2026-09-30", outcome: "MOVED" });
+    await Enrolment.create({ ...base, sectionId: p.girls, status: "ACTIVE", startKey: "2026-10-01" });
+    const gate = ctxOf(p.girlsTeacher);
+    // C4 Girls class teacher, window 2026-08-01..09-15: the placement is the combined section (not theirs), today's is.
+    await expect(assertStudentProfileRead(gate, girl.toString(), { onKey: "2026-09-15" })).resolves.toMatchObject({ sectionId: p.girls.toString() });
+    // And a teacher with neither is refused.
+    await expect(assertStudentProfileRead(ctxOf(new Types.ObjectId()), girl.toString(), { onKey: "2026-09-15" })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  test("placement spans: from today on only ACTIVE children; the past still answers for a deactivated child", async () => {
+    const world = await seedPastReadersWorld();
+    const gone = world.boys[2];
+    await Student.updateOne({ _id: gone }, { $set: { active: false } });
+    const today = dhakaDayKey(new Date());
+    const sec = [world.c3Boys2026.sectionId];
+    const idsOf = (spans: Array<{ studentId: string }>): string[] => [...new Set(spans.map((x) => x.studentId))].sort();
+    const all = world.boys.map(String).sort();
+    const rest = world.boys.slice(0, 2).map(String).sort();
+    expect(idsOf(await placementSpans({ sectionIds: sec }, { from: today, to: today }))).toEqual(rest);
+    expect(idsOf(await placementSpans({ sectionIds: sec }, { from: "2026-10-01", to: dayBefore(today) }))).toEqual(all);
+    // A range that straddles today keeps the past part of the deactivated child's span.
+    const straddle = await placementSpans({ sectionIds: sec }, { from: "2026-10-01", to: "2026-12-31" });
+    const goneSpan = straddle.filter((x) => x.studentId === gone.toString());
+    expect(goneSpan).toHaveLength(1);
+    expect(goneSpan[0].toKey).toBe(dayBefore(today));
+    // A by-id read (the profile, one child's history) is never narrowed.
+    expect(idsOf(await placementSpans({ studentIds: [gone], includeInactive: true }, { from: today, to: today }))).toEqual([gone.toString()]);
+  });
+
+  test("authz: a current-year section answers pastYearSectionTie with null, and one memoised section lookup per request", async () => {
+    const world = await seedPastReadersWorld();
+    const { pastYearSectionTie } = await import("../middleware/authz");
+    const memo = {};
+    const spy = jest.spyOn(Section, "findById");
+    const sectionId = world.c3Boys2026.sectionId.toString();
+    expect(await pastYearSectionTie(world.classTeacher2026.toString(), sectionId, memo)).toBeNull();
+    expect(await pastYearSectionTie(world.classTeacher2026.toString(), sectionId, memo)).toBeNull();
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 });

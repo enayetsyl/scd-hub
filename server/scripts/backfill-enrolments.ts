@@ -36,7 +36,6 @@ async function main(): Promise<void> {
   console.log(`active students considered : ${r.students}`);
   console.log(`already had an enrolment   : ${r.alreadyDone} (skipped)`);
   console.log(`rows ${APPLY ? "written" : "that would be written"}${APPLY ? "          " : ""}: ${APPLY ? r.rowsWritten : r.rowsPlanned}`);
-  console.log(`students with rebuilt split history : ${r.rebuiltHistory}`);
   console.log(`could NOT rebuild          : ${r.couldNot.length}`);
   for (const line of r.couldNot) console.log(`  - ${line}`);
 
