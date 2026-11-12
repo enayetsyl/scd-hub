@@ -109,6 +109,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   project06-deviation-quran.md ← consult-via-human note: Quran excluded from the HW tracker (D-#36 vs handoff §6.3)
   prd-plan-review.md  ← Plan review/approval loop: assign→review→re-import→sign-off, slices PR-1..3 (D-#38–#40)
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
+  prd-guardian-help.md ← Guardian help: question hints, per-question homework marks, honesty flag, missed-lesson home guide, slices GH-1..4 (D-#1520–#1524)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
   prd-exam-paper-bank.md ← Mohammadpur reference papers + Sylhet draft papers reviewed item by item (D-#1030–#1034)
   exam-paper-generation-brief.md ← how the draft papers (server/assets/exam-papers/) are generated + validated
