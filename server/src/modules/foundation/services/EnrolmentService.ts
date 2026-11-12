@@ -30,7 +30,13 @@ export class EnrolmentError extends Error {}
 const KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertKey(key: string): void {
-  if (!KEY_RE.test(key)) throw new EnrolmentError(`Bad date key "${key}" (want YYYY-MM-DD).`);
+  const bad = (): never => {
+    throw new EnrolmentError(`Bad date key "${key}" (want a real date as YYYY-MM-DD).`);
+  };
+  if (typeof key !== "string" || !KEY_RE.test(key)) return bad();
+  const d = new Date(`${key}T00:00:00.000Z`);
+  // Round-trip catches 2026-02-30 and month 13 (Date either rejects them or rolls them over).
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== key) bad();
 }
 
 /** The date key one day before `key`. */
@@ -140,20 +146,44 @@ export async function moveStudent(studentId: Id, toSectionId: Id, onKey: string,
   const student = await Student.findById(oid(studentId));
   if (!student) throw new EnrolmentError("Student not found.");
   if (!student.active) throw new EnrolmentError("Student is not active.");
+  const target = await Section.findById(oid(toSectionId)).select("active").lean();
+  if (!target) throw new EnrolmentError("Section not found.");
+  if (target.active === false) throw new EnrolmentError("The target section is not active.");
   const place = await placeOfSection(toSectionId);
-  const old = await Enrolment.findOne({ studentId: student._id, academicYearId: place.academicYearId, status: "ACTIVE" }).sort({ startKey: -1 });
+  const [yearStart, yearEnd] = await Promise.all([yearStartKey(place.academicYearId), yearEndKey(place.academicYearId)]);
+  if ((yearStart && onKey < yearStart) || (yearEnd && onKey > yearEnd)) {
+    throw new EnrolmentError("The move date is outside the target year.");
+  }
+  const actives = await Enrolment.find({ studentId: student._id, academicYearId: place.academicYearId, status: "ACTIVE" }).sort({ startKey: -1 });
+  const old = actives[0] ?? null;
+  const to = oid(toSectionId);
+  if (old && old.sectionId.equals(to)) {
+    // Retry of a half-done move: the new row exists. Finish the pointer and the old row's close.
+    const older = actives[1];
+    const pointerStale = !student.sectionId.equals(to) || !student.classId.equals(place.classId);
+    if (!older && !pointerStale) throw new EnrolmentError("Student is already in that section.");
+    await Student.updateOne({ _id: student._id }, { $set: { classId: place.classId, sectionId: to } });
+    if (older) await closeEnrolment(older._id, { endKey: dayBefore(old.startKey), outcome: "MOVED" });
+    await writeAudit({
+      eventKind: "ENROLMENT_MOVED",
+      actorId: actor,
+      targetId: student._id,
+      targetKind: "Student",
+      meta: { fromSectionId: (older ?? old).sectionId.toString(), toSectionId: to.toString(), onKey: old.startKey, completedRetry: true },
+    });
+    return old;
+  }
   if (old) {
-    if (old.sectionId.equals(oid(toSectionId))) throw new EnrolmentError("Student is already in that section.");
     if (onKey <= old.startKey) throw new EnrolmentError("The move date must be after the current enrolment started.");
   } else {
     const other = await Enrolment.findOne({ studentId: student._id, status: "ACTIVE" });
     if (other) throw new EnrolmentError("A mid-year move stays inside one year (D-#1462).");
-    if (student.sectionId.equals(oid(toSectionId))) throw new EnrolmentError("Student is already in that section.");
+    if (student.sectionId.equals(to)) throw new EnrolmentError("Student is already in that section.");
   }
   const fromSectionId = old ? old.sectionId : student.sectionId;
 
   const next = await applyEnrolmentMove(student._id, old, place, toSectionId, onKey, fromSectionId, actor, async () => {
-    await Student.updateOne({ _id: student._id }, { $set: { classId: place.classId, sectionId: oid(toSectionId) } });
+    await Student.updateOne({ _id: student._id }, { $set: { classId: place.classId, sectionId: to } });
   });
   await writeAudit({
     eventKind: "ENROLMENT_MOVED",
@@ -183,7 +213,10 @@ async function applyEnrolmentMove(
   actor: Id | undefined,
   pointer: () => Promise<void>,
 ): Promise<IEnrolment> {
-  if (old && old.startKey >= onKey) {
+  if (old && old.startKey > onKey) {
+    throw new EnrolmentError(`The current enrolment starts on ${old.startKey}, after the move date ${onKey}.`);
+  }
+  if (old && old.startKey === onKey) {
     // Same-day correction (e.g. merge then split on one date): re-point the row, no empty span.
     old.sectionId = oid(toSectionId);
     old.classId = place.classId;
@@ -236,26 +269,49 @@ export async function recordSectionMove(args: {
   from?: Map<string, Id>;
   actor?: Id;
 }): Promise<{ moved: number; failed: string[] }> {
-  const onKey = args.onKey ?? dhakaDayKey(new Date());
-  assertKey(onKey);
-  const place = await placeOfSection(args.toSectionId);
-  const ids = args.studentIds.map(oid);
-  const actives = await Enrolment.find({ studentId: { $in: ids }, academicYearId: place.academicYearId, status: "ACTIVE" });
-  const activeOf = new Map(actives.map((e) => [e.studentId.toString(), e]));
-  let moved = 0;
-  const failed: string[] = [];
-  for (const id of ids) {
-    const key = id.toString();
-    try {
-      const old = activeOf.get(key) ?? null;
-      if (old && old.sectionId.equals(oid(args.toSectionId))) continue;
-      await applyEnrolmentMove(id, old, place, args.toSectionId, onKey, old ? old.sectionId : args.from?.get(key), args.actor, async () => undefined);
-      moved++;
-    } catch (err) {
-      failed.push(`${key}: ${err instanceof Error ? err.message : String(err)}`);
+  // Never throws: the caller has already moved the children, so any error here (a bad date, a
+  // missing section, a failed lookup) is returned in `failed` and the merge / split completes.
+  try {
+    const onKey = args.onKey ?? dhakaDayKey(new Date());
+    assertKey(onKey);
+    const place = await placeOfSection(args.toSectionId);
+    const ids = args.studentIds.map(oid);
+    const actives = await Enrolment.find({ studentId: { $in: ids }, academicYearId: place.academicYearId, status: "ACTIVE" }).sort({ startKey: 1 });
+    const activeOf = new Map(actives.map((e) => [e.studentId.toString(), e]));
+    let moved = 0;
+    const failed: string[] = [];
+    for (const id of ids) {
+      const key = id.toString();
+      try {
+        const old = activeOf.get(key) ?? null;
+        if (old && old.sectionId.equals(oid(args.toSectionId))) continue;
+        await applyEnrolmentMove(id, old, place, args.toSectionId, onKey, old ? old.sectionId : args.from?.get(key), args.actor, async () => undefined);
+        moved++;
+      } catch (err) {
+        failed.push(`${key}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
+    return { moved, failed };
+  } catch (err) {
+    return { moved: 0, failed: [`all: ${err instanceof Error ? err.message : String(err)}`] };
   }
-  return { moved, failed };
+}
+
+/**
+ * `createStudent` guard: the section must exist and belong to `classId`. Throws a Bangla message
+ * otherwise. Call BEFORE `Student.create`.
+ */
+export async function assertSectionInClass(classId: Id, sectionId: Id): Promise<void> {
+  let sec: { classId: Types.ObjectId } | null = null;
+  let want: Types.ObjectId | null = null;
+  try {
+    want = oid(classId);
+    sec = await Section.findById(oid(sectionId)).select("classId").lean();
+  } catch {
+    sec = null;
+  }
+  if (!sec) throw new EnrolmentError("শাখা পাওয়া যায়নি।");
+  if (!want || !sec.classId.equals(want)) throw new EnrolmentError("নির্বাচিত শাখাটি এই শ্রেণির নয়।");
 }
 
 /**
@@ -321,4 +377,10 @@ export async function checkInvariant(): Promise<InvariantViolation[]> {
 export async function yearStartKey(academicYearId: Id): Promise<string | null> {
   const y = await AcademicYear.findById(oid(academicYearId)).select("startDate").lean();
   return y ? dhakaDayKey(y.startDate) : null;
+}
+
+/** The last day of a year as a Dhaka date key. */
+export async function yearEndKey(academicYearId: Id): Promise<string | null> {
+  const y = await AcademicYear.findById(oid(academicYearId)).select("endDate").lean();
+  return y ? dhakaDayKey(y.endDate) : null;
 }

@@ -14,6 +14,7 @@ import { Section } from "../../modules/foundation/models/Section";
 import { Student } from "../../modules/foundation/models/Student";
 import { SectionMerge } from "../../modules/foundation/models/SectionMerge";
 import { Enrolment } from "../../modules/foundation/models/Enrolment";
+import { Audit } from "../../modules/platform/models/Audit";
 
 export interface YearFixture {
   y2026: Types.ObjectId;
@@ -95,7 +96,7 @@ export async function seedChildren(c: ClassFixture, s: SectionFixture): Promise<
 }
 
 export async function clearYearChangeFixtures(): Promise<void> {
-  await Promise.all([Enrolment.deleteMany({}), SectionMerge.deleteMany({}), Student.deleteMany({}), Section.deleteMany({}), Class.deleteMany({}), AcademicYear.deleteMany({})]);
+  await Promise.all([Audit.deleteMany({ eventKind: "SECTIONS_SPLIT" }), Enrolment.deleteMany({}), SectionMerge.deleteMany({}), Student.deleteMany({}), Section.deleteMany({}), Class.deleteMany({}), AcademicYear.deleteMany({})]);
 }
 
 export interface SplitHistoryFixture {
@@ -147,4 +148,43 @@ export async function seedSplitHistory(c: ClassFixture): Promise<SplitHistoryFix
     splitAt: new Date("2026-06-01T06:00:00.000Z"),
   });
   return { boys, girls, combined, boy1, boy2, girl1, girl2, mergeKey: "2026-03-01", splitKey: "2026-06-01" };
+}
+
+export interface ProdSplitFixture {
+  classId: Types.ObjectId;
+  combined: Types.ObjectId;
+  boys: Types.ObjectId;
+  girls: Types.ObjectId;
+  /** Three children (T-P1..T-P3), now in boys / girls. */
+  kids: Types.ObjectId[];
+  effective: string | null;
+}
+
+/**
+ * YC-1: the shape prod has for C3/C4/C5 - a class of 2026 that began the year in one combined
+ * section and was split into boys / girls by the split skill. NO `SectionMerge` row exists; there
+ * is only a `SECTIONS_SPLIT` audit on the combined section with `meta.{classId, movedStudents,
+ * effective}`. `effective: null` leaves `meta.effective` out (the older copy of the skill).
+ */
+export async function seedProdSplit(
+  y: YearFixture,
+  opts: { effective?: string | null; movedStudents?: number } = {},
+): Promise<ProdSplitFixture> {
+  const effective = opts.effective === undefined ? "2026-10-01" : opts.effective;
+  const classId = (await Class.create({ level: 5, nameBn: "Class 5 (prod split)", academicYearId: y.y2026 }))._id;
+  const mk = async (code: string, active: boolean): Promise<Types.ObjectId> =>
+    (await Section.create({ classId, code, nameBn: `Prod ${code}`, active }))._id;
+  const combined = await mk("ALL", true);
+  const boys = await mk("Boys", true);
+  const girls = await mk("Girls", true);
+  const kid = async (n: number, sectionId: Types.ObjectId): Promise<Types.ObjectId> =>
+    (await Student.create({ schoolId: `T-P${n}`, name: `Prod Split Child ${n}`, classId, sectionId, active: true }))._id;
+  const kids = [await kid(1, boys), await kid(2, boys), await kid(3, girls)];
+  await Audit.create({
+    eventKind: "SECTIONS_SPLIT",
+    targetId: combined,
+    targetKind: "Section",
+    meta: { classId: classId.toString(), movedStudents: opts.movedStudents ?? 3, byGender: true, ...(effective ? { effective } : {}) },
+  });
+  return { classId, combined, boys, girls, kids, effective };
 }

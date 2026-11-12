@@ -19,6 +19,7 @@ import {
   clearYearChangeFixtures,
   seedClasses,
   seedSections,
+  seedProdSplit,
   seedSplitHistory,
   seedYears,
   type ClassFixture,
@@ -107,6 +108,42 @@ describe("backfillEnrolments", () => {
     const r = await backfillEnrolments({ apply: true });
     expect(r.couldNot.some((l) => l.startsWith("T-S7"))).toBe(true);
     expect(await Enrolment.countDocuments({ studentId: (await Student.findOne({ schoolId: "T-S7" }))!._id })).toBe(1);
+  });
+});
+
+describe("backfillEnrolments - prod split shape (no SectionMerge, one SECTIONS_SPLIT audit)", () => {
+  const ids = (p: { kids: mongoose.Types.ObjectId[] }): string[] => p.kids.map((k) => k.toString()).sort();
+
+  it("rebuilds the combined span from the audit: roster before the split = the moved children, empty on/after", async () => {
+    const p = await seedProdSplit(y);
+    const r = await backfillEnrolments({ apply: true });
+    expect(r.couldNot.filter((l) => l.startsWith("T-P"))).toEqual([]);
+    expect((await sectionRoster(p.combined, { on: "2026-09-30" })).map((e) => e.studentId.toString()).sort()).toEqual(ids(p));
+    expect(await sectionRoster(p.combined, { on: "2026-10-01" })).toHaveLength(0);
+    expect(await sectionRoster(p.combined, { on: "2026-12-01" })).toHaveLength(0);
+    expect(await sectionRoster(p.boys, { on: "2026-09-30" })).toHaveLength(0);
+    expect(await sectionRoster(p.boys, { on: "2026-10-01" })).toHaveLength(2);
+    const e = await enrolmentOf(p.kids[2], { on: "2026-02-01" });
+    expect(e).toMatchObject({ outcome: "MOVED", endKey: "2026-09-30", startKey: "2026-01-01" });
+    expect((await enrolmentOf(p.kids[2], { academicYearId: y.y2026 }))).toMatchObject({ status: "ACTIVE", startKey: "2026-10-01" });
+    expect(await checkInvariant()).toEqual([]);
+  });
+
+  it("count mismatch: plain single rows and every affected child listed in couldNot", async () => {
+    const p = await seedProdSplit(y, { movedStudents: 4 });
+    const r = await backfillEnrolments({ apply: true });
+    for (const n of [1, 2, 3]) expect(r.couldNot.some((l) => l.startsWith(`T-P${n}:`))).toBe(true);
+    expect(await Enrolment.countDocuments({ studentId: { $in: p.kids } })).toBe(3);
+    expect(await sectionRoster(p.combined, { on: "2026-02-01" })).toHaveLength(0);
+    expect(await checkInvariant()).toEqual([]);
+  });
+
+  it("missing meta.effective: plain single rows and the children listed", async () => {
+    const p = await seedProdSplit(y, { effective: null });
+    const r = await backfillEnrolments({ apply: true });
+    expect(r.couldNot.filter((l) => l.startsWith("T-P") && l.includes("effective"))).toHaveLength(3);
+    expect(await Enrolment.countDocuments({ studentId: { $in: p.kids } })).toBe(3);
+    expect(await sectionRoster(p.combined, { on: "2026-02-01" })).toHaveLength(0);
   });
 });
 

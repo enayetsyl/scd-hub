@@ -10,7 +10,7 @@ import {
 } from "../services/StudentDirectoryService";
 import type { Types } from "mongoose";
 import { ForbiddenError } from "../../../middleware/authz";
-import { openEnrolmentForNewStudent } from "../services/EnrolmentService";
+import { assertSectionInClass, openEnrolmentForNewStudent } from "../services/EnrolmentService";
 
 type StudentShape = Pick<
   IStudent,
@@ -172,6 +172,8 @@ builder.mutationField("createStudent", (t) =>
       sectionId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
+      // YC-1: refuse a section that is missing or belongs to another class, BEFORE the write.
+      await assertSectionInClass(args.classId, args.sectionId);
       const student = await Student.create({
         schoolId: args.schoolId,
         name: args.name,
