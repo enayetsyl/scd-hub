@@ -64,7 +64,7 @@ Run in this session, from the repo root unless noted.
 | `npx jest --runInBand src/__tests__/class6Onboarding.test.ts` (server) | `Tests: 9 passed, 9 total` |
 | touched suites `--runInBand` (homework, assignmentSchedule, englishDrive, vocabWord, routineSlots, popupNotice, printRequest, examPapers, observationRota, aiAssist, homeworkSummary, examSyllabusRead, guardianPortal, marksDrivers ×2, classToken, contentSubjects2027, activityBanks, classTestWeakObjectives) | all PASS |
 | `npx expo export --platform web` (app) | `App exported to: …/web-export`, exit 0 |
-| full server suite `npx jest --maxWorkers=2` | FULLSUITE_PLACEHOLDER |
+| full server suite `npx jest --maxWorkers=2` | `Test Suites: 432 passed, 432 total` · `Tests: 7073 passed, 7073 total`, exit 0 (first run: 2 failures — the activity-bank cap, fixed above, and a worker killed by SIGTERM while expo export ran; both suites green on rerun) |
 
 ## Not done
 
