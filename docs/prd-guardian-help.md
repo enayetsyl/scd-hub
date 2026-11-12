@@ -19,14 +19,14 @@ guardian gets a simple guide to teach the missed lesson at home; (3) flag homewo
 | Honesty flag rule | **Cumulative** per objective: the child's homework + assignment percentage on that objective (all items so far this year) is **20 percentage points or more above** the class-test percentage on the same objective. No fixed thresholds — the cumulative average flattens single good or bad days. |
 | Flag route | Office queue only; the Office investigates by hand and records an outcome. No automatic message to the guardian. |
 | Missed-lesson guide | A short guide per period, sent at **1 pm** (not 6 pm), and it must also list the **questions done as classwork** in that period. |
-| Homework marking | Today's CORRECT / PARTIAL / WRONG homework result does **not** continue. **From 2027 every homework question carries marks**, and marks are deducted for spelling, punctuation and similar, **following each book's marks distribution and decisions** — so the child learns what to improve. |
+| Homework marking | Today's CORRECT / PARTIAL / WRONG homework result does **not** continue. **From 2027 every homework question carries marks**; the teacher deducts for spelling, punctuation and similar **on the paper copy**, following each book's marks distribution and decisions, and **enters only each question's mark in the app** (no deduction tags in the app, 2026-11-13). |
 
 ## 1. Slices (build order)
 
 | Slice | What | Depends on |
 |---|---|---|
 | GH-1 | Hint store + loader + guardian hint ladder + hint-open log; hint guideline (`docs/hint-guideline.md`) | — (start first: hint generation runs in parallel) |
-| GH-2 | Per-question homework marks with deduction tags (2027 homework) + the deduction-rules table per class × subject | mastery HW papers |
+| GH-2 | Per-question homework marks entered in the app (2027 homework); deductions done by hand on the paper | mastery HW papers |
 | GH-3 | Homework-honesty flag + Office queue + outcome record | GH-2 (marks per objective), GH-1 (hint-open counts shown in the case) |
 | GH-4 | Missed-lesson home guide: revive LP-4 (#1151) + home-guide store + 1 pm notice | lesson progress switch ON in 2027 |
 
@@ -63,14 +63,13 @@ then 3, then 4–6; within a class, homework-heavy subjects first.
 
 ## 3. GH-2 — Per-question homework marks (from the 2027 school year)
 
-Every homework is a HW `MasteryPaper` (bank items or teacher items, each with marks and `loCodes`). The teacher
-enters only what differs (the existing `MasteryResult` exception model): an item's lost marks plus **deduction
-tags**. A deduction tag comes from a per-class × subject table, `MarkDeductionRule { classToken, subject, tag,
-labelBn, marksOff, cap, source }` (e.g. বানান −½ each up to −১; যতিচিহ্ন −½; হাতের লেখা …), collected **from each
-book's exam appendix (পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন) and decision log** by an agent into
-`docs/mark-deduction-rules.md`, reviewed by the owner, then seeded. The child and guardian see each lost mark with
-its reason ("বানান −½"). Confirmed papers feed `MasteryEvidence` per objective — the input GH-3 needs. The
-2026 CORRECT / PARTIAL / WRONG result stays readable for the old records only.
+Every homework is a HW `MasteryPaper` (bank items or teacher items, each with its marks and `loCodes`). **The teacher
+deducts on the child's paper copy** (spelling, punctuation, handwriting … following the book's marks distribution
+and decisions) **and enters only the mark for each question in the app** — the existing `MasteryResult` exception
+model (no row = full marks; a row = that item's marks). **No deduction tags or deduction rules in the app**
+(owner, 2026-11-13). Confirmed papers feed `MasteryEvidence` per objective — the input GH-3 needs. The 2026
+CORRECT / PARTIAL / WRONG result stays readable for the old records only. Build work: make the per-question marks
+entry fast for a whole section (one row per child, one cell per question, exceptions only).
 
 ## 4. GH-3 — Homework-honesty flag
 
@@ -104,8 +103,8 @@ case list.
 
 - GH-1: a hint containing the answer is refused by the loader; the guardian sees step 2 only after opening step 1;
   no answer field reaches any guardian GraphQL type; HintView is written once per step per day.
-- GH-2: a teacher marks an item −½ with tag বানান; the child's evidence on that objective drops by ½; the guardian
-  sees "বানান −½"; tags come only from that class × subject's rule table.
+- GH-2: a teacher enters 1½ of 2 on an item; the child's evidence on that objective drops by ½; no deduction tag
+  exists in the app.
 - GH-3: HW 85% / CT 60% on LO-X → a case; HW 75% / CT 60% → none; outcome recorded with an audit row; no guardian
   notification exists for the case.
 - GH-4: a child absent on a marked period gets one 1 pm notice listing it; the guide shows the classwork questions;
