@@ -37,8 +37,10 @@ import {
   type IEnglishDriveDoc,
 } from "../models/EnglishDriveDoc";
 
-/** The content axis this module covers — C1..C5 (no Nursery/KG). */
-export const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
+/** The content axis this module covers — C1..C6 (no Nursery/KG; Class 6 from YC-3, owner
+ *  ruling Q31, D-#1482). */
+export const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+const ED_MAX_LEVEL = ENGLISH_DRIVE_CLASS_LEVELS[ENGLISH_DRIVE_CLASS_LEVELS.length - 1];
 
 export interface EnglishDriveDocShape {
   id: string;
@@ -149,7 +151,7 @@ export async function allowedEnglishDriveClassLevels(
   const classes = (await Class.find({ _id: { $in: [...classIds] } })
     .select("level")
     .lean()) as unknown as Array<{ level: number }>;
-  return new Set(classes.map((c) => c.level).filter((l) => l >= 1 && l <= 5));
+  return new Set(classes.map((c) => c.level).filter((l) => l >= 1 && l <= ED_MAX_LEVEL));
 }
 
 /** The caller's class levels for the app (drawer gate + class picker). Guardian → []. */
@@ -297,7 +299,7 @@ export interface EnglishDriveUploadResult {
 export async function uploadEnglishDriveDoc(
   input: UploadEnglishDriveDocInput,
 ): Promise<EnglishDriveUploadResult> {
-  if (!Number.isInteger(input.classLevel) || input.classLevel < 1 || input.classLevel > 5) {
+  if (!Number.isInteger(input.classLevel) || input.classLevel < 1 || input.classLevel > ED_MAX_LEVEL) {
     throw new Error("শ্রেণি ১ থেকে ৫ এর মধ্যে দিন");
   }
   if (!(ENGLISH_DRIVE_KINDS as readonly string[]).includes(input.kind)) {

@@ -98,7 +98,8 @@ describe("VC-1 validators", () => {
     expect(assertClassLevel(3)).toBe(3);
     expect(assertClassLevel(0)).toBe(0); // KG
     expect(assertClassLevel(-1)).toBe(-1); // Nursery
-    expect(() => assertClassLevel(6)).toThrow(VocabError);
+    expect(assertClassLevel(6)).toBe(6); // Class 6 (YC-3, D-#1480)
+    expect(() => assertClassLevel(7)).toThrow(VocabError);
     expect(() => assertClassLevel(99)).toThrow(VocabError);
   });
 

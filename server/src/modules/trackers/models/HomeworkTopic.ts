@@ -12,7 +12,7 @@
  * Reference plane — carries no identity; it is just a controlled list of codes.
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 
 export const HOMEWORK_TOPIC_SOURCES = ["lesson_plan", "manual", "generic"] as const;
@@ -48,7 +48,8 @@ const HomeworkTopicChapterSchema = new Schema<IHomeworkTopicChapter>(
 
 const HomeworkTopicSchema = new Schema<IHomeworkTopic>(
   {
-    classLevel: { type: Number, required: true, min: 1, max: 5 },
+    // Max follows the roster (Class 6 from YC-3, D-#1480).
+    classLevel: { type: Number, required: true, min: 1, max: ROSTER_CLASS_LEVEL_MAX },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
     code: { type: String, required: true },
     labelBn: { type: String, required: true },

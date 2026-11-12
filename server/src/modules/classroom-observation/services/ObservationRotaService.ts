@@ -60,8 +60,9 @@ export class ObservationRotaError extends Error {
 
 export const ROTA_PROMPT_VERSION = "co14-1";
 
-/** Eligible roster levels by default — Nursery (-1) and KG (0) are out (owner rule). */
-export const DEFAULT_CLASS_LEVELS = [1, 2, 3, 4, 5];
+/** Eligible roster levels by default — Nursery (-1) and KG (0) are out (owner rule); Class 6
+ *  is in (owner ruling Q31, YC-3, D-#1482). */
+export const DEFAULT_CLASS_LEVELS = [1, 2, 3, 4, 5, 6];
 
 // ---------------------------------------------------------------------------
 // Candidate expansion

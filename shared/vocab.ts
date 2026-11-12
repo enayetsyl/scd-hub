@@ -94,10 +94,11 @@ export const CLASS_LEVEL_MAX = 6;
  *  curriculum content. A SUPERSET of the content range — One..Five keep 1..5 so content
  *  class_level stays meaningful; KG=0 and Nursery=-1 sit below. Identity-plane only;
  *  never mirrored into the envelope contract (see DECISIONS roster-vs-content note). */
-export const ROSTER_CLASS_LEVELS = [-1, 0, 1, 2, 3, 4, 5] as const;
+export const ROSTER_CLASS_LEVELS = [-1, 0, 1, 2, 3, 4, 5, 6] as const;
 export type RosterClassLevel = (typeof ROSTER_CLASS_LEVELS)[number];
 export const ROSTER_CLASS_LEVEL_MIN = -1;
-export const ROSTER_CLASS_LEVEL_MAX = 5;
+/** Class 6 joins the roster for 2027 (YC-3, D-#1480). */
+export const ROSTER_CLASS_LEVEL_MAX = 6;
 
 /** The class segment of every minted tracker id (HW_ID / AS_ID / CT_ID / TOP code).
  *
@@ -142,6 +143,7 @@ export const ROSTER_CLASS_LABELS_BN: Record<RosterClassLevel, string> = {
   [3]: "তৃতীয় শ্রেণি",
   [4]: "চতুর্থ শ্রেণি",
   [5]: "পঞ্চম শ্রেণি",
+  [6]: "ষষ্ঠ শ্রেণি",
 };
 
 /** Import doc types. MIRROR of envelope `doc_type`. `question_set` is reserved
@@ -958,7 +960,7 @@ export const POOLED_LEAVE_TYPES = ["casual", "sick", "bereavement"] as const sat
  *  Quran homework is handled by the Quran Tracker, not this channel (a deliberate
  *  deviation from handoff §6.3, routed to Project 06). Separate operational axis,
  *  never mirrored into the envelope (D-#36, mirroring D-#30's roster-vs-content split). */
-export const HW_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM"] as const;
+export const HW_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM", "ICT", "BAN2", "ENG2"] as const;
 export type HwSubject = (typeof HW_SUBJECTS)[number];
 
 /** The HW subjects EXPECTED to declare daily whenever the routine gives them
@@ -980,6 +982,9 @@ export const HW_SUBJECT_LABELS_BN: Record<HwSubject, string> = {
   BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
   ARABIC: "আরবি",
   ISLAM: "ইসলাম শিক্ষা",
+  ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
+  BAN2: "বাংলা দ্বিতীয় পত্র",
+  ENG2: "ইংরেজি দ্বিতীয় পত্র",
 };
 
 /** The ratified 6-stage lifecycle (handoff §3, FIRM) as 8 ATOMIC states — two
@@ -1074,6 +1079,7 @@ export const ROSTER_CLASS_LABELS_EN: Record<RosterClassLevel, string> = {
   [3]: "Class 3",
   [4]: "Class 4",
   [5]: "Class 5",
+  [6]: "Class 6",
 };
 
 export const SUBJECT_LABELS_EN: Record<FoundationSubjectCode, string> = {
@@ -1190,6 +1196,9 @@ export const HW_SUBJECT_LABELS_EN: Record<HwSubject, string> = {
   BGS: "Bangladesh & Global Studies",
   ARABIC: "Arabic",
   ISLAM: "Islamic Studies",
+  ICT: "Information & Communication Technology",
+  BAN2: "Bangla 2nd paper",
+  ENG2: "English 2nd paper",
 };
 
 export const LIFECYCLE_STATE_LABELS_EN: Record<LifecycleState, string> = {
@@ -1308,22 +1317,66 @@ export const GROUP_GENDER_LABELS_EN: Record<GroupGender, string> = {
  *  on the source routine (D-#56). Availability by class is a data rule
  *  (`ROUTINE_SUBJECTS_CLASS3_PLUS`), enforced in the resolver, not the enum.
  *  Never mirrored into the envelope (mirrors D-#30/#36's operational superset). */
-export const ROUTINE_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM", "QURAN"] as const;
+export const ROUTINE_SUBJECTS = [
+  "BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM", "QURAN", "ICT", "BAN2", "ENG2",
+] as const;
 export type RoutineSubject = (typeof ROUTINE_SUBJECTS)[number];
 
 export const ROUTINE_SUBJECT_LABELS_BN: Record<RoutineSubject, string> = {
   BAN: "বাংলা", ENG: "ইংরেজি", MATH: "গণিত", SCI: "বিজ্ঞান",
   BGS: "বাংলাদেশ ও বিশ্বপরিচয়", ARABIC: "আরবি", ISLAM: "ইসলাম শিক্ষা", QURAN: "কুরআন",
+  ICT: "তথ্য ও যোগাযোগ প্রযুক্তি", BAN2: "বাংলা দ্বিতীয় পত্র", ENG2: "ইংরেজি দ্বিতীয় পত্র",
 };
 export const ROUTINE_SUBJECT_LABELS_EN: Record<RoutineSubject, string> = {
   BAN: "Bangla", ENG: "English", MATH: "Mathematics", SCI: "Science",
   BGS: "Bangladesh & Global Studies", ARABIC: "Arabic", ISLAM: "Islamic Studies", QURAN: "Quran",
+  ICT: "Information & Communication Technology", BAN2: "Bangla 2nd paper", ENG2: "English 2nd paper",
 };
 
 /** Subjects taught only from Class 3 upward (D-#54) — BGS + Science. Every other
- *  ROUTINE_SUBJECT runs for all roster classes (incl. Nursery/KG). A data rule the
- *  routine resolver enforces per class level. */
+ *  ROUTINE_SUBJECT runs for all roster classes (incl. Nursery/KG). Documented as a
+ *  resolver rule, but NOTHING reads it today (found in YC-3, D-#1480; left as is). */
 export const ROUTINE_SUBJECTS_CLASS3_PLUS = ["BGS", "SCI"] as const;
+
+/** Teaching subjects that start in Class 6 (YC-3, D-#1480): ICT and the 2nd papers.
+ *  Members of HW_SUBJECTS / ROUTINE_SUBJECTS for every level (the server does not refuse
+ *  them below Class 6); pickers that know the class hide them below Class 6. */
+export const CLASS6_PLUS_SUBJECTS = ["ICT", "BAN2", "ENG2"] as const;
+/** The first class level whose Bangla / English are split into 1st and 2nd papers. */
+export const PAPER_SPLIT_FROM_LEVEL = 6;
+
+const PAPER_LABELS_BN: Record<string, string> = {
+  BAN: "বাংলা প্রথম পত্র",
+  ENG: "ইংরেজি প্রথম পত্র",
+  BAN2: "বাংলা দ্বিতীয় পত্র",
+  ENG2: "ইংরেজি দ্বিতীয় পত্র",
+};
+const PAPER_LABELS_EN: Record<string, string> = {
+  BAN: "Bangla 1st paper",
+  ENG: "English 1st paper",
+  BAN2: "Bangla 2nd paper",
+  ENG2: "English 2nd paper",
+};
+
+/** A teaching subject's name AT a class level (owner ruling Q33, D-#1481). From Class 6
+ *  BAN / ENG read "… প্রথম পত্র" and BAN2 / ENG2 "… দ্বিতীয় পত্র"; Classes 1–5 (and an
+ *  unknown level) keep the plain routine name. Unknown codes fall back to the code. */
+export function subjectLabel(code: string, level?: number | null, lang: "bn" | "en" = "bn"): string {
+  if (level != null && level >= PAPER_SPLIT_FROM_LEVEL) {
+    const paper = (lang === "en" ? PAPER_LABELS_EN : PAPER_LABELS_BN)[code];
+    if (paper) return paper;
+  }
+  const routine = (lang === "en" ? ROUTINE_SUBJECT_LABELS_EN : ROUTINE_SUBJECT_LABELS_BN) as Record<string, string>;
+  const content = (lang === "en" ? SUBJECT_LABELS_EN : SUBJECT_LABELS_BN) as Record<string, string>;
+  return routine[code] ?? content[code] ?? code;
+}
+
+/** The subjects of `list` a class at `level` can teach: drops CLASS6_PLUS_SUBJECTS below
+ *  Class 6. An unknown level keeps the whole list (the server has the final say). */
+export function subjectsForClassLevel<T extends string>(list: readonly T[], level?: number | null): T[] {
+  if (level == null || level >= PAPER_SPLIT_FROM_LEVEL) return [...list];
+  return list.filter((s) => !(CLASS6_PLUS_SUBJECTS as readonly string[]).includes(s));
+}
 
 // --- A.9 ATTENDANCE ENUMS (app-native; Attendance module — prd-attendance, ------
 // D-#63–#67). NO wire-contract twin: attendance is a feature, not import content,
@@ -5372,10 +5425,10 @@ export const SCHOLARSHIP_CLASS_LEVELS: readonly number[] = [5];
 export const MASTERY_CLASS_TOKENS = ["NUR", "KG", "C1", "C2", "C3", "C4", "C5", "C6"] as const;
 export type MasteryClassToken = (typeof MASTERY_CLASS_TOKENS)[number];
 
-/** Subjects the module covers: every homework subject — Quran is not one (D-#784) — plus the
- *  Class 6 content subjects ICT, BAN2, ENG2 so their objective trees can be imported (D-#1312).
- *  Those three are not routine / homework / class-test subjects yet (Class 6 onboarding). */
-export const MASTERY_SUBJECTS = [...HW_SUBJECTS, "ICT", "BAN2", "ENG2"] as const;
+/** Subjects the module covers: every homework subject — Quran is not one (D-#784). ICT, BAN2,
+ *  ENG2 were added here first so their objective trees could be imported (D-#1312); since YC-3
+ *  (D-#1480) they are homework subjects too, so this list equals HW_SUBJECTS. */
+export const MASTERY_SUBJECTS = [...HW_SUBJECTS] as const;
 export type MasterySubject = (typeof MASTERY_SUBJECTS)[number];
 
 /** Bangla label of a mastery subject (homework subjects + the Class 6 content subjects). */

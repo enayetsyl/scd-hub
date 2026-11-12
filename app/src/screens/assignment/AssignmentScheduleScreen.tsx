@@ -8,7 +8,7 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { HW_SUBJECTS, DAYS_OF_WEEK, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
+import { HW_SUBJECTS, DAYS_OF_WEEK, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX, subjectsForClassLevel } from "@scd/shared";
 import {
   ACADEMIC_YEARS_QUERY,
   CLASSES_QUERY,
@@ -302,8 +302,8 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                   ) : null}
                   <Muted style={{ marginTop: 4 }}>{STR.subject}</Muted>
                   <ChipRow>
-                    {HW_SUBJECTS.map((s) => (
-                      <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => setSubject(s)} />
+                    {subjectsForClassLevel(HW_SUBJECTS, selectedClass?.level).map((s) => (
+                      <Chip key={s} label={hwSubjectLabel(s, selectedClass?.level)} selected={subject === s} onPress={() => setSubject(s)} />
                     ))}
                   </ChipRow>
                   <Select

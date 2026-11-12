@@ -357,9 +357,9 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     expect(mockItemCreate).not.toHaveBeenCalled();
   });
 
-  test("rejects classLevel outside the roster homework range (-1..5)", async () => {
-    await expect(declareHomeworkItem(validDeclareInput({ classLevel: -2 }))).rejects.toThrow(/-1..5/);
-    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 6 }))).rejects.toThrow(/-1..5/);
+  test("rejects classLevel outside the roster homework range (-1..6; Class 6 from YC-3)", async () => {
+    await expect(declareHomeworkItem(validDeclareInput({ classLevel: -2 }))).rejects.toThrow(/-1..6/);
+    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 7 }))).rejects.toThrow(/-1..6/);
   });
 
   test("rejects empty topTags (≥1 topic required)", async () => {

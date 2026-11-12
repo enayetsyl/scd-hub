@@ -130,7 +130,7 @@ export async function addScheduleEntry(input: AddEntryInput): Promise<IAssignmen
     input.classLevel > ROSTER_CLASS_LEVEL_MAX
   ) {
     throw new Error(
-      `Assignments cover the roster classes Nursery–C5 (classLevel must be ${ROSTER_CLASS_LEVEL_MIN}..${ROSTER_CLASS_LEVEL_MAX})`,
+      `Assignments cover the roster classes Nursery–C${ROSTER_CLASS_LEVEL_MAX} (classLevel must be ${ROSTER_CLASS_LEVEL_MIN}..${ROSTER_CLASS_LEVEL_MAX})`,
     );
   }
   const schedule = await AssignmentSchedule.findOne({ academicYearId: input.academicYearId });

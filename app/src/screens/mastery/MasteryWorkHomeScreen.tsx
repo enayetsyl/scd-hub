@@ -86,7 +86,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
         ))}
       </ChipRow>
       <ChipRow>
-        {/* Sheets follow the routine / homework subjects; ICT, BAN2, ENG2 are content-only until Class 6 onboarding (D-#1312). */}
+        {/* Sheets follow the routine / homework subjects; ICT, BAN2, ENG2 joined them in YC-3 (D-#1480). */}
         {HW_SUBJECTS.map((s) => (
           <Chip key={s} label={hwSubjectLabel(s)} selected={s === subject} onPress={() => { setSubject(s); setPage(1); }} />
         ))}

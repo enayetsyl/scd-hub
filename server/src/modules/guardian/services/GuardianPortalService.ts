@@ -17,6 +17,7 @@ import {
   DAYS_OF_WEEK,
   ROSTER_CLASS_LABELS_BN,
   ROUTINE_SUBJECT_LABELS_BN,
+  subjectLabel,
   HW_SUBJECT_LABELS_BN,
   LIFECYCLE_STATE_LABELS_BN,
   HW_RESULT_LABELS_BN,
@@ -431,7 +432,8 @@ export async function childRoutine(studentId: string, date: Date): Promise<Guard
     .filter((s) => !s.isBreak)
     .map((s) => ({
       subject: s.subject,
-      subjectLabelBn: ROUTINE_SUBJECT_LABELS_BN[s.subject] ?? s.subject,
+      // Class 6 names the papers (বাংলা প্রথম পত্র …; YC-3, D-#1481).
+      subjectLabelBn: subjectLabel(s.subject, cls?.level),
       periodNumber: s.periodNumber,
       startHHMM: times.get(s.periodNumber)?.startHHMM ?? null,
       endHHMM: times.get(s.periodNumber)?.endHHMM ?? null,
@@ -576,7 +578,7 @@ export async function childRoutineRange(
         // must not be able to ride along into a guardian payload.
         .map((s) => ({
           subject: s.subject,
-          subjectLabelBn: ROUTINE_SUBJECT_LABELS_BN[s.subject] ?? s.subject,
+          subjectLabelBn: subjectLabel(s.subject, cls?.level),
           periodNumber: s.periodNumber,
           startHHMM: times!.get(s.periodNumber)?.startHHMM ?? null,
           endHHMM: times!.get(s.periodNumber)?.endHHMM ?? null,
