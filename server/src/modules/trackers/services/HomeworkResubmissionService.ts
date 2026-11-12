@@ -26,6 +26,7 @@ import { assertTransition, isTerminalState } from "../lifecycle";
 import { resolveHomeworkDueDateByItem } from "../homeworkDueDate";
 import { listDailyItems } from "./HomeworkService";
 import { emitHwResubmitIssued } from "../../notifications/services/emitters";
+import { heldRefusal } from "../../mastery/examHold";
 
 export interface TopupInput {
   /** Pool question ids selected (never authored) for the top-up (§5.1). */
@@ -39,7 +40,7 @@ export interface TopupInput {
  * resolve to an existing CURRENT question artifact in the SAME subject+class as the
  * failed item — i.e. the topic's chapter Pool (QP-…). No free-text entry.
  */
-async function assertTopupSelectedFromPool(
+export async function assertTopupSelectedFromPool(
   item: { subject: string; classLevel: number },
   topup: TopupInput,
 ): Promise<void> {
@@ -62,6 +63,12 @@ async function assertTopupSelectedFromPool(
     const q = await ContentArtifact.findOne(filter).lean();
     if (!q) {
       throw new Error(`Top-up qid "${qid}" is not an existing question — selected, never authored (§5.1)`);
+    }
+    // PR-I (D-#1408): a question held for the exam papers is not handed out as a top-up either.
+    const sref = ((q.envelopeJson as Record<string, unknown> | undefined)?.payload as Record<string, unknown> | undefined)?.stimulus_ref;
+    if (q.examPoolAt || (typeof sref === "string" && sref.trim())) {
+      const why = await heldRefusal([String(q._id)]);
+      if (why) throw new Error(`Top-up qid "${qid}": ${why}`);
     }
     if (q.subject !== item.subject || q.classLevel !== item.classLevel) {
       throw new Error(

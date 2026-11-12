@@ -46,9 +46,10 @@ describe("isGrantLapsed — the authz expiry rule", () => {
     expect(isGrantLapsed({ kind: "teaching" }, now)).toBe(false);
   });
 
-  test("supervisory and proxy grants are never lapsed by expiresAt (authz ignores it for them)", () => {
+  test("a supervisory grant lapses by expiresAt (the year change re-points supervisors, D-#1494); proxy never does", () => {
     const past = new Date(now.getTime() - HOUR);
-    expect(isGrantLapsed({ kind: "supervisory", expiresAt: past }, now)).toBe(false);
+    expect(isGrantLapsed({ kind: "supervisory", expiresAt: past }, now)).toBe(true);
+    expect(isGrantLapsed({ kind: "supervisory", expiresAt: null }, now)).toBe(false);
     expect(isGrantLapsed({ kind: "proxy", expiresAt: past }, now)).toBe(false);
   });
 });

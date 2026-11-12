@@ -54,6 +54,8 @@ import { masteryLevelLabels } from "./MasteryReviewService";
 import { objectiveGrain } from "./MasteryGuardianService";
 import type { MasteryLevelLabels } from "@scd/shared";
 
+import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
+
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
 const sum = (qs: { marks: number }[]) => qs.reduce((s, q) => s + q.marks, 0);
@@ -69,19 +71,30 @@ export async function marksTable(classToken: MasteryClassToken, subject: Mastery
   return new Map(rows.filter((r) => typeof r.marks === "number" && r.marks > 0).map((r) => [r.code, r.marks as number]));
 }
 
-/** The gold, current, not-retired questions tagged with any of `codes`, with their text. */
-export async function goldBank(codes: string[]): Promise<(BankQuestion & { textBn: string | null })[]> {
+/**
+ * The gold, current, not-retired questions tagged with any of `codes`, with their text. Questions held
+ * for the exam papers (PR-I, D-#1408) are left out unless `examPool` says otherwise — every picker
+ * takes the default, only the future exam-paper builder asks for `any` / `only`.
+ */
+export async function goldBank(codes: string[], examPool: ExamPoolLens = "exclude"): Promise<(BankQuestion & { textBn: string | null })[]> {
   if (codes.length === 0) return [];
   const arts = await ContentArtifact.find({
-    docType: "question", current: true, retiredAt: null, reviewStatus: "gold", ...loCodeMongoFilter(codes),
+    docType: "question", current: true, retiredAt: null, reviewStatus: "gold", ...(examPoolClause(examPool) ?? {}), ...loCodeMongoFilter(codes),
   })
     .select("envelopeJson.tags envelopeJson.payload")
     .lean(); // bounded: one class × subject's gold questions
+  // PR-I: the other parts of a passage with a held part stay out too (same stimulus_ref).
+  let sibling = new Set<string>();
+  if (examPool === "exclude") {
+    sibling = await heldStimulusRefs(arts.map((a) => stimulusRefOf((a.envelopeJson as Record<string, unknown> | undefined)?.payload as Record<string, unknown> | undefined)).filter((x): x is string => Boolean(x)));
+  }
   return arts.flatMap((a) => {
     const env = (a.envelopeJson ?? {}) as Record<string, unknown>;
     const payload = env.payload as Record<string, unknown> | undefined;
     const qid = payload?.qid as string | undefined;
     if (!qid) return [];
+    const ref = stimulusRefOf(payload);
+    if (ref && sibling.has(ref)) return [];
     const text = payload?.question_text;
     return [{
       artifactId: String(a._id),

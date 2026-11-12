@@ -35,7 +35,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { Conversation, type IConversation } from "../models/Conversation";
 import { ConversationMember } from "../models/ConversationMember";
 import { ChatError } from "./ChatService";
-import { currentYearSectionFilter } from "../../foundation/services/currentYear";
+import { currentAcademicYearId, currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 /** The SCHOOL conversation is a singleton — a fixed refId makes it findable. */
 const SCHOOL_REF = "ALL";
@@ -215,8 +215,12 @@ export async function syncSectionGroup(sectionId: string): Promise<SyncCounts | 
   // Boys groups alike). upsertAutoConversation $sets the title on every sync, so an
   // existing group is renamed on its next sync, not only at creation.
   const cls = section.classId
-    ? ((await Class.findById(section.classId).select("level").lean()) as { level?: number } | null)
+    ? ((await Class.findById(section.classId).select("level academicYearId").lean()) as { level?: number; academicYearId?: Types.ObjectId } | null)
     : null;
+  // YC-6 (decision F): a section of a year that is not the current one gets no chat group - the 2027
+  // groups appear at the cut-over, not while the Principal is still editing the December draft.
+  const currentYear = await currentAcademicYearId();
+  if (currentYear && cls?.academicYearId && !currentYear.equals(cls.academicYearId)) return null;
   const conv = await upsertAutoConversation(
     "SECTION",
     section._id.toString(),

@@ -155,6 +155,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   QUESTION_RETIRED: { bn: "প্রশ্ন বাতিল করেছেন", en: "Retired a question", group: "CONTENT" },
   QUESTION_RESTORED: { bn: "বাতিল প্রশ্ন ফিরিয়েছেন", en: "Restored a question", group: "CONTENT" },
   QUESTION_MARKED_IMPORTANT: { bn: "প্রশ্ন গুরুত্বপূর্ণ চিহ্নিত করেছেন", en: "Marked a question important", group: "CONTENT" },
+  QUESTION_EXAM_HELD: { bn: "প্রশ্ন পরীক্ষার জন্য রেখেছেন", en: "Held a question for exams", group: "CONTENT" },
+  QUESTION_EXAM_RELEASED: { bn: "প্রশ্ন পরীক্ষার জন্য রাখা থেকে ছেড়েছেন", en: "Released a question from the exam hold", group: "CONTENT" },
   QUESTION_UNMARKED_IMPORTANT: { bn: "প্রশ্নের গুরুত্ব চিহ্ন তুলে নিয়েছেন", en: "Unmarked a question important", group: "CONTENT" },
 
   // --- Exams & class tests --------------------------------------------------

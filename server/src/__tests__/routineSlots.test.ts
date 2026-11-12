@@ -45,6 +45,8 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
 }));
 
 const mockSectionFindById = jest.fn();
+jest.mock("../modules/foundation/services/currentYear", () => ({ currentAcademicYearId: async () => null }));
+jest.mock("../modules/year-change/models/YearChangeRun", () => ({ YearChangeRun: { exists: async () => null, findOne: async () => null } }));
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => ({ lean: () => mockSectionFindById(id) }) },
 }));

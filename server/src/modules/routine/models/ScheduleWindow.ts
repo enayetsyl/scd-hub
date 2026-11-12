@@ -21,6 +21,8 @@ export interface IScheduleWindow extends Document {
   dayStartMinutes: number;
   label: string;
   active: boolean;
+  /** Year-change run that copied this row (YC-6). */
+  runId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +36,7 @@ const ScheduleWindowSchema = new Schema<IScheduleWindow>(
     dayStartMinutes: { type: Number, required: true, min: 0, max: 1439 },
     label: { type: String, required: true, trim: true },
     active: { type: Boolean, default: true },
+    runId: { type: String },
   },
   { timestamps: true },
 );

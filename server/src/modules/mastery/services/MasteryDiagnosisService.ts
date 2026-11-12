@@ -663,7 +663,7 @@ export async function outcomeTrail(studentId: string, loCode: string, auth: Auth
     diagnosisPolicy(ctx.classToken, subject),
     MasteryEvidence.find({ studentId: oid(studentId), loCode, supersededAt: null }).sort({ at: -1, itemNo: 1 }).lean(),
     MasteryTag.find({}).select("code labelBn").lean(),
-    ContentArtifact.find({ docType: "question", current: true, retiredAt: null, reviewStatus: "gold", ...loCodeMongoFilter([loCode]) })
+    ContentArtifact.find({ docType: "question", current: true, retiredAt: null, reviewStatus: "gold", examPoolAt: null, ...loCodeMongoFilter([loCode]) })
       .select("envelopeJson.payload.qid")
       .lean(), // bounded: one outcome's gold questions
   ]);
