@@ -32,6 +32,7 @@ import { deriveScore, type DerivedScore } from "../classTestScoring";
 import { resolveClassTestDeadline, resolveClassTestOverdue, atMidnight } from "../classTestCalendar";
 import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
 import type { IAiCheck } from "../../platform/models/aiCheckSchema";
+import { absentWeakLoMessage, guardianObjectiveLabels, guardianObjectiveWord, validateWeakLoCodes } from "./ClassTestWeakObjectiveService";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class ClassTestResultError extends Error {}
@@ -71,6 +72,9 @@ export interface EnterResultInput {
   actorId: string;
   /** AI-5 (D-#1095): the comment-check stamp the resolver worked out (PRESENT only). */
   aiCheck?: IAiCheck;
+  /** D-#1360: weak objective codes (≤ 5). Undefined/null keeps what is stored (an older
+   *  phone build never sends it); [] clears. PRESENT only. */
+  weakLoCodes?: string[] | null;
   /** Injectable for tests; defaults to the live clock. The exam-date gate (J3). */
   now?: Date;
 }
@@ -83,6 +87,8 @@ export interface ClassTestResultShape extends DerivedScore {
   /** INTERNAL — the resolver/guardian read must NOT expose this to a guardian (J7). */
   teacherAction: string | null;
   guardianAction: string | null;
+  /** D-#1360: the picked weak objective codes ([] when none). */
+  weakLoCodes: string[];
   /** CT-8 approval state: submittedAt set + publishedAt null = pending approval. */
   submittedAt: string | null;
   sendBackReason: string | null;
@@ -105,6 +111,7 @@ function resultShape(d: IClassTestResult, test: { totalMarks: number; passMark: 
     weakness: d.weakness ?? null,
     teacherAction: d.teacherAction ?? null,
     guardianAction: d.guardianAction ?? null,
+    weakLoCodes: d.weakLoCodes ?? [],
     submittedAt: d.submittedAt ? new Date(d.submittedAt).toISOString() : null,
     sendBackReason: d.sendBackReason ?? null,
     publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
@@ -180,6 +187,9 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
     if (hasText(input.weakness) || hasText(input.teacherAction) || hasText(input.guardianAction)) {
       throw new ClassTestResultError("অনুপস্থিত শিক্ষার্থীর জন্য মন্তব্য লেখা যাবে না");
     }
+    if (input.weakLoCodes && input.weakLoCodes.length > 0) {
+      throw new ClassTestResultError(await absentWeakLoMessage());
+    }
   }
 
   const testOid = new Types.ObjectId(input.testId);
@@ -204,6 +214,10 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
     );
   }
 
+  // D-#1360: picks are checked only when sent (undefined keeps the stored ones).
+  const weakLoCodes =
+    status === "PRESENT" && input.weakLoCodes != null ? await validateWeakLoCodes(test, input.weakLoCodes) : undefined;
+
   // Upsert one row per (student × exam). $unset marks AND the comments on ABSENT so
   // an edit PRESENT→ABSENT does not leave a stale score or stale notes behind.
   // publishedVersion stays on its existing value (default 0; the CT-3 publish flow
@@ -212,7 +226,7 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
     status === "ABSENT"
       ? {
           $set: { status, enteredBy: new Types.ObjectId(input.actorId) },
-          $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "", aiCheck: "" },
+          $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "", aiCheck: "", weakLoCodes: "" },
         }
       : {
           $set: {
@@ -223,7 +237,9 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
             enteredBy: new Types.ObjectId(input.actorId),
             marks,
             ...(input.aiCheck && !keepCtStamp(existing, input) ? { aiCheck: input.aiCheck } : {}),
+            ...(weakLoCodes && weakLoCodes.length > 0 ? { weakLoCodes } : {}),
           },
+          ...(weakLoCodes && weakLoCodes.length === 0 ? { $unset: { weakLoCodes: "" } } : {}),
         };
 
   const doc = (await ClassTestResult.findOneAndUpdate(
@@ -455,6 +471,11 @@ export interface GuardianClassTestResult {
   pass: boolean | null;
   weakness: string | null;
   guardianAction: string | null;
+  /** D-#1360 / D-#925: the picked weak objectives at OBJECTIVE grain — labels only, never a
+   *  code or a sub-objective label. */
+  weakObjectives: string[];
+  /** The level word to name them with (masteryLevelLabels, D-#923); null when none. */
+  weakObjectivesWordBn: string | null;
   publishedAt: string | null;
   /** D-#507: the Bangla name of the Arabic GROUP this exam was held for, when it was
    *  a group exam (`classLevel` is then null). A parent needs to know their child
@@ -491,6 +512,7 @@ export async function childTestResults(studentId: string): Promise<GuardianClass
   const groupNameById = new Map(groups.map((g) => [g._id.toString(), g.nameBn]));
 
   const out: GuardianClassTestResult[] = [];
+  const pickedCodes: string[][] = [];
   for (const d of docs) {
     const test = testById.get(d.testId.toString());
     if (!test) continue; // exam not PRINTED / missing — not guardian-visible
@@ -515,9 +537,19 @@ export async function childTestResults(studentId: string): Promise<GuardianClass
       pass: score.pass,
       weakness: d.weakness ?? null,
       guardianAction: d.guardianAction ?? null,
+      weakObjectives: [],
+      weakObjectivesWordBn: null,
       publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
     });
+    pickedCodes.push(d.weakLoCodes ?? []);
   }
+  // D-#1360: one objective-grain read for every row (D-#925).
+  const objectiveLabels = await guardianObjectiveLabels(pickedCodes);
+  const objectiveWord = await guardianObjectiveWord(objectiveLabels.some((l) => l.length > 0));
+  out.forEach((r, i) => {
+    r.weakObjectives = objectiveLabels[i];
+    r.weakObjectivesWordBn = objectiveLabels[i].length > 0 ? objectiveWord : null;
+  });
   // Newest exam first.
   out.sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
   return out;

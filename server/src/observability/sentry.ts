@@ -168,6 +168,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "VivaError",
   // Exam routine (D-#883): a bad date/time or a duplicate slot — the Office's input.
   "ExamRoutineError",
+  // Exam cycle EX-1..EX-9 (D-#375–#382): components not summing to 100, a locked paper, not on
+  // duty, a custody count that does not balance — a person's input, never a fault.
+  "ExamError",
   // Staff mistake record (D-#936–#939): not your entry, decided already, bad reason.
   "StaffMistakeError",
   // Warning ladder (D-#940–#942): not your warning, bad meeting time/place.

@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `exam_results`, `exam_custody`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations
@@ -433,3 +433,29 @@ App gates: tab `VivaTab` = any of view / manage / examine; question and examiner
 | submitExamPaperReview | `exam_papers:review`; svc: the paper's reviewer only |
 
 App gates: stack `ExamPapersTab` on any of the five; drawer leaf প্রশ্নপত্র রিভিউ on review/view/manage, মোহাম্মদপুরের প্রশ্নপত্র on view_reference/manage_reference; assign/accept/finalize controls only when the paper says `viewerCanManage`; review buttons only for `viewerIsReviewer` or a manager.
+
+## (l) `exam_results` + `exam_custody` — the exam cycle (ported onto dev 2026-11-11, EX-1..EX-9, D-#375–#382)
+
+| resolver / route | gate |
+|---|---|
+| exams, createExam, updateExam | unchanged SY-1 gates (`exams`: assertSyllabusReader; create/update: `exam_syllabus:settings`). `createExam` gains optional `ctAggregationMode`/`ctAggregationBestN` |
+| exam, examPaper, examPapers | `exam_results:view` |
+| upsertExamPaper, setExamStatus | `exam_results:settings` |
+| examAssignments, myExamDuties, myExamDutiesPage | `exam_results:view` (`myExamDuties*`: caller's own rows, user id forced server-side) |
+| assignExamDuty, revokeExamDuty | `exam_results:assign` |
+| examPaperRoster, examMarks, examCtProposals | `exam_results:view` |
+| enterExamMarks, applyExamCtPull | hasAnyPermission(`exam_results:enter_marks`, `exam_results:edit_all`); resolver: without `edit_all`, a CHECKER duty on THIS paper; ADAB: the routine's subject teacher unless `edit_all` |
+| examRecheckWorksheet, examDivergences, examTabulationReadiness, enterExamRecheckMarks, resolveExamDivergence, tabulateExamPaper | hasAnyPermission(`exam_results:enter_marks`, `exam_results:edit_all`); resolver: without `edit_all`, the matching duty (RECHECKER / TABULATOR / MARK_RECHECKER) on THIS paper |
+| reopenExamPaper | `exam_results:reopen` |
+| examReportCard, examClassReportCards, examCommentSuggestions | `exam_results:view` |
+| setExamReportComment | `exam_results:comment` |
+| submitExamResults | `exam_results:submit` |
+| approveExamResults, sendBackExamResults, unpublishExamResults | `exam_results:publish` |
+| GET /pdf/report-card/:examId/:studentId, GET /pdf/report-card/:examId?classId= (class bundle, staff only) | `exam_results:view` (callerHasPermission); guardian: `guardian:read_child` + linked child + exam published |
+| examCustodyEvents, examCustodyEventsPage, examCustodyBalance, examCustodyExceptions | `exam_custody:view` |
+| examCustodyRecipients, recordExamCustodyHandover, cancelExamCustodyHandover | `exam_custody:hand_over`; svc: only the giver cancels |
+| myPendingCustodyAcknowledgements, acknowledgeExamCustodyHandover | `exam_custody:acknowledge`; svc: only the named receiver |
+
+Recipients (D-#796): a custody dispute → `holdersOf("exam_results:settings")`; results submitted → `holdersOf("exam_results:publish")`; handover → the named receiver; the receiver picker lists `holdersOf("exam_custody:acknowledge")`.
+
+App gates: `ExamsTab` on any `exam_results:*` or `exam_custody:*`; drawer leaf পরীক্ষা in the exam group on `exam_results:view` / `exam_custody:view`; every paper shown with `edit_all`/`settings`/`assign` (else own duties only); submit on `submit`, approve on `publish`; custody inbox on `acknowledge`, new-handover form on `hand_over`; the report-card comment on `comment`.

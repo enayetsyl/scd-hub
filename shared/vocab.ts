@@ -1593,6 +1593,15 @@ export const NOTIFICATION_KINDS = [
   // AI Workspace batch job finished (W-4, D-#1213; app-native, NO wire twin): to the person who
   // started the job, once, when every item is done / failed / cancelled. Opens the AI workspace.
   "AI_JOB_FINISHED",
+  // Exam custody (EX-8, D-#382). App-native, no wire twin. HANDOVER goes to the named
+  // RECEIVER ("you have scripts to acknowledge"); DISPUTED goes to exam:manage holders,
+  // because a count mismatch is an Office problem, not the two signatories' to settle.
+  "EXAM_CUSTODY_HANDOVER",
+  "EXAM_CUSTODY_DISPUTED",
+  // EX-9 publish loop: SUBMITTED → Principal/Office (a card set awaits approval);
+  // PUBLISHED → the exam's guardians via the guardian portal path.
+  "EXAM_RESULT_SUBMITTED",
+  "EXAM_RESULT_PUBLISHED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1681,6 +1690,10 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   SCHOOL_NOTICE: "স্কুলের বার্তা",
   AI_BUDGET_ALERT: "এআই খরচের সতর্কবার্তা",
   AI_JOB_FINISHED: "এআই ব্যাচ কাজ শেষ",
+  EXAM_CUSTODY_HANDOVER: "গ্রহণ স্বীকার করুন",
+  EXAM_CUSTODY_DISPUTED: "হস্তান্তরে সংখ্যার গরমিল",
+  EXAM_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
+  EXAM_RESULT_PUBLISHED: "পরীক্ষার ফলাফল প্রকাশিত",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1767,6 +1780,10 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   SCHOOL_NOTICE: "School notice",
   AI_BUDGET_ALERT: "AI spending alert",
   AI_JOB_FINISHED: "AI batch job finished",
+  EXAM_CUSTODY_HANDOVER: "Acknowledge a handover",
+  EXAM_CUSTODY_DISPUTED: "Custody count disputed",
+  EXAM_RESULT_SUBMITTED: "Report cards await approval",
+  EXAM_RESULT_PUBLISHED: "Exam results published",
 };
 
 /**
@@ -3822,6 +3839,7 @@ export const BUDGET_LINE_KIND_LABELS_EN: Record<BudgetLineKind, string> = {
   EXPENSE: "Expense",
   INCOME: "Income",
 };
+
 
 
 // --- A.18 BOOK PRODUCTION (SB-1, prd-support-book.md §4, D-#403–#427) ----------
@@ -5992,3 +6010,204 @@ export const LESSON_NONE_REASON_LABELS_BN: Record<LessonNoneReason, string> = {
   TEST: "পরীক্ষা বা ক্লাস টেস্ট",
   OTHER: "পরিকল্পনার বাইরে অন্য কাজ",
 };
+
+// --- EXAMS / REPORT CARDS (EX-1..EX-9, docs/prd-exams.md, D-#375–#382) -------
+// Ported onto dev 2026-11-11. EXAM_TERMS and EXAM_COMPONENTS are NOT redeclared here:
+// they live in the exam-syllabus block above (SY-1) and EX-1 reuses them.
+// App-native only; NO envelope twin, NO harness enum sync (the D-#46/#52 pattern).
+// The custody-chain enums land with EX-6, not here.
+
+/** Exam lifecycle. MARKING→TABULATED is gated on custody reconciliation (EX-7);
+ *  APPROVED→PUBLISHED is the guardian-visible flip (EX-9, the CT-8/CO-8 pattern). */
+export const EXAM_STATUSES = [
+  "PLANNED", "IN_PROGRESS", "MARKING", "TABULATED", "APPROVED", "PUBLISHED", "ARCHIVED",
+] as const;
+export type ExamStatus = (typeof EXAM_STATUSES)[number];
+export const EXAM_STATUS_LABELS_BN: Record<ExamStatus, string> = {
+  PLANNED: "পরিকল্পিত",
+  IN_PROGRESS: "চলমান",
+  MARKING: "খাতা মূল্যায়ন",
+  TABULATED: "নম্বর সংকলিত",
+  APPROVED: "অনুমোদিত",
+  PUBLISHED: "প্রকাশিত",
+  ARCHIVED: "সংরক্ষিত",
+};
+export const EXAM_STATUS_LABELS_EN: Record<ExamStatus, string> = {
+  PLANNED: "Planned",
+  IN_PROGRESS: "In progress",
+  MARKING: "Marking",
+  TABULATED: "Tabulated",
+  APPROVED: "Approved",
+  PUBLISHED: "Published",
+  ARCHIVED: "Archived",
+};
+
+/** Per-COMPONENT attendance (D-#377f): `Ab` appears in a lone Semester-Final cell while
+ *  CT/Adab still carry marks. An absent component contributes 0 and prints "Ab", and does
+ *  NOT drop the student from cohort denominators. */
+export const MARK_ENTRY_STATUSES = ["PRESENT", "ABSENT"] as const;
+export type MarkEntryStatus = (typeof MARK_ENTRY_STATUSES)[number];
+export const MARK_ENTRY_STATUS_LABELS_BN: Record<MarkEntryStatus, string> = {
+  PRESENT: "উপস্থিত",
+  ABSENT: "অনুপস্থিত",
+};
+export const MARK_ENTRY_STATUS_LABELS_EN: Record<MarkEntryStatus, string> = {
+  PRESENT: "Present",
+  ABSENT: "Ab",
+};
+
+/** Grade letters. Codes are identifier-safe; DISPLAY carries the printed glyph. The
+ *  point/percent BANDS are NOT here — they are stored per `Exam` so a future year can
+ *  re-band without a code change (D-#377). */
+export const GRADE_LETTERS = ["A_PLUS", "A", "A_MINUS", "B", "C", "F"] as const;
+export type GradeLetter = (typeof GRADE_LETTERS)[number];
+export const GRADE_LETTER_DISPLAY: Record<GradeLetter, string> = {
+  A_PLUS: "A+", A: "A", A_MINUS: "A-", B: "B", C: "C", F: "F",
+};
+
+/** The default scale printed on every 2026 card. Seeded onto a new `Exam`; editable
+ *  per exam thereafter. `maxPercent` is inclusive. */
+export const DEFAULT_GRADE_SCALE = [
+  { letter: "A_PLUS",  point: 5,   minPercent: 80, maxPercent: 100 },
+  { letter: "A",       point: 4,   minPercent: 70, maxPercent: 79.99 },
+  { letter: "A_MINUS", point: 3.5, minPercent: 60, maxPercent: 69.99 },
+  { letter: "B",       point: 3,   minPercent: 50, maxPercent: 59.99 },
+  { letter: "C",       point: 2,   minPercent: 40, maxPercent: 49.99 },
+  { letter: "F",       point: 0,   minPercent: 0,  maxPercent: 39.99 },
+] as const satisfies readonly { letter: GradeLetter; point: number; minPercent: number; maxPercent: number }[];
+
+/** How the CT component is pulled from the class-test tracker. BOTH ship (D-#378) —
+ *  set on the Exam, overridable per paper. */
+export const CT_AGGREGATION_MODES = ["MEAN", "BEST_N"] as const;
+export type CtAggregationMode = (typeof CT_AGGREGATION_MODES)[number];
+export const CT_AGGREGATION_MODE_LABELS_BN: Record<CtAggregationMode, string> = {
+  MEAN: "গড়",
+  BEST_N: "সেরা কয়টি",
+};
+export const CT_AGGREGATION_MODE_LABELS_EN: Record<CtAggregationMode, string> = {
+  MEAN: "Mean of all tests",
+  BEST_N: "Best N tests",
+};
+export const CT_AGGREGATION_DEFAULT_BEST_N = 3;
+
+/** Exam duty assignments (EX-2). These are ASSIGNMENT ROWS, not `ROLES` entries — the
+ *  single TEACHER role is never widened (the CO-1 / D-#42 pattern). */
+export const EXAM_DUTY_ROLES = [
+  "INVIGILATOR", "CHECKER", "RECHECKER", "TABULATOR", "MARK_RECHECKER",
+] as const;
+export type ExamDutyRole = (typeof EXAM_DUTY_ROLES)[number];
+export const EXAM_DUTY_ROLE_LABELS_BN: Record<ExamDutyRole, string> = {
+  INVIGILATOR: "পরীক্ষার দায়িত্বে",
+  CHECKER: "খাতা চেককারী",
+  RECHECKER: "খাতা রিচেককারী",
+  TABULATOR: "নম্বর সংকলনকারী",
+  MARK_RECHECKER: "নম্বর রিচেককারী",
+};
+export const EXAM_DUTY_ROLE_LABELS_EN: Record<ExamDutyRole, string> = {
+  INVIGILATOR: "Invigilator",
+  CHECKER: "Checker",
+  RECHECKER: "Rechecker",
+  TABULATOR: "Tabulator",
+  MARK_RECHECKER: "Mark rechecker",
+};
+
+// --- A.20b EXAM CUSTODY CHAIN (EX-6/EX-7, D-#382) ----------------------------
+// The owner's core ask. The paper mark sheets carry names and signatures but NO counts and
+// no issue/return record, so "how many scripts went out, how many came back" was
+// unanswerable. Every physical handover is now a two-signature event carrying a count.
+
+/** The 13 real-world steps, in order, from printing the papers to filing the scripts. */
+export const CUSTODY_STAGES = [
+  "QUESTION_ISSUE",         // Office → invigilator: printed papers + blank scripts
+  "QUESTION_RETURN_UNUSED", // invigilator → Office: papers NOT used
+  "SCRIPT_RETURN",          // invigilator → Office: the used answer scripts
+  "CHECK_ISSUE",            // Office → checker
+  "CHECK_RETURN",           // checker → Office
+  "RECHECK_ISSUE",          // Office → rechecker
+  "RECHECK_RETURN",         // rechecker → Office
+  "TABULATION_ISSUE",       // Office → tabulator (mark sheet)
+  "TABULATION_RETURN",      // tabulator → Office
+  "MARK_RECHECK_ISSUE",     // Office → mark-rechecker
+  "MARK_RECHECK_RETURN",    // mark-rechecker → Office
+  "ARCHIVE",                // Office → store
+] as const;
+export type CustodyStage = (typeof CUSTODY_STAGES)[number];
+export const CUSTODY_STAGE_LABELS_BN: Record<CustodyStage, string> = {
+  QUESTION_ISSUE: "প্রশ্ন সরবরাহ",
+  QUESTION_RETURN_UNUSED: "অব্যবহৃত প্রশ্ন ফেরত",
+  SCRIPT_RETURN: "উত্তরপত্র ফেরত",
+  CHECK_ISSUE: "চেকের জন্য প্রদান",
+  CHECK_RETURN: "চেক শেষে ফেরত",
+  RECHECK_ISSUE: "রিচেকের জন্য প্রদান",
+  RECHECK_RETURN: "রিচেক শেষে ফেরত",
+  TABULATION_ISSUE: "সংকলনের জন্য প্রদান",
+  TABULATION_RETURN: "সংকলন শেষে ফেরত",
+  MARK_RECHECK_ISSUE: "নম্বর রিচেকের জন্য প্রদান",
+  MARK_RECHECK_RETURN: "নম্বর রিচেক শেষে ফেরত",
+  ARCHIVE: "সংরক্ষণাগারে জমা",
+};
+export const CUSTODY_STAGE_LABELS_EN: Record<CustodyStage, string> = {
+  QUESTION_ISSUE: "Question issue",
+  QUESTION_RETURN_UNUSED: "Unused questions returned",
+  SCRIPT_RETURN: "Answer scripts returned",
+  CHECK_ISSUE: "Issued for checking",
+  CHECK_RETURN: "Returned from checking",
+  RECHECK_ISSUE: "Issued for rechecking",
+  RECHECK_RETURN: "Returned from rechecking",
+  TABULATION_ISSUE: "Issued for tabulation",
+  TABULATION_RETURN: "Returned from tabulation",
+  MARK_RECHECK_ISSUE: "Issued for mark recheck",
+  MARK_RECHECK_RETURN: "Returned from mark recheck",
+  ARCHIVE: "Archived",
+};
+
+/** What physically moved. */
+export const CUSTODY_ITEM_KINDS = ["QUESTION_PAPER", "BLANK_SCRIPT", "ANSWER_SCRIPT", "MARK_SHEET"] as const;
+export type CustodyItemKind = (typeof CUSTODY_ITEM_KINDS)[number];
+export const CUSTODY_ITEM_KIND_LABELS_BN: Record<CustodyItemKind, string> = {
+  QUESTION_PAPER: "প্রশ্নপত্র",
+  BLANK_SCRIPT: "খালি খাতা",
+  ANSWER_SCRIPT: "উত্তরপত্র",
+  MARK_SHEET: "মার্কশিট",
+};
+export const CUSTODY_ITEM_KIND_LABELS_EN: Record<CustodyItemKind, string> = {
+  QUESTION_PAPER: "Question paper",
+  BLANK_SCRIPT: "Blank script",
+  ANSWER_SCRIPT: "Answer script",
+  MARK_SHEET: "Mark sheet",
+};
+
+/** DISPUTED is a valid TERMINAL state, not an error: it carries BOTH counts plus a note.
+ *  The app never overwrites one person's count with the other's — that is the entire point
+ *  of recording a chain (D-#382). */
+export const CUSTODY_EVENT_STATUSES = ["PENDING_ACK", "ACKNOWLEDGED", "DISPUTED", "CANCELLED"] as const;
+export type CustodyEventStatus = (typeof CUSTODY_EVENT_STATUSES)[number];
+export const CUSTODY_EVENT_STATUS_LABELS_BN: Record<CustodyEventStatus, string> = {
+  PENDING_ACK: "গ্রহণের অপেক্ষায়",
+  ACKNOWLEDGED: "গৃহীত",
+  DISPUTED: "সংখ্যায় গরমিল",
+  CANCELLED: "বাতিল",
+};
+export const CUSTODY_EVENT_STATUS_LABELS_EN: Record<CustodyEventStatus, string> = {
+  PENDING_ACK: "Awaiting acknowledgement",
+  ACKNOWLEDGED: "Acknowledged",
+  DISPUTED: "Count disputed",
+  CANCELLED: "Cancelled",
+};
+
+/** Every paper's components must sum to this (D-#376): the only composition guard. */
+export const EXAM_PAPER_COMPONENT_TOTAL = 100;
+
+/** Paper-scale conversion rounds to NEAREST 0.5 (D-#377a). THE single implementation —
+ *  the marking screen's live preview and the report-card renderer BOTH call this. Two
+ *  rounding sites is exactly how the printed card and the on-screen figure drift apart. */
+export function roundToHalf(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+/** Convert a raw mark against its paper's own full marks onto a component's scale.
+ *  Derived on read, NEVER stored (D-#85). */
+export function convertMark(rawMark: number, paperFullMarks: number, componentMax: number): number {
+  if (paperFullMarks <= 0) throw new Error("paperFullMarks must be > 0");
+  return roundToHalf((rawMark / paperFullMarks) * componentMax);
+}
