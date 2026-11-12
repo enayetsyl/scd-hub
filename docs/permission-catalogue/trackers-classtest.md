@@ -94,6 +94,14 @@ Shared helpers referenced below: `assertAnchorWrite` / `assertAnchorRead` (`serv
 | classTestResult.ts:229 | classTestResults | tracker:read; assertReadTest | `class_test:view` (+ `class_test:view_all` lifts scope) + assertReadTest. F-18 |
 | classTestResult.ts:242 | classTestReportStatus | tracker:read; assertReadTest | `class_test:view` (+ `class_test:view_all` lifts scope) + assertReadTest. F-18 |
 
+### `server/src/modules/trackers/resolvers/classTestWeakObjectives.ts` (D-#1360, added 2026-11-11 — no new action)
+| file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
+|---|---|---|---|
+| classTestWeakObjectives.ts:49 | classTestWeakObjectiveOptions | `class_test:enter_results` + assertAnchorRead(CLASS_TEST_REACH) | same (built on the matrix) |
+| classTestWeakObjectives.ts:83 | classTestWeakObjectivesPage | hasAnyPermission [`class_test:view`, `class_test:view_all`]; `view` → assertReportRead on the student's section (the classTestStudentProfile gate) | same (built on the matrix) |
+
+`enterClassTestResult` gains an optional `weakLoCodes` argument under its existing gate; `ClassTestResult.weakLoCodes` / `weakObjectives` and the guardian `weakObjectives` / `weakObjectivesWordBn` ride their existing parents' gates.
+
 ### `server/src/modules/trackers/resolvers/classTestScripts.ts`
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
 |---|---|---|---|

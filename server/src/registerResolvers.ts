@@ -48,6 +48,7 @@ import "./modules/trackers/resolvers/classTest";
 import "./modules/trackers/resolvers/classTestResult";
 import "./modules/trackers/resolvers/classTestRecheck";
 import "./modules/trackers/resolvers/classTestGuardian";
+import "./modules/trackers/resolvers/classTestWeakObjectives";
 import "./modules/trackers/resolvers/classTestScripts";
 import "./modules/improvement/resolvers/improvement";
 import "./modules/trackers/resolvers/classTestSummary";

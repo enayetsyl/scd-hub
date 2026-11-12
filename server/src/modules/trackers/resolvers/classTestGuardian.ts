@@ -57,6 +57,14 @@ GuardianClassTestResultRef.implement({
     pass: t.boolean({ nullable: true, resolve: (r) => r.pass }),
     weakness: t.string({ nullable: true, resolve: (r) => r.weakness }),
     guardianAction: t.string({ nullable: true, resolve: (r) => r.guardianAction }),
+    weakObjectives: t.exposeStringList("weakObjectives", {
+      description: "D-#1360: the picked weak objectives at OBJECTIVE grain (D-#925) — labels only, no code, no sub-objective.",
+    }),
+    weakObjectivesWordBn: t.string({
+      nullable: true,
+      description: "The level word for them (masteryLevelLabels, D-#923); null when there are none.",
+      resolve: (r) => r.weakObjectivesWordBn,
+    }),
     publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
     scriptPages: t.field({
       type: [GuardianScriptPageRef],

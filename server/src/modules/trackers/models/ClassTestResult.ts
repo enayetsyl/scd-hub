@@ -37,6 +37,9 @@ export interface IClassTestResult extends Document {
   teacherAction?: string;
   /** Parent-facing "what the guardian should do". */
   guardianAction?: string;
+  /** CT weak objectives (docs/prd-ct-weak-objectives.md, D-#1360): up to 5 tagged LOCKED
+   *  objective codes of the test's class × subject the child is weak in. PRESENT only. */
+  weakLoCodes?: string[];
   /** CT-8 approval gate: teacher proposes for release (guardian does NOT see yet). */
   submittedAt?: Date;
   submittedBy?: Types.ObjectId;
@@ -82,6 +85,7 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
     weakness: { type: String, trim: true },
     teacherAction: { type: String, trim: true },
     guardianAction: { type: String, trim: true },
+    weakLoCodes: { type: [String], default: undefined },
     submittedAt: { type: Date },
     submittedBy: { type: Schema.Types.ObjectId },
     sendBackReason: { type: String, trim: true },
