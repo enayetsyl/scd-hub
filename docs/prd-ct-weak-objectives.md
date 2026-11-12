@@ -50,8 +50,14 @@ checked text).
 The codes are part of the result **the way the weakness text is**: `publishedSnapshot` and the
 marks-correction diff (D-#945) hold marks + status only, so neither the text nor the codes enter
 them; `publishedVersion` bumps on every publish regardless. The guardian message (WhatsApp / in-app
-body) and its kind (regular / excellent / absent) still read the text only — no code reaches the
-message. Nothing in `ClassTestPublishService` / `ClassTestCorrectionService` changes.
+body) and its kind (regular / excellent / absent) read the text **and, from D-#1430 (PR-L), the picks**: a
+PRESENT result with at least one pick is the feedback (regular) message even when the weakness text is
+empty, and the `{Weakness}` line gains "দুর্বল <objective word>: name، name" at objective grain
+(`guardianObjectiveLabels`: sub shown as its parent, duplicates collapse, no code ever). No picks +
+no text stays the excellent message; ABSENT stays the absent message and ignores picks. No new
+template variable and no registry change, so nothing for an admin to do on prod (a customised
+`class_test.result.regular.body` keeps working; its `{Weakness}` just carries the extra line). The
+guardian card line (§2.5) is not behind the mastery switch (pinned by test). `ClassTestCorrectionService` and the snapshot are unchanged; only the message builder in `ClassTestPublishService` reads the picks.
 
 ### 2.4 Picker — class-test marks screen
 
@@ -103,3 +109,4 @@ them into mastery evidence is a separate owner decision.
 4. A submitted or published result refuses a change to the codes.
 5. The guardian payload contains objective labels only — no code and no sub-objective label.
 6. `classTestWeakObjectivesPage` returns only that student's picks and respects the caller's scope.
+7. (PR-L, D-#1430) Picks + empty text → the feedback message naming objectives (no code, sub shown as its parent); no picks + empty text → excellent; ABSENT → absent; the guardian card line shows with the mastery switch absent, off or on.
