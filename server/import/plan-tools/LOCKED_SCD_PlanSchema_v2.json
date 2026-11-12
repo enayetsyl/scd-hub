@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://school.local/scd/SCD_PlanSchema_v2.json",
   "title": "SCD Plan Schema v2 (unified Chapter Plan + Session Plan; Nursery–Class 10; + Islamic Studies)",
-  "description": "Supersedes LOCKED_C5_PlanSchema_v1 (Project 03). v2 changes ONLY: class_level accepts 'NUR', 'KG' or 1–10; subject adds ISL (ইসলাম শিক্ষা, anchor পাঠ or অধ্যায়); topic_tag and rc_id patterns accept CNUR, CKG, C1–C10. Every v1-valid plan stays v2-valid. Shape authority: LOCKED_ChapterPlan_Layout_Instruction_v3_3 + LOCKED_SessionPlan_Layout_Instruction_v11. Enforces shape only; arithmetic, cross-field, numeral, surface-purity and cross-plan checks live in validate_plan.py.",
+  "description": "Supersedes LOCKED_C5_PlanSchema_v1 (Project 03). v2 changes ONLY: class_level accepts 'NUR', 'KG' or 1–10; subject adds ISL (ইসলাম শিক্ষা, anchor পাঠ or অধ্যায়); topic_tag and rc_id patterns accept CNUR, CKG, C1–C10. SCD amendment 2026-11-11 (D-#1310, scd-hub): subject also accepts the app content codes ISLAM (= ISL, the canonical app code), ICT, BAN2 (Bangla 2nd paper), ENG2 (English 2nd paper), and the subject part of topic_tag / rc_id may carry a digit (BAN2). Every v1-valid plan stays v2-valid. Shape authority: LOCKED_ChapterPlan_Layout_Instruction_v3_3 + LOCKED_SessionPlan_Layout_Instruction_v11. Enforces shape only; arithmetic, cross-field, numeral, surface-purity and cross-plan checks live in validate_plan.py.",
   "type": "object",
   "required": [
     "schema_version",
@@ -45,7 +45,11 @@
         "MATH",
         "SCI",
         "BGS",
-        "ISL"
+        "ISL",
+        "ISLAM",
+        "ICT",
+        "BAN2",
+        "ENG2"
       ]
     },
     "class_level": {
@@ -215,7 +219,10 @@
       "if": {
         "properties": {
           "subject": {
-            "const": "ISL"
+            "enum": [
+              "ISL",
+              "ISLAM"
+            ]
           }
         }
       },
@@ -577,7 +584,7 @@
                 },
                 "topic_tag": {
                   "type": "string",
-                  "pattern": "^TOP-[A-Z]+-C(NUR|KG|[1-9]|10)-[A-Z0-9]+$",
+                  "pattern": "^TOP-[A-Z][A-Z0-9]*-C(NUR|KG|[1-9]|10)-[A-Z0-9]+$",
                   "description": "internal only; never rendered to the surface"
                 }
               }
@@ -863,7 +870,7 @@
           "properties": {
             "rc_id": {
               "type": "string",
-              "pattern": "^RC-[A-Z]+-C(NUR|KG|[1-9]|10)-U[0-9]+(-S[0-9]+)?$",
+              "pattern": "^RC-[A-Z][A-Z0-9]*-C(NUR|KG|[1-9]|10)-U[0-9]+(-S[0-9]+)?$",
               "description": "internal only"
             },
             "intro": {

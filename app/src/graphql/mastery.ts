@@ -280,6 +280,7 @@ const POLICY_FIELDS = `
   sectionTriggerPct sectionTriggerMinAssessments retestAfterDays rubricWeakAtOrBelow rubricGoodAt
   assignmentTotalMarks assignmentMinutes assignmentPartAOn assignmentPartAMarks assignmentPartBMarks
   assignmentMixWeak assignmentMixImproving assignmentMixRevision
+  homeworkDraftQuestionsPerObjective homeworkDraftMaxItems extraHomeworkMaxQuestions extraHomeworkIncludeImproving
 `;
 
 export const MASTERY_POLICY_QUERY = gql`
@@ -391,6 +392,8 @@ const PAPER_FIELDS = `
   subject
   date
   hwItemId
+  classTestId
+  extra
   entryState
   totalMarks
   rubricLoCodes
@@ -423,6 +426,8 @@ export const MASTERY_PAPER_QUERY = gql`
   query MasteryPaper($paperId: String!) {
     masteryPaper(paperId: $paperId) {
       paper { ${PAPER_FIELDS} }
+      classTest { classTestId ctId totalMarks examDate status }
+      classTestMismatches { studentId name sheetStatus sheetMarks classTestStatus classTestMarks }
       roster {
         studentId
         name
@@ -446,6 +451,50 @@ export const MASTERY_PAPER_QUERY = gql`
           }
         }
       }
+    }
+  }
+`;
+
+/** PR-C (D-#1317): the section's class tests a CT sheet can own (no sheet yet). */
+export interface MasteryClassTestOption {
+  classTestId: string;
+  ctId: string;
+  testNumber: number;
+  examDate: string;
+  totalMarks: number;
+  status: string;
+}
+
+export const MASTERY_CLASS_TEST_OPTIONS_QUERY = gql`
+  query MasteryClassTestOptions($sectionId: String!, $subject: String!) {
+    masteryClassTestOptions(sectionId: $sectionId, subject: $subject) {
+      classTestId
+      ctId
+      testNumber
+      examDate
+      totalMarks
+      status
+    }
+  }
+`;
+
+/** PR-C (D-#1319): is mastery on for this test, and which sheet owns its totals. */
+export interface MasteryClassTestSheetLink {
+  enabled: boolean;
+  paperId: string | null;
+  entryState: string | null;
+  sectionId: string | null;
+  classLevel: number | null;
+}
+
+export const MASTERY_CLASS_TEST_SHEET_QUERY = gql`
+  query MasteryClassTestSheet($classTestId: String!) {
+    masteryClassTestSheet(classTestId: $classTestId) {
+      enabled
+      paperId
+      entryState
+      sectionId
+      classLevel
     }
   }
 `;
@@ -482,6 +531,7 @@ export const CREATE_MASTERY_PAPER = gql`
     $date: String!
     $title: String
     $hwItemId: String
+    $classTestId: String
     $items: [MasteryPaperItemInput!]!
     $rubricLoCodes: [String!]
   ) {
@@ -492,6 +542,7 @@ export const CREATE_MASTERY_PAPER = gql`
       date: $date
       title: $title
       hwItemId: $hwItemId
+      classTestId: $classTestId
       items: $items
       rubricLoCodes: $rubricLoCodes
     ) {
@@ -550,10 +601,24 @@ export type MasteryPaperRow = {
   subject: string;
   date: string;
   hwItemId: string | null;
+  /** PR-C: the class test whose totals this sheet writes (null when none). */
+  classTestId?: string | null;
+  /** PR-D: an extra homework for weak children (per-child items). */
+  extra?: boolean;
   entryState: string;
   totalMarks: number;
   rubricLoCodes: string[];
   items: MasteryPaperItemRow[];
+};
+
+/** PR-C: a student whose class-test mark differs from the sheet total (another flow changed it). */
+export type MasteryClassTestMismatch = {
+  studentId: string;
+  name: string;
+  sheetStatus: string;
+  sheetMarks: number | null;
+  classTestStatus: string | null;
+  classTestMarks: number | null;
 };
 
 export type MasteryResultRow = {
@@ -628,6 +693,34 @@ const HEAT_COLUMN_FIELDS = `
   childCodes
   weakChildCodes
   masteredPct
+`;
+
+/** PR-B (D-#1315): earlier-class codes this section has evidence on (paged; empty ⇒ section hidden). */
+export interface MasteryEarlierClassRow {
+  code: string;
+  labelBn: string;
+  classToken: string;
+  assessed: number;
+  weak: number;
+  weakStudents: { studentId: string; name: string; rollNumber: string | null }[];
+}
+
+export const MASTERY_EARLIER_CLASS_SUMMARY_QUERY = gql`
+  query MasteryEarlierClassSummary($sectionId: String!, $subject: String!, $page: Int, $pageSize: Int) {
+    masteryEarlierClassSummary(sectionId: $sectionId, subject: $subject, page: $page, pageSize: $pageSize) {
+      total
+      page
+      pageSize
+      rows {
+        code
+        labelBn
+        classToken
+        assessed
+        weak
+        weakStudents { studentId name rollNumber }
+      }
+    }
+  }
 `;
 
 export const MASTERY_SECTION_HEATMAP_QUERY = gql`
@@ -1608,3 +1701,77 @@ export type ChildMasteryProgressRow = {
   improving: { labelBn: string }[];
   schoolDid: { date: string; kind: string; labelBn: string; status: string; present: boolean | null; retestPct: number | null }[];
 };
+
+// ---------------------------------------------------------------------------
+// PR-D (D-#1321–#1326): homework from the lesson taught + extra homework for weak children
+// ---------------------------------------------------------------------------
+
+export interface MasteryHomeworkDraftItem {
+  origin: "BANK" | "TEACHER";
+  artifactId: string | null;
+  qid: string | null;
+  textBn: string | null;
+  loCode: string;
+  questionTypeCode: string;
+  marks: number;
+  fromBook: boolean;
+}
+
+export interface MasteryHomeworkDraft {
+  reason: string | null;
+  items: MasteryHomeworkDraftItem[];
+  rubricCodes: string[];
+  gaps: string[];
+  leftOut: string[];
+  hwItemId: string | null;
+}
+
+export const MASTERY_HOMEWORK_DRAFT_QUERY = gql`
+  query MasteryHomeworkDraft($sectionId: String!, $subject: String!, $dateKey: String!) {
+    masteryHomeworkDraft(sectionId: $sectionId, subject: $subject, dateKey: $dateKey) {
+      reason
+      items { origin artifactId qid textBn loCode questionTypeCode marks fromBook }
+      rubricCodes
+      gaps
+      leftOut
+      hwItemId
+    }
+  }
+`;
+
+export interface MasteryExtraHomeworkStudent {
+  studentId: string;
+  name: string;
+  rollNumber: string | null;
+  cause: string | null;
+  items: { artifactId: string; qid: string; textBn: string | null; loCode: string; labelBn: string; questionTypeCode: string; marks: number; reasonBn: string }[];
+}
+
+export const MASTERY_EXTRA_HOMEWORK_PREVIEW_QUERY = gql`
+  query MasteryExtraHomeworkPreview($sectionId: String!, $subject: String!) {
+    masteryExtraHomeworkPreview(sectionId: $sectionId, subject: $subject) {
+      studentId
+      name
+      rollNumber
+      cause
+      items { artifactId qid textBn loCode labelBn questionTypeCode marks reasonBn }
+    }
+  }
+`;
+
+export const CREATE_MASTERY_EXTRA_HOMEWORK = gql`
+  mutation CreateMasteryExtraHomework($sectionId: String!, $subject: String!, $date: String!, $sheets: [MasteryExtraHomeworkSheetInput!]!) {
+    createMasteryExtraHomework(sectionId: $sectionId, subject: $subject, date: $date, sheets: $sheets) {
+      paperId
+    }
+  }
+`;
+
+export const MASTERY_SECTION_SWITCH_QUERY = gql`
+  query MasterySectionSwitch($sectionId: String!, $subject: String!) {
+    masterySectionSwitch(sectionId: $sectionId, subject: $subject) {
+      enabled
+      classLevel
+    }
+  }
+`;

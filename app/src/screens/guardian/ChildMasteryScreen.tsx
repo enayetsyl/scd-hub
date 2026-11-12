@@ -79,7 +79,7 @@ export default function ChildMasteryScreen(): React.ReactElement {
               {s.assignmentsSent > 0 ? <Body>• {STR.gpMsAssignmentsSent.replace("{n}", bnNum(s.assignmentsSent))}</Body> : null}
               {s.schoolDid.map((d, i) => (
                 <Body key={`${d.date}-${i}`}>
-                  • {bnNum(d.date)} · {d.kind === "EXTRA_CLASS" ? STR.gpMsExtraClass : STR.gpMsReteach} · {d.labelBn}
+                  • {bnNum(d.date)} · {d.kind === "EXTRA_CLASS" ? STR.gpMsExtraClass : d.kind === "EXTRA_HOMEWORK" ? STR.gpMsExtraHomework : STR.gpMsReteach} · {d.labelBn}
                   {d.present === false ? ` · ${STR.gpMsMissed}` : ""}
                   {d.retestPct !== null ? ` · ${STR.gpMsRetest} ${bnNum(d.retestPct)}%` : ""}
                 </Body>

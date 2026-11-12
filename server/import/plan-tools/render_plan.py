@@ -35,7 +35,10 @@ CLASS_NAME = {"NUR": "নার্সারি", "KG": "কেজি",
               7: "সপ্তম শ্রেণি", 8: "অষ্টম শ্রেণি", 9: "নবম শ্রেণি", 10: "দশম শ্রেণি"}
 
 SUBJECT_NAME = {"BAN": "বাংলা", "ENG": "English", "MATH": "গণিত", "SCI": "বিজ্ঞান",
-                "BGS": "বাংলাদেশ ও বিশ্বপরিচয়", "ISL": "ইসলাম শিক্ষা"}
+                "BGS": "বাংলাদেশ ও বিশ্বপরিচয়", "ISL": "ইসলাম শিক্ষা",
+                # scd-hub D-#1310: the app's content codes (ISLAM = ISL) and the Class 6 papers.
+                "ISLAM": "ইসলাম শিক্ষা", "ICT": "তথ্য ও যোগাযোগ প্রযুক্তি",
+                "BAN2": "বাংলা ২য় পত্র", "ENG2": "English 2nd Paper"}
 
 SEGMENT_DISPLAY = {  # frozen bilingual headings (§E / corpus)
     "Opening": "সূচনা / Opening",
@@ -50,7 +53,8 @@ MANDATORY_SEGMENTS = {"Opening", "Hook", "ExitCheck", "Closing"}
 
 
 def is_eng(plan):
-    return plan["subject"] == "ENG"
+    # ENG2 (English 2nd paper, Class 6) is an English-surface subject too (D-#1310).
+    return plan["subject"] in ("ENG", "ENG2")
 
 
 def num(n, plan):

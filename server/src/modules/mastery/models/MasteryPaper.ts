@@ -57,6 +57,9 @@ export interface IMasteryPaper extends Document {
    * every other paper: everyone gets every item.
    */
   perStudentItems: { studentId: Types.ObjectId; itemNos: number[] }[];
+  /** PR-D (D-#1323): an EXTRA homework for weak children (source HW) — per-student items like an AS
+   *  sheet; no HomeworkItem, not in the daily minutes. One per section × subject × date. */
+  extra?: boolean;
   items: IMasteryPaperItem[];
   /** RUBRIC papers: the rubric-assessed LOs graded on the 4-step scale. */
   rubricLoCodes: string[];
@@ -107,6 +110,7 @@ const MasteryPaperSchema = new Schema<IMasteryPaper>(
       type: [{ _id: false, studentId: { type: Schema.Types.ObjectId, required: true }, itemNos: { type: [Number], default: [] } }],
       default: [],
     },
+    extra: { type: Boolean },
     items: { type: [ItemSchema], default: [] },
     rubricLoCodes: { type: [String], default: [] },
     entryState: { type: String, enum: ["OPEN", "CONFIRMED"], required: true, default: "OPEN" },
@@ -120,5 +124,12 @@ const MasteryPaperSchema = new Schema<IMasteryPaper>(
 MasteryPaperSchema.index({ paperId: 1 }, { unique: true });
 // The section's list, newest first.
 MasteryPaperSchema.index({ sectionId: 1, subject: 1, date: -1, _id: -1 });
+// PR-D (D-#1323): one extra-homework sheet per section × subject × date.
+MasteryPaperSchema.index({ sectionId: 1, subject: 1, date: 1 }, { unique: true, partialFilterExpression: { extra: true } });
+// PR-C (D-#1317): a class test has at most one question sheet (the sheet owns its totals).
+MasteryPaperSchema.index(
+  { "links.classTestId": 1 },
+  { unique: true, partialFilterExpression: { "links.classTestId": { $type: "objectId" } } },
+);
 
 export const MasteryPaper = model<IMasteryPaper>("MasteryPaper", MasteryPaperSchema);

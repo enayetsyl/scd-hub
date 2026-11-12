@@ -10,7 +10,6 @@
   "required": [
     "qid",
     "topic_tag",
-    "ref19_topic_id",
     "question_text",
     "question_type",
     "paper_role",
@@ -23,12 +22,12 @@
   "properties": {
     "qid": {
       "type": "string",
-      "pattern": "^QP-[A-Z]+-C[1-5]-U\\d+(-L\\d+)?-Q\\d{2,}$",
-      "description": "Permanent stable question id (Conventions §3), never reused. E.g. QP-BAN-C5-U13-Q01 or QP-BAN-C1-U2-L4-Q03."
+      "pattern": "^QP-[A-Z][A-Z0-9]*-C[1-6]-U\\d+(-L\\d+)?-Q\\d{2,}$",
+      "description": "Permanent stable question id (Conventions §3), never reused. E.g. QP-BAN-C5-U13-Q01 or QP-BAN-C1-U2-L4-Q03. D-#1310: Class 6 and a digit in the subject part (QP-BAN2-C6-U03-Q012)."
     },
     "topic_tag": {
       "type": "string",
-      "pattern": "^(TOP-(BAN|ENG|MATH|SCI|BGS)-C[1-5]-\\d{2}|LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2}(\\.\\d{1,2})?)$",
+      "pattern": "^(TOP-(BAN|ENG|MATH|SCI|BGS)-C[1-5]-\\d{2}|LO-(NUR|KG|C[1-6])-(BAN2|ENG2|BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM|ICT)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2}(\\.\\d{1,2})?)$",
       "description": "Numbered topic tag (REF-07 §3.5 scheme) OR a mastery learning-outcome code (D-#785, docs/prd-mastery.md §6.2): LO-<class>-<subject>-<CC>-<NN> or LO-<class>-<subject>-SK-<STRAND>-<NN>, either optionally with a `.N` sub-objective suffix (objective tree, D-#921). The register join key and the app filter key; MIRROR of envelope tags.topic_tag. Pattern-only — TOP- numbers come from the per-subject revision chart + REF-19; LO codes from the locked mastery catalogue, checked by the app at import (a warning, never a refusal)."
     },
     "lo_codes": {
@@ -38,14 +37,14 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2}(\\.\\d{1,2})?$"
+        "pattern": "^LO-(NUR|KG|C[1-6])-(BAN2|ENG2|BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM|ICT)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2}(\\.\\d{1,2})?$"
       },
       "description": "OPTIONAL (D-#785): the learning outcome this question assesses. EXACTLY ONE code (D-#926, maxItems 1): a question that tests two skills is authored as a stimulus plus one question per part (ক/খ), each with its own code. When present, topic_tag MUST equal lo_codes[0] and the code must carry the envelope's class and subject (harness L4). Absent ⇒ the question assesses [topic_tag] when that is an LO code. MIRROR of envelope tags.lo_codes. Kept as a list so old envelopes still validate."
     },
     "ref19_topic_id": {
       "type": "string",
-      "pattern": "^(BAN|ENG|MATH|SCI|BGS)-[A-Z0-9]+$",
-      "description": "REF-19 canonical topic slug, e.g. BAN-POEM / ENG-SENTSTR / BGS-ETHICS. Payload-only (NOT an envelope tag). The durable vertical-map identity; hard-validated against the REF-19 registry in the harness."
+      "pattern": "^[A-Z][A-Z0-9]*-[A-Z0-9]+$",
+      "description": "REF-19 canonical topic slug, e.g. BAN-POEM / ENG-SENTSTR / BGS-ETHICS. Payload-only (NOT an envelope tag). The durable vertical-map identity; hard-validated against the REF-19 registry in the harness. D-#1311: no longer in `required` here because the payload does not know its subject — the harness L4 requires it for BAN / ENG / MATH / SCI / BGS / BAN2 / ENG2 (BAN2 / ENG2 use the BAN- / ENG- slugs) and leaves it optional (and unchecked) for ISLAM and ICT, which have no REF-19 slugs."
     },
     "question_text": {
       "type": "string",

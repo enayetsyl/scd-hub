@@ -408,7 +408,7 @@ export function validatePolicy(p: MasteryPolicyValues): string | null {
   }
   for (const k of ["minQuestionsForVerdict", "masteredDistinctQuestions", "revisionFirstWeeks", "revisionThenWeeks",
     "lightSignalsMakeWeak", "lightSignalWindowWeeks", "sectionTriggerMinAssessments", "retestAfterDays",
-    "assignmentMinutes"] as const) {
+    "assignmentMinutes", "homeworkDraftQuestionsPerObjective", "homeworkDraftMaxItems", "extraHomeworkMaxQuestions"] as const) {
     if (!posInt(p[k])) return `${k}: ১ বা তার বেশি পূর্ণসংখ্যা দিন।`;
   }
   if (!(p.weakBelowPct < p.improvingAtPct)) return "“দুর্বল”-এর সীমা “উন্নতি”-র সীমার চেয়ে কম হতে হবে।";

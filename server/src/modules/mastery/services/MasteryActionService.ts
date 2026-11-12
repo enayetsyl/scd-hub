@@ -588,7 +588,8 @@ export async function actionsPage(
   args: PageArgs,
   auth: Auth,
 ): Promise<Page<ActionSummary>> {
-  const q: Record<string, unknown> = {};
+  // PR-D (D-#1324): per-child EXTRA_HOMEWORK record rows are hand-outs, not actions to run — off the dashboard.
+  const q: Record<string, unknown> = { kind: { $ne: "EXTRA_HOMEWORK" } };
   if (where.sectionId) {
     const ctx = await sectionContext(where.sectionId);
     q.sectionId = ctx.sectionId;
