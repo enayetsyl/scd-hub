@@ -67,6 +67,14 @@ export function assertSyllabusReader(ctx: AppContext): void {
   }
 }
 
+/** The exam picker (D-#1435): syllabus readers, plus anyone who can view exam results or
+ *  custody — the picker must follow exam access, not only the syllabus switch. A guardian
+ *  passes untouched (assertSyllabusReader). */
+export function assertExamPicker(ctx: AppContext): void {
+  if (ctx.auth && (callerHasPermission(ctx.auth, "exam_results:view") || callerHasPermission(ctx.auth, "exam_custody:view"))) return;
+  assertSyllabusReader(ctx);
+}
+
 export interface SyllabusShape {
   id: string | null;
   examId: string;

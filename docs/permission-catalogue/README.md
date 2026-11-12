@@ -427,7 +427,7 @@ Creating the exam row itself stays `exam_syllabus:settings` (one exam record, SY
 | `exam_results:reopen` | Re-open a tabulated paper | সংকলিত বিষয়পত্র আবার খোলা | Unlock a tabulated paper with a reason | — | on | | exam:manage (July branch) |
 | `exam_results:comment` | Write the school comment | রিপোর্ট কার্ডে স্কুলের মন্তব্য লেখা | The Comment from School line on a student's card | — | on | | exam:manage (July branch) |
 | `exam_results:submit` | Send results for approval | ফলাফল অনুমোদনে পাঠানো | Submit the card set once every paper is tabulated | on | on | | exam:manage ∪ exam:mark (July branch) |
-| `exam_results:publish` | Approve & publish results | ফলাফল অনুমোদন ও প্রকাশ | Approve and publish, send back with a reason, unpublish | — | on | | exam:manage (July branch) |
+| `exam_results:publish` | Approve & publish results | ফলাফল অনুমোদন ও প্রকাশ | Approve and publish, send back with a reason, unpublish | — | — | | exam:manage (July branch) |
 
 #### `exam_custody` — খাতা ও প্রশ্নের হস্তান্তর (EX-6..EX-8, D-#382)
 | permission | EN | BN | what it allows | T | O | flags | replaces |

@@ -47,8 +47,10 @@ check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.include
 check("NO pipeline perms remain — every permission is BUILD (chat:oversee flipped at M-6 per D-#111; chat:manage at M-2 per D-#98)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), []));
 // Exams EX-1..EX-9 (D-#375–#382), ported 2026-11-11 onto the permission catalogue (D-#799): the
 // July legacy exam:manage/custody/mark/read became exam_results:* and exam_custody:*.
-check("exams: Office runs the cycle (settings/assign/edit_all/reopen/comment/publish), TEACHER marks an assigned paper but never manages, GUARDIAN none (D-#375)",
-  ["PRINCIPAL","OFFICE"].every((r) => ["exam_results:settings","exam_results:assign","exam_results:edit_all","exam_results:publish"].every((p) => V.roleHasPermission(r, p)))
+check("exams: Office runs the cycle (settings/assign/edit_all/reopen/comment) but PUBLISH is the Principal's only (D-#1435), TEACHER marks an assigned paper but never manages, GUARDIAN none (D-#375)",
+  ["PRINCIPAL","OFFICE"].every((r) => ["exam_results:settings","exam_results:assign","exam_results:edit_all"].every((p) => V.roleHasPermission(r, p)))
+  && V.roleHasPermission("PRINCIPAL","exam_results:publish")
+  && !V.roleHasPermission("OFFICE","exam_results:publish")
   && V.roleHasPermission("TEACHER","exam_results:enter_marks")
   && !["exam_results:settings","exam_results:assign","exam_results:edit_all","exam_results:reopen","exam_results:comment","exam_results:publish"].some((p) => V.roleHasPermission("TEACHER", p))
   && !V.roleHasPermission("OFFICE","exam_results:enter_marks")
@@ -1009,7 +1011,8 @@ const ROLE_CHECK_DEFAULTS = {
     // Exams EX-1..EX-9 (D-#375–#382; the July exam:manage/custody/read for OFFICE): the Office runs
     // the cycle and is the hub of every custody handover; it does not mark (no enter_marks).
     "exam_results:view", "exam_results:settings", "exam_results:assign", "exam_results:edit_all",
-    "exam_results:reopen", "exam_results:comment", "exam_results:submit", "exam_results:publish",
+    "exam_results:reopen", "exam_results:comment", "exam_results:submit",
+    // D-#1435: exam_results:publish left the Office template — approving and publishing results is the Principal's.
     "exam_custody:view", "exam_custody:hand_over", "exam_custody:acknowledge"],
 };
 for (const role of ["TEACHER", "OFFICE"]) {

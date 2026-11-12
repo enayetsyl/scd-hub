@@ -591,4 +591,29 @@ describe("PM — syllabus read gates are actions", () => {
     setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view"] } });
     expect(() => assertSyllabusReader(ctxFor("TEACHER"))).toThrow(/অনুমতি নেই/);
   });
+
+  test("exam picker (D-#1435): exam_results:view / exam_custody:view opens it without syllabus view; guardian unchanged", async () => {
+    const { assertExamPicker } = await import("../modules/exams/services/ExamSyllabusReadService");
+    // TEACHER holds exam_results:view + exam_custody:view by default, but no syllabus view here.
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view"] } });
+    expect(() => assertExamPicker(ctxFor("TEACHER"))).not.toThrow();
+    // Only custody view left -> still allowed.
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view", "exam_results:view"] } });
+    expect(() => assertExamPicker(ctxFor("TEACHER"))).not.toThrow();
+    // No exam access at all -> refused.
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view", "exam_results:view", "exam_custody:view"] } });
+    expect(() => assertExamPicker(ctxFor("TEACHER"))).toThrow(/অনুমতি নেই/);
+    // Guardian keeps the picker either way.
+    expect(() => assertExamPicker(ctxFor("GUARDIAN"))).not.toThrow();
+    setRoleTemplateOverrides({});
+  });
+
+  test("Office cannot approve/publish by default but works on any paper; Principal publishes (D-#1435)", async () => {
+    const { callerHasPermission } = await import("@scd/shared");
+    const o = ctxFor("OFFICE").auth!;
+    expect(callerHasPermission(o, "exam_results:publish")).toBe(false);
+    expect(callerHasPermission(o, "exam_results:edit_all")).toBe(true);
+    expect(callerHasPermission(o, "exam_results:submit")).toBe(true);
+    expect(callerHasPermission(ctxFor("PRINCIPAL").auth!, "exam_results:publish")).toBe(true);
+  });
 });
