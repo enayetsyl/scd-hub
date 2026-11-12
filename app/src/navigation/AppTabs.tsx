@@ -462,6 +462,7 @@ import PopupNoticeListScreen from "../screens/popup/PopupNoticeListScreen";
 import PopupComposeScreen from "../screens/popup/PopupComposeScreen";
 import PopupReportScreen from "../screens/popup/PopupReportScreen";
 import QuranExamSeenScreen from "../screens/popup/QuranExamSeenScreen";
+import ChildMissedLessonsScreen from "../screens/guardian/ChildMissedLessonsScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -1801,6 +1802,7 @@ function GuardianHomeNavigator(): React.ReactElement {
         <GuardianHomeStack.Screen name="ChildRevision" component={ChildRevisionScreen} options={{ title: STR.gpRevision }} />
         <GuardianHomeStack.Screen name="ChildMastery" component={ChildMasteryScreen} options={{ title: STR.gpMsProgress }} />
         <GuardianHomeStack.Screen name="MyPopups" component={MyPopupsScreen} options={{ title: STR.ppMineTitle }} />
+        <GuardianHomeStack.Screen name="ChildMissedLessons" component={ChildMissedLessonsScreen} options={{ title: STR.gpMissedLessons }} />
       </GuardianHomeStack.Navigator>
     );
   }

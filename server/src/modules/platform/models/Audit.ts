@@ -13,6 +13,7 @@ export type AuditEventKind =
   | "ROUTINE_SLOT_REVISED"  // a routine cell edited — old row closed, replacement opened (D-#47(3))
   | "ROUTINE_SLOT_RETIRED"  // a routine cell removed from the timetable (retired, or deleted if unstarted)
   | "LESSON_PLAN_QUESTION_SET" // the class note's lesson-plan question switched on/off (D-#952) — meta.on
+  | "HOME_GUIDES_IMPORTED" // session home guides loaded for guardians (GH-4, D-#1528) — meta.created/updated/dryRun=false only
   | "SCOPE_GRANT_ASSIGN"
   | "SCOPE_GRANT_REVOKE"
   | "SCOPE_GRANT_EXTEND"

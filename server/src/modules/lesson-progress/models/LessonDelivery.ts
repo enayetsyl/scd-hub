@@ -48,6 +48,10 @@ export interface ILessonDelivery extends Document {
    *  Group membership is not dated, so after a split this is the only way to find the record a child
    *  was marked on that day (LP-3, D-#823). */
   attendanceUnits?: string[];
+  /** GH-4 (D-#1528): when the guardians' 1 pm missed-lesson notice covered this class (set once; a later
+   *  re-mark does not notice again). Absent = not covered yet — a class marked after 1 pm rides the next
+   *  school day's 1 pm notice. */
+  missedNoticeAt?: Date;
   updatedBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -81,6 +85,7 @@ const LessonDeliverySchema = new Schema<ILessonDelivery>(
     noneNote: { type: String, trim: true },
     rosterStudentIds: { type: [Schema.Types.ObjectId], ref: "Student", default: [] },
     attendanceUnits: { type: [String], default: undefined },
+    missedNoticeAt: { type: Date },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true },
@@ -91,5 +96,7 @@ LessonDeliverySchema.index({ noteId: 1 }, { unique: true });
 LessonDeliverySchema.index({ sectionId: 1, subject: 1, dateKey: 1 });
 // The student link: every delivery a child sat on the roster of.
 LessonDeliverySchema.index({ rosterStudentIds: 1, subject: 1 });
+// The 1 pm missed-lesson notice: the last days' classes not yet covered (GH-4).
+LessonDeliverySchema.index({ dateKey: 1, missedNoticeAt: 1 });
 
 export const LessonDelivery = model<ILessonDelivery>("LessonDelivery", LessonDeliverySchema);
