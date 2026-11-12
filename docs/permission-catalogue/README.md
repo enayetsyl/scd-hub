@@ -717,6 +717,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `lesson_plans:view` | View lesson plans | পাঠ পরিকল্পনা দেখা | Plan tree, a plan, its PDF | on | — | | content:read |
 | `lesson_plans:view_all` | Every plan | সব পাঠ পরিকল্পনা দেখা | Plans beyond own routine/supervisory scope | — | on | †, 2H, F-27 | contentScope primary-role P/O = all |
 | `lesson_plans:import` | Import lesson plans | পাঠ পরিকল্পনা ইম্পোর্ট করা | Upload a plan pair or envelope | — | on | | content:import |
+| `home_guide:import` | Import home guides | বাড়ির গাইড ইম্পোর্ট করা | Load the per-session guardian home guides (steps + classwork items) from a plan pack file (GH-4, D-#1528) | — | — | | — (new) |
 | `plan_review:assign` | Assign plan reviewers | রিভিউয়ার বরাদ্দ করা | Assign/move/cancel rounds; board, inbox, load; any thread | — | on | F-26 | content:assign_review; isAdminStaff (thread) |
 | `plan_review:review` | Review plans | পরিকল্পনা রিভিউ করা | Verdict on an assigned plan | on | — | DESIGNATION:assigned_reviewer | content:review |
 | `plan_review:approve` | Sign off plans (gold) | চূড়ান্ত অনুমোদন (গোল্ড) দেওয়া | Promote to gold, single or bulk | — | — | | content:promote_gold |

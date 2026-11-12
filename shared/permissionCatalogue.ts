@@ -748,6 +748,14 @@ export const FEATURE_CATALOGUE = {
       import: { en: "Import lesson plans", bn: "পাঠ পরিকল্পনা ইম্পোর্ট করা", desc: "Upload a plan pair or envelope", teacher: false, office: true, flags: [] },
     },
   },
+  home_guide: {
+    group: "content_and_books",
+    en: "Missed-lesson home guides",
+    bn: "মিস হওয়া পাঠের বাড়ির গাইড",
+    actions: {
+      import: { en: "Import home guides", bn: "বাড়ির গাইড ইম্পোর্ট করা", desc: "Load the per-session guardian home guides (steps + classwork items) from a plan pack file", teacher: false, office: false, flags: [] },
+    },
+  },
   plan_review: {
     group: "content_and_books",
     en: "Plan review",

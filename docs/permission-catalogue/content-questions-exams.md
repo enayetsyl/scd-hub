@@ -8,6 +8,7 @@ Counts: 56 mutations, 73 queries, 7 REST/SSE.
 |---|---|---|---|
 | server/src/modules/content/resolvers/content.ts:193 | importEnvelope | `content:import` | hasAnyPermission(`lesson_plans:import`, `question_bank:import`); resolver detects the doc kind, then assertHasPermission `lesson_plans:import` (plan envelope) or `question_bank:import` (bank) |
 | server/src/modules/content/resolvers/content.ts:226 | importFiles | `content:import` | hasAnyPermission(`lesson_plans:import`, `question_bank:import`); resolver detects the kind (plan pair/envelope → `lesson_plans:import`; Project-04 bank → `question_bank:import`) |
+| server/src/modules/lesson-progress/resolvers/guardianLessons.ts | importSessionHomeGuides (GH-4, D-#1528) | new: `home_guide:import` (Principal only — no template default) | `dryRun` defaults to true; a file with any problem writes nothing; a real run writes a `HOME_GUIDES_IMPORTED` audit row |
 | server/src/modules/content/resolvers/review.ts:104 | assignPlanReview | `content:assign_review`; reviewer not validated (any user id) | `plan_review:assign` (F-26) |
 | server/src/modules/content/resolvers/review.ts:135 | submitPlanReview | `content:review`; svc: assigned reviewer = caller, round open | `plan_review:review` + designation assigned reviewer (stays); round open (stays) |
 | server/src/modules/content/resolvers/review.ts:170 | cancelPlanReview | `content:assign_review` | `plan_review:assign` |

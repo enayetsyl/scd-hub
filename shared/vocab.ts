@@ -1663,6 +1663,7 @@ export const NOTIFICATION_KINDS = [
   // PUBLISHED → the exam's guardians via the guardian portal path.
   "EXAM_RESULT_SUBMITTED",
   "EXAM_RESULT_PUBLISHED",
+  "LESSON_MISSED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1755,6 +1756,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   EXAM_CUSTODY_DISPUTED: "হস্তান্তরে সংখ্যার গরমিল",
   EXAM_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
   EXAM_RESULT_PUBLISHED: "পরীক্ষার ফলাফল প্রকাশিত",
+  LESSON_MISSED: "ক্লাসের পাঠ মিস হয়েছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1845,6 +1847,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   EXAM_CUSTODY_DISPUTED: "Custody count disputed",
   EXAM_RESULT_SUBMITTED: "Report cards await approval",
   EXAM_RESULT_PUBLISHED: "Exam results published",
+  LESSON_MISSED: "Missed a lesson",
 };
 
 /**
