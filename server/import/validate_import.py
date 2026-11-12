@@ -32,6 +32,9 @@ v1.2 diff vs v1.1 (2026-11-11, D-#1310/#1311 — 2027 content subjects + Class 6
     spelling) is no longer an alias — it is refused, naming "ISLAM".
   - ref19_topic_id leaves the payload schema's `required`: L4 requires it for every subject
     except ISLAM / ICT (no REF-19 slugs), where it is optional and unchecked.
+  - D-#1405: ref19_topic_id is also optional, for ANY subject, when topic_tag is an objective
+    code (LO-...); a legacy TOP- tag still requires it. When present it is still registry-checked
+    (except ISLAM / ICT, unchanged).
 
 v1.1 diff vs v1.0 (2026-08-15, Principal ruling — batch import):
   - doc_type += 'question_batch', a WRAPPER carrying N standard question envelopes.
@@ -338,10 +341,15 @@ def question_semantics(env, ref19_slugs):
 
     slug = p.get("ref19_topic_id")
     subj = env.get("subject")
+    topic = p.get("topic_tag")
+    is_objective = isinstance(topic, str) and topic.startswith("LO-")
     if subj in REF19_OPTIONAL_SUBJECTS:
         pass  # D-#1311: no REF-19 slugs exist for ISLAM / ICT — optional and unchecked.
     elif not slug:
-        fail("REF19", f"ref19_topic_id is required for subject {subj!r} (only {sorted(REF19_OPTIONAL_SUBJECTS)} may omit it)")
+        # D-#1405: an objective-tagged question (topic_tag = LO-...) already carries its vertical
+        # identity, so ref19_topic_id may be absent for ANY subject. A legacy TOP- tag still needs it.
+        if not is_objective:
+            fail("REF19", f"ref19_topic_id is required for subject {subj!r} unless topic_tag is an objective code (LO-...) (only {sorted(REF19_OPTIONAL_SUBJECTS)} may always omit it)")
     elif slug not in ref19_slugs:
         fail("REF19", f"ref19_topic_id '{slug}' not in the REF-19 registry ({len(ref19_slugs)} slugs)")
 

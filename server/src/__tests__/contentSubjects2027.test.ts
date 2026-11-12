@@ -9,7 +9,7 @@
  * 2. A Class 7 envelope and an unknown subject are refused.
  * 3. LO-C6-BAN2-03-02.1, LO-C6-ICT-01-01, DOM-ENG2-TENSE match; LO-C7-… does not.
  * 4. A C6 ICT tree passes the shared invariant check and imports as a draft round.
- * 5. An ISLAM question without ref19_topic_id passes; a BAN question without it still fails.
+ * 5. An ISLAM question without ref19_topic_id passes; a BAN question without it passes when LO-tagged (D-#1405) and fails when TOP-tagged.
  * +  The class-note lesson-plan picker finds the ISLAM session plan for an ISLAM routine slot.
  */
 import fs from "node:fs";
@@ -125,11 +125,14 @@ describe("import (real harness)", () => {
     expect(await ContentArtifact.countDocuments({})).toBe(0);
   });
 
-  it("acceptance 5: an ISLAM question without ref19_topic_id passes; a BAN question without it still fails", async () => {
+  it("acceptance 5: an ISLAM question without ref19_topic_id passes; an LO-tagged BAN question passes without it, a TOP-tagged one still fails", async () => {
     const islam = await importEnvelope(kase("pass_islam_c3_question_no_ref19.json"), ACTOR);
     expect(islam.failChecks).toEqual([]);
     expect(islam.verdict).toBe("PASS");
-    const ban = await importEnvelope(kase("fail_ban_question_no_ref19.json"), ACTOR);
+    const banLo = await importEnvelope(kase("pass_ban_question_lo_no_ref19.json"), ACTOR);
+    expect(banLo.failChecks).toEqual([]);
+    expect(banLo.verdict).toBe("PASS");
+    const ban = await importEnvelope(JSON.parse(fs.readFileSync(path.join(REPO, "server/import/cases/lo-codes/fail_top_no_ref19.json"), "utf8")), ACTOR);
     expect(ban.verdict).toBe("FAIL");
     expect(ban.failChecks.join("\n")).toMatch(/ref19_topic_id is required/);
   });

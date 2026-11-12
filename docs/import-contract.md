@@ -98,8 +98,9 @@ grows; the count of `current:true` rows per qid stays at one. Such elements repo
   curation_tag/address/pinned_to; question: `tags.{bloom_level,difficulty,topic_tag,paper_role}`).
 - **L4 — question semantics:** marks sums (per-blank/pair/step); a `descriptive` item must carry a
   `rubric` or a `model_answer` (HARD fail — the payload schema gates it too, this restates it in
-  actionable terms); `ref19_topic_id` must be in the REF-19 registry (HARD fail; override the default
-  121-slug set via `--ref19-registry`); `stimulus_ref` form (WARN).
+  actionable terms); `ref19_topic_id` must be in the REF-19 registry when present (HARD fail; override the default
+  121-slug set via `--ref19-registry`) and is REQUIRED only when `topic_tag` is a legacy `TOP-` tag (D-#1405;
+  an objective-coded `LO-` question may omit it for any subject, and ISLAM / ICT may always omit it); `stimulus_ref` form (WARN).
 
 ### Answer carriers (one per `question_type`, QDN-04 xor)
 `mcq → options`, `true_false → tf_answer`, `fill_blank → blanks`, `matching → pairs`,
