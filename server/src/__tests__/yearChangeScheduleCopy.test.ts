@@ -820,6 +820,55 @@ describe("YC-6 fix round 2", () => {
   });
 });
 
+describe("YC-6 fix round 3", () => {
+  const newTeacher = async (n: string, phone: string): Promise<Types.ObjectId> => (await User.create({ name: n, phone, passwordHash: "x", role: "TEACHER" }))._id;
+  const cell = async (sectionId: Types.ObjectId, day: string, period: number) => (await RoutineSlot.findOne({ groupId: sectionId, groupType: "section", dayOfWeek: day, periodNumber: period }))!;
+
+  it("after the cut-over on 2 Jan a Class 6 create starts 3 Jan without a clash, a reassign works and an edit writes no mistake note", async () => {
+    const tU = await newTeacher("New T", "01700000441");
+    await prepare();
+    await applyCutover(RUN, w.principal, { allowEarly: true });
+    jest.setSystemTime(new Date("2027-01-02T10:00:00+06:00"));
+    const c6 = await sec2027(6, "Boys");
+    const made = await createRoutineSlot({ groupType: "section", groupId: c6.toString(), dayOfWeek: "MON", periodNumber: 2, subject: "MATH", track: "general", isBreak: false, teacherId: w.tEng.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    expect(dayKey(made.slot.effectiveFrom)).toBe("2027-01-03");
+    const c4b27 = await sec2027(4, "Boys");
+    expect((await reassignRoutineSubjectTeacher(c4b27.toString(), "MATH", tU.toString(), w.teacher4.toString())).updatedSlots).toBe(2);
+    const c5b = await cell(await sec2027(5, "Boys"), "SUN", 1);
+    await updateRoutineSlot({ slotId: c5b._id.toString(), subject: "BAN", track: "general", teacherId: w.tEng.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: new Date() });
+    expect(await StaffMistakeNote.countDocuments({ refKey: c5b._id.toString() })).toBe(0);
+  });
+
+  it("a cell whose 2026 row was deleted and re-run, then re-added, is copied again (not reported as deleted)", async () => {
+    await prepare();
+    const c5g27 = await sec2027(5, "Girls");
+    await deleteRoutineSlot((await cell(w.c5Girls.sectionId, "THU", 3))._id.toString(), w.teacher4.toString());
+    await prepare(); // the copy of the vanished source goes
+    expect(await RoutineSlot.countDocuments({ groupId: c5g27, dayOfWeek: "THU" })).toBe(0);
+    await createRoutineSlot({ groupType: "section", groupId: w.c5Girls.sectionId.toString(), dayOfWeek: "THU", periodNumber: 3, subject: "BAN", track: "general", isBreak: false, teacherId: w.tBan.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    const plan = await planYearChange(input());
+    expect(plan.scheduleCopy.routine.notes.some((n) => n.includes("you deleted it"))).toBe(false);
+    await prepare();
+    expect(await RoutineSlot.countDocuments({ groupId: c5g27, dayOfWeek: "THU" })).toBe(1);
+  });
+
+  it("a draft edit of a 2027 row writes no place-mistake note", async () => {
+    const tU = await newTeacher("New T", "01700000442");
+    await prepare();
+    const row = await cell(await sec2027(4, "Boys"), "THU", 2);
+    await updateRoutineSlot({ slotId: row._id.toString(), subject: "BAN", track: "general", teacherId: tU.toString(), roomId: null, actorId: w.teacher4.toString(), effectiveFrom: new Date() });
+    expect(await StaffMistakeNote.countDocuments({ refKey: row._id.toString() })).toBe(0);
+  });
+
+  it("two concurrent writes to the run's routineEnds both survive", async () => {
+    await prepare();
+    const mk = (day: "MON" | "TUE") => createRoutineSlot({ groupType: "section", groupId: w.c4Boys.sectionId.toString(), dayOfWeek: day, periodNumber: 3, subject: "MATH", track: "general", isBreak: false, teacherId: w.tMath.toString(), effectiveFrom: new Date(), createdBy: w.teacher4.toString() });
+    const [a, b] = await Promise.all([mk("MON"), mk("TUE")]);
+    const ends = (await YearChangeRun.findOne({ runId: RUN }).lean())!.routineEnds.map((e) => e.slotId);
+    expect(ends).toEqual(expect.arrayContaining([a.slot._id.toString(), b.slot._id.toString()]));
+  });
+});
+
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }

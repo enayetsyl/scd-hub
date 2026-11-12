@@ -146,6 +146,8 @@ interface Computed {
   ownCopies: Map<string, IRoutineSlot>;
   /** Own copies whose source is gone and which nobody edited: deleted by the apply. */
   removeOwn: IRoutineSlot[];
+  /** Cell keys of the copies in `removeOwn` (their "copied" mark is cleared, so a new 2026 row there is copied). */
+  removeCells: string[];
   toEnd: IRoutineSlot[];
   // bell windows
   windowsDesired: Array<{ fromDate: Date; toDate: Date; season: string; dayStartMinutes: number; label: string }>;
@@ -236,6 +238,7 @@ async function compute(
     desired: [],
     ownCopies: new Map(),
     removeOwn: [],
+    removeCells: [],
     toEnd: [],
     windowsDesired: [],
     windowsOwned: [],
@@ -369,6 +372,7 @@ async function compute(
         continue;
       }
       c.removeOwn.push(o);
+      if (info) c.removeCells.push(`${info.level}:${info.code}|${o.dayOfWeek}|${o.periodNumber}`);
     }
     summary.routine.slotsToRemove = c.removeOwn.length;
 
@@ -844,6 +848,7 @@ export async function applyScheduleCopy(plan: YearChangePlan, runId: string, act
       await RoutineSlot.deleteOne({ _id: o._id, runId });
       w.routineSlots++;
     }
+    if (c.removeCells.length) await YearChangeRun.updateOne({ _id: run._id }, { $pull: { copiedCells: { $in: c.removeCells } } });
     // remember which sources were copied: a copy that is gone later was deleted by the Principal
     const copied: string[] = [];
     const cells: string[] = [];

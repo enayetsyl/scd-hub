@@ -105,12 +105,14 @@ async function futureRoutineStart(sectionId: string | Types.ObjectId): Promise<D
   const cur = await currentAcademicYearId();
   if (!cur) return null;
   const y = await sectionYear(sectionId);
-  if (!y || y.id.equals(cur)) return null;
+  if (!y) return null;
   const today = dhakaDayKey(new Date());
   const yearNum = dhakaDayKey(y.startDate).slice(0, 4);
   const run = await YearChangeRun.findOne({ toYearId: y.id }).select("_id").lean();
-  // While a run exists the floor is the new routine's first day (3 Jan), also on 1-2 Jan after the year start.
+  // While a run exists the floor is the new routine's first day (3 Jan) - also on 1-2 Jan, and also once the
+  // cut-over has made the year current (the evening of 1 Jan): the old routine still runs until 2 Jan.
   if (run) return today < `${yearNum}-01-03` ? new Date(`${yearNum}-01-03`) : null;
+  if (y.id.equals(cur)) return null;
   if (dhakaDayKey(y.startDate) <= today) return null;
   return new Date(dhakaDayKey(y.startDate));
 }
