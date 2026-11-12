@@ -31,7 +31,32 @@ Tests: `server/src/__tests__/yearChangePastReaders.test.ts` (8 tests) on new fix
 
 ## Verified (commands + result tails)
 
-FILLED_BELOW
+All run in this session on the final code (`NODE_OPTIONS=--max-old-space-size=6144`, as CI sets 4096).
+
+| Check | Command | Result tail |
+|---|---|---|
+| Shared build | `npm run build --workspace=shared` | exit 0 |
+| Shared typecheck | `npm run typecheck --workspace=shared` | exit 0 |
+| Server typecheck | `npm run typecheck --workspace=server` | `tsc --noEmit`, exit 0 |
+| App typecheck | `npm run typecheck --workspace=app` (app dir) | `tsc --noEmit`, exit 0 |
+| Shared vocab/RBAC | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` | `RESULT: PASS — all checks green`, exit 0 |
+| LO-code carriers | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes` | `RESULT: PASS — all 19 lo-codes cases gate as intended` |
+| 2027 subjects / C6 | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/subjects-2027` | `RESULT: PASS — all 20 subjects-2027 cases gate as intended` |
+| Descriptive carriers | `node skills/_tools/verify_descriptive_carriers.mjs` | `RESULT: PASS — all 11 descriptive cases gate as intended` |
+| Objective tree | `node skills/_tools/verify_objective_tree.mjs docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json` | `ALL CHECKS PASSED` |
+| Mastery catalogue | `npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue` | `RESULT: PASS — 11 catalogue files valid` |
+| Import envelope | `python3 server/import/validate_import.py docs/examples/envelope_C5_ENG_U09_S01.json --envelope-schema docs/import-contract.schema.json` | `RESULT: PASS (0 warn, 0 advisory) — importable` |
+| Help guides | `node skills/_tools/verify_help_guides.mjs` | `366 file(s), 20 draft(s)` … `ALL CHECKS PASSED` |
+| New suite | `npx jest --runInBand yearChangePastReaders` | 8 passed, 8 total |
+| New suite discriminates | same, with the enrolment path forced off (temporary local edit, reverted) | 8 failed, 8 total |
+| New + touched suites | `npx jest --runInBand --forceExit yearChangePastReaders yearChange enrolment sectionMerge attendance classTest ctScripts childClassTests monthly lessonDelivery lessonProgress studentLessons objectiveLessons assignmentGift giftRbac pmGiftReportGates studentProfile wholePicture scopeGrant myScopes delegationScope trackerSubjectScope splitRecordOwner` | `Test Suites: 59 passed, 59 total` · `Tests: 1185 passed, 1185 total` |
+| Full server suite | `npx jest --maxWorkers=2 --forceExit` | `Test Suites: 432 passed, 432 total` · `Tests: 7072 passed, 7072 total` · exit 0 |
+| Web export | `npx expo export --platform web --output-dir <scratch>` | `App exported to: …` · exit 0 |
+
+First run of the touched suites (before the `enrolmentsInUse()` guard) failed 7 mocked-model suites
+(`attendanceRanking`, `classTestSummary`, `assignmentGift`, `classTestResult`, `attendanceRollup`,
+`studentProfileRbac`, `attendanceUnit`): they assert the old query shapes and time out on an unmocked
+`Enrolment` read. The guard (D-#1470) fixed all 7 without editing any existing test.
 
 ## Not done
 
