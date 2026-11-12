@@ -24,6 +24,7 @@ import {
   revokeExclusion,
   sectionHeatmap,
   studentDiagnosis,
+  type BaselineRow,
   type EarlierClassRow,
   type DomainRollupView,
   type EarlierStep,
@@ -144,6 +145,18 @@ StateRef.implement({
   }),
 });
 
+const BaselineRowRef = builder.objectRef<BaselineRow>("MasteryBaselineRow");
+BaselineRowRef.implement({
+  description: "PR-K (D-#1425): an earlier-class objective this child has evidence on, judged by that class's policy.",
+  fields: (t) => ({
+    loCode: t.exposeString("loCode"),
+    labelBn: t.exposeString("labelBn"),
+    classToken: t.exposeString("classToken"),
+    state: t.exposeString("state"),
+    lastEvidenceAt: t.string({ nullable: true, resolve: (r) => r.lastEvidenceAt }),
+  }),
+});
+
 const StudentDiagnosisRef = builder.objectRef<StudentDiagnosis>("MasteryStudentDiagnosis");
 StudentDiagnosisRef.implement({
   fields: (t) => ({
@@ -162,6 +175,7 @@ StudentDiagnosisRef.implement({
     isTree: t.exposeBoolean("isTree"),
     objectives: t.field({ type: [RollupObjectiveRef], resolve: (s) => s.objectives }),
     domains: t.field({ type: [DomainRollupRef], resolve: (s) => s.domains }),
+    baseline: t.field({ type: [BaselineRowRef], resolve: (s) => s.baseline }),
     /** OT-5 (D-#950): per outcome, was it taught in the child's শাখা and was the child there — splits a
      *  WEAK row into "taught, not yet learnt" / "missed that class" / "not taught yet". Lazy; rides this gate. */
     objectiveLessons: t.field({

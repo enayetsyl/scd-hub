@@ -20,7 +20,7 @@ import {
   type MasteryStudentDiagnosisData,
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Chip, ChipRow, Loader, Notice, H2 } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, masteryReasonLabel, masteryStateLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, masteryClassLabel, masteryReasonLabel, masteryStateLabel } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
@@ -260,6 +260,26 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
           </Pressable>
         ))}
       </Card>
+
+      {/* PR-K (D-#1425): earlier-class objectives this child has evidence on; hidden when none. Staff only. */}
+      {(d.baseline ?? []).length > 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.msBaselineTitle}</Body>
+          {d.baseline.map((b) => (
+            <View key={b.loCode} style={{ flexDirection: "row", gap: space(2), paddingVertical: space(1), borderTopWidth: 1, borderTopColor: colors.surfaceAlt }}>
+              <StateDot state={b.state} />
+              <View style={{ flex: 1 }}>
+                <Body>{b.labelBn}</Body>
+                <Muted>
+                  {masteryClassLabel(b.classToken)}
+                  {b.lastEvidenceAt ? ` · ${STR.msBaselineLast}: ${bnNum(b.lastEvidenceAt.slice(0, 10))}` : ""}
+                </Muted>
+              </View>
+              <Badge text={masteryStateLabel(b.state)} tone={stateTone(b.state)} />
+            </View>
+          ))}
+        </Card>
+      ) : null}
 
       <Card>
         <Body style={{ fontWeight: "700" }}>{STR.msByChapter}</Body>
