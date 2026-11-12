@@ -42,6 +42,7 @@ import { personName } from "../../../lib/personName";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { approvalFlagCount, assertNoSubmitBlockers, submittedFlagCount } from "./ClassTestRecheckService";
 import { bnNum } from "../../../lib/bnNum";
+import { guardianObjectiveLabels, guardianObjectiveWord } from "./ClassTestWeakObjectiveService";
 
 // ---------------------------------------------------------------------------
 // Message build (rendered from the MT registry; §8 Regular / Excellent / Absent)
@@ -50,11 +51,15 @@ import { bnNum } from "../../../lib/bnNum";
 export type ClassTestMessageKind = "regular" | "excellent" | "absent";
 
 /** Which §8 template a result maps to: ABSENT → absent; PRESENT with a teacher-entered
- *  weakness → regular (feedback); PRESENT with no weakness → excellent (D-#122/§8). */
-export function classTestMessageKind(result: { status: string; weakness?: string | null }): ClassTestMessageKind {
+ *  weakness OR a picked weak objective (D-#1430, `hasObjectives`) → regular (feedback);
+ *  PRESENT with neither → excellent (D-#122/§8). */
+export function classTestMessageKind(
+  result: { status: string; weakness?: string | null },
+  hasObjectives = false,
+): ClassTestMessageKind {
   if (result.status === "ABSENT") return "absent";
   const hasWeakness = !!(result.weakness && result.weakness.trim().length > 0);
-  return hasWeakness ? "regular" : "excellent";
+  return hasWeakness || hasObjectives ? "regular" : "excellent";
 }
 
 /** dd/mm/yyyy (the VC-4 guardian-message convention). */
@@ -69,6 +74,8 @@ interface ResultLike {
   marks?: number | null;
   weakness?: string | null;
   guardianAction?: string | null;
+  /** D-#1360 picks. Only read on a PRESENT result; the message names them at objective grain. */
+  weakLoCodes?: string[] | null;
 }
 
 /** Render the per-student Bangla body for a published result (once per student). */
@@ -77,7 +84,12 @@ export async function buildClassTestResultMessage(
   test: { subject: string; testNumber: number; examDate: Date; totalMarks: number },
   studentName: string,
 ): Promise<{ kind: ClassTestMessageKind; messageBn: string }> {
-  const kind = classTestMessageKind(result);
+  // D-#1430: picked weak objectives count as feedback even with no weakness text. Objective
+  // grain only (D-#925) — names, never codes; a sub-objective reads as its parent. This line is
+  // not behind the mastery switch (the picks are a class-test record).
+  const pickedCodes = result.status === "ABSENT" ? [] : result.weakLoCodes ?? [];
+  const objectiveLabels = pickedCodes.length > 0 ? (await guardianObjectiveLabels([pickedCodes]))[0] : [];
+  const kind = classTestMessageKind(result, objectiveLabels.length > 0);
   const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[test.subject] ?? test.subject;
   let messageBn: string;
   if (kind === "absent") {
@@ -96,13 +108,19 @@ export async function buildClassTestResultMessage(
       TotalMarks: test.totalMarks,
     });
   } else {
+    const weaknessLines: string[] = [];
+    if (result.weakness && result.weakness.trim().length > 0) weaknessLines.push(result.weakness.trim());
+    if (objectiveLabels.length > 0) {
+      const word = (await guardianObjectiveWord(true)) ?? "";
+      weaknessLines.push(`দুর্বল ${word}: ${objectiveLabels.join("، ")}`);
+    }
     messageBn = await renderTemplate("class_test.result.regular.body", {
       StudentName: studentName,
       Subject: subjectBn,
       TestNumber: test.testNumber,
       Marks: result.marks ?? 0,
       TotalMarks: test.totalMarks,
-      Weakness: result.weakness ?? "",
+      Weakness: weaknessLines.join("\n"),
       GuardianAction: result.guardianAction ?? "",
     });
   }
@@ -156,7 +174,7 @@ async function deliverResult(
 ): Promise<ClassTestMessageRecipient> {
   const studentName = personName(student, "শিক্ষার্থী");
   const { kind, messageBn } = await buildClassTestResultMessage(
-    { status: doc.status, marks: doc.marks ?? null, weakness: doc.weakness, guardianAction: doc.guardianAction },
+    { status: doc.status, marks: doc.marks ?? null, weakness: doc.weakness, guardianAction: doc.guardianAction, weakLoCodes: doc.weakLoCodes },
     { subject: test.subject, testNumber: test.testNumber, examDate: test.examDate, totalMarks: test.totalMarks },
     studentName,
   );
