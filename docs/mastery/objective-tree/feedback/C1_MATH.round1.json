@@ -1,0 +1,5516 @@
+{
+  "format": "scd-objective-review-export/1",
+  "classToken": "C1",
+  "subject": "MATH",
+  "round": 1,
+  "state": "LOCKED",
+  "book": "C1_MATH_Student_Print_v1_5",
+  "importedAt": "2026-11-04T15:10:38.754Z",
+  "submittedAt": "2026-11-11T15:01:18.299Z",
+  "lockedAt": "2026-11-11T16:35:03.718Z",
+  "exportedAt": "2026-11-11T16:35:50.727Z",
+  "reviewers": [
+    "Mahzabin Yasmin"
+  ],
+  "decisions": {
+    "proposed": 0,
+    "accepted": 63,
+    "edited": 10,
+    "added": 5,
+    "rejected": 0,
+    "merged": 0,
+    "moved": 0,
+    "splits": 1,
+    "merges": 0
+  },
+  "unmapped": [],
+  "events": [
+    {
+      "seq": 1,
+      "id": "6aeb4aefcede8ccf95e8ad1e",
+      "at": "2026-11-04T15:10:38.754Z",
+      "action": "IMPORT",
+      "code": null,
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": null,
+      "before": null,
+      "after": {
+        "roundAction": "OPEN_NEW",
+        "added": 73,
+        "backToProposed": 0,
+        "removedInRedraft": 0,
+        "kept": 0,
+        "book": "C1_MATH_Student_Print_v1_5"
+      }
+    },
+    {
+      "seq": 2,
+      "id": "6aebdf34ef4dc9969ce4755d",
+      "at": "2026-11-05T01:43:16.724Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-01-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-01-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জিনিস হাতে নিয়ে তুলনা করা — কম-বেশি, লম্বা-খাটো, হালকা-ভারি, কাছে-দূরে",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দুটি জিনিস হাতে দিন — কোনটা ভারি, কোনটা লম্বা, জিজ্ঞেস করুন। চোখে দেখে নয়, হাতে ধরে বলুক।",
+        "exercises": [
+          "1/কম – বেশি/—",
+          "1/ছোট – বড়ো/—",
+          "1/খাটো – লম্বা/—",
+          "1/কাছে – দূরে/—",
+          "1/হালকা – ভারি/—",
+          "1/নিজে করি/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-01-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জিনিস হাতে নিয়ে তুলনা করা — কম-বেশি, লম্বা-খাটো, হালকা-ভারি, কাছে-দূরে",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দুটি জিনিস হাতে দিন — কোনটা ভারি, কোনটা লম্বা, জিজ্ঞেস করুন। চোখে দেখে নয়, হাতে ধরে বলুক।",
+        "exercises": [
+          "1/কম – বেশি/—",
+          "1/ছোট – বড়ো/—",
+          "1/খাটো – লম্বা/—",
+          "1/কাছে – দূরে/—",
+          "1/হালকা – ভারি/—",
+          "1/নিজে করি/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 3,
+      "id": "6aebe580ef4dc9969ce4f4a0",
+      "at": "2026-11-05T02:10:08.754Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-02-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-02-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "সমান সংখ্যার দল মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-02-01"
+        ],
+        "homeTipBn": "দুই দলে জিনিস রেখে জিজ্ঞেস করুন — দুই দলে কি সমান? একটা একটা করে জোড়া মিলিয়ে দেখুক।",
+        "exercises": [
+          "2/দাগ টেনে সমান সংখ্যক ছবি মিল করি/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-02-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "সমান সংখ্যার দল মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-02-01"
+        ],
+        "homeTipBn": "দুই দলে জিনিস রেখে জিজ্ঞেস করুন — দুই দলে কি সমান? একটা একটা করে জোড়া মিলিয়ে দেখুক।",
+        "exercises": [
+          "2/দাগ টেনে সমান সংখ্যক ছবি মিল করি/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 4,
+      "id": "6aebe587ef4dc9969ce4f4c2",
+      "at": "2026-11-05T02:10:15.170Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-02-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "এটি ০২-০১-এর সঙ্গে না মিলিয়ে আলাদা রাখা উচিত, কারণ এটি ভিন্ন একটি দক্ষতা। বইয়ে নম্বরযুক্ত অনুশীলনী না থাকলেও class activity-তে কাজটি সরাসরি করানো হয়েছে। Assessment-এর জন্য MCQ-এর পাশাপাশি হাতে-কলমে দুটি দলের সমান সংখ্যক ছবি বা বস্তু মিলিয়ে দেখার সুযোগ রাখা যেতে পারে।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 5,
+      "id": "6aebe65def4dc9969ce50794",
+      "at": "2026-11-05T02:13:49.138Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 6,
+      "id": "6aebe6eaef4dc9969ce51448",
+      "at": "2026-11-05T02:16:10.183Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 7,
+      "id": "6aebe828ef4dc9969ce537b2",
+      "at": "2026-11-05T02:21:28.871Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 8,
+      "id": "6aebe82cef4dc9969ce537d3",
+      "at": "2026-11-05T02:21:32.428Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "শুধু assessment method-টি Edit করার সাজেস্ট করছি। বর্তমান Question types-এ এই দক্ষতা যাচাইয়ের উপযুক্ত option নেই। MCQ-এর পাশাপাশি ছবি বা বাস্তব বস্তু গুনে নিজে সংখ্যা লেখার সুযোগ রাখা উচিত, যাতে শিশুর গণনা ও সংখ্যা লেখার দক্ষতা সরাসরি যাচাই করা যায়।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 9,
+      "id": "6aebe9e21904bbbca6804b6b",
+      "at": "2026-11-05T02:28:50.779Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-01-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "তুলনার শব্দ লেখা ও উল্টো শব্দ মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-01"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে কম-বেশি, লম্বা-খাটো, কাছে-দূরে বলান; তারপর শব্দটি খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/নিজে করি/1",
+          "1/নিজে করি/2",
+          "1/নিজে করি/3",
+          "1/তুলনা করার শব্দগুলো মনে রাখি/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "তুলনার শব্দ লেখা ও উল্টো শব্দ মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-01"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে কম-বেশি, লম্বা-খাটো, কাছে-দূরে বলান; তারপর শব্দটি খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/নিজে করি/1",
+          "1/নিজে করি/2",
+          "1/নিজে করি/3",
+          "1/তুলনা করার শব্দগুলো মনে রাখি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 10,
+      "id": "6aebe9ff1904bbbca6804d06",
+      "at": "2026-11-05T02:29:19.361Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-01-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "শুধু assessment method-টি Edit করার সাজেস্ট করছি। বর্তমান Question types-এ এই দক্ষতাগুলো যাচাইয়ের উপযুক্ত option নেই। বিপরীত শব্দ মেলানো, শূন্যস্থান পূরণ ও উপযুক্ত তুলনার শব্দ নিজে লেখার সুযোগ রাখা উচিত, যাতে শিশুর শব্দ চেনা, বোঝা ও লেখার দক্ষতা সরাসরি যাচাই করা যায়।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 11,
+      "id": "6aebedee1904bbbca6809659",
+      "at": "2026-11-05T02:46:06.317Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-03-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "১০০ পর্যন্ত সংখ্যা শুদ্ধ করে পড়া",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ক্যালেন্ডার বা বইয়ের পৃষ্ঠা নম্বর জোরে পড়তে দিন; ঊনষাট, ঊনআশির মতো কঠিন নামগুলো আলাদা করে অনুশীলন করান।",
+        "exercises": [
+          "3/১১ থেকে ২০ — দশের সাহায্যে/—",
+          "3/২১ থেকে ৪০/—",
+          "3/৪১ থেকে ১০০ শুদ্ধ উচ্চারণে পড়ি/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "১০০ পর্যন্ত সংখ্যা শুদ্ধ করে পড়া",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ক্যালেন্ডার বা বইয়ের পৃষ্ঠা নম্বর জোরে পড়তে দিন; ঊনষাট, ঊনআশির মতো কঠিন নামগুলো আলাদা করে অনুশীলন করান।",
+        "exercises": [
+          "3/১১ থেকে ২০ — দশের সাহায্যে/—",
+          "3/২১ থেকে ৪০/—",
+          "3/৪১ থেকে ১০০ শুদ্ধ উচ্চারণে পড়ি/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 12,
+      "id": "6aebee471904bbbca6809f0d",
+      "at": "2026-11-05T02:47:35.342Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-03-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "সংখ্যা অঙ্কে লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-NUM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "প্রতিদিন দুটি সংখ্যার নাম বলুন (যেমন \"সাতচল্লিশ\"); শিক্ষার্থী অঙ্কে লিখবে। উল্টো করে লেখা অঙ্ক থাকলে শুধরে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "সংখ্যা অঙ্কে লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-NUM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "প্রতিদিন দুটি সংখ্যার নাম বলুন (যেমন \"সাতচল্লিশ\"); শিক্ষার্থী অঙ্কে লিখবে। উল্টো করে লেখা অঙ্ক থাকলে শুধরে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 13,
+      "id": "6aebee731904bbbca680a0c8",
+      "at": "2026-11-05T02:48:19.870Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-02.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-02",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "০ থেকে ১০ পর্যন্ত অঙ্ক ঠিকভাবে লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-NUM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০ পড়ি ও লিখি/1",
+          "3/শূন্য (০)/1",
+          "3/শূন্য (০)/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-02.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-02",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "০ থেকে ১০ পর্যন্ত অঙ্ক ঠিকভাবে লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-NUM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০ পড়ি ও লিখি/1",
+          "3/শূন্য (০)/1",
+          "3/শূন্য (০)/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 14,
+      "id": "6aebee731904bbbca680a0c9",
+      "at": "2026-11-05T02:48:19.871Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-02.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-02.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-02",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "সংখ্যার নাম দেখে অঙ্কে লেখা (তেরো → ১৩)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-NUM"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ১১ থেকে ২০/2",
+          "3/কথায় লিখি: ২১ থেকে ৪০/2",
+          "3/কথায় লিখি: ৪১ থেকে ৬০/2",
+          "3/কথায় লিখি: ৬১ থেকে ৮০/2",
+          "3/কথায় লিখি: ৮১ থেকে ১০০/2",
+          "3/নিজে করি/2",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-02.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-02",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "সংখ্যার নাম দেখে অঙ্কে লেখা (তেরো → ১৩)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-NUM"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ১১ থেকে ২০/2",
+          "3/কথায় লিখি: ২১ থেকে ৪০/2",
+          "3/কথায় লিখি: ৪১ থেকে ৬০/2",
+          "3/কথায় লিখি: ৬১ থেকে ৮০/2",
+          "3/কথায় লিখি: ৮১ থেকে ১০০/2",
+          "3/নিজে করি/2",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 15,
+      "id": "6aebf34c1904bbbca681163c",
+      "at": "2026-11-05T03:09:00.342Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-03-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "সংখ্যার ক্রম — আগে-পরে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "একটি সংখ্যা বলুন; শিক্ষার্থী আগেরটি ও পরেরটি বলবে। মাঝে মাঝে ২০ থেকে উল্টো গুনতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "সংখ্যার ক্রম — আগে-পরে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "একটি সংখ্যা বলুন; শিক্ষার্থী আগেরটি ও পরেরটি বলবে। মাঝে মাঝে ২০ থেকে উল্টো গুনতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 16,
+      "id": "6aebf3901904bbbca68117f1",
+      "at": "2026-11-05T03:10:08.644Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-03-05",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "দুটি সংখ্যার মধ্যে ছোট-বড় চেনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দুটি সংখ্যা লিখে জিজ্ঞেস করুন কোনটা বড়; তারপর মাঝে চিহ্ন বসাতে দিন — চিহ্নের খোলা মুখ বড় সংখ্যার দিকে।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "দুটি সংখ্যার মধ্যে ছোট-বড় চেনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দুটি সংখ্যা লিখে জিজ্ঞেস করুন কোনটা বড়; তারপর মাঝে চিহ্ন বসাতে দিন — চিহ্নের খোলা মুখ বড় সংখ্যার দিকে।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 17,
+      "id": "6aebf3b31904bbbca681193d",
+      "at": "2026-11-05T03:10:43.183Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-04.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-04",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "ক্রম মিলিয়ে ফাঁকা ঘরে সংখ্যা লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-02.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০০ পড়ি/1",
+          "3/দশের গুচ্ছ বানিয়ে গুনি/1",
+          "3/ক্রমে সাজাই/3",
+          "3/নিজে করি/7",
+          "3/শূন্য (০)/3",
+          "5/নিজে করি — সংখ্যা ও গণনা/1",
+          "13/নিজে করি — পূর্ণ বই/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-04",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "ক্রম মিলিয়ে ফাঁকা ঘরে সংখ্যা লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-02.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০০ পড়ি/1",
+          "3/দশের গুচ্ছ বানিয়ে গুনি/1",
+          "3/ক্রমে সাজাই/3",
+          "3/নিজে করি/7",
+          "3/শূন্য (০)/3",
+          "5/নিজে করি — সংখ্যা ও গণনা/1",
+          "13/নিজে করি — পূর্ণ বই/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 18,
+      "id": "6aebf3b31904bbbca681193e",
+      "at": "2026-11-05T03:10:43.184Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-04.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-04.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-04",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "আগের, পরের ও মাঝের সংখ্যা বলা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০০ পড়ি/2",
+          "3/ক্রমে সাজাই/4",
+          "3/নিজে করি/5",
+          "5/নিজে করি — সংখ্যা ও গণনা/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-04.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-04",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "আগের, পরের ও মাঝের সংখ্যা বলা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০০ পড়ি/2",
+          "3/ক্রমে সাজাই/4",
+          "3/নিজে করি/5",
+          "5/নিজে করি — সংখ্যা ও গণনা/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 19,
+      "id": "6aebf3b31904bbbca681193f",
+      "at": "2026-11-05T03:10:43.185Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-04.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-04.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-04",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "উল্টো ক্রমে গোনা ও লেখা (১০ থেকে ১)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০ পড়ি ও লিখি/2",
+          "3/শূন্য (০)/3",
+          "5/নিজে করি — সংখ্যা ও গণনা/2"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-04.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-04",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "উল্টো ক্রমে গোনা ও লেখা (১০ থেকে ১)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-FILL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/১ থেকে ১০ পড়ি ও লিখি/2",
+          "3/শূন্য (০)/3",
+          "5/নিজে করি — সংখ্যা ও গণনা/2"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 20,
+      "id": "6aebf3b41904bbbca681196d",
+      "at": "2026-11-05T03:10:44.661Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-05.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-05",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "দুটি সংখ্যার মধ্যে ছোট ও বড়টি চেনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-02",
+          "LO-C1-MATH-03-04.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/1",
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/2",
+          "13/নিজে করি — পূর্ণ বই/2"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-05",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "দুটি সংখ্যার মধ্যে ছোট ও বড়টি চেনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-02",
+          "LO-C1-MATH-03-04.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/1",
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/2",
+          "13/নিজে করি — পূর্ণ বই/2"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 21,
+      "id": "6aebf3b41904bbbca681196e",
+      "at": "2026-11-05T03:10:44.662Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-05.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-05",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": ">, < ও = চিহ্ন ঠিক জায়গায় বসানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-05.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/3",
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/4",
+          "3/নিজে করি/3",
+          "5/নিজে করি — সংখ্যা ও গণনা/8"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-05",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": ">, < ও = চিহ্ন ঠিক জায়গায় বসানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-05.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/3",
+          "3/তুলনা করি — শব্দে, তারপর চিহ্নে/4",
+          "3/নিজে করি/3",
+          "5/নিজে করি — সংখ্যা ও গণনা/8"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 22,
+      "id": "6aebf3f61904bbbca6811b17",
+      "at": "2026-11-05T03:11:50.385Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-03-06",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-06",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "সংখ্যা ছোট থেকে বড় ও বড় থেকে ছোট সাজানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORDER"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-05.1"
+        ],
+        "homeTipBn": "পাঁচটি সংখ্যা-কার্ড ছোট থেকে বড়, তারপর উল্টো ক্রমে সাজাতে দিন।",
+        "exercises": [
+          "3/ক্রমে সাজাই/1",
+          "3/ক্রমে সাজাই/2",
+          "3/নিজে করি/4",
+          "5/নিজে করি — সংখ্যা ও গণনা/7",
+          "13/নিজে করি — পূর্ণ বই/3",
+          "13/নিজে করি — পূর্ণ বই/4"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-06",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "সংখ্যা ছোট থেকে বড় ও বড় থেকে ছোট সাজানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORDER"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-05.1"
+        ],
+        "homeTipBn": "পাঁচটি সংখ্যা-কার্ড ছোট থেকে বড়, তারপর উল্টো ক্রমে সাজাতে দিন।",
+        "exercises": [
+          "3/ক্রমে সাজাই/1",
+          "3/ক্রমে সাজাই/2",
+          "3/নিজে করি/4",
+          "5/নিজে করি — সংখ্যা ও গণনা/7",
+          "13/নিজে করি — পূর্ণ বই/3",
+          "13/নিজে করি — পূর্ণ বই/4"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 23,
+      "id": "6aec01e115a51b284923744c",
+      "at": "2026-11-05T04:11:13.399Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-03-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "১০০ পর্যন্ত সংখ্যা কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দিনে দুটি সংখ্যা কথায় লিখতে দিন এবং বানান মিলিয়ে দিন। এক দিনে একটি দশক — বেশি নয়।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": false,
+        "labelBn": "১০০ পর্যন্ত সংখ্যা কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দিনে দুটি সংখ্যা কথায় লিখতে দিন এবং বানান মিলিয়ে দিন। এক দিনে একটি দশক — বেশি নয়।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 24,
+      "id": "6aec01e315a51b2849237481",
+      "at": "2026-11-05T04:11:15.831Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-03-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "Class 1-এর শিক্ষার্থীদের শেখার সুবিধার্থে এই LO-এর অধীনে পাঁচটি Sub-objective রাখা যেতে পারে:\n\n১. ১–২০ কথায় লেখা\n২. ২১–৪০ কথায় লেখা\n৩. ৪১–৬০ কথায় লেখা\n৪. ৬১–৮০ কথায় লেখা\n৫. ৮১–১০০ কথায় লেখা\n\nকিন্তু App-এ নতুন Sub-objective add করার option নেই।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 25,
+      "id": "6aec01f815a51b28492376a6",
+      "at": "2026-11-05T04:11:36.971Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-03.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "১ থেকে ৪০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ১১ থেকে ২০/1",
+          "3/কথায় লিখি: ২১ থেকে ৪০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "১ থেকে ৪০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ১১ থেকে ২০/1",
+          "3/কথায় লিখি: ২১ থেকে ৪০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 26,
+      "id": "6aec01f815a51b28492376a7",
+      "at": "2026-11-05T04:11:36.972Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-03-03.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "৪১ থেকে ১০০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ৪১ থেকে ৬০/1",
+          "3/কথায় লিখি: ৬১ থেকে ৮০/1",
+          "3/কথায় লিখি: ৮১ থেকে ১০০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "৪১ থেকে ১০০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ৪১ থেকে ৬০/1",
+          "3/কথায় লিখি: ৬১ থেকে ৮০/1",
+          "3/কথায় লিখি: ৮১ থেকে ১০০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 27,
+      "id": "6aec0a92ea9379f1d26cc9f5",
+      "at": "2026-11-05T04:48:18.885Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-04-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-04-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": false,
+        "labelBn": "দুই অঙ্কের সংখ্যায় দশক ও একক বোঝা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PLACE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দশটি কাঠি এক বান্ডিল করে দেখান: ৩৪ = ৩ বান্ডিল আর ৪টি আলগা কাঠি। ২০, ৫০-এর মতো ০-ওয়ালা সংখ্যাও দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-04-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": false,
+        "labelBn": "দুই অঙ্কের সংখ্যায় দশক ও একক বোঝা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PLACE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দশটি কাঠি এক বান্ডিল করে দেখান: ৩৪ = ৩ বান্ডিল আর ৪টি আলগা কাঠি। ২০, ৫০-এর মতো ০-ওয়ালা সংখ্যাও দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 28,
+      "id": "6aec0a99ea9379f1d26cca1d",
+      "at": "2026-11-05T04:48:25.214Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-04-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-04-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-04-01",
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "সংখ্যাকে দশক ও এককে ভাঙা (৩৪ = ৩ দশক ৪ একক)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PLACE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-02.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "4/স্থানীয় মান — দশক ও একক/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/5"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-04-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-04-01",
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "সংখ্যাকে দশক ও এককে ভাঙা (৩৪ = ৩ দশক ৪ একক)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PLACE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-02.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "4/স্থানীয় মান — দশক ও একক/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/5"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 29,
+      "id": "6aec0a99ea9379f1d26cca1e",
+      "at": "2026-11-05T04:48:25.215Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-04-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-04-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-04-01",
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "দশক ও একক থেকে সংখ্যা বানানো (২ দশ ৩ = ২৩, শতকিয়া)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PLACE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "5/নিজে করি — সংখ্যা ও গণনা/4",
+          "3/নিজে করি/6",
+          "3/শতকিয়া — বাংলা রীতিতে গুনি/—",
+          "3/১১ থেকে ২০ — দশের সাহায্যে/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-04-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-04-01",
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "দশক ও একক থেকে সংখ্যা বানানো (২ দশ ৩ = ২৩, শতকিয়া)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-PLACE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "5/নিজে করি — সংখ্যা ও গণনা/4",
+          "3/নিজে করি/6",
+          "3/শতকিয়া — বাংলা রীতিতে গুনি/—",
+          "3/১১ থেকে ২০ — দশের সাহায্যে/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 30,
+      "id": "6aec0b29ea9379f1d26ccf5e",
+      "at": "2026-11-05T04:50:49.488Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-04-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-04-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "দশক মিলিয়ে কোন সংখ্যা বড় তা কারণসহ বলা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE",
+          "QT-PLACE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-04-01.1",
+          "LO-C1-MATH-03-05.2"
+        ],
+        "homeTipBn": "দুটি সংখ্যা দিন (যেমন ৪৭ ও ৭৪); আগে দশকের অঙ্ক মেলাতে বলুন, তারপর কোনটা বড় ও কেন বলুক।",
+        "exercises": [
+          "4/দশক দিয়ে তুলনা করি/1",
+          "4/দশক দিয়ে তুলনা করি/2"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-04-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "দশক মিলিয়ে কোন সংখ্যা বড় তা কারণসহ বলা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COMPARE",
+          "QT-PLACE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-04-01.1",
+          "LO-C1-MATH-03-05.2"
+        ],
+        "homeTipBn": "দুটি সংখ্যা দিন (যেমন ৪৭ ও ৭৪); আগে দশকের অঙ্ক মেলাতে বলুন, তারপর কোনটা বড় ও কেন বলুক।",
+        "exercises": [
+          "4/দশক দিয়ে তুলনা করি/1",
+          "4/দশক দিয়ে তুলনা করি/2"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 31,
+      "id": "6aec0f3bea9379f1d26d1757",
+      "at": "2026-11-05T05:08:11.869Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-06-01.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-06-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-06-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "গুণের খালি ঘরে গুণফল লেখা (১–৫-এর ঘর)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TABLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "6/নামতা (১ থেকে ৫)/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-06-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-06-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "গুণের খালি ঘরে গুণফল লেখা (১–৫-এর ঘর)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TABLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "6/নামতা (১ থেকে ৫)/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 32,
+      "id": "6aec0fa5ea9379f1d26d2e31",
+      "at": "2026-11-05T05:09:57.581Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-06-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-06-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": false,
+        "labelBn": "নামতা ১ থেকে ৫",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "প্রতিদিন দুই মিনিট একসাথে নামতা ছড়ার মতো বলুন; তারপর হঠাৎ জিজ্ঞেস করুন \"চার তিনে কত?\"",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-06-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": false,
+        "labelBn": "নামতা ১ থেকে ৫",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "প্রতিদিন দুই মিনিট একসাথে নামতা ছড়ার মতো বলুন; তারপর হঠাৎ জিজ্ঞেস করুন \"চার তিনে কত?\"",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 33,
+      "id": "6aec0fa5ea9379f1d26d2e32",
+      "at": "2026-11-05T05:09:57.582Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-06-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-06-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-06-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ১–৫ সবাই মিলে ছন্দে বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/নামতা (১ থেকে ৫)/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-06-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-06-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ১–৫ সবাই মিলে ছন্দে বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "6/নামতা (১ থেকে ৫)/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 34,
+      "id": "6aec0fa5ea9379f1d26d2e33",
+      "at": "2026-11-05T05:09:57.583Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-06-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-06-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-06-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ১–৫ থেকে এলোমেলো প্রশ্নের সঙ্গে সঙ্গে উত্তর",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "6/নামতা (১ থেকে ৫)/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-06-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-06-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ১–৫ থেকে এলোমেলো প্রশ্নের সঙ্গে সঙ্গে উত্তর",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "6/নামতা (১ থেকে ৫)/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 35,
+      "id": "6aefd4cce1f312f59ba70e27",
+      "at": "2026-11-08T01:47:56.905Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-07-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": false,
+        "labelBn": "২০ পর্যন্ত যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "খেজুর বা কাঠি দুই দলে রেখে একসাথে কয়টি জিজ্ঞেস করুন; ১০ বানানোর জোড়াগুলো (৬ আর ৪, ৭ আর ৩) খেলার মতো মুখে বলান।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": false,
+        "labelBn": "২০ পর্যন্ত যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "খেজুর বা কাঠি দুই দলে রেখে একসাথে কয়টি জিজ্ঞেস করুন; ১০ বানানোর জোড়াগুলো (৬ আর ৪, ৭ আর ৩) খেলার মতো মুখে বলান।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 36,
+      "id": "6aefd4d2e1f312f59ba70e52",
+      "at": "2026-11-08T01:48:02.920Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "ছবি দেখে যোগের বাক্য লেখা (+ ও = চেনা)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-02-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "ছবি দেখে যোগের বাক্য লেখা (+ ও = চেনা)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-02-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 37,
+      "id": "6aefd4d2e1f312f59ba70e53",
+      "at": "2026-11-08T01:48:02.921Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "শূন্যের যোগ (৫ + ০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/2"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "শূন্যের যোগ (৫ + ০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/2"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 38,
+      "id": "6aefd4d2e1f312f59ba70e54",
+      "at": "2026-11-08T01:48:02.922Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-01.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "১০-এর মধ্যে যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/3",
+          "7/একসাথে কয়টি হয়?/4",
+          "7/দ্রুত-শিট ১ — যোগ ১০-এর মধ্যে/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "১০-এর মধ্যে যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/3",
+          "7/একসাথে কয়টি হয়?/4",
+          "7/দ্রুত-শিট ১ — যোগ ১০-এর মধ্যে/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 39,
+      "id": "6aefd4d2e1f312f59ba70e55",
+      "at": "2026-11-08T01:48:02.923Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-01.4",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-01.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "যোগ করে ১০ হয় এমন জোড়া চেনা (১০ বানানো)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.3"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/5"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-01.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "যোগ করে ১০ হয় এমন জোড়া চেনা (১০ বানানো)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.3"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/একসাথে কয়টি হয়?/5"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 40,
+      "id": "6aefd4d2e1f312f59ba70e56",
+      "at": "2026-11-08T01:48:02.924Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-01.5",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-01.5",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "১১ থেকে ২০-এর মধ্যে যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.4",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/যোগ ১১ থেকে ২০/1",
+          "7/যোগ ১১ থেকে ২০/2",
+          "7/দ্রুত-শিট ২ — যোগ ২০-এর মধ্যে/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-01.5",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-01",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "১১ থেকে ২০-এর মধ্যে যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.4",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/যোগ ১১ থেকে ২০/1",
+          "7/যোগ ১১ থেকে ২০/2",
+          "7/দ্রুত-শিট ২ — যোগ ২০-এর মধ্যে/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 41,
+      "id": "6aefd551e1f312f59ba7153c",
+      "at": "2026-11-08T01:50:09.396Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-07-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "৯৯ পর্যন্ত খাড়া যোগ, হাতে না রেখে",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.3",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": "যোগ সবসময় উপর-নিচে লেখান — এককের নিচে একক, দশকের নিচে দশক — আর একক ঘর থেকে শুরু করান।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/1",
+          "7/যোগ ৯৯ পর্যন্ত/2",
+          "7/যোগ ৯৯ পর্যন্ত/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "৯৯ পর্যন্ত খাড়া যোগ, হাতে না রেখে",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.3",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": "যোগ সবসময় উপর-নিচে লেখান — এককের নিচে একক, দশকের নিচে দশক — আর একক ঘর থেকে শুরু করান।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/1",
+          "7/যোগ ৯৯ পর্যন্ত/2",
+          "7/যোগ ৯৯ পর্যন্ত/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 42,
+      "id": "6aefd6d5e1f312f59ba726ca",
+      "at": "2026-11-08T01:56:37.213Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-07-03.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-03",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "কাঠির বান্ডিল দিয়ে হাতে রাখা বোঝা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-04-01.2",
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/হাতে রাখি/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-03",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "কাঠির বান্ডিল দিয়ে হাতে রাখা বোঝা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-04-01.2",
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/হাতে রাখি/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 43,
+      "id": "6aefd6eee1f312f59ba72850",
+      "at": "2026-11-08T01:57:02.703Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": false,
+        "labelBn": "হাতে রেখে যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দশটি আলগা কাঠি জমলে এক বান্ডিল বানিয়ে দশকের ঘরে দিন — এটাই \"হাতে ১\"। খাতায় হাতে রাখা ১ ঘরের মাথায় ছোট করে লেখান।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": false,
+        "labelBn": "হাতে রেখে যোগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দশটি আলগা কাঠি জমলে এক বান্ডিল বানিয়ে দশকের ঘরে দিন — এটাই \"হাতে ১\"। খাতায় হাতে রাখা ১ ঘরের মাথায় ছোট করে লেখান।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 44,
+      "id": "6aefd6eee1f312f59ba72851",
+      "at": "2026-11-08T01:57:02.704Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-07-03.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-03",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "খাড়ায় হাতে রেখে যোগ (৯৯ পর্যন্ত)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/হাতে রাখি/2"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-07-03",
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "খাড়ায় হাতে রেখে যোগ (৯৯ পর্যন্ত)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "7/হাতে রাখি/2"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 45,
+      "id": "6aefd751e1f312f59ba7368d",
+      "at": "2026-11-08T01:58:41.514Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-07-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-07-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "গল্প শুনে যোগের হিসাবটি লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": "ছোট গল্প বলুন (\"তোমার ৯টি খেজুর, আরও ৫টি পেলে\"); শিক্ষার্থী শুধু হিসাবটি লিখবে, যেমন ৯ + ৫ = ১৪ — বাংলা বাক্য নয়।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/4",
+          "7/হাতে রাখি/3",
+          "7/যোগ ১১ থেকে ২০/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-07-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-ADD",
+        "tagged": true,
+        "labelBn": "গল্প শুনে যোগের হিসাবটি লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": "ছোট গল্প বলুন (\"তোমার ৯টি খেজুর, আরও ৫টি পেলে\"); শিক্ষার্থী শুধু হিসাবটি লিখবে, যেমন ৯ + ৫ = ১৪ — বাংলা বাক্য নয়।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/4",
+          "7/হাতে রাখি/3",
+          "7/যোগ ১১ থেকে ২০/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 46,
+      "id": "6aefdcb0e1f312f59ba769f8",
+      "at": "2026-11-08T02:21:36.020Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-08-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": false,
+        "labelBn": "২০ পর্যন্ত বিয়োগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "৮টি খেজুর রেখে ৩টি সরিয়ে নিন — কয়টি রইল? তারপর একই হিসাব খাতায় উপর-নিচে লেখান।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": false,
+        "labelBn": "২০ পর্যন্ত বিয়োগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "৮টি খেজুর রেখে ৩টি সরিয়ে নিন — কয়টি রইল? তারপর একই হিসাব খাতায় উপর-নিচে লেখান।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 47,
+      "id": "6aefdcb8e1f312f59ba76a4c",
+      "at": "2026-11-08T02:21:44.538Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "ছবি দেখে বিয়োগের বাক্য লেখা (− চিহ্ন চেনা)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কয়টি রইল?/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "ছবি দেখে বিয়োগের বাক্য লেখা (− চিহ্ন চেনা)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কয়টি রইল?/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 48,
+      "id": "6aefdcb8e1f312f59ba76a4d",
+      "at": "2026-11-08T02:21:44.539Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "১০-এর মধ্যে বিয়োগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.1",
+          "LO-C1-MATH-03-04.3"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কয়টি রইল?/2",
+          "8/কয়টি রইল?/4"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "১০-এর মধ্যে বিয়োগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.1",
+          "LO-C1-MATH-03-04.3"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কয়টি রইল?/2",
+          "8/কয়টি রইল?/4"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 49,
+      "id": "6aefdcb8e1f312f59ba76a4e",
+      "at": "2026-11-08T02:21:44.540Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-01.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "শূন্যের বিয়োগ (৫ − ০, ৫ − ৫)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কয়টি রইল?/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "শূন্যের বিয়োগ (৫ − ০, ৫ − ৫)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কয়টি রইল?/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 50,
+      "id": "6aefdcb8e1f312f59ba76a4f",
+      "at": "2026-11-08T02:21:44.541Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-01.4",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-01.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "১১ থেকে ২০ থেকে খাড়ায় বিয়োগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.2",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/বিয়োগ ১১ থেকে ২০/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-01.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-01",
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "১১ থেকে ২০ থেকে খাড়ায় বিয়োগ",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.2",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/বিয়োগ ১১ থেকে ২০/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 51,
+      "id": "6aefdce7e1f312f59ba76b9e",
+      "at": "2026-11-08T02:22:31.310Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-08-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "৯৯ পর্যন্ত খাড়া বিয়োগ, ধার ছাড়া",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.4",
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": "বিয়োগ সবসময় উপর-নিচে লেখান, একক ঘর থেকে শুরু। এই শ্রেণিতে উপরের অঙ্ক সবসময় নিচের অঙ্কের সমান বা বড়।",
+        "exercises": [
+          "8/বিয়োগ ৯৯ পর্যন্ত/1",
+          "8/বিয়োগ ৯৯ পর্যন্ত/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-SUB",
+        "tagged": true,
+        "labelBn": "৯৯ পর্যন্ত খাড়া বিয়োগ, ধার ছাড়া",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-01.4",
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": "বিয়োগ সবসময় উপর-নিচে লেখান, একক ঘর থেকে শুরু। এই শ্রেণিতে উপরের অঙ্ক সবসময় নিচের অঙ্কের সমান বা বড়।",
+        "exercises": [
+          "8/বিয়োগ ৯৯ পর্যন্ত/1",
+          "8/বিয়োগ ৯৯ পর্যন্ত/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 52,
+      "id": "6aefdf02e1f312f59ba77bc9",
+      "at": "2026-11-08T02:31:30.994Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-08-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": false,
+        "labelBn": "যোগ না বিয়োগ — বুঝে হিসাব করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "যোগ-বিয়োগ মিশিয়ে ছোট গল্প বলুন; আগে জিজ্ঞেস করুন \"বাড়বে না কমবে?\", তারপর হিসাব করতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": false,
+        "labelBn": "যোগ না বিয়োগ — বুঝে হিসাব করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD",
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "যোগ-বিয়োগ মিশিয়ে ছোট গল্প বলুন; আগে জিজ্ঞেস করুন \"বাড়বে না কমবে?\", তারপর হিসাব করতে দিন।",
+        "exercises": [],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 53,
+      "id": "6aefdf18e1f312f59ba77c20",
+      "at": "2026-11-08T02:31:52.726Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-03.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "চিহ্ন দেখে যোগ বা বিয়োগ করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-02",
+          "LO-C1-MATH-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/মিশ্র অনুশীলন — ৯৯ পর্যন্ত/1",
+          "13/নিজে করি — পূর্ণ বই/8",
+          "13/নিজে করি — পূর্ণ বই/9"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "চিহ্ন দেখে যোগ বা বিয়োগ করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-02",
+          "LO-C1-MATH-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/মিশ্র অনুশীলন — ৯৯ পর্যন্ত/1",
+          "13/নিজে করি — পূর্ণ বই/8",
+          "13/নিজে করি — পূর্ণ বই/9"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 54,
+      "id": "6aefdf18e1f312f59ba77c21",
+      "at": "2026-11-08T02:31:52.727Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-03.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "গল্প শুনে যোগ না বিয়োগ ঠিক করে হিসাবটি লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-04",
+          "LO-C1-MATH-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/1–30",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/1–20",
+          "13/নিজে করি — পূর্ণ বই/10"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "গল্প শুনে যোগ না বিয়োগ ঠিক করে হিসাবটি লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-07-04",
+          "LO-C1-MATH-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/1–30",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/1–20",
+          "13/নিজে করি — পূর্ণ বই/10"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 55,
+      "id": "6aefdf18e1f312f59ba77c22",
+      "at": "2026-11-08T02:31:52.728Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-03.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-03.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "\"কত বেশি\" প্রশ্নে বিয়োগ করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-03.2",
+          "LO-C1-MATH-03-05.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/3",
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/13",
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/23",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/7",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/17",
+          "13/নিজে করি — পূর্ণ বই/10"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-03.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "\"কত বেশি\" প্রশ্নে বিয়োগ করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-03.2",
+          "LO-C1-MATH-03-05.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/3",
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/13",
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/23",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/7",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/17",
+          "13/নিজে করি — পূর্ণ বই/10"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 56,
+      "id": "6aefdf18e1f312f59ba77c23",
+      "at": "2026-11-08T02:31:52.729Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-08-03.4",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-08-03.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "খালি ঘরের অজানা সংখ্যা বের করা (৬ + ▭ = ১৪)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD",
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-03.2",
+          "LO-C1-MATH-08-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/8",
+          "13/নিজে করি — পূর্ণ বই/10"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-08-03.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-08-03",
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "খালি ঘরের অজানা সংখ্যা বের করা (৬ + ▭ = ১৪)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD",
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-08-03.2",
+          "LO-C1-MATH-08-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "8/কোনটা যোগ, কোনটা বিয়োগ?/8",
+          "13/নিজে করি — পূর্ণ বই/10"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 57,
+      "id": "6aefe065e1f312f59ba7a73e",
+      "at": "2026-11-08T02:37:25.155Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-09-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-09-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-GEOM",
+        "tagged": false,
+        "labelBn": "গোল, তিনকোনা ও চারকোনা আকৃতি",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-GEOM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ঘরের থালা, জানালা, রুটি দেখিয়ে কোনটা কোন আকৃতি জিজ্ঞেস করুন; তারপর খাতায় একটি করে আঁকতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-09-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-GEOM",
+        "tagged": false,
+        "labelBn": "গোল, তিনকোনা ও চারকোনা আকৃতি",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-GEOM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "ঘরের থালা, জানালা, রুটি দেখিয়ে কোনটা কোন আকৃতি জিজ্ঞেস করুন; তারপর খাতায় একটি করে আঁকতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 58,
+      "id": "6aefe068e1f312f59ba7a766",
+      "at": "2026-11-08T02:37:28.301Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-09-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-09-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-09-01",
+        "domainCode": "DOM-MATH-GEOM",
+        "tagged": true,
+        "labelBn": "আকৃতি চিনে নাম বলা ও লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-GEOM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "9/জ্যামিতি — আকৃতি চিনি/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-09-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-09-01",
+        "domainCode": "DOM-MATH-GEOM",
+        "tagged": true,
+        "labelBn": "আকৃতি চিনে নাম বলা ও লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-GEOM"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "9/জ্যামিতি — আকৃতি চিনি/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 59,
+      "id": "6aefe068e1f312f59ba7a767",
+      "at": "2026-11-08T02:37:28.302Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-09-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-09-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-09-01",
+        "domainCode": "DOM-MATH-GEOM",
+        "tagged": true,
+        "labelBn": "আকৃতি নিজে আঁকা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-GEOM"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-09-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "9/জ্যামিতি — আকৃতি চিনি/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-09-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-09-01",
+        "domainCode": "DOM-MATH-GEOM",
+        "tagged": true,
+        "labelBn": "আকৃতি নিজে আঁকা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-GEOM"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-09-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "9/জ্যামিতি — আকৃতি চিনি/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 60,
+      "id": "6aefe2dce1f312f59ba7bf35",
+      "at": "2026-11-08T02:47:56.208Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-10-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-10-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-10-01",
+        "domainCode": "DOM-MATH-NPROP",
+        "tagged": true,
+        "labelBn": "জোড়া বানিয়ে জোড়-বিজোড় বোঝা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-02-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/জোড় ও বিজোড়/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-10-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-10-01",
+        "domainCode": "DOM-MATH-NPROP",
+        "tagged": true,
+        "labelBn": "জোড়া বানিয়ে জোড়-বিজোড় বোঝা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL",
+          "QT-ODDEVEN"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-02-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/জোড় ও বিজোড়/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 61,
+      "id": "6aefe2ffe1f312f59ba7c31a",
+      "at": "2026-11-08T02:48:31.484Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-10-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "বইয়ে জোড়-বিজোড় চেনার পাশাপাশি লিখিত কাজও রয়েছে। কিন্তু বর্তমান Assessment-এ লিখিত কাজের বিষয়টি আলাদাভাবে গুরুত্ব পায়নি। শিক্ষার্থীর নিজের উত্তর লেখা এবং বাক্সে বাছাই করে লেখার দক্ষতাও যাচাই করা প্রয়োজন।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 62,
+      "id": "6aefe30ce1f312f59ba7c3e3",
+      "at": "2026-11-08T02:48:44.907Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-10-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-10-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NPROP",
+        "tagged": false,
+        "labelBn": "জোড় ও বিজোড় সংখ্যা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ODDEVEN"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "জিনিস জোড়ায় জোড়ায় সাজাতে দিন — একটা বাকি থাকলে বিজোড়। পরে বাড়ির নম্বর বা পৃষ্ঠা নম্বরের শেষ অঙ্ক দেখে বলান।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-10-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NPROP",
+        "tagged": false,
+        "labelBn": "জোড় ও বিজোড় সংখ্যা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ODDEVEN"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "জিনিস জোড়ায় জোড়ায় সাজাতে দিন — একটা বাকি থাকলে বিজোড়। পরে বাড়ির নম্বর বা পৃষ্ঠা নম্বরের শেষ অঙ্ক দেখে বলান।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 63,
+      "id": "6aefe30ce1f312f59ba7c3e4",
+      "at": "2026-11-08T02:48:44.908Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-10-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-10-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-10-01",
+        "domainCode": "DOM-MATH-NPROP",
+        "tagged": true,
+        "labelBn": "শেষ অঙ্ক দেখে জোড়-বিজোড় বলা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ODDEVEN"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-10-01.1",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/জোড় ও বিজোড় — জোড়া বানিয়ে দেখি/1",
+          "10/জোড় ও বিজোড় — জোড়া বানিয়ে দেখি/2",
+          "10/জোড় ও বিজোড় — জোড়া বানিয়ে দেখি/3",
+          "13/নিজে করি — পূর্ণ বই/11"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-10-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-10-01",
+        "domainCode": "DOM-MATH-NPROP",
+        "tagged": true,
+        "labelBn": "শেষ অঙ্ক দেখে জোড়-বিজোড় বলা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ODDEVEN"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-10-01.1",
+          "LO-C1-MATH-04-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "10/জোড় ও বিজোড় — জোড়া বানিয়ে দেখি/1",
+          "10/জোড় ও বিজোড় — জোড়া বানিয়ে দেখি/2",
+          "10/জোড় ও বিজোড় — জোড়া বানিয়ে দেখি/3",
+          "13/নিজে করি — পূর্ণ বই/11"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 64,
+      "id": "6aefe455e1f312f59ba7e498",
+      "at": "2026-11-08T02:54:13.958Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-11-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-11-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-11-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ৬–১০ থেকে এলোমেলো প্রশ্নের সঙ্গে সঙ্গে উত্তর",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-11-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "11/নামতা (৬ থেকে ১০)/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-11-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-11-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ৬–১০ থেকে এলোমেলো প্রশ্নের সঙ্গে সঙ্গে উত্তর",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL",
+          "QT-TABLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-11-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "11/নামতা (৬ থেকে ১০)/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 65,
+      "id": "6aefe498e1f312f59ba7e5f5",
+      "at": "2026-11-08T02:55:20.176Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-11-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "বইয়ে ৬–১০-এর নামতা সম্পূর্ণ গুণের সমীকরণ আকারে দেওয়া আছে। মৌখিকভাবে নামতা বলা ও এলোমেলো প্রশ্নের উত্তর দেওয়ার পাশাপাশি গুণের খালি ঘরে গুণফল লেখার দক্ষতাও যাচাই করা প্রয়োজন।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 66,
+      "id": "6aefe49ee1f312f59ba7e625",
+      "at": "2026-11-08T02:55:26.490Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-11-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-11-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": false,
+        "labelBn": "নামতা ৬ থেকে ১০",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "সপ্তাহে একটি ঘর; প্রতিদিন সকালে একবার মুখে বলান, তারপর এলোমেলো জিজ্ঞেস করুন। ১০-এর ঘর আগে নিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-11-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": false,
+        "labelBn": "নামতা ৬ থেকে ১০",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "সপ্তাহে একটি ঘর; প্রতিদিন সকালে একবার মুখে বলান, তারপর এলোমেলো জিজ্ঞেস করুন। ১০-এর ঘর আগে নিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 67,
+      "id": "6aefe49ee1f312f59ba7e626",
+      "at": "2026-11-08T02:55:26.491Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-11-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-11-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-11-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ৬–১০ সবাই মিলে ছন্দে বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "11/নামতা (৬ থেকে ১০)/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-11-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-11-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "নামতা ৬–১০ সবাই মিলে ছন্দে বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "11/নামতা (৬ থেকে ১০)/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 68,
+      "id": "6aefe49ee1f312f59ba7e627",
+      "at": "2026-11-08T02:55:26.492Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-11-01.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-11-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-11-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "গুণের খালি ঘরে গুণফল লেখা (৬–১০-এর ঘর)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TABLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-11-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "11/নামতা (৬ থেকে ১০)/—"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-11-01.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-11-01",
+        "domainCode": "DOM-MATH-MUL",
+        "tagged": true,
+        "labelBn": "গুণের খালি ঘরে গুণফল লেখা (৬–১০-এর ঘর)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-TABLE"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-11-01.2"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "11/নামতা (৬ থেকে ১০)/—"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 69,
+      "id": "6aefe776e1f312f59ba7f35a",
+      "at": "2026-11-08T03:07:34.812Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-12-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": false,
+        "labelBn": "টাকার নোট ও কয়েন চেনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "আসল নোট ও কয়েন হাতে দিয়ে কোনটা কত টাকা জিজ্ঞেস করুন; তারপর ছোট থেকে বড় মানে সাজাতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": false,
+        "labelBn": "টাকার নোট ও কয়েন চেনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "আসল নোট ও কয়েন হাতে দিয়ে কোনটা কত টাকা জিজ্ঞেস করুন; তারপর ছোট থেকে বড় মানে সাজাতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 70,
+      "id": "6aefe77ae1f312f59ba7f383",
+      "at": "2026-11-08T03:07:38.002Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-12-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-01",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "নোট ও কয়েন দেখে কত টাকা বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বাংলাদেশি মুদ্রা ও মানসাংক/—",
+          "12/মুদ্রা চিনি/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-01.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-01",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "নোট ও কয়েন দেখে কত টাকা বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বাংলাদেশি মুদ্রা ও মানসাংক/—",
+          "12/মুদ্রা চিনি/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 71,
+      "id": "6aefe77ae1f312f59ba7f384",
+      "at": "2026-11-08T03:07:38.003Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-12-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-01",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "টাকার মান ছোট থেকে বড় সাজানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-01.1",
+          "LO-C1-MATH-03-06"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/মুদ্রা চিনি/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-01.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-01",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "টাকার মান ছোট থেকে বড় সাজানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-01.1",
+          "LO-C1-MATH-03-06"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/মুদ্রা চিনি/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 72,
+      "id": "6aefe7ede1f312f59ba7f5f4",
+      "at": "2026-11-08T03:09:33.036Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-12-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "একই নোট কয়েকটি থাকলে মোট টাকা গোনা (৫ টাকার ৪টি = ২০ টাকা)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-01.1",
+          "LO-C1-MATH-06-01.2",
+          "LO-C1-MATH-11-01.2"
+        ],
+        "homeTipBn": "কয়েকটি ৫ টাকার কয়েন দিয়ে ৫, ১০, ১৫, ২০ করে গুনতে দিন — মোট কত টাকা হলো?",
+        "exercises": [
+          "12/টাকা গুনি — ধাপে ধাপে/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "একই নোট কয়েকটি থাকলে মোট টাকা গোনা (৫ টাকার ৪টি = ২০ টাকা)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-01.1",
+          "LO-C1-MATH-06-01.2",
+          "LO-C1-MATH-11-01.2"
+        ],
+        "homeTipBn": "কয়েকটি ৫ টাকার কয়েন দিয়ে ৫, ১০, ১৫, ২০ করে গুনতে দিন — মোট কত টাকা হলো?",
+        "exercises": [
+          "12/টাকা গুনি — ধাপে ধাপে/1"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 73,
+      "id": "6aefe8a6e1f312f59ba80082",
+      "at": "2026-11-08T03:12:38.404Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-12-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": false,
+        "labelBn": "কেনাকাটার হিসাব",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দোকান-খেলা খেলুন: দুটি জিনিস কিনলে মোট কত, আর ৫০ টাকা দিলে কত ফেরত — খাতায় লিখে হিসাব করুক।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-03",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": false,
+        "labelBn": "কেনাকাটার হিসাব",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "দোকান-খেলা খেলুন: দুটি জিনিস কিনলে মোট কত, আর ৫০ টাকা দিলে কত ফেরত — খাতায় লিখে হিসাব করুক।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 74,
+      "id": "6aefe8aae1f312f59ba800b4",
+      "at": "2026-11-08T03:12:42.290Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-12-03.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-03",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "কয়েকটি জিনিসের মোট দাম বের করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-02",
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/দোকান-খেলা/1",
+          "12/দোকান-খেলা/2",
+          "12/দোকান-খেলা/5",
+          "12/দোকান-খেলা/6",
+          "12/দোকান-খেলা/8",
+          "12/দোকান-খেলা/9",
+          "12/দোকান-খেলা/11",
+          "12/দোকান-খেলা/12",
+          "12/দোকান-খেলা/13",
+          "12/দোকান-খেলা/15",
+          "12/দোকান-খেলা/17",
+          "12/দোকান-খেলা/18"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-03",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "কয়েকটি জিনিসের মোট দাম বের করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-02",
+          "LO-C1-MATH-07-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/দোকান-খেলা/1",
+          "12/দোকান-খেলা/2",
+          "12/দোকান-খেলা/5",
+          "12/দোকান-খেলা/6",
+          "12/দোকান-খেলা/8",
+          "12/দোকান-খেলা/9",
+          "12/দোকান-খেলা/11",
+          "12/দোকান-খেলা/12",
+          "12/দোকান-খেলা/13",
+          "12/দোকান-খেলা/15",
+          "12/দোকান-খেলা/17",
+          "12/দোকান-খেলা/18"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 75,
+      "id": "6aefe8aae1f312f59ba800b5",
+      "at": "2026-11-08T03:12:42.291Z",
+      "action": "BULK_ACCEPT",
+      "code": "LO-C1-MATH-12-03.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-03",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "ফেরত টাকা ও দামের পার্থক্য বের করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-03.1",
+          "LO-C1-MATH-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/দোকান-খেলা/3",
+          "12/দোকান-খেলা/4",
+          "12/দোকান-খেলা/7",
+          "12/দোকান-খেলা/10",
+          "12/দোকান-খেলা/14",
+          "12/দোকান-খেলা/16",
+          "12/দোকান-খেলা/19",
+          "12/দোকান-খেলা/20"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-03",
+        "domainCode": "DOM-MATH-MONEY",
+        "tagged": true,
+        "labelBn": "ফেরত টাকা ও দামের পার্থক্য বের করা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MONEY"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-03.1",
+          "LO-C1-MATH-08-02"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/দোকান-খেলা/3",
+          "12/দোকান-খেলা/4",
+          "12/দোকান-খেলা/7",
+          "12/দোকান-খেলা/10",
+          "12/দোকান-খেলা/14",
+          "12/দোকান-খেলা/16",
+          "12/দোকান-খেলা/19",
+          "12/দোকান-খেলা/20"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 76,
+      "id": "6aeff6ce19fb0d2131a3cfbf",
+      "at": "2026-11-08T04:13:02.613Z",
+      "action": "SPLIT",
+      "code": "LO-C1-MATH-12-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "12/জোড়া, হালি, ডজন/3",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "12/জোড়া, হালি, ডজন/3",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null,
+        "children": [
+          {
+            "code": "LO-C1-MATH-12-04.1",
+            "labelBn": "জোড়া, হালি ও ডজনের মান নির্ণয়",
+            "exercises": [
+              "12/জোড়া, হালি, ডজন/1",
+              "12/জোড়া, হালি, ডজন/2",
+              "13/নিজে করি — পূর্ণ বই/12"
+            ]
+          },
+          {
+            "code": "LO-C1-MATH-12-04.2",
+            "labelBn": "জোড়া, হালি ও ডজন ব্যবহার করে হিসাব",
+            "exercises": [
+              "12/জোড়া, হালি, ডজন/3"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 77,
+      "id": "6aeff75a19fb0d2131a3d430",
+      "at": "2026-11-08T04:15:22.022Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-12-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "জোড়া, হালি ও ডজনের মান নির্ণয় এবং এগুলো ব্যবহার করে গল্পের হিসাব করার দক্ষতা আলাদা Sub-objective-এ ভাগ করা হয়েছে।\n\nIn the book-এ Ch 12 · বার ও মাস — ক্যালেন্ডার পড়ি · Ex 4 ভুল করে যুক্ত হয়েছে। এটি এই LO-এর অন্তর্ভুক্ত নয়।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 78,
+      "id": "6aeffba1ff261a16c7dac240",
+      "at": "2026-11-08T04:33:37.365Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-12-05.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-05",
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": true,
+        "labelBn": "ক্যালেন্ডার দেখে তারিখ ও বার বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-05.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/2"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-05.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-05",
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": true,
+        "labelBn": "ক্যালেন্ডার দেখে তারিখ ও বার বলা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-12-05.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/2"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 79,
+      "id": "6aeffc4cff261a16c7dac39c",
+      "at": "2026-11-08T04:36:28.577Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-05.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-05",
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": true,
+        "labelBn": "সপ্তাহের দিন ও মাসের হিসাব (৭ দিন, ১২ মাস)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ",
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-04.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/1",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-05",
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": true,
+        "labelBn": "সপ্তাহের দিন ও মাসের হিসাব (৭ দিন, ১২ মাস)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/1",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 80,
+      "id": "6aeffc66ff261a16c7dac3fa",
+      "at": "2026-11-08T04:36:54.579Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-12-05.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "Book wording সংশোধন করে ‘সপ্তাহের দিন ও মাসের হিসাব করা এবং মাসের নাম পড়তে পারা’ করা প্রয়োজন। Earlier step হিসেবে যুক্ত 03-04.1 (ক্রম মিলিয়ে ফাঁকা ঘরে সংখ্যা লেখা) এই Sub-objective-এর সরাসরি পূর্বশর্ত নয়, তাই এটি বাদ দেওয়া হয়েছে।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 81,
+      "id": "6aeffc83ff261a16c7dac4ba",
+      "at": "2026-11-08T04:37:23.443Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-12-05",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": false,
+        "labelBn": "সপ্তাহ, মাস ও ক্যালেন্ডার",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "সপ্তাহের সাত দিনের নাম শনিবার থেকে ক্রমে বলান; দেয়ালের ক্যালেন্ডারে আজকের তারিখ ও বার খুঁজে বের করতে দিন।",
+        "exercises": [],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-05",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": false,
+        "labelBn": "সপ্তাহ, মাস ও ক্যালেন্ডার",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "সপ্তাহের সাত দিনের নাম শনিবার থেকে ক্রমে বলান; দেয়ালের ক্যালেন্ডারে আজকের তারিখ ও বার খুঁজে বের করতে দিন।",
+        "exercises": [],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 82,
+      "id": "6aeffdb8ff261a16c7dadc52",
+      "at": "2026-11-08T04:42:32.786Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-SK-WORK-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-SK-WORK-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "হিসাবের প্রশ্নে খাতায় হিসাব দেখানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বাড়িতে অঙ্ক করার সময় শুধু উত্তর নয়, খাতায় পুরো হিসাব লিখতে বলুন।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/3",
+          "7/হাতে রাখি/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/3"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-SK-WORK-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "হিসাবের প্রশ্নে খাতায় হিসাব দেখানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-SOLVE",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "বাড়িতে অঙ্ক করার সময় শুধু উত্তর নয়, খাতায় পুরো হিসাব লিখতে বলুন।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/3",
+          "7/হাতে রাখি/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/3"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 83,
+      "id": "6aefff3bff261a16c7daec1c",
+      "at": "2026-11-08T04:48:59.910Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-SK-COL-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-SK-COL-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "খাড়ায় একক-দশক ঘর মিলিয়ে লেখা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "খাতায় যোগ-বিয়োগ লেখার সময় এককের নিচে একক, দশকের নিচে দশক — ঘর টেনে দিলে সুবিধা হয়।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/1",
+          "7/যোগ ৯৯ পর্যন্ত/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/1"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-SK-COL-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-PLACE",
+        "tagged": true,
+        "labelBn": "খাড়ায় একক-দশক ঘর মিলিয়ে লেখা",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL",
+          "QT-SOLVE"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "খাতায় যোগ-বিয়োগ লেখার সময় এককের নিচে একক, দশকের নিচে দশক — ঘর টেনে দিলে সুবিধা হয়।",
+        "exercises": [
+          "7/যোগ ৯৯ পর্যন্ত/1",
+          "7/যোগ ৯৯ পর্যন্ত/2",
+          "8/বিয়োগ ৯৯ পর্যন্ত/1"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 84,
+      "id": "6aefffa5ff261a16c7daec7f",
+      "at": "2026-11-08T04:50:45.604Z",
+      "action": "COMMENT",
+      "code": "LO-C1-MATH-SK-COL-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": "Book wording-এ ‘অঙ্ক ঠিক কিন্তু ঘর এলোমেলো — পূর্ণ নম্বর’ বলতে মূল্যায়নের নিয়ম বোঝানো হয়েছে, নাকি দক্ষতার বিবরণ—তা স্পষ্ট নয়। বিষয়টি পরিষ্কার করা প্রয়োজন। লিখিত কাজের পাশাপাশি Rubric-এর মাধ্যমে দক্ষতাটি পর্যবেক্ষণ করা প্রয়োজন।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 85,
+      "id": "6af00026ff261a16c7daed4c",
+      "at": "2026-11-08T04:52:54.535Z",
+      "action": "ACCEPT",
+      "code": "LO-C1-MATH-SK-MENT-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-SK-MENT-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "সময় ধরে মুখে হিসাব (দ্রুত-শিট, ১০ খুঁজি)",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "রোজ এক মিনিট মুখে ছোট যোগ-বিয়োগ জিজ্ঞেস করুন (৬ আর ৪? ১২ থেকে ২?) — দ্রুত হলে প্রশংসা করুন।",
+        "exercises": [
+          "7/দ্রুত-শিট ১ — যোগ ১০-এর মধ্যে/—",
+          "7/দ্রুত-শিট ২ — যোগ ২০-এর মধ্যে/—",
+          "7/একসাথে কয়টি হয়?/5",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/1–20"
+        ],
+        "reviewState": "PROPOSED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-SK-MENT-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MIXED",
+        "tagged": true,
+        "labelBn": "সময় ধরে মুখে হিসাব (দ্রুত-শিট, ১০ খুঁজি)",
+        "labelEn": null,
+        "assess": "RUBRIC",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "রোজ এক মিনিট মুখে ছোট যোগ-বিয়োগ জিজ্ঞেস করুন (৬ আর ৪? ১২ থেকে ২?) — দ্রুত হলে প্রশংসা করুন।",
+        "exercises": [
+          "7/দ্রুত-শিট ১ — যোগ ১০-এর মধ্যে/—",
+          "7/দ্রুত-শিট ২ — যোগ ২০-এর মধ্যে/—",
+          "7/একসাথে কয়টি হয়?/5",
+          "8/দ্রুত-শিট ৫ — মিশ্র ৯৯ পর্যন্ত/1–20"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 86,
+      "id": "6af040dabc1842e7d9759d9d",
+      "at": "2026-11-08T09:28:58.635Z",
+      "action": "REOPEN",
+      "code": null,
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "প্রশ্নের ধরন ঠিক করতে খোলা হলো (QT-COUNT/MATCH/BLANK/CONVERT) — মাহজাবিন দেখে আবার জমা দেবেন।",
+      "before": {
+        "state": "SUBMITTED"
+      },
+      "after": {
+        "state": "OPEN"
+      }
+    },
+    {
+      "seq": 87,
+      "id": "6af040dabc1842e7d9759daa",
+      "at": "2026-11-08T09:28:58.676Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-01-02",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মাহজাবিনের মন্তব্য: উল্টো শব্দ মেলানো + শূন্যস্থানে তুলনার শব্দ নিজে লেখা",
+      "before": {
+        "code": "LO-C1-MATH-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "তুলনার শব্দ লেখা ও উল্টো শব্দ মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-01"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে কম-বেশি, লম্বা-খাটো, কাছে-দূরে বলান; তারপর শব্দটি খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/নিজে করি/1",
+          "1/নিজে করি/2",
+          "1/নিজে করি/3",
+          "1/তুলনা করার শব্দগুলো মনে রাখি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "তুলনার শব্দ লেখা ও উল্টো শব্দ মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MATCH",
+          "QT-BLANK"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-01"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে কম-বেশি, লম্বা-খাটো, কাছে-দূরে বলান; তারপর শব্দটি খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/নিজে করি/1",
+          "1/নিজে করি/2",
+          "1/নিজে করি/3",
+          "1/তুলনা করার শব্দগুলো মনে রাখি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 88,
+      "id": "6af040dabc1842e7d9759db7",
+      "at": "2026-11-08T09:28:58.707Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মাহজাবিনের মন্তব্য: ছবি গুনে নিজে সংখ্যা লেখা",
+      "before": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COUNT",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 89,
+      "id": "6af040dabc1842e7d9759dc4",
+      "at": "2026-11-08T09:28:58.735Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-04.1",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মাহজাবিনের প্রস্তাব: জোড়া-হালি-ডজনের রূপান্তর ও সমান কিনা",
+      "before": {
+        "code": "LO-C1-MATH-12-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-04",
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জোড়া, হালি ও ডজনের মান নির্ণয়",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-04",
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জোড়া, হালি ও ডজনের মান নির্ণয়",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CONVERT",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 90,
+      "id": "6af040dabc1842e7d9759dd1",
+      "at": "2026-11-08T09:28:58.760Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-04",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মাহজাবিনের মন্তব্য: ক্যালেন্ডার অনুশীলনী ৪ এই শিখনফলের নয় (১২-০৫.১-এ আছে)",
+      "before": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "12/জোড়া, হালি, ডজন/3",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "12/জোড়া, হালি, ডজন/3",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 91,
+      "id": "6af047389bcfa482f2bb80f0",
+      "at": "2026-11-08T09:56:08.250Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-01-02",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মালিকের নিয়ম: প্রশ্নের ধরন শুধু বইয়ের নম্বর বণ্টন থেকে — আগের মানে ফেরানো হলো।",
+      "before": {
+        "code": "LO-C1-MATH-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "তুলনার শব্দ লেখা ও উল্টো শব্দ মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MATCH",
+          "QT-BLANK"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-01"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে কম-বেশি, লম্বা-খাটো, কাছে-দূরে বলান; তারপর শব্দটি খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/নিজে করি/1",
+          "1/নিজে করি/2",
+          "1/নিজে করি/3",
+          "1/তুলনা করার শব্দগুলো মনে রাখি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-01-02",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "তুলনার শব্দ লেখা ও উল্টো শব্দ মেলানো",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-ORAL"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-01-01"
+        ],
+        "homeTipBn": "ঘরের জিনিস দেখিয়ে কম-বেশি, লম্বা-খাটো, কাছে-দূরে বলান; তারপর শব্দটি খাতায় লিখতে দিন।",
+        "exercises": [
+          "1/নিজে করি/1",
+          "1/নিজে করি/2",
+          "1/নিজে করি/3",
+          "1/তুলনা করার শব্দগুলো মনে রাখি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 92,
+      "id": "6af047389bcfa482f2bb80fd",
+      "at": "2026-11-08T09:56:08.291Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মালিকের নিয়ম: প্রশ্নের ধরন শুধু বইয়ের নম্বর বণ্টন থেকে — আগের মানে ফেরানো হলো।",
+      "before": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-COUNT",
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-02-01",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "জিনিস গুনে কয়টি তা লেখা (১–১০)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": "চামচ, বোতাম বা খেজুর ছুঁয়ে ছুঁয়ে গুনতে দিন; শেষ সংখ্যাটাই মোট — এটা বারবার বলুন।",
+        "exercises": [
+          "2/নিজে করি/1",
+          "2/নিজে করি/2",
+          "2/নিজে করি/3",
+          "3/১ থেকে ১০ পড়ি ও লিখি/3",
+          "3/শূন্য (০)/2",
+          "2/গণনা করি/—"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 93,
+      "id": "6af047389bcfa482f2bb810a",
+      "at": "2026-11-08T09:56:08.317Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-04.1",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মালিকের নিয়ম: প্রশ্নের ধরন শুধু বইয়ের নম্বর বণ্টন থেকে — আগের মানে ফেরানো হলো।",
+      "before": {
+        "code": "LO-C1-MATH-12-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-04",
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জোড়া, হালি ও ডজনের মান নির্ণয়",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-CONVERT",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-04.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-04",
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": true,
+        "labelBn": "জোড়া, হালি ও ডজনের মান নির্ণয়",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 94,
+      "id": "6af1b601a33ae2ec3d940f71",
+      "at": "2026-11-09T12:01:05.022Z",
+      "action": "REOPEN",
+      "code": null,
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "state": "SUBMITTED"
+      },
+      "after": {
+        "state": "OPEN"
+      }
+    },
+    {
+      "seq": 95,
+      "id": "6af1b786a33ae2ec3d9416f1",
+      "at": "2026-11-09T12:07:34.176Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-01-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aebe9ff1904bbbca6804d06",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 96,
+      "id": "6af27063572376f52c0089ab",
+      "at": "2026-11-10T01:16:19.283Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-02-01",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aebe82cef4dc9969ce537d3",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 97,
+      "id": "6af2707d572376f52c008cf2",
+      "at": "2026-11-10T01:16:45.658Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-02-02",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aebe587ef4dc9969ce4f4c2",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 98,
+      "id": "6af27341572376f52c00b18c",
+      "at": "2026-11-10T01:28:33.023Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-03-03.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "১ থেকে ৪০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ১১ থেকে ২০/1",
+          "3/কথায় লিখি: ২১ থেকে ৪০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-03.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "১ থেকে ২০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-01"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ১১ থেকে ২০/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 99,
+      "id": "6af273be572376f52c00b9e6",
+      "at": "2026-11-10T01:30:38.382Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-03-03.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-03-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "৪১ থেকে ১০০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ৪১ থেকে ৬০/1",
+          "3/কথায় লিখি: ৬১ থেকে ৮০/1",
+          "3/কথায় লিখি: ৮১ থেকে ১০০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ACCEPTED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-03-03.2",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "২১ থেকে ৪০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-03-03.1"
+        ],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ২১ থেকে ৪০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 100,
+      "id": "6af27464572376f52c00c91a",
+      "at": "2026-11-10T01:33:24.345Z",
+      "action": "ADD",
+      "code": "LO-C1-MATH-03-03.3",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": null,
+      "after": {
+        "code": "LO-C1-MATH-03-03.3",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "৪১ থেকে ৬০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ৪১ থেকে ৬০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 101,
+      "id": "6af274d2572376f52c00da4b",
+      "at": "2026-11-10T01:35:14.286Z",
+      "action": "ADD",
+      "code": "LO-C1-MATH-03-03.4",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": null,
+      "after": {
+        "code": "LO-C1-MATH-03-03.4",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "৬১ থেকে ৮০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ৬১ থেকে ৮০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 102,
+      "id": "6af27527572376f52c00df7e",
+      "at": "2026-11-10T01:36:39.333Z",
+      "action": "ADD",
+      "code": "LO-C1-MATH-03-03.5",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": null,
+      "after": {
+        "code": "LO-C1-MATH-03-03.5",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-03-03",
+        "domainCode": "DOM-MATH-NUM",
+        "tagged": true,
+        "labelBn": "৮১ থেকে ১০০ কথায় লেখা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WRITE-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "3/কথায় লিখি: ৮১ থেকে ১০০/1",
+          "3/নিজে করি/1",
+          "5/নিজে করি — সংখ্যা ও গণনা/8",
+          "13/নিজে করি — পূর্ণ বই/6"
+        ],
+        "reviewState": "ADDED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 103,
+      "id": "6af27553572376f52c00e0fe",
+      "at": "2026-11-10T01:37:23.182Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-03-03",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aec01e315a51b2849237481",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 104,
+      "id": "6af275d8572376f52c00e846",
+      "at": "2026-11-10T01:39:36.706Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-10-01.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aefe2ffe1f312f59ba7c31a",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 105,
+      "id": "6af2760a572376f52c00ed83",
+      "at": "2026-11-10T01:40:26.855Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-11-01.2",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aefe498e1f312f59ba7e5f5",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 106,
+      "id": "6af27771572376f52c00fb2c",
+      "at": "2026-11-10T01:46:25.310Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-12-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aeff75a19fb0d2131a3d430",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 107,
+      "id": "6af27773572376f52c00fb53",
+      "at": "2026-11-10T01:46:27.619Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-04",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": null,
+      "comment": null,
+      "before": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "12/জোড়া, হালি, ডজন/3",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া",
+          "হালি",
+          "ডজন/1",
+          "ডজন/2",
+          "ডজন/3",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 108,
+      "id": "6af27982d350b214e0d05e5a",
+      "at": "2026-11-10T01:55:14.541Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-12-05.1",
+      "by": "Mahzabin Yasmin",
+      "parentEventId": "6aeffc66ff261a16c7dac3fa",
+      "comment": null,
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 109,
+      "id": "6af4833e054a122c0af5cc1d",
+      "at": "2026-11-11T15:01:18.225Z",
+      "action": "REOPEN",
+      "code": null,
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "১২-০৪-এর অনুশীলনী ঠিক করা ও ১২-০৫.১-এর লেবেল বদলানোর জন্য খোলা হলো।",
+      "before": {
+        "state": "SUBMITTED"
+      },
+      "after": {
+        "state": "OPEN"
+      }
+    },
+    {
+      "seq": 110,
+      "id": "6af4833e054a122c0af5cc2b",
+      "at": "2026-11-11T15:01:18.266Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-04",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "অ্যাপের ত্রুটিতে কমা-যুক্ত অনুশীলনী ভেঙে গিয়েছিল — আগের মতো ফেরানো হলো।",
+      "before": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া",
+          "হালি",
+          "ডজন/1",
+          "ডজন/2",
+          "ডজন/3",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-04",
+        "level": "OBJECTIVE",
+        "parentCode": null,
+        "domainCode": "DOM-MATH-MEAS",
+        "tagged": false,
+        "labelBn": "জোড়া, হালি ও ডজনে গোনা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-WORD"
+        ],
+        "prereqCodes": [
+          "LO-C1-MATH-06-01.3"
+        ],
+        "homeTipBn": "বাজারে ডিম, কলা হালি ও ডজনে কেনার সময় জিজ্ঞেস করুন — ২ হালি মানে কয়টি? ১ ডজন মানে কয়টি?",
+        "exercises": [
+          "12/জোড়া, হালি, ডজন/1",
+          "12/জোড়া, হালি, ডজন/2",
+          "12/জোড়া, হালি, ডজন/3",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 111,
+      "id": "6af4833e054a122c0af5cc38",
+      "at": "2026-11-11T15:01:18.291Z",
+      "action": "EDIT",
+      "code": "LO-C1-MATH-12-05.1",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": null,
+      "comment": "মাহজাবিনের প্রস্তাবিত লেবেল (মালিকের অনুমোদন)।",
+      "before": {
+        "code": "LO-C1-MATH-12-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-05",
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": true,
+        "labelBn": "সপ্তাহের দিন ও মাসের হিসাব (৭ দিন, ১২ মাস)",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/1",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      },
+      "after": {
+        "code": "LO-C1-MATH-12-05.1",
+        "level": "SUB",
+        "parentCode": "LO-C1-MATH-12-05",
+        "domainCode": "DOM-MATH-TIME",
+        "tagged": true,
+        "labelBn": "সপ্তাহের দিন ও মাসের হিসাব করা এবং মাসের নাম পড়তে পারা",
+        "labelEn": null,
+        "assess": "QUESTION",
+        "questionTypeCodes": [
+          "QT-MCQ",
+          "QT-WORD"
+        ],
+        "prereqCodes": [],
+        "homeTipBn": null,
+        "exercises": [
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/1",
+          "12/বার ও মাস — ক্যালেন্ডার পড়ি/4",
+          "13/নিজে করি — পূর্ণ বই/12"
+        ],
+        "reviewState": "EDITED",
+        "rejectReason": null,
+        "mergedInto": null
+      }
+    },
+    {
+      "seq": 112,
+      "id": "6af4833e054a122c0af5cc46",
+      "at": "2026-11-11T15:01:18.320Z",
+      "action": "REPLY",
+      "code": "LO-C1-MATH-SK-COL-01",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6aefffa5ff261a16c7daec7f",
+      "comment": "এটি বইয়ের নম্বর দেওয়ার নিয়ম, দক্ষতার বর্ণনা নয়। উত্তর ঠিক হলে পূর্ণ নম্বর; একক-দশকের ঘর এলোমেলো হলে শুধু এই দক্ষতায় (খাড়ায় একক-দশক ঘর মিলিয়ে লেখা) চিহ্ন পড়বে। প্রশ্নের ধরন পর্যালোচনায় নয়, পরে তালিকার পাতায় ঠিক হবে।",
+      "before": null,
+      "after": null
+    },
+    {
+      "seq": 113,
+      "id": "6af4833e054a122c0af5cc53",
+      "at": "2026-11-11T15:01:18.343Z",
+      "action": "RESOLVE",
+      "code": "LO-C1-MATH-SK-COL-01",
+      "by": "Md Enayetur Rahman",
+      "parentEventId": "6aefffa5ff261a16c7daec7f",
+      "comment": null,
+      "before": null,
+      "after": null
+    }
+  ]
+}
