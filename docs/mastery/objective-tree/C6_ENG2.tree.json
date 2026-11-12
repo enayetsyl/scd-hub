@@ -1,0 +1,2017 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C6",
+ "subject": "ENG2",
+ "status": "DRAFT",
+ "source": {
+  "book": "C6_ENG2_Book_v1_Writer-Reviewer (English 2nd Paper) — not yet printed (first Writer-Reviewer copy; the reviewer has not answered yet)",
+  "version": "C6_ENG2_Book_v1_Writer-Reviewer (4 November 2026) — not yet printed",
+  "files": [
+   "Book Review Material/Class 6 Eng/C6_ENG2_Book_v1_Writer-Reviewer.md (+ .docx — the source: units with Teacher note (Learning outcomes, In the exam, Answers), Exam Practice, two Revision papers, NCTB Model Question)",
+   "Book Review Material/Class 6 Eng/C6_ENG2_Memo_v1.docx (D-01–D-10 — all awaiting the reviewer; Part 1 has the exam: Q1–Q8, 50 marks)",
+   "docs/mastery/objective-tree/C5_ENG.tree.json and C6_ENG.tree.json (earlier steps — another subject, named in the notes)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "Nouns, Pronouns, Adjectives"
+  },
+  {
+   "number": 2,
+   "titleBn": "Verbs, Adverbs, Prepositions, Conjunctions, Interjections"
+  },
+  {
+   "number": 3,
+   "titleBn": "Prefixes and Suffixes"
+  },
+  {
+   "number": 4,
+   "titleBn": "Letters and Applications"
+  },
+  {
+   "number": 5,
+   "titleBn": "Tenses"
+  },
+  {
+   "number": 6,
+   "titleBn": "Substitution Table"
+  },
+  {
+   "number": 7,
+   "titleBn": "Articles"
+  },
+  {
+   "number": 8,
+   "titleBn": "Writing Emails"
+  },
+  {
+   "number": 9,
+   "titleBn": "Sentences"
+  },
+  {
+   "number": 10,
+   "titleBn": "Punctuation and Capitalisation"
+  },
+  {
+   "number": 11,
+   "titleBn": "Paragraph and Composition"
+  },
+  {
+   "number": 18,
+   "titleBn": "Revision and Exam Practice 1"
+  },
+  {
+   "number": 12,
+   "titleBn": "Possessives"
+  },
+  {
+   "number": 13,
+   "titleBn": "Gerund and Participle"
+  },
+  {
+   "number": 14,
+   "titleBn": "Introductory There and It"
+  },
+  {
+   "number": 15,
+   "titleBn": "Letters, Applications and Emails 2"
+  },
+  {
+   "number": 16,
+   "titleBn": "Verb Forms, Conjugation, Mixed Tenses"
+  },
+  {
+   "number": 17,
+   "titleBn": "Composition 2"
+  },
+  {
+   "number": 19,
+   "titleBn": "Revision and Exam Practice 2"
+  },
+  {
+   "number": 20,
+   "titleBn": "NCTB Model Question"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-POS",
+   "labelBn": "Q1 Parts of speech: identify the underlined words",
+   "marksBn": "০.৫",
+   "examUse": "Half-yearly and annual, the same paper (50 marks): 10 × ½ = 5."
+  },
+  {
+   "code": "QT-GAP",
+   "labelBn": "Q2 Gap filling with clues (words from a box)",
+   "marksBn": "০.৫",
+   "examUse": "10 × ½ = 5; a box of 12 words for 10 gaps."
+  },
+  {
+   "code": "QT-SUBST",
+   "labelBn": "Q3 Substitution table",
+   "marksBn": "১",
+   "examUse": "5 × 1 = 5."
+  },
+  {
+   "code": "QT-VERBFORM",
+   "labelBn": "Q4 Right form of verbs",
+   "marksBn": "১",
+   "examUse": "5 × 1 = 5."
+  },
+  {
+   "code": "QT-CHANGE",
+   "labelBn": "Q5 Changing sentences",
+   "marksBn": "১",
+   "examUse": "5 × 1 = 5 (half marks for a small error — proposal, memo D-09)."
+  },
+  {
+   "code": "QT-PUNC",
+   "labelBn": "Q6 Punctuation and capitalisation",
+   "marksBn": "০.৫",
+   "examUse": "10 × ½ = 5."
+  },
+  {
+   "code": "QT-LETTER",
+   "labelBn": "Q7 Letter, application or email (about 150 words)",
+   "marksBn": "৮",
+   "examUse": "8 (marking — memo D-07)."
+  },
+  {
+   "code": "QT-COMPOSITION",
+   "labelBn": "Q8 Composition (about 200 words)",
+   "marksBn": "১২",
+   "examUse": "12 (marking — memo D-08)."
+  },
+  {
+   "code": "QT-CLASSTEST",
+   "labelBn": "Class test — prefixes and suffixes (5 × 1); conjugation",
+   "marksBn": "১",
+   "examUse": "Not on the half-yearly or annual paper — class tests only (Unit 3; Unit 16 section A)."
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "Classwork — not on the paper",
+   "marksBn": "—",
+   "examUse": "Teacher notes: free sentence writing, pair work and the lesson activities are classwork only."
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C6-ENG2-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-POS",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Name the part of speech of an underlined word in a passage (Q1)",
+   "sourceText": "Name the part of speech of an underlined noun, pronoun or adjective in a passage (exam Q1). · Name the part of speech of any underlined word in a passage (Q1).",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/EP/Q1",
+     "2/EP/Q1",
+     "18/Rev/Q1",
+     "19/Rev/Q1",
+     "20/Model/Q1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS"
+   ],
+   "homeTipBn": "একটি বাক্য লিখে একটি শব্দের নিচে দাগ দিন — সন্তান বলবে সেটি noun, pronoun, adjective, verb, adverb, preposition, conjunction না interjection, এবং কেন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 02-02 \"Name the part of speech of an underlined word — all eight (Q\". The exam skill; the eight parts of speech themselves are the rows of Units 1–2. Q1 underlines ten words, half a mark each."
+  },
+  {
+   "code": "LO-C6-ENG2-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-NOUN",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Pick out nouns and form regular and irregular plurals",
+   "sourceText": "Name the eight parts of speech and pick out the nouns in a sentence or passage. · Form regular plurals (-s, -es, -ies) and common irregular plurals.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/A",
+     "1/L1/B",
+     "1/L1/C",
+     "1/L1/D",
+     "1/L1/E",
+     "1/L1/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "ঘরের দশটি জিনিসের ইংরেজি নাম বলে তাদের plural লিখতে দিন: box → boxes, baby → babies, child → children, tooth → teeth।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 02-01 \"Common and collective nouns\". "
+  },
+  {
+   "code": "LO-C6-ENG2-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-NOUN",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Countable and uncountable nouns: how many / how much and measure words",
+   "sourceText": "Tell countable nouns from uncountable nouns, use how many / how much, and use measure words before uncountable nouns.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/A",
+     "1/L2/B",
+     "1/L2/C",
+     "1/L2/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "রান্নাঘরে জিজ্ঞেস করুন: \"How many eggs?\" \"How much rice?\" — কোনটি গোনা যায়, কোনটি যায় না; a glass of water, a kilo of sugar বলতে দিন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-03 \"How much and how many (class test)\"; C6 ENG 03-02 \"Use quantity and container phrases (a dozen eggs, a loaf of \". "
+  },
+  {
+   "code": "LO-C6-ENG2-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-PRON",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Use pronouns in the subject, object and possessive forms; say which noun a pronoun refers to",
+   "sourceText": "Use pronouns in the subject, object and possessive forms and say which noun a pronoun refers to.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L3/A",
+     "1/L3/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি ছোট গল্পে he, him, his, they, them-এর নিচে দাগ দিয়ে জিজ্ঞেস করুন — এই শব্দটি কার বদলে বসেছে?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-01-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-ADJ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Identify adjectives, their positions and their three degrees",
+   "sourceText": "Identify adjectives, their positions in a sentence and their three degrees (positive, comparative, superlative).",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L4/A",
+     "1/L4/B",
+     "1/L4/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "তিনটি জিনিস তুলনা করতে বলুন: tall – taller – the tallest; beautiful – more beautiful – the most beautiful।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-01 \"Find and use adjectives and adverbs\"; C5 ENG 19-01 \"Compare with -er / -est and more / most (class test)\". "
+  },
+  {
+   "code": "LO-C6-ENG2-01-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-USE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Complete a passage with words from a box — gap filling with clues (Q2)",
+   "sourceText": "Complete a gap-filling passage with words from a box (exam Q2).",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/EP/Q2",
+     "2/EP/Q2",
+     "7/EP/Q2",
+     "12/EP/Q2",
+     "13/EP/Q2",
+     "14/EP/Q2",
+     "18/Rev/Q2",
+     "19/Rev/Q2",
+     "20/Model/Q2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP"
+   ],
+   "homeTipBn": "বইয়ের Exam Practice-এর Q2 একটি করে করান — বাক্সের ১২টি শব্দ থেকে ১০টি শূন্যস্থানে; শব্দটি বাক্সের বানানেই লিখেছে কি না দেখুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C6 ENG 01-01.3 \"Fill the gaps in a passage or dialogue with suitable words (\". The exam skill: a mixed-grammar passage, 12 words for 10 gaps, half a mark each. The grammar it draws on (nouns, articles, possessives, gerunds, there/it) is in the topic rows."
+  },
+  {
+   "code": "LO-C6-ENG2-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Action verbs and \"to be\" verbs; regular and irregular verbs and their three forms",
+   "sourceText": "Tell action verbs from ‘to be’ (state) verbs, and regular verbs from irregular verbs. · Give the base, past and past participle forms of common regular and irregular verbs.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L1/A",
+     "2/L1/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-VERBFORM",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "দশটি verb-এর তিন রূপ মুখে বলতে বলুন: go – went – gone, write – wrote – written, play – played – played।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-01 \"The simple past of regular and irregular verbs\". "
+  },
+  {
+   "code": "LO-C6-ENG2-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Auxiliary verbs and modals",
+   "sourceText": "Identify auxiliary verbs (be, do, have) and modals, and say what meaning a modal expresses.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-CLASS",
+    "QT-GAP"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: \"She is reading\" বাক্যে সাহায্যকারী verb কোনটি? can, may, must, should দিয়ে একটি করে বাক্য বলতে দিন ও অর্থ বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-02-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-02-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-02-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Identify auxiliary verbs (be, do, have) and main verbs",
+   "sourceText": "Identify auxiliary verbs (be, do, have) and modals, and say what meaning a modal expresses. [ভাগ: auxiliary verbs]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L2/A",
+     "2/L2/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-02-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-02-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Modals and the meanings they express (can, could, may, might, shall, should, will, would, must, ought to)",
+   "sourceText": "Identify auxiliary verbs (be, do, have) and modals, and say what meaning a modal expresses. [ভাগ: modals]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L2/C",
+     "2/L2/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-02 \"Should, shouldn't and must (class test)\". A child can pick out be/do/have and still not know what a modal means; the book teaches them in two halves of the lesson."
+  },
+  {
+   "code": "LO-C6-ENG2-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-ADJ",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Adverbs of time, place, manner and frequency: identify, place correctly and use linkers",
+   "sourceText": "Identify adverbs of time, place, manner and frequency, place them correctly, and use linkers (firstly, secondly …).",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L3/A",
+     "2/L3/B",
+     "2/L3/C",
+     "2/L3/D",
+     "2/L3/E",
+     "2/L3/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: \"He runs fast.\" \"She came yesterday.\" — fast ও yesterday কোন প্রশ্নের উত্তর দেয় (how? when?); always, often, never বাক্যে কোথায় বসে?",
+   "prereqCodes": [
+    "LO-C6-ENG2-01-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-01 \"Find and use adjectives and adverbs\". "
+  },
+  {
+   "code": "LO-C6-ENG2-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-PREP",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Prepositions of time and place",
+   "sourceText": "Use prepositions of time and place, and the conjunctions and, but, yet, so, because, with interjections for strong feelings. [ভাগ: prepositions]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L4/A",
+     "2/L4/B",
+     "2/L4/C",
+     "2/L4/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "ঘরের জিনিসের অবস্থান ইংরেজিতে বলতে দিন (on the table, under the bed, between the chairs) আর সময়ে at, on, in: at 7 o'clock, on Friday, in June।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 11-02 \"Prepositions of place; giving directions\". "
+  },
+  {
+   "code": "LO-C6-ENG2-02-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-PREP",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Conjunctions (and, but, yet, so, because) and interjections",
+   "sourceText": "Use prepositions of time and place, and the conjunctions and, but, yet, so, because, with interjections for strong feelings. [ভাগ: conjunctions and interjections]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L5/A",
+     "2/L5/B",
+     "2/L5/C",
+     "2/L5/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS",
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "দুটি ছোট বাক্য জুড়তে দিন: \"It was raining. We stayed at home.\" → so / because; Alas! Hurrah! Oh! কখন বলি?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-02-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Use the right form of verbs in a passage (Q4)",
+   "sourceText": "Complete a gap-filling passage (Q2) and use the right form of verbs (Q4). [ভাগ: right form of verbs] · Use clue words (every day, now, already, since/for, yesterday, then, tomorrow) to choose the tense. · Choose the right tense from clue words in a sentence or passage.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/EP/Q4",
+     "5/EP/Q4",
+     "13/EP/Q4",
+     "16/U/D",
+     "16/U/CW",
+     "16/EP/Q4",
+     "18/Rev/Q4",
+     "19/Rev/Q4",
+     "20/Model/Q4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": "বাক্যে বন্ধনীর verb-এর সঠিক রূপ বসাতে দিন; আগে clue word খুঁজতে বলুন — every day, now, already, since, yesterday, tomorrow।",
+   "prereqCodes": [
+    "LO-C6-ENG2-02-01",
+    "LO-C6-ENG2-05-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-02 \"Right form of verbs — all nine forms, three with clue words \". The exam skill (five verbs, one mark each): choosing the tense from the clue word, then the form. Unit 16 section D (clue words) and its classwork belong here."
+  },
+  {
+   "code": "LO-C6-ENG2-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-WORD",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Make new words with prefixes and suffixes, with correct spelling (class test)",
+   "sourceText": "Say what a prefix and a suffix are and how they change the meaning or the part of speech of a word. · Use the new affixes im-, in-, mis-, pre-, -less, -able, -ous and -y. · Spell new words correctly when y changes to i, when a final e drops, and when two suffixes join.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/U/A",
+     "3/U/B",
+     "3/U/C",
+     "3/U/D",
+     "3/U/E",
+     "3/CT/1",
+     "3/CT/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASSTEST",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "মূল শব্দ দিন — happy, care, possible, use — আর জিজ্ঞেস করুন কোন prefix বা suffix যোগ করে নতুন শব্দ হয়: unhappy, careful, careless, impossible, useful।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 13-01 \"Make new words with prefixes and suffixes (Q7)\". Not on the half-yearly or annual paper — class tests only (5 × 1). One row: the Class Five affixes, the new ones and the spelling rules are practised together in section E and the two class-test passages. Whether the unit stays is open (memo D-01)."
+  },
+  {
+   "code": "LO-C6-ENG2-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write a formal letter or an application (Q7)",
+   "sourceText": "Write a formal letter or an application in full block layout, without mixing layouts.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বিষয় দিন (তিন দিনের ছুটির আবেদন) — সন্তান আগে আটটি অংশ ক্রমে বলবে (তারিখ থেকে নাম পর্যন্ত), তারপর ১৫০ শব্দের মধ্যে লিখবে; সব লাইন বাম দিক থেকে শুরু (full block)।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-04-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-04-01",
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "The eight parts of a formal letter in full block layout, with a suitable salutation and closing",
+   "sourceText": "Name the eight parts of a formal letter and write them in the right order. · Choose a suitable salutation and closing for the reader (Dear Sir/Madam, Dear Madam, Dear Ms Shifa; Yours sincerely, Yours obediently).",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L1/A",
+     "4/L1/B",
+     "15/L1/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.1 \"The seven parts of an application, in order\". "
+  },
+  {
+   "code": "LO-C6-ENG2-04-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-04-01",
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write a formal letter or an application of about 150 words on a given topic",
+   "sourceText": "Write a formal letter or an application in full block layout, without mixing layouts. · Keep to a word limit (10% above or below; “not more than”; “at least”).",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L1/C",
+     "4/L1/D",
+     "4/EP/Q7",
+     "15/EP/Q7",
+     "18/Rev/Q7",
+     "20/Model/Q7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.2 \"Write an application on a given topic\". 4/EP/Q7 and 15/EP/Q7 offer \"a letter or an application\"; they are cited here (the formal form). Marking of Q7 is open (memo D-07); one layout for all — full block — is open (D-06)."
+  },
+  {
+   "code": "LO-C6-ENG2-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write an informal letter to a friend or a family member (Q7)",
+   "sourceText": "Write an informal letter to a friend or a family member with a friendly greeting, tone and closing.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L2/A",
+     "4/L2/B",
+     "4/L2/C",
+     "15/L1/B",
+     "19/Rev/Q7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER"
+   ],
+   "homeTipBn": "বন্ধু বা ছোট ভাই-বোনকে একটি চিঠি লিখতে দিন (গ্রামের বাড়ি নিয়ে) — আন্তরিক সম্বোধন, সহজ ভাষা, শেষে \"Your loving brother/sister\"।",
+   "prereqCodes": [
+    "LO-C6-ENG2-04-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 02-04.2 \"Write a letter on a given topic\". "
+  },
+  {
+   "code": "LO-C6-ENG2-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Say the time (present, past, future) and the aspect of a verb",
+   "sourceText": "Say whether a verb refers to present, past or future time, and name its aspect (simple, continuous, perfect, perfect continuous).",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L1/A",
+     "5/L1/B",
+     "5/L1/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি অনুচ্ছেদের verb-গুলোর নিচে দাগ দিয়ে জিজ্ঞেস করুন — কোনটি এখনকার, কোনটি আগের, কোনটি পরের কাজ?",
+   "prereqCodes": [
+    "LO-C6-ENG2-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-05-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Form and use the seven tenses — affirmative, negative and interrogative",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). · Make negative and interrogative sentences in each tense.",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বাক্য নিন (\"I write a letter\") — সন্তান সেটিকে একে একে সাত tense-এ বলবে, তারপর না-বাচক ও প্রশ্নে; ভুল হলে auxiliary verb-টি ধরিয়ে দিন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-05-01",
+    "LO-C6-ENG2-02-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 05-02 \"Change the tense as directed — six forms (Q6)\". "
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Present simple (with do / does; have / has as a main verb)",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: present simple]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L2/A",
+     "5/L2/B",
+     "5/L2/C",
+     "5/L2/D",
+     "5/L2/E",
+     "5/L2/F",
+     "5/L2/G"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Present continuous",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: present continuous]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L3/A",
+     "5/L3/B",
+     "5/L3/C",
+     "5/L3/D",
+     "5/L3/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.3",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Present perfect",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: present perfect]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L4/A",
+     "5/L4/B",
+     "5/L4/C",
+     "5/L4/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.4",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Present perfect continuous (since / for)",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: present perfect continuous]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L5/A",
+     "5/L5/B",
+     "5/L5/C",
+     "5/L5/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.5",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Past simple (did; had as a main verb)",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: past simple]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L6/A",
+     "5/L6/B",
+     "5/L6/C",
+     "5/L6/D",
+     "5/L6/E",
+     "5/L6/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-01 \"The simple past of regular and irregular verbs\". "
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.6",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Past continuous",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: past continuous]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L7/A",
+     "5/L7/B",
+     "5/L7/C",
+     "5/L7/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-05-02.7",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-05-02",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Future simple (will / shall)",
+   "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: future simple]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L8/A",
+     "5/L8/B",
+     "5/L8/C",
+     "5/L8/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 05-01 \"The simple future with will\". "
+  },
+  {
+   "code": "LO-C6-ENG2-05-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "Change a sentence from one tense to another (Q5)",
+   "sourceText": "Change a sentence from one tense to another, keeping the subject and the rest of the sentence.",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/EP/Q5",
+     "16/EP/Q5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE"
+   ],
+   "homeTipBn": "\"He plays football.\" — এটিকে past simple, present continuous ও future simple-এ বদলাতে দিন; কর্তা ও বাক্যের বাকি অংশ একই থাকবে।",
+   "prereqCodes": [
+    "LO-C6-ENG2-05-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 05-02 \"Change the tense as directed — six forms (Q6)\". Q5 changes either the tense (Units 5, 16) or the sentence type (Unit 9, row 09-06); the revision and model papers mix both and are cited in 09-06."
+  },
+  {
+   "code": "LO-C6-ENG2-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Make five meaningful sentences from a substitution table (Q3)",
+   "sourceText": "Match each subject with a verb that agrees with it in number and person. · Match the rest of the sentence by meaning. · Make five correct, meaningful sentences, using each part only once, with a capital letter and a full stop.",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/U/A",
+     "6/U/B",
+     "6/EP/Q3",
+     "18/Rev/Q3",
+     "19/Rev/Q3",
+     "20/Model/Q3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SUBST"
+   ],
+   "homeTipBn": "তিন কলামের একটি ছক দিন (Subject | Verb | Rest) — সন্তান পাঁচটি সঠিক বাক্য বানাবে; subject-এর সঙ্গে verb মিলছে কি না (He goes / They go) দেখুন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "New question type in Class Six. Whether the unit stays is open (memo D-02)."
+  },
+  {
+   "code": "LO-C6-ENG2-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-DET",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Use a, an, the or no article (×) correctly, and correct wrong articles",
+   "sourceText": "Use a and an before singular countable nouns mentioned for the first time or not specified. · Use the for something mentioned again, something specific and something that is the only one of its kind. · Leave out the article before plural and uncountable nouns used in a general sense, and mark it with a cross (×).",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/U/A",
+     "7/U/B",
+     "7/U/C",
+     "7/U/D",
+     "7/U/E",
+     "7/U/F",
+     "7/U/G",
+     "7/U/H"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "শূন্যস্থানে a, an, the বা × বসাতে দিন: ___ university, ___ hour, ___ sun, ___ milk is good for health; কেন, জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-01-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-02 \"A, an and the — the Class Five rules (Q7)\". One row: the eight sections mix a/an, the and the zero article in the same passages, as the Class Five row does."
+  },
+  {
+   "code": "LO-C6-ENG2-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Write an email (Q7)",
+   "sourceText": "Write a formal email (to a principal, an office or an organisation) and an informal email (to a family member or a friend) in full block.",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বিষয় দিন (অধ্যক্ষকে ছুটির ইমেইল বা বন্ধুকে দাওয়াত) — সন্তান From, To, Subject লিখে ছোট ও ভদ্র ভাষায় ইমেইলটি লিখবে।",
+   "prereqCodes": [
+    "LO-C6-ENG2-04-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-08-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-08-01",
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "The parts of an email and its layout (From, To, Cc, Subject, salutation, body, closing)",
+   "sourceText": "Name the parts of an email: From, To, Cc, Subject, Attachment, salutation, body, closing and name. · Write a correct email address and a short, clear subject line.",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L1/A",
+     "8/L1/B",
+     "8/L1/E",
+     "15/L1/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.1 \"The parts of an email, in order\". "
+  },
+  {
+   "code": "LO-C6-ENG2-08-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-08-01",
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Write a formal or an informal email of about 150 words",
+   "sourceText": "Write a formal email (to a principal, an office or an organisation) and an informal email (to a family member or a friend) in full block. · Keep the message short, polite and in clear paragraphs.",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L1/C",
+     "8/L1/D",
+     "8/EP/Q7",
+     "15/EP/Q7b"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.2 \"Write an email on a given topic\". Whether the NCTB emails are shown in real email layout is open (memo D-03)."
+  },
+  {
+   "code": "LO-C6-ENG2-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative)",
+   "sourceText": "Define a sentence and name its five types: affirmative, negative, interrogative, imperative and exclamatory (and the optative sentence in Lesson 7).",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L1/Act1",
+     "9/L1/Act2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "পাঁচ রকম বাক্য বলুন — সন্তান প্রতিটির ধরন বলবে: \"Sit down.\" \"What a nice day!\" \"May Allah bless you.\"",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-02 \"The five kinds of sentence (class test)\". "
+  },
+  {
+   "code": "LO-C6-ENG2-09-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Affirmative sentences: find the subject and the verb; the three basic patterns",
+   "sourceText": "Identify the subject and verb of an affirmative sentence and the three basic patterns (linking, intransitive, transitive verb).",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L2/Act1",
+     "9/L2/Act2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "বাক্যে subject ও verb-এর নিচে দাগ দিতে বলুন: \"Birds fly.\" \"She is a teacher.\" \"He reads a book.\"",
+   "prereqCodes": [
+    "LO-C6-ENG2-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-09-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Make negative and interrogative sentences",
+   "sourceText": "Make negative sentences and yes/no and wh-questions correctly.",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "\"She likes mangoes.\" — এটিকে না-বাচক (\"She does not like …\") ও প্রশ্নে (\"Does she like …?\", \"What does she like?\") বদলাতে দিন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-09-02",
+    "LO-C6-ENG2-02-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-09-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-09-03",
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Make negative sentences",
+   "sourceText": "Make negative sentences and yes/no and wh-questions correctly. [ভাগ: negative]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L3/Act1",
+     "9/L3/Act2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 05-04 \"Make a sentence negative or a question (class test)\". "
+  },
+  {
+   "code": "LO-C6-ENG2-09-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-09-03",
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Make yes/no questions and wh-questions",
+   "sourceText": "Make negative sentences and yes/no and wh-questions correctly. [ভাগ: interrogative]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L4/Act1",
+     "9/L4/Act2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 09-02 \"Make WH questions from underlined words (Q8)\". "
+  },
+  {
+   "code": "LO-C6-ENG2-09-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Give instructions, directions and requests with imperative sentences",
+   "sourceText": "Give instructions, directions and requests with imperative sentences.",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L5/Act1",
+     "9/L5/Act2",
+     "9/L5/Act3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "খাবার স্যালাইন বা ডিম সেদ্ধ করার ধাপগুলো ইংরেজিতে বলতে দিন: \"Wash your hands. Boil the water. Add …\"; অনুরোধে Please যোগ করতে বলুন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-01 \"Give and follow polite commands and requests (class test)\"; C6 ENG 10-01 \"Write instructions with \"Do not\" and \"cannot\"; understand pu\". "
+  },
+  {
+   "code": "LO-C6-ENG2-09-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Exclamatory and optative sentences",
+   "sourceText": "Express surprise, joy, sorrow or sympathy with exclamatory sentences. · Define a sentence and name its five types: affirmative, negative, interrogative, imperative and exclamatory (and the optative sentence in Lesson 7). [ভাগ: optative]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L6/Act1",
+     "9/L7/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "পরিস্থিতি বলুন — সুন্দর ফুল দেখলে (\"What a beautiful flower!\"), কারও জন্য দোয়া করলে (\"May you live long!\") — সন্তান বাক্যটি বলবে।",
+   "prereqCodes": [
+    "LO-C6-ENG2-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The optative lesson is SCD's addition (memo D-05, open)."
+  },
+  {
+   "code": "LO-C6-ENG2-09-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "Change sentences from one type to another without changing the meaning (Q5)",
+   "sourceText": "Change sentences from one type to another without changing the meaning (exam Q5).",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/L7/B",
+     "9/L7/Act1",
+     "9/EP/Q5",
+     "18/Rev/Q5",
+     "19/Rev/Q5",
+     "20/Model/Q5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CHANGE"
+   ],
+   "homeTipBn": "একটি বাক্য দিয়ে নির্দেশ দিন — (Make it negative) / (Make it interrogative) / (Make it exclamatory) — অর্থ একই রেখে বদলাতে হবে।",
+   "prereqCodes": [
+    "LO-C6-ENG2-09-03",
+    "LO-C6-ENG2-09-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The exam skill (five sentences, one mark each). Whether a small error loses only half a mark is open (memo D-09)."
+  },
+  {
+   "code": "LO-C6-ENG2-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-PUNC",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Punctuation and capital letters (Q6)",
+   "sourceText": "Correct the capital letters and punctuation in an unpunctuated passage (exam Q6).",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PUNC",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "ছোট হাতের অক্ষরে, কোনো বিরামচিহ্ন ছাড়া তিনটি বাক্য লিখে দিন — সন্তান capital letter ও সব চিহ্ন বসিয়ে আবার লিখবে; প্রতিটি কেন বসাল, জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-10-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-10-01",
+   "domainCode": "DOM-ENG2-PUNC",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Use the eight punctuation marks correctly (comma, full stop, question mark, exclamation mark, quotation marks, colon, semicolon, apostrophe)",
+   "sourceText": "Use the comma, full stop, question mark, exclamation mark, quotation marks, colon, semicolon and apostrophe correctly. · Join two independent clauses correctly: a comma with and, but, so, or, or a semicolon without them. · Use the apostrophe for possessives (singular and plural nouns) and for contractions.",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/PA/Act1",
+     "10/PA/Act2",
+     "10/PA/Act3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PUNC",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-10-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-10-01",
+   "domainCode": "DOM-ENG2-PUNC",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Use capital letters correctly",
+   "sourceText": "Use capital letters correctly: sentence beginnings, quoted speech, I, names, days and months, Allah, the Qur’an, the Prophet’s name, Ramadan, Eid and book titles.",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/PB/Act4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PUNC",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-10-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-10-01",
+   "domainCode": "DOM-ENG2-PUNC",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Correct the capital letters and punctuation of an unpunctuated passage (Q6)",
+   "sourceText": "Correct the capital letters and punctuation in an unpunctuated passage (exam Q6).",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/EP/Q6",
+     "18/Rev/Q6",
+     "19/Rev/Q6",
+     "20/Model/Q6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PUNC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-01 \"Capital letters and all the punctuation marks, with quotatio\". Three parts that fail apart: knowing each mark, knowing where capitals go, and doing both at once in a passage (ten corrections, half a mark each)."
+  },
+  {
+   "code": "LO-C6-ENG2-11-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-COMP",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Write a paragraph with a topic sentence, body and conclusion — by description, listing, examples and narration",
+   "sourceText": "Explain what a paragraph is and name its three parts: topic sentence, body and conclusion. · Write a paragraph by description, by listing, by examples and in narrative style.",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/PA/Act1",
+     "11/PA/Act2",
+     "11/PA/Act3",
+     "11/PA/Act4",
+     "11/PA/Act5",
+     "11/PA/Act6",
+     "11/PA/Act7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বিষয় দিন (My Family, My Hobby) — সন্তান আগে মূল বাক্যটি (topic sentence) বলবে, তারপর পাঁচ-ছয়টি বাক্যে বিস্তার, শেষে একটি সমাপ্তি-বাক্য লিখবে।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 17-01 \"Build a paragraph: topic sentence, supporting sentences, det\"; C6 ENG 01-07 \"Write a paragraph of about 120 words (Q12)\". Classwork in the 2nd Paper (the paragraph question itself is Q12 of the 1st Paper). The four kinds are one row: the seven activities move from one kind to the next without separate practice of each."
+  },
+  {
+   "code": "LO-C6-ENG2-11-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-COMP",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Write a composition of about 200 words (Q8)",
+   "sourceText": "Write a composition of about 200 words on a familiar topic (exam Q8). · Write a well-organised composition of about 200 words on a familiar topic (exam Q8).",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "রচনার আগে পাঁচ মিনিট ছক করতে বলুন (ভূমিকা – তিনটি অনুচ্ছেদের মূল কথা – উপসংহার), তারপর লিখতে; শেষে নিজের লেখা নিজে মিলিয়ে দেখবে।",
+   "prereqCodes": [
+    "LO-C6-ENG2-11-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-11-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-11-02",
+   "domainCode": "DOM-ENG2-COMP",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Plan a composition: its parts and an outline",
+   "sourceText": "Explain what a composition is and name its parts: introduction, body paragraphs and conclusion. · Plan a composition with an outline before writing. · Follow four steps to write a composition: plan, outline, write and check.",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/PB/Act8",
+     "17/U/A",
+     "17/U/ActB"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-03.1 \"The four parts of a composition\". "
+  },
+  {
+   "code": "LO-C6-ENG2-11-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-11-02",
+   "domainCode": "DOM-ENG2-COMP",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Join ideas and paragraphs with linking words (Firstly, Moreover, However, As a result, Finally, In conclusion)",
+   "sourceText": "Use linking words (Firstly, Moreover, However, As a result, Finally, In conclusion) to join ideas and paragraphs.",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "17/U/B",
+     "17/U/ActA"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C6-ENG2-02-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-11-02.3",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-11-02",
+   "domainCode": "DOM-ENG2-COMP",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "Write and check a composition of about 200 words on a familiar topic",
+   "sourceText": "Write a composition of about 200 words on a familiar topic (exam Q8). · Check their own composition with a self-check list and correct mistakes.",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/EP/Q8",
+     "11/EP/Q8b",
+     "17/U/C",
+     "17/U/D",
+     "17/EP/Q8",
+     "17/EP/Q8b",
+     "18/Rev/Q8",
+     "19/Rev/Q8",
+     "20/Model/Q8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-COMPOSITION"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-03.3 \"Write a composition from the topic alone (annual form)\". Marking of Q8 (12 marks) is open (memo D-08); whether composition is taught in Units 11 and 17 is open (D-04). Units 11 and 17 are one objective: the same skill, taught twice."
+  },
+  {
+   "code": "LO-C6-ENG2-12-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-PRON",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "Possessives: possessive adjectives and pronouns; 's, s' and of",
+   "sourceText": "Students will be able to name and use the seven possessive adjectives (my, our, your, his, her, its, their) before nouns. · Students will be able to use possessive pronouns (mine, ours, yours, his, hers, theirs) in place of a possessive adjective + noun. · Students will be able to show possession with ’s, s’ and of.",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/U/A",
+     "12/U/B",
+     "12/U/Act1",
+     "12/U/Act2",
+     "12/U/Act3",
+     "12/U/Act4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "জিনিস দেখিয়ে জিজ্ঞেস করুন \"Whose book is this?\" — উত্তর দুইভাবে: \"It is my book.\" / \"It is mine.\"; \"the name of my friend\" → \"my friend's name\"।",
+   "prereqCodes": [
+    "LO-C6-ENG2-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Not split: only one exercise (Activity 4) practises 's / of; the rest fill my–mine forms."
+  },
+  {
+   "code": "LO-C6-ENG2-13-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "The -ing form of verbs: gerund and present participle",
+   "sourceText": "Students will be able to tell a gerund from a participle by its function.",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-VERBFORM",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "দুটি বাক্য দিন: \"Swimming is good exercise.\" ও \"Look at the swimming boy.\" — কোনটিতে swimming noun-এর কাজ করছে, কোনটিতে adjective-এর?",
+   "prereqCodes": [
+    "LO-C6-ENG2-05-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-13-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-13-01",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "Gerund as subject or object; the -ing form after like, enjoy, mind …; \"Would you mind + -ing …?\"",
+   "sourceText": "Students will be able to recognise a gerund (verb + ing used as a noun) as the subject or the object of a sentence. · Students will be able to use the -ing form after like, love, enjoy, hate, mind, admit, deny, remember and stop. · Students will be able to ask politely with “Would you mind + -ing …?”",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/L1/A",
+     "13/L1/Act1",
+     "13/L1/Act2",
+     "13/L1/Act3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-VERBFORM",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-13-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG2-13-01",
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "Present participle as an adjective before a noun; tell a gerund from a participle",
+   "sourceText": "Students will be able to recognise a present participle (verb + ing used as an adjective) before a noun. · Students will be able to tell a gerund from a participle by its function.",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/L2/A",
+     "13/L2/Act1",
+     "13/L2/Act2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-VERBFORM",
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG2-14-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-SENT",
+   "chapterNumber": 14,
+   "strand": null,
+   "labelBn": "Use introductory \"there\" and \"it\" correctly, and correct wrong uses",
+   "sourceText": "Students will be able to use introductory “there” to say that something exists or happens (There is a pond. There was an accident.). · Students will be able to use introductory “it” for time, day, date, weather and distance, and before an adjective + to-infinitive or that-clause (It is easy to learn. It’s good that …). · Students will be able to find and correct wrong uses of there and it in a text.",
+   "bookRef": {
+    "chapter": 14,
+    "lesson": null,
+    "exercises": [
+     "14/U/A",
+     "14/U/Act1",
+     "14/U/Act2",
+     "14/U/Act3",
+     "14/U/Act4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "ঘর বা এলাকার বর্ণনা দিতে বলুন: \"There is a pond near our house. There are two mango trees.\" আর সময়-আবহাওয়ায়: \"It is seven o'clock. It is raining.\"",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One row: the four activities mix there and it in the same emails and dialogues. \"it\" versus \"its\" (outcome 4) is tested inside Activity 3."
+  },
+  {
+   "code": "LO-C6-ENG2-15-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-LTR",
+   "chapterNumber": 15,
+   "strand": null,
+   "labelBn": "Choose the right layout for the task and correct common mistakes in letters, applications and emails",
+   "sourceText": "Choose the right layout for the task: formal letter / application, informal letter or email. · Find and correct common mistakes in salutations, closings, subject lines, dates and paragraphing.",
+   "bookRef": {
+    "chapter": 15,
+    "lesson": null,
+    "exercises": [
+     "15/L3/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTER",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "তিনটি নমুনা দেখিয়ে জিজ্ঞেস করুন — কোনটি চিঠি, কোনটি দরখাস্ত, কোনটি ইমেইল; সম্বোধন, তারিখ ও শেষের অংশে ভুল থাকলে ধরতে বলুন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-04-01",
+    "LO-C6-ENG2-04-02",
+    "LO-C6-ENG2-08-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One exercise only (Lesson 3 A); Lesson 2 (the checklist of common mistakes) has no exercise of its own — see the flag."
+  },
+  {
+   "code": "LO-C6-ENG2-16-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 16,
+   "strand": null,
+   "labelBn": "Conjugate a verb in the seven tenses with every person; the three forms of 40 more irregular verbs",
+   "sourceText": "Conjugate a verb in the seven tenses of Unit 5 with every person (I, we, you, they, he, she, it). · Give the past and past participle forms of 40 more common irregular verbs.",
+   "bookRef": {
+    "chapter": 16,
+    "lesson": null,
+    "exercises": [
+     "16/U/A",
+     "16/U/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-CLASSTEST"
+   ],
+   "homeTipBn": "একটি verb (write, go, eat) সাত tense-এ I, we, you, he, she, it, they দিয়ে মুখে বলতে বলুন; প্রতিদিন পাঁচটি irregular verb-এর তিন রূপ ধরুন।",
+   "prereqCodes": [
+    "LO-C6-ENG2-05-02",
+    "LO-C6-ENG2-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Section A is \"for class tests only\" (the teacher sets another verb); reading and drill sections with no written answer."
+  },
+  {
+   "code": "LO-C6-ENG2-16-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG2-VERB",
+   "chapterNumber": 16,
+   "strand": null,
+   "labelBn": "Make the verb agree with the subject (each / every, A and B, one of, There is / There are)",
+   "sourceText": "Make the verb agree with the subject after each/every, A and B, one of, and There is/There are.",
+   "bookRef": {
+    "chapter": 16,
+    "lesson": null,
+    "exercises": [
+     "16/U/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM",
+    "QT-SUBST",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "বাক্য দিন: \"Each of the boys ___ (have) a book.\" \"One of my friends ___ (live) in Sylhet.\" — সন্তান verb-এর সঠিক রূপ বসাবে ও কারণ বলবে।",
+   "prereqCodes": [
+    "LO-C6-ENG2-05-02",
+    "LO-C6-ENG2-14-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "New in Class Six. One presentation section; its practice is the classwork of 16 (cited in the Q4 row) and the substitution table (06-01)."
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 210,
+  "mapped": 210,
+  "unmapped": [],
+  "note": "exercisesTotal = every lettered section, activity, class-test practice and Exam Practice question of Units 1–17 (186) plus the eight questions of each of the two Revision and Exam Practice papers and of the NCTB Model Question (24) — 210 in all. Refs read \"unit/L<lesson>/<letter>\" or \"unit/L<lesson>/Act<n>\" (a unit without lessons: \"unit/U/…\"; Part A / Part B: \"PA\", \"PB\"), \"unit/EP/Q<n>\" (a second one in the unit: Q<n>b), \"unit/CT/<n>\", \"18|19/Rev/Q<n>\", \"20/Model/Q<n>\"."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "The book is not yet printed and this is its first version. Source: C6_ENG2_Book_v1_Writer-Reviewer (4 November 2026); the reviewer has not answered the memo yet. Section letters and activity numbers may move in the next version and at print — re-check all 210 refs before the lock."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Open memo decisions (C6_ENG2_Memo_v1, D-01–D-10, all unanswered) that can change the tree: D-01 whether Unit 3 (Prefixes and Suffixes) stays — row 03-01 goes if not; D-02 whether Unit 6 (Substitution Table) stays — row 06-01 would lose its teaching unit (Q3 stays on the paper); D-04 whether composition is taught in Units 11 and 17 — the 11-02 rows; D-05 whether Unit 9 keeps the lesson on optative sentences and changing sentences — rows 09-05, 09-06; D-03 email layout; D-06 one layout (full block) for all letters; D-07, D-08, D-09 marking of Q7, Q8 and Q5; D-10 the new texts."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "CROSS-SUBJECT PREREQUISITES: the grammar and writing rows of the 2nd Paper continue rows of the Class Five English tree (subject ENG) and of the Class Six 1st Paper tree (ENG), but the app accepts a prerequisite only in the same subject (rule PREREQ_RESOLVES: \"another subject\" is refused, also at import). So prereqCodes hold only codes inside this tree, and each row's earlier step in ENG is written at the start of its Claude note (\"Earlier step …\"), checked against C5_ENG and C6_ENG when the tree was built. If the owner wants these as real prerequisites, the rule must first allow ENG → ENG2 (and BAN → BAN2); then the codes can be moved from the notes into prereqCodes."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Question types are the eight questions of the book's exam (Q1–Q8, 50 marks) plus the class test (prefixes and suffixes; conjugation) and classwork. A grammar row carries the exam questions in which that grammar is examined (as its teacher note says) plus classwork; the six exam-skill rows (01-01, 01-06, 02-06, 05-03, 06-01, 09-06, 10-01.3) and the writing rows cite the Exam Practice questions themselves."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "The two \"Revision and Exam Practice\" sections and the NCTB Model Question have no unit number in the book; they are inventoried as units 18, 19 and 20 so that their 24 questions can be cited. They have no learning outcomes of their own — each question is cited by the exam-skill row it practises."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Exercises that are thin for a tagged row (book team): subject–verb agreement (16-02) has one presentation section and no exercise set of its own; \"choose the layout and correct common mistakes\" (15-01) has one exercise, and Unit 15 Lesson 2 (the checklist) has none; possessive 's / of has one activity (12/U/Act4); the linking-words row (11-02.2) has one activity."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Many lettered sections are presentation, not practice (\"Read … and notice …\", model letters, rule tables). They are inventoried and cited by the row they teach, so every heading of the book has a home; the number of real practice items behind a row is smaller than its list of refs suggests."
+  },
+  {
+   "code": "LO-C6-ENG2-05-02",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): The seven tenses are seven sub-objectives (05-02.1–.7), following the book's eight lessons; Class Five had one row for \"change the tense — six forms\". The alternative is three subs (present / past / future)."
+  },
+  {
+   "code": "LO-C6-ENG2-11-02",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): Composition of Units 11 and 17 is one objective with three subs (plan · linking words · write and check) instead of one objective per unit — \"once per class\". Linking words (17) could also sit with the adverb linkers of 02-03."
+  },
+  {
+   "code": "LO-C6-ENG2-11-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): Paragraph writing appears in both papers: 2nd Paper Unit 11 Part A (classwork, row 11-01) and 1st Paper Q12 (C6 ENG 01-07). They are kept as two rows in two subjects; a bank question for Q12 is tagged with the 1st Paper code."
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে; বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। সূত্র: \"5/L2/C\" = Unit 5, Lesson 2, section C; \"9/L5/Act2\" = Unit 9, Lesson 5, Activity 2; \"7/U/D\" = Unit 7 (পাঠ-ভাগ নেই), section D; \"5/EP/Q4\" = Unit 5-এর Exam Practice Q4; \"3/CT/1\" = Class-Test Practice 1; \"18/Rev/Q3\" = Revision and Exam Practice 1-এর Q3 (১৯ = Revision 2, ২০ = NCTB Model Question)।\n\n**বইটি ছাপা হয়নি এবং এটি প্রথম সংস্করণ** — স্মারকের ১০টি সিদ্ধান্তই খোলা; Unit 3 ও Unit 6 থাকবে কি না তা-ও (D-01, D-02)।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **\"আগের ধাপ\" এই গাছে নোটে লেখা, prereq-ঘরে নয়।** ২য় পত্রের ব্যাকরণ পঞ্চম শ্রেণির ইংরেজি (ENG) গাছের সারির পরের ধাপ, কিন্তু অ্যাপ অন্য বিষয়ের কোড prerequisite হিসেবে নেয় না। তাই প্রতিটি সারির Claude-নোটের শুরুতে \"Earlier step …\" লেখা আছে (পতাকা ৩) — মালিক নিয়ম বদলালে সেগুলো ঘরে তোলা যাবে।\n2. **দুই রকম সারি:** (ক) ব্যাকরণ-বিষয়ের সারি — বইয়ের পাঠ ধরে (noun, pronoun, tense …); (খ) পরীক্ষার দক্ষতার সারি — প্রশ্নপত্রের Q1–Q8 (parts of speech চেনা, gap filling, substitution table, right form of verbs, changing sentences, punctuation, letter, composition)। Exam Practice-এর প্রশ্ন (খ)-তে, পাঠের অনুশীলনী (ক)-তে।\n3. **সাত tense সাতটি উপ-সারি (05-02)** — বইয়ের আট পাঠ ধরে। তিন ভাগ (present/past/future) চাইলে বলুন।\n4. **Composition এক শিখনফল, তিন উপ-সারি (11-02)** — Unit 11 ও 17 মিলিয়ে: পরিকল্পনা, linking words, লেখা ও যাচাই।\n5. **ভাগ করা হয়নি:** articles (07-01), possessives (12-01), there/it (14-01), prefixes-suffixes (03-01) — বইয়ের অনুশীলনীগুলো মিশ্র।\n6. **Changing sentences দুই সারিতে:** tense বদল (05-03) ও বাক্যের ধরন বদল (09-06) — প্রশ্নপত্রের Q5 দুটিই মেশায়।\n7. **পাতলা সারি:** subject–verb agreement (16-02), layout বাছাই ও ভুল সংশোধন (15-01) — একটি করে অংশ।\n8. **Paragraph দুই পত্রেই** (এখানে 11-01 শ্রেণির কাজ; ১ম পত্রে Q12) — দুটি আলাদা সারি থাকল।\n\n**নতুন ডোমেইন-মই `domains/ENG2.json`** (১৩টি ক্ষেত্র): প্রতিটি ENG-এর কোন ক্ষেত্রের ধারাবাহিকতা তা note-এ লেখা; \"Grammar in use\" (gap filling ও cloze) একমাত্র নতুন ক্ষেত্র। সপ্তম–দশম শ্রেণিতে একই মই চলবে।\n"
+}
