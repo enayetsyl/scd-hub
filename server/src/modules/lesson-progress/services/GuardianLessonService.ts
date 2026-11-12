@@ -1,5 +1,5 @@
 /**
- * Lesson-plan progress LP-4 (D-#828) + GH-4 (D-#1523/#1527) — guardians and the lessons their child missed.
+ * Lesson-plan progress LP-4 (D-#828) + GH-4 (D-#1523/#1528) — guardians and the lessons their child missed.
  *
  *  - `childMissedLessonsPage` — every marked class this academic year where the child was on the
  *    roster and listed absent that day: subject, the session(s) taught, the teacher's class-note
@@ -40,7 +40,7 @@ const sessionLine = (s: ILessonDelivery["sessions"][number]) =>
 /** The noon rung (13:00 Dhaka, school days; GH-4 — was 18:00 in LP-4). */
 export const LESSON_MISSED_MINUTES = 13 * 60;
 /** A class not covered yet (marked late, or attendance not taken) is looked for this many calendar days back. */
-export const LESSON_MISSED_LOOKBACK_DAYS = 7;
+export const LESSON_MISSED_LOOKBACK_DAYS = 21;
 
 export const lessonMissedDedupe = (studentId: string, dateKey: string, guardianId: string) => `LPMISS:${studentId}:${dateKey}:${guardianId}`;
 
@@ -153,11 +153,11 @@ export async function dispatchLessonMissed(now: Date): Promise<number> {
   if (deliveries.length === 0) return 0;
   const absences = await absencesByNote(deliveries);
   const byStudent = new Map<string, Array<{ dateKey: string; subject: string; lines: string[] }>>();
-  const covered: Types.ObjectId[] = [];
+  const candidates: Array<{ id: Types.ObjectId; absent: string[] }> = [];
   for (const d of deliveries) {
     const a = absences.get(String(d.noteId));
     if (!a?.recorded) continue; // attendance not (fully) taken yet — look again next school day
-    covered.push(d._id);
+    candidates.push({ id: d._id, absent: [...a.absent] });
     for (const sid of a.absent) {
       const list = byStudent.get(sid) ?? [];
       list.push({ dateKey: d.dateKey, subject: d.subject, lines: d.sessions.map(sessionLine) });
@@ -165,6 +165,9 @@ export async function dispatchLessonMissed(now: Date): Promise<number> {
     }
   }
   let sent = 0;
+  // A child whose notice the dedupe key swallowed (a second run the same day) keeps their classes unstamped,
+  // so the next school day notices them (GH-4 review).
+  const swallowed = new Set<string>();
   if (byStudent.size > 0) {
     const ids = [...byStudent.keys()].map((s) => new Types.ObjectId(s));
     const students = new Map((await Student.find({ _id: { $in: ids } }).select("name nameBn").lean()).map((s) => [String(s._id), personName(s as never)]));
@@ -188,8 +191,10 @@ export async function dispatchLessonMissed(now: Date): Promise<number> {
         dedupeKey: lessonMissedDedupe(sid, today, String(l.guardianId)),
       });
       if (r.created) sent++;
+      else swallowed.add(sid);
     }
   }
+  const covered = candidates.filter((c) => !c.absent.some((sid) => swallowed.has(sid))).map((c) => c.id);
   if (covered.length > 0) await LessonDelivery.updateMany({ _id: { $in: covered }, missedNoticeAt: { $exists: false } }, { $set: { missedNoticeAt: now } });
   return sent;
 }

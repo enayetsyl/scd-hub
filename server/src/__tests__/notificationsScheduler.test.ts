@@ -602,7 +602,7 @@ describe("meeting comment 08:00 reminders (D-#756)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Missed-lesson guardian notice (LP-4 D-#828; moved to 13:00 by GH-4, D-#1527)
+// Missed-lesson guardian notice (LP-4 D-#828; moved to 13:00 by GH-4, D-#1528)
 // ---------------------------------------------------------------------------
 
 describe("missed-lesson 13:00 notice (GH-4)", () => {
@@ -621,7 +621,7 @@ describe("missed-lesson 13:00 notice (GH-4)", () => {
     expect(mockLessonMissed).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["OFF", "HOLIDAY"] as const)("does NOT run on a %s day", async (dayType) => {
+  it.each(["OFF", "HOLIDAY", "QURAN_ONLY"] as const)("does NOT run on a %s day", async (dayType) => {
     mockResolveDayType.mockResolvedValue(dayType);
     await runSchedulerTick(at(13, 0));
     expect(mockLessonMissed).not.toHaveBeenCalled();

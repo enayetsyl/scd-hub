@@ -48,7 +48,7 @@ export interface ILessonDelivery extends Document {
    *  Group membership is not dated, so after a split this is the only way to find the record a child
    *  was marked on that day (LP-3, D-#823). */
   attendanceUnits?: string[];
-  /** GH-4 (D-#1527): when the guardians' 1 pm missed-lesson notice covered this class (set once; a later
+  /** GH-4 (D-#1528): when the guardians' 1 pm missed-lesson notice covered this class (set once; a later
    *  re-mark does not notice again). Absent = not covered yet — a class marked after 1 pm rides the next
    *  school day's 1 pm notice. */
   missedNoticeAt?: Date;

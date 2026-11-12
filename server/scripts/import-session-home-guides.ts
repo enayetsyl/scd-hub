@@ -1,5 +1,5 @@
 /**
- * Load a plan pack's session home guides (GH-4, docs/prd-guardian-help.md §5; D-#1527).
+ * Load a plan pack's session home guides (GH-4, docs/prd-guardian-help.md §5; D-#1528).
  *
  *   npx tsx server/scripts/import-session-home-guides.ts <file.json>             # dry run: checks + counts, no writes
  *   npx tsx server/scripts/import-session-home-guides.ts <file.json> --commit    # upsert into the database

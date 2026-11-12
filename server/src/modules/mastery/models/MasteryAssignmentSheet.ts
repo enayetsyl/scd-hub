@@ -43,5 +43,7 @@ const MasteryAssignmentSheetSchema = new Schema<IMasteryAssignmentSheet>(
 );
 
 MasteryAssignmentSheetSchema.index({ assignmentId: 1, studentId: 1 }, { unique: true });
+// A child's sheets (guardian reads: assignments, hints) - the unique index above starts with assignmentId.
+MasteryAssignmentSheetSchema.index({ studentId: 1 });
 
 export const MasteryAssignmentSheet = model<IMasteryAssignmentSheet>("MasteryAssignmentSheet", MasteryAssignmentSheetSchema);

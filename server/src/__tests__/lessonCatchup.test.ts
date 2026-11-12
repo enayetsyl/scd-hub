@@ -223,3 +223,52 @@ describe("guardian view: class note, homework and the home guide (GH-4)", () => 
     expect((await childMissedLessonsPage(kid[3])).rows).toEqual([]);
   });
 });
+
+describe("notice edge cases (GH-4 review)", () => {
+  const present = async (date: string, absent: number[]) => {
+    await StudentAttendanceDay.create([{ sectionId: SEC, dateKey: date, absentStudentIds: absent.map((i) => new Types.ObjectId(kid[i])), markedBy: OFFICE.userId, markedAt: new Date() }]);
+  };
+  const lessonRows = () => Notification.find({ kind: "LESSON_MISSED" }).lean();
+
+  it("a second run the same day leaves a newly marked class unstamped; the next school day notices it", async () => {
+    await present("2027-03-15", [0]);
+    await markClass("2027-03-15", "1:1");
+    await present("2027-03-16", [0]);
+    expect(await dispatchLessonMissed(new Date("2027-03-16T07:00:00Z"))).toBe(1); // covers 03-15 (03-16 not marked yet)
+    await markClass("2027-03-16", "1:2"); // marked after the run, same day
+    expect(await dispatchLessonMissed(new Date("2027-03-16T07:30:00Z"))).toBe(0); // same dedupe key: swallowed
+    expect((await LessonDelivery.findOne({ dateKey: "2027-03-16" }).lean())!.missedNoticeAt).toBeUndefined();
+    expect((await LessonDelivery.findOne({ dateKey: "2027-03-15" }).lean())!.missedNoticeAt).toBeDefined();
+    expect(await dispatchLessonMissed(new Date("2027-03-17T07:00:00Z"))).toBe(1);
+    expect((await LessonDelivery.findOne({ dateKey: "2027-03-16" }).lean())!.missedNoticeAt).toBeDefined();
+  });
+
+  it("a class marked late the day before a 10-day break is still noticed on the first school day back", async () => {
+    await present("2027-03-18", [0]);
+    await markClass("2027-03-18", "2:1"); // marked after the 1 pm run on 03-18; then ten days off
+    expect(await dispatchLessonMissed(new Date("2027-03-28T07:00:00Z"))).toBe(1);
+    const latest = (await lessonRows()).sort((a, b) => +new Date(b.createdAt as Date) - +new Date(a.createdAt as Date))[0];
+    expect(latest.bodyBn).toContain("শিরোনাম 2:1");
+    expect(await dispatchLessonMissed(new Date("2027-03-29T07:00:00Z"))).toBe(0);
+  });
+
+  it("two guardians of one child and one guardian with two children: one notice per guardian × child", async () => {
+    const G2 = new Types.ObjectId();
+    const G3 = new Types.ObjectId();
+    await GuardianLink.create([
+      { guardianId: G2, studentId: new Types.ObjectId(kid[0]), relation: "বাবা", active: true },
+      { guardianId: G3, studentId: new Types.ObjectId(kid[1]), relation: "মা", active: true },
+      { guardianId: G3, studentId: new Types.ObjectId(kid[2]), relation: "মা", active: true },
+    ]);
+    await present("2027-04-04", [0, 1, 2]);
+    await markClass("2027-04-04", "1:1");
+    const before = (await lessonRows()).length;
+    expect(await dispatchLessonMissed(new Date("2027-04-05T07:00:00Z"))).toBe(4);
+    const rows = (await lessonRows()).slice(before);
+    const per = (g: Types.ObjectId) => rows.filter((r) => String(r.recipientGuardianId) === String(g)).length;
+    expect(per(GUARDIAN)).toBe(1);
+    expect(per(G2)).toBe(1);
+    expect(per(G3)).toBe(2); // one per child — an entity-only key would have swallowed the second
+    expect(await dispatchLessonMissed(new Date("2027-04-05T07:10:00Z"))).toBe(0);
+  });
+});

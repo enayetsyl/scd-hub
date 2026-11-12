@@ -2,7 +2,7 @@
  * ChildMissedLessonsScreen (LP-4, D-#828) — the classes this academic year where the guardian's
  * child was listed absent while a lesson-plan session was taught: the date, subject, the session(s)
  * and what the teacher wrote in the class note that day, newest first, so the family can go over it
- * at home. Server-paged (D-#761). The 13:00 LESSON_MISSED notice lands here (GH-4, D-#1527); each period also shows the class
+ * at home. Server-paged (D-#761). The 13:00 LESSON_MISSED notice lands here (GH-4, D-#1528); each period also shows the class
  * homework and the session's home guide (steps + the classwork items done in class).
  */
 import React from "react";
@@ -19,8 +19,13 @@ import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { space } from "../../theme/tokens";
 import { dayMonth } from "../lessonprogress/lessonProgressUi";
 
-export default function ChildMissedLessonsScreen(): React.ReactElement {
-  const { selected } = useGuardianChild();
+export default function ChildMissedLessonsScreen({ route }: { route?: { params?: { studentId?: string } } }): React.ReactElement {
+  const { selected, selectChild } = useGuardianChild();
+  // GH-4: the 13:00 notice names its own child (refs.studentId).
+  const deepLinkedChild = route?.params?.studentId;
+  React.useEffect(() => {
+    if (deepLinkedChild) selectChild(deepLinkedChild);
+  }, [deepLinkedChild, selectChild]);
   const sid = selected?.studentId ?? "";
   const [page, setPage] = usePageState(sid);
   const [{ data, fetching, error }] = useQuery({
@@ -61,7 +66,7 @@ export default function ChildMissedLessonsScreen(): React.ReactElement {
                 <Body>{r.noteBn}</Body>
               </View>
             ) : null}
-            {/* GH-4 (D-#1527): that day's homework, then each session's home guide + classwork. */}
+            {/* GH-4 (D-#1528): that day's homework, then each session's home guide + classwork. */}
             {r.homework ? (
               <View style={{ marginTop: space(1) }}>
                 <Muted>{STR.gpMissedHomework}:</Muted>

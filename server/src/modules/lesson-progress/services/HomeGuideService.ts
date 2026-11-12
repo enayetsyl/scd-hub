@@ -1,5 +1,5 @@
 /**
- * Session home guides (GH-4, docs/prd-guardian-help.md §5; D-#1523/#1527).
+ * Session home guides (GH-4, docs/prd-guardian-help.md §5; D-#1523/#1528).
  *
  *  - `checkSessionHomeGuides` — the pure file check: refuses an unknown class token / subject, steps
  *    not 5–7, empty text, missing classworkItems, a bad chapter / session / minutes figure, a
@@ -11,7 +11,8 @@
  * The caller's `home_guide:import` gate lives in the resolver; the script runs from the shell.
  */
 import { Types } from "mongoose";
-import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS, masteryClassTokenForLevel } from "@scd/shared";
+import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS } from "@scd/shared";
+import { classTokenForLevel } from "../../mastery/services/MasteryWorkService";
 import { SessionHomeGuide, type ISessionHomeGuide } from "../models/SessionHomeGuide";
 
 export const HOME_GUIDE_MIN_STEPS = 5;
@@ -171,7 +172,7 @@ export async function guidesForSessions(
   sessions: Array<{ chapter: string; sessionIndex: number }>,
 ): Promise<Map<string, SessionHomeGuideView>> {
   const out = new Map<string, SessionHomeGuideView>();
-  const token = masteryClassTokenForLevel(classLevel);
+  const token = classTokenForLevel(classLevel); // Nursery = -1, KG = 0 as well as C1–C6
   if (!token || sessions.length === 0) return out;
   const wanted = sessions.filter((s) => /^\d+$/.test(s.chapter)).map((s) => ({ chapter: Number(s.chapter), sessionIndex: s.sessionIndex }));
   if (wanted.length === 0) return out;

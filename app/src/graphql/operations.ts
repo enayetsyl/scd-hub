@@ -5006,7 +5006,7 @@ export interface MissedLessonT {
     sessionOf: number;
     titleBn: string;
     finished: boolean;
-    /** GH-4 (D-#1527): the loaded home guide for this session; null until one is imported. */
+    /** GH-4 (D-#1528): the loaded home guide for this session; null until one is imported. */
     guide: { steps: string[]; classworkItems: Array<{ label: string; textBn: string }>; homeTimeMin: number } | null;
   }>;
   noteBn: string | null;

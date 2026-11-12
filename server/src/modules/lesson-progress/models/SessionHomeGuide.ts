@@ -1,6 +1,6 @@
 /**
  * SessionHomeGuide — the short home guide a guardian reads for ONE lesson-plan session their child
- * missed (docs/prd-guardian-help.md §5, GH-4, D-#1523/#1527).
+ * missed (docs/prd-guardian-help.md §5, GH-4, D-#1523/#1528).
  *
  * Keyed by the STABLE session address (class token x subject x chapter x session index) — the same
  * address a LessonDelivery session names — so a plan re-import never orphans a guide. Written in

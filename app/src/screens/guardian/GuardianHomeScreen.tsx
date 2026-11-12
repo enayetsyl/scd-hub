@@ -64,7 +64,7 @@ import { ChildCommentRows, ChildRevisionRows } from "../../components/ChildComme
 import { StorybookTodayCard } from "../storybooks/StorybookTodayCard";
 import { ActivityTodayCard } from "../activity/ActivityTodayCard";
 import { AllRounderCard } from "../../components/AllRounderCard";
-import { useGuardianFeatures } from "../../lib/guardianFeatures";
+import { useGuardianFeatures, useLessonProgressOn } from "../../lib/guardianFeatures";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
 
@@ -88,6 +88,7 @@ const HW_HOME_DATES = 3;
 export default function GuardianHomeScreen(): React.ReactElement {
   // D-#1011: storybook / activity cards (and the all-rounder that came with them) only when switched on.
   const guardianFeatures = useGuardianFeatures();
+  const lessonProgressOn = useLessonProgressOn(); // GH-4 (D-#1528): the missed-lessons shortcut waits for the school switch
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
   useRecordView("HOME", selected?.studentId);
@@ -362,7 +363,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
     { key: "fees", title: STR.gpFees, onPress: () => nav.navigate("ChildFees") },
     { key: "leave", title: STR.gpLeave, onPress: () => nav.navigate("ChildLeave") },
     { key: "mastery", title: STR.gpMsProgress, onPress: () => nav.navigate("ChildMastery") },
-    { key: "missed", title: STR.gpMissedLessons, onPress: () => nav.navigate("ChildMissedLessons") },
+    ...(lessonProgressOn ? [{ key: "missed", title: STR.gpMissedLessons, onPress: () => nav.navigate("ChildMissedLessons") }] : []),
     { key: "notifications", title: STR.gpPush, onPress: () => openNotificationCenter() },
   ];
 

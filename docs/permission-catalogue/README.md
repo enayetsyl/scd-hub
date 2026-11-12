@@ -168,6 +168,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Content & books | `lesson_plans` | Lesson plans | পাঠ পরিকল্পনা | 3 | content-questions-exams |
 | Content & books | `plan_review` | Plan review | পরিকল্পনা রিভিউ | 3 | content-questions-exams |
 | Content & books | `question_bank` | Question bank | প্রশ্নব্যাংক | 5 | content-questions-exams |
+| Content & books | `question_hint` | Question hints | প্রশ্নের ইঙ্গিত | 1 | content-questions-exams |
 | Content & books | `question_review` | Question review & publishing | প্রশ্ন রিভিউ | 4 | content-questions-exams |
 | Content & books | `book_production` | Book production | বই তৈরি | 10 | content-questions-exams |
 | Content & books | `teaching_notes` | Notes & guides | নোট ও গাইড | 5 | observation-comments-reports |
@@ -716,7 +717,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `lesson_plans:view` | View lesson plans | পাঠ পরিকল্পনা দেখা | Plan tree, a plan, its PDF | on | — | | content:read |
 | `lesson_plans:view_all` | Every plan | সব পাঠ পরিকল্পনা দেখা | Plans beyond own routine/supervisory scope | — | on | †, 2H, F-27 | contentScope primary-role P/O = all |
 | `lesson_plans:import` | Import lesson plans | পাঠ পরিকল্পনা ইম্পোর্ট করা | Upload a plan pair or envelope | — | on | | content:import |
-| `home_guide:import` | Import home guides | বাড়ির গাইড ইম্পোর্ট করা | Load the per-session guardian home guides (steps + classwork items) from a plan pack file (GH-4, D-#1527) | — | — | | — (new) |
+| `home_guide:import` | Import home guides | বাড়ির গাইড ইম্পোর্ট করা | Load the per-session guardian home guides (steps + classwork items) from a plan pack file (GH-4, D-#1528) | — | — | | — (new) |
 | `plan_review:assign` | Assign plan reviewers | রিভিউয়ার বরাদ্দ করা | Assign/move/cancel rounds; board, inbox, load; any thread | — | on | F-26 | content:assign_review; isAdminStaff (thread) |
 | `plan_review:review` | Review plans | পরিকল্পনা রিভিউ করা | Verdict on an assigned plan | on | — | DESIGNATION:assigned_reviewer | content:review |
 | `plan_review:approve` | Sign off plans (gold) | চূড়ান্ত অনুমোদন (গোল্ড) দেওয়া | Promote to gold, single or bulk | — | — | | content:promote_gold |
@@ -729,6 +730,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `question_bank:import` | Import question bank | প্রশ্নব্যাংক ইম্পোর্ট করা | Upload a Project-04 collection | — | on | | content:import |
 | `question_bank:edit` | Correct questions | প্রশ্ন ও উত্তর সংশোধন করা | Text, answer, marks; IMPORTANT on any question | — | on | | question:manage |
 | `question_bank:delete` | Retire / restore | প্রশ্ন বাদ দেওয়া ও ফেরত আনা | Soft-delete, restore, retired view | — | on | | question:manage |
+| `question_hint:import` | Load question hints | প্রশ্নের ইঙ্গিত লোড করা | Dry-run or load a hint file (3 steps per question); refused when a step contains the answer (GH-1, D-#1520) | — | — | | new |
 | `question_review:assign` | Assign question reviewers | প্রশ্ন রিভিউ বরাদ্দ করা | Assign by question/chapter, move, clear a condition, picker | — | on | | content:assign_review |
 | `question_review:view_all` | Review progress | রিভিউয়ের অগ্রগতি দেখা | Inbox, progress, drill-downs, coverage, slices, any thread | — | on | | content:assign_review; isAdminStaff (thread) |
 | `question_review:review` | Review questions | প্রশ্ন রিভিউ করা | Verdict (single/bulk); IMPORTANT on own rounds | on | — | DESIGNATION:assigned_reviewer | content:review |

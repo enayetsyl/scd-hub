@@ -778,6 +778,16 @@ export const FEATURE_CATALOGUE = {
       delete: { en: "Retire / restore", bn: "প্রশ্ন বাদ দেওয়া ও ফেরত আনা", desc: "Soft-delete, restore, retired view", teacher: false, office: true, flags: [] },
     },
   },
+  // GH-1 (D-#1520/#1521): guardian question hints. The Principal loads the hint files; guardians
+  // open them one step at a time under guardian:read_child (the guardian plane, not catalogued).
+  question_hint: {
+    group: "content_and_books",
+    en: "Question hints",
+    bn: "প্রশ্নের ইঙ্গিত",
+    actions: {
+      import: { en: "Load question hints", bn: "প্রশ্নের ইঙ্গিত লোড করা", desc: "Dry-run or load a hint file (3 steps per question); refused when a step contains the answer", teacher: false, office: false, flags: [] },
+    },
+  },
   question_review: {
     group: "content_and_books",
     en: "Question review & publishing",

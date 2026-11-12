@@ -1,5 +1,5 @@
 /**
- * Lesson-plan progress LP-4 guardian resolver (D-#828) + GH-4 (D-#1527): the lessons a linked child
+ * Lesson-plan progress LP-4 guardian resolver (D-#828) + GH-4 (D-#1528): the lessons a linked child
  * missed this academic year, paged (D-#761), each with the class note, the homework and the loaded
  * home guide; and the Principal's home-guide import. The list is guardian:read_child + the guardian
  * link (assertGuardianOfStudent); the import is home_guide:import.
@@ -9,6 +9,7 @@ import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import { assertGuardianOfStudent, ForbiddenError } from "../../../middleware/authz";
 import { writeAudit } from "../../platform/services/AuditService";
+import { isLessonPlanQuestionOn } from "../services/LessonPlanQuestionSwitch";
 import { childMissedLessonsPage, type MissedHomework, type MissedLesson } from "../services/GuardianLessonService";
 import { importSessionHomeGuides, type HomeGuideImportResult, type SessionHomeGuideView } from "../services/HomeGuideService";
 
@@ -64,7 +65,7 @@ builder.queryField("childMissedLessonsPage", (t) =>
   t.field({
     type: MissedLessonPageRef,
     description:
-      "LP-4 (D-#828) + GH-4 (D-#1527): the classes this academic year where the linked child was listed absent while a " +
+      "LP-4 (D-#828) + GH-4 (D-#1528): the classes this academic year where the linked child was listed absent while a " +
       "lesson-plan session was taught — subject, the session(s), the teacher's class-note text, the linked homework and " +
       "each session's home guide (steps + classwork items) when one is loaded; newest first. Link-gated.",
     authScopes: { hasPermission: "guardian:read_child" },
@@ -73,6 +74,15 @@ builder.queryField("childMissedLessonsPage", (t) =>
       await assertGuardianOfStudent(ctx, args.studentId);
       return childMissedLessonsPage(args.studentId, { page: args.page, pageSize: args.pageSize });
     },
+  }),
+);
+
+builder.queryField("lessonProgressOn", (t) =>
+  t.boolean({
+    description:
+      "GH-4 (D-#1528): the school's lesson-progress switch (D-#952, default OFF) for guardians, so the missed-lessons entry points show only once the school uses lesson plans.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    resolve: () => isLessonPlanQuestionOn(),
   }),
 );
 
@@ -91,7 +101,7 @@ builder.mutationField("importSessionHomeGuides", (t) =>
   t.field({
     type: HomeGuideImportRef,
     description:
-      "GH-4 (D-#1527): load a plan pack's session home guides ({ guides: [...] }). Requires home_guide:import (Principal). " +
+      "GH-4 (D-#1528): load a plan pack's session home guides ({ guides: [...] }). Requires home_guide:import (Principal). " +
       "dryRun defaults to TRUE and writes nothing; a file with any problem writes nothing either way.",
     authScopes: { hasPermission: "home_guide:import" },
     args: { json: t.arg.string({ required: true }), dryRun: t.arg.boolean({ required: false }) },

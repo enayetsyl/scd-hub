@@ -1,5 +1,5 @@
 /**
- * GH-4 session home guides (docs/prd-guardian-help.md §5; D-#1523/#1527) — the loader.
+ * GH-4 session home guides (docs/prd-guardian-help.md §5; D-#1523/#1528) — the loader.
  *
  *  - the file check refuses an unknown subject / class token, steps not 5–7, empty text and missing
  *    classworkItems, and a repeated address
@@ -10,13 +10,20 @@
  */
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { graphql, type ExecutionResult } from "graphql";
 import { roleHasPermission, type Permission } from "@scd/shared";
+import { LessonProgressConfig } from "../modules/lesson-progress/models/LessonProgressConfig";
+import "../registerResolvers";
+import { builder } from "../schema";
 import { SessionHomeGuide } from "../modules/lesson-progress/models/SessionHomeGuide";
 import { checkSessionHomeGuides, guidesForSessions, importSessionHomeGuides } from "../modules/lesson-progress/services/HomeGuideService";
 
 jest.setTimeout(120_000);
 
 let mongo: MongoMemoryServer;
+const schema = builder.toSchema();
+const run = (source: string, auth: Record<string, unknown> | null, variableValues?: Record<string, unknown>): Promise<ExecutionResult> =>
+  graphql({ schema, source, contextValue: { auth }, variableValues }) as Promise<ExecutionResult>;
 const ACTOR = String(new Types.ObjectId());
 
 const guide = (over: Record<string, unknown> = {}) => ({
@@ -103,6 +110,13 @@ describe("home guide import (DB)", () => {
     expect((await SessionHomeGuide.findOne({ sessionIndex: 2 }).lean())!.version).toBe(1);
   });
 
+  it("Nursery (-1) and KG (0) guides are found like any other class", async () => {
+    await importSessionHomeGuides({ guides: [guide({ classToken: "NUR", chapter: 2 }), guide({ classToken: "KG", chapter: 3 })] }, ACTOR, { dryRun: false });
+    expect([...(await guidesForSessions(-1, "BAN", [{ chapter: "2", sessionIndex: 1 }])).keys()]).toEqual(["2:1"]);
+    expect([...(await guidesForSessions(0, "BAN", [{ chapter: "3", sessionIndex: 1 }])).keys()]).toEqual(["3:1"]);
+    expect((await guidesForSessions(0, "BAN", [{ chapter: "2", sessionIndex: 1 }])).size).toBe(0); // NUR guide is not KG's
+  });
+
   it("the guardian read finds a guide by class level x subject x chapter:session", async () => {
     await importSessionHomeGuides({ guides: [guide()] }, ACTOR, { dryRun: false });
     const hit = await guidesForSessions(1, "BAN", [{ chapter: "13", sessionIndex: 1 }, { chapter: "13", sessionIndex: 2 }]);
@@ -120,5 +134,39 @@ describe("home_guide:import permission", () => {
     expect(roleHasPermission("OFFICE", perm)).toBe(false);
     expect(roleHasPermission("TEACHER", perm)).toBe(false);
     expect(roleHasPermission("GUARDIAN", perm)).toBe(false);
+  });
+});
+
+describe("GraphQL gates (GH-4)", () => {
+  const IMPORT = `mutation($j: String!, $d: Boolean) { importSessionHomeGuides(json: $j, dryRun: $d) { dryRun total created errors } }`;
+  const j = JSON.stringify({ guides: [guide()] });
+  const refused = /অনুমতি|permission|Not authorized|Forbidden/i;
+
+  it("Office and Teacher callers are refused; nothing is written", async () => {
+    for (const role of ["OFFICE", "TEACHER"] as const) {
+      const r = await run(IMPORT, { userId: ACTOR, role }, { j, d: false });
+      expect(r.errors?.[0]?.message).toMatch(refused);
+    }
+    expect(await SessionHomeGuide.countDocuments()).toBe(0);
+  });
+
+  it("the Principal's call is a dry run unless dryRun is false", async () => {
+    const principal = { userId: ACTOR, role: "PRINCIPAL" as const };
+    const dry = await run(IMPORT, principal, { j });
+    expect(dry.errors).toBeUndefined();
+    expect((dry.data as any).importSessionHomeGuides).toMatchObject({ dryRun: true, created: 1, errors: [] });
+    expect(await SessionHomeGuide.countDocuments()).toBe(0);
+    const real = await run(IMPORT, principal, { j, d: false });
+    expect((real.data as any).importSessionHomeGuides).toMatchObject({ dryRun: false, created: 1 });
+    expect(await SessionHomeGuide.countDocuments()).toBe(1);
+  });
+
+  it("the guardians' lessonProgressOn follows the school switch (default OFF)", async () => {
+    await LessonProgressConfig.deleteMany({});
+    const g = { userId: ACTOR, role: "GUARDIAN" as const };
+    expect((await run("{ lessonProgressOn }", g)).data).toEqual({ lessonProgressOn: false });
+    await LessonProgressConfig.create({ classNoteQuestionOn: true });
+    expect((await run("{ lessonProgressOn }", g)).data).toEqual({ lessonProgressOn: true });
+    await LessonProgressConfig.deleteMany({});
   });
 });

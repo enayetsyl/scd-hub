@@ -285,7 +285,7 @@ export interface TickSummary {
   dailyReportEmitted: number;
   /** D-#1054: report shares removed because their end day passed. */
   dailyReportSharesExpired: number;
-  /** 13:00 missed-lesson notices to guardians (LP-4 D-#828; moved from 18:00 by GH-4, D-#1527). */
+  /** 13:00 missed-lesson notices to guardians (LP-4 D-#828; moved from 18:00 by GH-4, D-#1528). */
   lessonMissedEmitted: number;
 }
 
@@ -783,7 +783,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       });
     });
 
-    // --- Missed lessons (LP-4 D-#828, GH-4 D-#1527) — 13:00, FULL days: one row per guardian × child naming
+    // --- Missed lessons (LP-4 D-#828, GH-4 D-#1528) — 13:00, FULL days: one row per guardian × child naming
     // the lesson-plan sessions taught today while the child was listed absent, so the family can go
     // over them at home. runOnce guards the reads; the dedupe key (child, day, guardian) guards rows.
     await family("lesson missed", async () => {
