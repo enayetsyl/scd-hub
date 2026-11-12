@@ -33,6 +33,7 @@ import { signToken, type AuthResult } from "./AuthService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { normalizePage, MAX_PAGE_SIZE, type Page, type PageArgs } from "../../../lib/paging";
 import { personName } from "../../../lib/personName";
+import { currentYearSectionFilter } from "./currentYear";
 
 /** A borrowed session is short. Long enough to reproduce a bug, short enough that a
  *  forgotten tab is not a standing second identity. */
@@ -259,7 +260,7 @@ async function staffTargetRows(
   users: Array<{ _id: Types.ObjectId; name: string; role: unknown; active?: boolean; additionalTemplates?: unknown }>,
   callerId: string,
 ): Promise<ImpersonationTarget[]> {
-  const sections = await Section.find({ classTeacherId: { $in: users.map((u) => u._id) }, active: true })
+  const sections = await Section.find({ classTeacherId: { $in: users.map((u) => u._id) }, active: true, ...(await currentYearSectionFilter()) })
     .select("classTeacherId nameBn code")
     .lean();
   const sectionsByTeacher = new Map<string, string[]>();

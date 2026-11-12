@@ -10,6 +10,7 @@ import { User } from "../models/User";
 import { ClassTeacherAssignment, type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
 import { onSectionTeachersChangedSync } from "../../chat/services/ChatGroupService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { currentYearSectionFilter } from "./currentYear";
 
 async function assertTeacher(userId: string): Promise<void> {
   const user = await User.findById(userId).lean();
@@ -133,5 +134,5 @@ export async function classTeacherHistory(sectionId: string): Promise<IClassTeac
 
 /** The sections a teacher is class teacher of (CT1.2). */
 export async function mySectionsAsClassTeacher(userId: string): Promise<ISection[]> {
-  return Section.find({ classTeacherId: userId, active: true }).lean() as unknown as ISection[];
+  return Section.find({ classTeacherId: userId, active: true, ...(await currentYearSectionFilter()) }).lean() as unknown as ISection[];
 }

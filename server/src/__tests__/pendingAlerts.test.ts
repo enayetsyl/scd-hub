@@ -31,6 +31,13 @@ const mockAsItemFind = jest.fn();
 const mockHwItemFind = jest.fn();
 const mockHwReconFind = jest.fn();
 
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (f: unknown) => ({ select: () => ({ lean: () => mockHolidayFind(f) }) }) },
 }));

@@ -33,6 +33,13 @@ const chain = (fn: jest.Mock) => (f: unknown) => ({
   select: () => ({ lean: () => fn(f) }),
 });
 
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: { find: (f: unknown) => chain(mockSlotFind)(f) },
 }));

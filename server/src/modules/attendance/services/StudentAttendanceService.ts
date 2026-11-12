@@ -62,6 +62,7 @@ import {
   type AttendanceUnit,
   type UnitType,
 } from "../attendanceUnit";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 export class AttendanceError extends Error {
   constructor(msg: string) {
@@ -541,7 +542,7 @@ export async function myMarkingUnits(userId: string, dateKey: string): Promise<M
     StaffCoverSlot.find({ finalCoverTeacherUserId: userId, dateKey, status: "approved" })
       .select("routineSlotId")
       .lean(),
-    Section.find({ classTeacherId: userId, active: true }).select("_id").lean(),
+    Section.find({ classTeacherId: userId, active: true, ...(await currentYearSectionFilter()) }).select("_id").lean(),
     SectionAttendanceAssignment.find({
       teacherId: userId,
       active: true,

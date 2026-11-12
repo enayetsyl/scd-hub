@@ -33,6 +33,7 @@ import { scopeForSections } from "../../platform/services/DeidScopeService";
 import { activeAiPolicy } from "../../platform/services/AiPolicyService";
 import { aiFeatureConfig } from "../../platform/services/AiSettingService";
 import { AiCapError } from "../../platform/services/AiUsageService";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 export class AiAssistError extends Error {
   constructor(message: string) {
@@ -186,7 +187,7 @@ export async function chapterContext(s: Pick<IAiAssistSession, "classLevel" | "s
 }
 
 async function schoolScope(): Promise<DeidScope> {
-  const sections = await Section.find({ active: { $ne: false } }).select("_id").lean();
+  const sections = await Section.find({ active: { $ne: false }, ...(await currentYearSectionFilter()) }).select("_id").lean();
   return scopeForSections(sections.map((s) => s._id.toString()));
 }
 

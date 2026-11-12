@@ -16,6 +16,11 @@ const oid = (): mongoose.Types.ObjectId => new mongoose.Types.ObjectId();
 const mockNoteFind = jest.fn();
 const mockNoteCount = jest.fn();
 const mockNoteDistinct = jest.fn();
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/routine/models/ClassNote", () => ({
   ClassNote: {
     find: (query: unknown) => ({
