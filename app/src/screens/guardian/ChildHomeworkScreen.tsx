@@ -55,6 +55,7 @@ import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, h
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
+import { ChildQuestionHints } from "../../components/ChildQuestionHints";
 import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -680,7 +681,8 @@ export default function ChildHomeworkScreen({
             ))}
           </Card>
         ) : null}
-
+        {/* GH-1: assigned bank questions with a hint ladder - own query, outside the gate. */}
+        {selected ? <ChildQuestionHints studentId={selected.studentId} /> : null}
         <QueryGate
           results={[hwQ, nilQ, routineQ]}
           onRetry={() => {
