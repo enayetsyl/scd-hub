@@ -300,6 +300,10 @@ Review writes (accept/edit/split/merge/reject/add/comment/submit) arrive with OT
 | server/src/modules/mastery/resolvers/masteryWork.ts | deleteMasteryPaper | `mastery:create`; svc: OPEN + no results |
 | server/src/modules/mastery/resolvers/masteryWork.ts | saveMasteryResults | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
 | server/src/modules/mastery/resolvers/masteryWork.ts | confirmMasteryPaper | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryClassTestOptions (PR-C, D-#1317) | `mastery:create`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryClassTestSheet (PR-C, D-#1319) | `mastery:view`; no student data (switch state + linked sheet id) |
+| server/src/modules/mastery/resolvers/masteryWork.ts | createMasteryPaper `classTestId` (PR-C) | unchanged gate; svc: CT source, section test, totals equal, one sheet per test |
+| server/src/modules/trackers/resolvers/classTestResult.ts | enterClassTestResult (PR-C guard) | unchanged gate (`class_test:enter_results`); svc: a linked sheet's mark / status cannot be overwritten here |
 
 App: `MasteryTab` opens on `mastery:view` || `mastery:settings` || `mastery:enter_results`; the drawer leaf প্রশ্নভিত্তিক নম্বর on `mastery:enter_results`; the new-sheet button on `mastery:create`. Reach: `MasteryWorkHomeScreen` lists sections via `useAccessibleClasses({ viewAll: "mastery:edit_all" })`.
 

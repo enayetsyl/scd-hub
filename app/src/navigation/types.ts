@@ -615,7 +615,8 @@ export type MasteryStackParamList = {
   MasteryPolicy: undefined;
   /** M-2: param-free — the drawer leaf; the screen picks its own section and subject. */
   MasteryWork: undefined;
-  MasteryNewPaper: { sectionId: string; subject: string; classLevel: number };
+  /** PR-C: `classTestId` pre-picks the class test the CT sheet will own (opened from the class test). */
+  MasteryNewPaper: { sectionId: string; subject: string; classLevel: number; classTestId?: string };
   MasteryEntry: { paperId: string };
   /** M-3: diagnosis views + quality report (all param-requiring — never register one first). */
   MasteryHeatmap: { sectionId: string; subject: string };

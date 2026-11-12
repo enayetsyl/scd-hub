@@ -93,7 +93,7 @@ the brief).
 
 ## PR-B — a work sheet can carry an earlier class's objectives
 
-**Commits:** first `320ccf6` · last: the `[PR-B] docs: overnight handoff` commit right after it.
+**Commits:** first `320ccf6` · last `936e44a`.
 
 ### What was built
 - `createPaper` (HW / CT / RUBRIC) accepts a same-subject code of the section's class or any earlier class
@@ -137,3 +137,60 @@ D-#1315 (the summary read is paged from the start), D-#1316 (new-sheet switch, c
    weak row), e.g. a short "ভিত্তি যাচাই" list? Not built.
 2. A baseline sheet uses the section class's switch only. Should the earlier class × subject also have to be
    switched on (its tree locked) — it must be LOCKED already, so this only matters for the switch itself?
+
+---
+
+## PR-C — the class test and its question sheet are one entry
+
+**Commits:** first `2402d65` · last: the `[PR-C] docs: overnight handoff` commit right after it.
+
+### What was built
+- `createMasteryPaper(…, classTestId?)` (CT only): test exists, REQUESTED / PRINTED, section-anchored (group
+  test refused), same section + subject, no other sheet (unique partial index on `links.classTestId`); sheet
+  date = exam date; item marks must equal `totalMarks` (refusal names both, e.g. "১৮ … ২০").
+- `masteryClassTestOptions` (section's unlinked REQUESTED / PRINTED section tests, exam date from 30 days ago
+  onwards — upcoming included) and `masteryClassTestSheet` (switch on? linked sheet id/state; no student data).
+- Linked sheet: NOT_SUBMITTED refused / hidden. Confirm checks PRINTED + exam day, refuses if a submitted /
+  published result would change, then writes every roster child through `enterResult` (ABSENT, or PRESENT +
+  sheet total; full marks without a row); comments and the AI stamp kept (test pins it). Corrections re-write;
+  a total-changing correction on a submitted / published result is refused with the class test's own message,
+  a tag-only one goes through. Deleting an OPEN sheet frees the test.
+- `enterClassTestResult` defers to the sheet via a lazy-imported guard: before confirmation nothing is
+  entered; after, a different mark / status is refused; same mark + comments saves.
+- App: class-test screen "প্রশ্নভিত্তিক শিট" row (open / create, only where mastery is on — also on the
+  not-yet-printed view), read-only marks + "শুধু মন্তব্য" note while a sheet owns them, "আগে প্রশ্নভিত্তিক শিট
+  নিশ্চিত করুন" before confirmation; new-sheet test picker with required vs running total; entry screen hides
+  "জমা দেয়নি" on a linked sheet and shows a warning line per mismatch. Reading guide
+  `mastery-class-test-sheet`; `exam-ct-enter-marks` intro updated.
+
+### Verified (executed; gate worktree at `2402d65`)
+```
+verifiers (vocab, descriptive 11, lo-codes 13, subjects-2027 15, catalogue 11, tree C1_MATH, help guides,
+  example envelope)               → all PASS / ALL CHECKS PASSED, exit 0
+shared build / typecheck shared / server / app → exit 0 ×4
+jest --runInBand touched (masteryClassTestLink [new], masteryWork, masteryEarlierClass, masteryAssignment,
+  masteryAction, classTestResult, classTest, classTestPublish, classTestCorrection, classTestRecheck,
+  classTestGroupAnchor, graphqlDocuments, permissionCatalogueGates, expectedErrorRegistry, helpGuides)
+                                  → Test Suites: 15 passed, 15 total · Tests: 265 passed, 265 total
+full server suite --maxWorkers=2  → Test Suites: 412 passed, 412 total · Tests: 6758 passed · JEST_EXIT=0
+expo export --platform web        → App exported … EXPO_EXIT=0
+```
+
+### Not done
+- The resolver-level guard is tested through `classTestEntryGuard` + `enterResult` directly, not by a GraphQL
+  call to `enterClassTestResult` (graphqlDocuments confirms the app's operations against the schema).
+- The class-test "detail" and "marks" screens are one screen in the live app (`ClassTestResultsScreen`); the
+  row and the read-only marks are both there.
+- No screenshot guide (reading guide only).
+
+### Decisions made
+D-#1317 (link rules, unique index, options window incl. upcoming tests), D-#1318 (writes through
+`enterResult`, comments kept for PRESENT, ABSENT still clears comments, VOID → PRESENT total, locked check),
+D-#1319 (entry guard via lazy import, link read on `mastery:view`), D-#1320 (other flows untouched; mismatch
+warning only).
+
+### Questions for the owner
+1. An ABSENT write clears the result's comments (the class test's own rule since 2026-11-06). The brief says
+   "keep any comment text" — I kept that rule for ABSENT children. Confirm.
+2. A VOID (copied / behaviour) sheet row becomes PRESENT with the earned total on the class test. Should VOID
+   instead block the class-test write for that child?
