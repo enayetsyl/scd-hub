@@ -27,6 +27,7 @@ import { LoadOlder } from "../../components/LoadOlder";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { ChildMasteryAssignments } from "./ChildMasteryAssignments";
+import { ChildQuestionHints } from "../../components/ChildQuestionHints";
 import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
@@ -78,6 +79,7 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
         {/* M-4b: the weekly tailored assignment — own query, outside the gate so an empty
             tracker list never hides it. Renders nothing when the add-on is off. */}
         {selected ? <ChildMasteryAssignments studentId={selected.studentId} childName={selected.nameBn || selected.name} /> : null}
+        {selected ? <ChildQuestionHints studentId={selected.studentId} sources={["ASSIGNMENT"]} /> : null}
         {!selected ? (
           <Loader label={STR.loading} />
         ) : (

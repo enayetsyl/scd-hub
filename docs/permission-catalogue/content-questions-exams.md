@@ -461,3 +461,10 @@ The `exams` list (the exam picker) answers for `exam_syllabus:view`, or any `exa
 Recipients (D-#796): a custody dispute → `holdersOf("exam_results:settings")`; results submitted → `holdersOf("exam_results:publish")`; handover → the named receiver; the receiver picker lists `holdersOf("exam_custody:acknowledge")`.
 
 App gates: `ExamsTab` on any `exam_results:*` or `exam_custody:*`; drawer leaf পরীক্ষা in the exam group on `exam_results:view` / `exam_custody:view`; every paper shown with `edit_all`/`settings`/`assign` (else own duties only); submit on `submit`, approve on `publish`; custody inbox on `acknowledge`, new-handover form on `hand_over`; the report-card comment on `comment`.
+
+### GH-1 (2026-11-13, D-#1520/#1521) — question hints
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/guardian-help/resolvers/questionHints.ts | importQuestionHints | `question_hint:import` (Principal; dry run or apply) |
+| server/src/modules/guardian-help/resolvers/questionHints.ts | childAssignedQuestions | `guardian:read_child` (non-catalogue guardian plane) + `assertGuardianOfStudent`; question text only, no answer field |
+| server/src/modules/guardian-help/resolvers/questionHints.ts | openQuestionHint | `guardian:read_child` + `assertGuardianOfStudent`; the qid must be assigned to that child; step N only after step N-1 |

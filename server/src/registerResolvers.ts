@@ -178,6 +178,7 @@ import "./modules/mastery/resolvers/masteryGuardian";
 import "./modules/mastery/resolvers/masteryAction";
 import "./modules/mastery/resolvers/masteryReview";
 import "./modules/mastery/resolvers/masteryBankCoverage";
+import "./modules/guardian-help/resolvers/questionHints";
 import "./modules/lesson-progress/resolvers/lessonDelivery";
 import "./modules/lesson-progress/resolvers/lessonProgress";
 import "./modules/lesson-progress/resolvers/studentLessons";

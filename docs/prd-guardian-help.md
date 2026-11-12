@@ -32,6 +32,8 @@ guardian gets a simple guide to teach the missed lesson at home; (3) flag homewo
 
 ## 2. GH-1 — Question hints
 
+**Status (GH-1):** BUILT on `feat/gh1-question-hints` (not promoted). Store `QuestionHint`, log `HintView`, loader service + `importQuestionHints` mutation (`question_hint:import`) + `server/scripts/import-question-hints.ts`, guardian queries `childAssignedQuestions` / `openQuestionHint`, app button on the guardian Assignments and Homework tabs. The teacher-side count "ইঙ্গিত খোলা হয়েছে" is NOT built yet (GH-3 shows it in the Office case).
+
 **Store** (not in the question payload — the payload schema stays locked; hints can be added or edited without
 re-importing a bank): `QuestionHint { qid (unique), classToken, subject, steps: [{ n: 1|2|3, textBn }], language
 ("bn"|"en"), source ("agent"|"teacher"), version, updatedBy, updatedAt }`. Step 1 = where to look / what to notice;
