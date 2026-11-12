@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-11-12: **BUILT — PR-L picks change the class-test guardian message (D-#1430)**, branch `feat/fu-l-picks-guardian-msg`, PR to dev.
 - 2026-11-11: **PLANNED — 2027 year change + Class 6: audit and build plan** (cloud session, docs only, branch `claude/cool-brown-x2nzvt`; `docs/prd-year-change.md`). No code, schema, vocab or test changed; no DECISIONS rows (YC-D1–D9 proposed inside the PRD for the owner to ratify).
   - **Found (blocking 3 Jan):** 2027 HW/AS/CT/SP ids collide with 2026 ids (per-year counters, global unique id) → every create fails; Class 6 refused (`ROSTER_CLASS_LEVEL_MAX` 5) and ICT/BAN2/ENG2 missing from every teaching list + `[A-Z]+` id regexes; Office can flip the current year today (`classes_sections:settings`); ~30 server reads list classes/sections/bell windows with no year filter; 128 live section/class roster reads would empty 2026 views, and monthly-report revisions, lesson-note snapshots and gift stamps would write 2027 sections onto 2026 records.
   - **Recommended:** hybrid model — a dated `Enrolment` per student-year with `Student.classId/sectionId` kept as the current pointer; past-period readers read the enrolment. Procedure Prepare (December, invisible) → Cut-over (Fri 1 Jan 2027 evening, flip last) → Undo; slices YC-0…YC-9, YC-0–YC-6 live and rehearsed on dev by 20 Dec.
