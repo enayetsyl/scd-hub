@@ -44,7 +44,7 @@
     "ref19_topic_id": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9]*-[A-Z0-9]+$",
-      "description": "REF-19 canonical topic slug, e.g. BAN-POEM / ENG-SENTSTR / BGS-ETHICS. Payload-only (NOT an envelope tag). The durable vertical-map identity; hard-validated against the REF-19 registry in the harness. D-#1311: no longer in `required` here because the payload does not know its subject — the harness L4 requires it for BAN / ENG / MATH / SCI / BGS / BAN2 / ENG2 (BAN2 / ENG2 use the BAN- / ENG- slugs) and leaves it optional (and unchecked) for ISLAM and ICT, which have no REF-19 slugs."
+      "description": "REF-19 canonical topic slug, e.g. BAN-POEM / ENG-SENTSTR / BGS-ETHICS. Payload-only (NOT an envelope tag). The durable vertical-map identity; hard-validated against the REF-19 registry in the harness. D-#1311: no longer in `required` here because the payload does not know its subject — the harness L4 requires it for BAN / ENG / MATH / SCI / BGS / BAN2 / ENG2 (BAN2 / ENG2 use the BAN- / ENG- slugs) when topic_tag is a legacy TOP- tag, and leaves it optional (and unchecked) for ISLAM and ICT, which have no REF-19 slugs. D-#1405: when topic_tag is an objective code (LO-...) it is optional for every subject; when present it is still registry-checked."
     },
     "question_text": {
       "type": "string",
