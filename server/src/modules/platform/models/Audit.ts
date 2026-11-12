@@ -37,6 +37,8 @@ export type AuditEventKind =
   // her own queue from a desk mark, because the two reach the mutation by different gates.
   | "QUESTION_MARKED_IMPORTANT"   // raised: normal → important
   | "QUESTION_UNMARKED_IMPORTANT" // lowered back to the usual state
+  | "QUESTION_EXAM_HELD"          // set aside for the exam papers (PR-I, D-#1408)
+  | "QUESTION_EXAM_RELEASED"      // released back to the pickers
   // Book production (SB-1, D-#403–#428). SECURITY log only — who did what. The
   // EDITORIAL "why" lives in the book plane's own BookEvent (D-#411); the two answer
   // different questions and neither is derivable from the other.

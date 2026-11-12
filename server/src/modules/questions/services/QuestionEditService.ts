@@ -35,7 +35,7 @@ import { Types } from "mongoose";
 import { QUESTION_TYPES } from "@scd/shared";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
-import { writeAudit } from "../../platform/services/AuditService";
+import { writeAudit, writeAuditMany } from "../../platform/services/AuditService";
 import { ReviewError, supersedeOpenRounds } from "../../content/services/ReviewService";
 import { QUESTION_DOC_TYPE } from "./QuestionReviewService";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
@@ -84,6 +84,7 @@ interface LeanArtifact {
   retiredAt?: Date | null;
   retiredBy?: Types.ObjectId | null;
   importantAt?: Date | null;
+  examPoolAt?: Date | null;
   envelopeJson?: Record<string, unknown>;
 }
 
@@ -489,6 +490,174 @@ export async function setQuestionImportant(input: {
     retiredAt: lean.retiredAt ? lean.retiredAt.toISOString() : null,
     important: input.important,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Held for exams (PR-I, D-#1408)
+// ---------------------------------------------------------------------------
+
+export interface ExamPoolResult {
+  artifactId: string;
+  qid: string | null;
+  /** The mark AFTER the call. */
+  examPool: boolean;
+  /** False when the question already held that state (nothing written, nothing audited). */
+  changed: boolean;
+}
+
+export interface ExamPoolBulkResult {
+  /** Questions whose state changed. */
+  marked: number;
+  /** qids that match no live (current, not retired) question — the first EXAM_POOL_LIST_CAP only. */
+  notFound: string[];
+  notFoundCount: number;
+  /** qids that already held the asked state — the first EXAM_POOL_LIST_CAP only. */
+  unchanged: string[];
+  unchangedCount: number;
+}
+
+/** Id arrays in a response are capped here; the totals are in the *Count fields. */
+export const EXAM_POOL_LIST_CAP = 200;
+const capped = (l: string[]): string[] => l.slice(0, EXAM_POOL_LIST_CAP);
+
+function examPoolAudit(on: boolean, actorId: string, actorRole: string | undefined, id: string, qid: string | null, subject: string, classLevel: number, how: string) {
+  return {
+    eventKind: on ? ("QUESTION_EXAM_HELD" as const) : ("QUESTION_EXAM_RELEASED" as const),
+    actorId,
+    actorRole,
+    targetId: id,
+    targetKind: "ContentArtifact",
+    meta: { qid, subject, classLevel, how },
+  };
+}
+
+/**
+ * Hold one question for the exam papers, or release it (PR-I, D-#1408). Principal + Office
+ * (`question_bank:edit` / `question_bank:delete`, gated in the resolver). Idempotent: asking for
+ * the state it already holds writes and audits nothing.
+ */
+export async function setQuestionExamPool(input: {
+  artifactId: string;
+  on: boolean;
+  actorId: string;
+  actorRole?: string;
+}): Promise<ExamPoolResult> {
+  const doc = await loadQuestionDoc(input.artifactId);
+  const lean = doc.toObject() as unknown as LeanArtifact;
+  const qid = typeof payloadOf(lean).qid === "string" ? (payloadOf(lean).qid as string) : null;
+  const was = lean.examPoolAt != null;
+  if (was === input.on) return { artifactId: doc._id.toString(), qid, examPool: was, changed: false };
+  doc.set("examPoolAt", input.on ? new Date() : null);
+  doc.set("examPoolBy", input.on ? new Types.ObjectId(input.actorId) : undefined);
+  await doc.save();
+  await writeAudit(examPoolAudit(input.on, input.actorId, input.actorRole, doc._id.toString(), qid, lean.subject, lean.classLevel, "single"));
+  return { artifactId: doc._id.toString(), qid, examPool: input.on, changed: true };
+}
+
+/** The most ids (or filter matches) one bulk call takes. */
+export const EXAM_POOL_MAX_IDS = 5000;
+const EXAM_POOL_CHUNK = 500;
+
+/** Pasted ids -> the bank's form: trimmed, Bangla digits to ASCII, upper case. */
+export function normaliseQid(q: string): string {
+  return q.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))).trim().toUpperCase();
+}
+
+/** Apply the mark to the given artifacts (already known to be live questions) and audit each change. */
+async function applyExamPool(
+  docs: { _id: Types.ObjectId; subject: string; classLevel: number; qid: string | null }[],
+  on: boolean,
+  actorId: string,
+  actorRole: string | undefined,
+  how: string,
+): Promise<void> {
+  if (docs.length === 0) return;
+  for (let i = 0; i < docs.length; i += EXAM_POOL_CHUNK) {
+    const ids = docs.slice(i, i + EXAM_POOL_CHUNK).map((d) => d._id);
+    await ContentArtifact.updateMany(
+      { _id: { $in: ids } },
+      on
+        ? { $set: { examPoolAt: new Date(), examPoolBy: new Types.ObjectId(actorId) } }
+        : { $set: { examPoolAt: null }, $unset: { examPoolBy: "" } },
+    );
+  }
+  await writeAuditMany(docs.map((d) => examPoolAudit(on, actorId, actorRole, d._id.toString(), d.qid, d.subject, d.classLevel, how)));
+}
+
+/**
+ * Hold or release many questions named by their ids (`QP-…`) — the Principal pastes the list the
+ * question-bank run proposed. Ids are normalised (trim, upper case, Bangla digits to ASCII) and
+ * de-duplicated. ONE `$in` read for the whole list (at most EXAM_POOL_MAX_IDS), then the writes.
+ * Reports marked / not found / unchanged.
+ */
+export async function markExamPool(input: {
+  qids: string[];
+  on: boolean;
+  actorId: string;
+  actorRole?: string;
+}): Promise<ExamPoolBulkResult> {
+  const wanted = [...new Set(input.qids.map(normaliseQid).filter(Boolean))];
+  if (wanted.length > EXAM_POOL_MAX_IDS) {
+    throw new ReviewError(`Too many ids in one go (${wanted.length}) — the limit is ${EXAM_POOL_MAX_IDS}`);
+  }
+  const found = new Map<string, { _id: Types.ObjectId; subject: string; classLevel: number; qid: string; held: boolean }>();
+  if (wanted.length > 0) {
+    const rows = await ContentArtifact.find({
+      docType: QUESTION_DOC_TYPE,
+      current: true,
+      retiredAt: null,
+      "envelopeJson.payload.qid": { $in: wanted },
+    })
+      .select("subject classLevel examPoolAt envelopeJson.payload.qid")
+      .lean();
+    for (const r of rows) {
+      const qid = ((r.envelopeJson as Record<string, unknown>)?.payload as Record<string, unknown> | undefined)?.qid;
+      if (typeof qid === "string") found.set(qid, { _id: r._id as Types.ObjectId, subject: r.subject, classLevel: r.classLevel, qid, held: r.examPoolAt != null });
+    }
+  }
+  const notFound = wanted.filter((q) => !found.has(q));
+  const unchanged = wanted.filter((q) => found.has(q) && found.get(q)!.held === input.on);
+  const todo = wanted.filter((q) => found.has(q) && found.get(q)!.held !== input.on).map((q) => found.get(q)!);
+  await applyExamPool(todo, input.on, input.actorId, input.actorRole, "id-list");
+  return { marked: todo.length, notFound: capped(notFound), notFoundCount: notFound.length, unchanged: capped(unchanged), unchangedCount: unchanged.length };
+}
+
+/**
+ * Hold or release every question a filter matches (PR-I). Guard rails, all checked BEFORE any write:
+ *  - the filter must name a subject AND a class, so "everything" is never one tap away;
+ *  - it must match at most EXAM_POOL_MAX_IDS questions;
+ *  - the caller names the `expectedCount` it showed the user; a different number refuses the call.
+ * The response carries counts and at most EXAM_POOL_LIST_CAP ids.
+ */
+export async function markExamPoolByFilter(input: {
+  filter: Record<string, unknown>;
+  expectedCount: number;
+  on: boolean;
+  actorId: string;
+  actorRole?: string;
+}): Promise<ExamPoolBulkResult> {
+  if (!input.filter.subject || input.filter.classLevel == null) {
+    throw new ReviewError("Choose a subject and a class first — a bulk hold by filter needs both");
+  }
+  const where = { ...input.filter, docType: QUESTION_DOC_TYPE, current: true, retiredAt: null };
+  const count = await ContentArtifact.countDocuments(where);
+  if (count > EXAM_POOL_MAX_IDS) {
+    throw new ReviewError(`The filter matches ${count} questions — narrow it to ${EXAM_POOL_MAX_IDS} or fewer`);
+  }
+  if (count !== input.expectedCount) {
+    throw new ReviewError(`The filter now matches ${count} questions, not ${input.expectedCount} — look again before applying`);
+  }
+  const rows = await ContentArtifact.find(where).select("subject classLevel examPoolAt envelopeJson.payload.qid").lean();
+  const qidOf = (r: (typeof rows)[number]) => {
+    const q = ((r.envelopeJson as Record<string, unknown>)?.payload as Record<string, unknown> | undefined)?.qid;
+    return typeof q === "string" ? q : null;
+  };
+  const todo = rows
+    .filter((r) => (r.examPoolAt != null) !== input.on)
+    .map((r) => ({ _id: r._id as Types.ObjectId, subject: r.subject, classLevel: r.classLevel, qid: qidOf(r) }));
+  const unchanged = rows.filter((r) => (r.examPoolAt != null) === input.on).map(qidOf).filter((q): q is string => q !== null);
+  await applyExamPool(todo, input.on, input.actorId, input.actorRole, "filter");
+  return { marked: todo.length, notFound: [], notFoundCount: 0, unchanged: capped(unchanged), unchangedCount: rows.length - todo.length };
 }
 
 /** Retired questions are hidden everywhere a question is CHOSEN — the bank, the assign

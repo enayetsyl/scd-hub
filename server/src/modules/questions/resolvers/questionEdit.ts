@@ -18,16 +18,22 @@
  * Every mutation writes an audit row naming the actor, the question, and exactly which
  * fields moved with their before and after values.
  */
-import { callerHasPermission } from "@scd/shared";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
 import { ReviewError } from "../../content/services/ReviewService";
+import { buildQuestionsFilter, QuestionFilterInput } from "./questions";
 import {
   updateQuestionContent as updateSvc,
   retireQuestion as retireSvc,
   restoreQuestion as restoreSvc,
   setQuestionImportant as setImportantSvc,
+  setQuestionExamPool as setExamPoolSvc,
+  markExamPool as markExamPoolSvc,
+  markExamPoolByFilter as markExamPoolByFilterSvc,
+  type ExamPoolBulkResult,
+  type ExamPoolResult,
   type QuestionEditResult,
 } from "../services/QuestionEditService";
 
@@ -206,6 +212,105 @@ builder.mutationField("setQuestionImportant", (t) =>
           actorId: ctx.auth.userId,
           actorRole: ctx.auth.role,
           mayManage,
+        });
+      } catch (err) {
+        return mapEditError(err);
+      }
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Held for exams (PR-I, D-#1408)
+// ---------------------------------------------------------------------------
+
+const ExamPoolResultRef = builder.objectRef<ExamPoolResult>("QuestionExamPoolResult");
+ExamPoolResultRef.implement({
+  description: "Outcome of holding / releasing one question. `changed` is false when it already held that state.",
+  fields: (t) => ({
+    artifactId: t.exposeString("artifactId"),
+    qid: t.string({ nullable: true, resolve: (r) => r.qid }),
+    examPool: t.exposeBoolean("examPool"),
+    changed: t.exposeBoolean("changed"),
+  }),
+});
+
+const ExamPoolBulkRef = builder.objectRef<ExamPoolBulkResult>("QuestionExamPoolBulkResult");
+ExamPoolBulkRef.implement({
+  description: "Outcome of a bulk hold / release: how many changed, which ids matched nothing, which already held the state.",
+  fields: (t) => ({
+    marked: t.exposeInt("marked"),
+    notFound: t.exposeStringList("notFound", { description: "The first 200 only; see notFoundCount." }),
+    notFoundCount: t.exposeInt("notFoundCount"),
+    unchanged: t.exposeStringList("unchanged", { description: "The first 200 only; see unchangedCount." }),
+    unchangedCount: t.exposeInt("unchangedCount"),
+  }),
+});
+
+/** question:manage = question_bank:edit or question_bank:delete (Principal + Office). */
+const MANAGE: { hasAnyPermission: Permission[] } = { hasAnyPermission: ["question_bank:edit", "question_bank:delete"] };
+
+builder.mutationField("setQuestionExamPool", (t) =>
+  t.field({
+    type: ExamPoolResultRef,
+    description:
+      "Hold one question for the exam papers, or release it (PR-I, D-#1408). A held question is never " +
+      "given out for homework, assignment sheets, re-tests, extra homework or class-test sheets. " +
+      "Requires question:manage (Principal, Office). Setting the state it already holds writes nothing.",
+    authScopes: MANAGE,
+    args: { artifactId: t.arg.string({ required: true }), on: t.arg.boolean({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await setExamPoolSvc({ artifactId: args.artifactId, on: args.on, actorId: ctx.auth.userId, actorRole: ctx.auth.role });
+      } catch (err) {
+        return mapEditError(err);
+      }
+    },
+  }),
+);
+
+builder.mutationField("markExamPool", (t) =>
+  t.field({
+    type: ExamPoolBulkRef,
+    description:
+      "Hold (on) or release (off) many questions named by their ids, e.g. a pasted list from the question-bank run " +
+      "(PR-I). Reports marked / not found / unchanged; up to 5000 ids in one call. Requires question:manage.",
+    authScopes: MANAGE,
+    args: { qids: t.arg.stringList({ required: true }), on: t.arg.boolean({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await markExamPoolSvc({ qids: args.qids, on: args.on, actorId: ctx.auth.userId, actorRole: ctx.auth.role });
+      } catch (err) {
+        return mapEditError(err);
+      }
+    },
+  }),
+);
+
+builder.mutationField("markExamPoolByFilter", (t) =>
+  t.field({
+    type: ExamPoolBulkRef,
+    description:
+      "Hold or release every question the bank filter matches (PR-I). `expectedCount` is the number shown to the " +
+      "user first (questionsCount); if the filter now matches a different number nothing is changed. Requires question:manage.",
+    authScopes: MANAGE,
+    args: {
+      filter: t.arg({ type: QuestionFilterInput, required: true }),
+      expectedCount: t.arg.int({ required: true }),
+      on: t.arg.boolean({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        const built = await buildQuestionsFilter(args.filter, ctx);
+        if (!built) return { marked: 0, notFound: [], notFoundCount: 0, unchanged: [], unchangedCount: 0 };
+        const { filter, ands } = built;
+        if (ands.length) filter.$and = ands;
+        return await markExamPoolByFilterSvc({
+          filter: filter as Record<string, unknown>, expectedCount: args.expectedCount, on: args.on,
+          actorId: ctx.auth.userId, actorRole: ctx.auth.role,
         });
       } catch (err) {
         return mapEditError(err);

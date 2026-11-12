@@ -72,6 +72,15 @@ export interface IContentArtifact extends Document {
   importantAt?: Date | null;
   importantBy?: Types.ObjectId;
 
+  /**
+   * HELD FOR EXAMS (PR-I, D-#1408). `null` is the usual state; a date means the question is set aside
+   * for the half-yearly / annual papers and no picker may give it out before (homework, assignment
+   * sheets, re-test, extra homework, class-test sheets). Same shape and same re-import rule as the
+   * IMPORTANT mark above: `persistEnvelope` copies it onto the new version.
+   */
+  examPoolAt?: Date | null;
+  examPoolBy?: Types.ObjectId;
+
   retiredAt?: Date | null;
   retiredBy?: Types.ObjectId;
   retireReason?: string;
@@ -107,6 +116,8 @@ const ContentArtifactSchema = new Schema<IContentArtifact>(
     approvalOverride: { type: Boolean },
     importantAt: { type: Date, default: null },
     importantBy: { type: Schema.Types.ObjectId },
+    examPoolAt: { type: Date, default: null },
+    examPoolBy: { type: Schema.Types.ObjectId },
     retiredAt: { type: Date, default: null },
     retiredBy: { type: Schema.Types.ObjectId },
     retireReason: { type: String },
