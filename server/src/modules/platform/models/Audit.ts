@@ -370,6 +370,7 @@ export type AuditEventKind =
   | "AI_PROJECT_FILE_CHANGED" // AI Workspace file added / re-read / pinned / removed (W-1) — meta.action/fileId/name; never the text
   | "AI_DRAFT_CHANGED"        // AI Workspace draft created / new version / approved / sent to a pipeline (W-3) — meta.action/version/pipeline/ok
   | "QUESTION_HINTS_IMPORTED" // guardian question hints loaded (GH-1, D-#1520) - meta.total/created/updated/unchanged/refused
+  | "HOMEWORK_INTEGRITY_RECORDED" // Office recorded the outcome of a homework-honesty case (GH-3, D-#1522) - meta.studentId/loCode/outcome/gap
   | "AI_JOB_CHANGED"          // AI Workspace batch job created / cancelled (W-4) — meta.action/items/runAt/model/estimateUsd
   | "AI_MCP_AUTHORIZED"       // the Principal allowed an MCP client (Claude) into the AI Workspace (W-5) — meta.client/clientId
   | "AI_MCP_REVOKED"          // the Principal disconnected an MCP client (W-5) — meta.clientId/tokens

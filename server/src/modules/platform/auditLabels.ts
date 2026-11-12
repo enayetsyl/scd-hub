@@ -465,6 +465,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   AI_PROJECT_FILE_CHANGED: { bn: "এআই প্রকল্পের ফাইল বদলেছেন", en: "Changed an AI workspace project file", group: "ACCESS" },
   AI_DRAFT_CHANGED: { bn: "এআই কর্মক্ষেত্রের খসড়া বদলেছেন", en: "Changed an AI workspace draft", group: "ACCESS" },
   QUESTION_HINTS_IMPORTED: { bn: "প্রশ্নের ইঙ্গিত লোড করেছেন", en: "Loaded question hints", group: "CONTENT" },
+  HOMEWORK_INTEGRITY_RECORDED: { bn: "হোমওয়ার্ক যাচাইয়ের ফলাফল লিখেছেন", en: "Recorded a homework check outcome", group: "CONTENT" },
   AI_JOB_CHANGED: { bn: "এআই ব্যাচ কাজ শুরু / বাতিল করেছেন", en: "Started or cancelled an AI batch job", group: "ACCESS" },
   AI_MCP_AUTHORIZED: { bn: "Claude-কে এআই কর্মক্ষেত্রে ঢোকার অনুমতি দিয়েছেন", en: "Allowed Claude into the AI workspace", group: "ACCESS" },
   AI_MCP_REVOKED: { bn: "Claude-এর সংযোগ বন্ধ করেছেন", en: "Disconnected Claude from the AI workspace", group: "ACCESS" },

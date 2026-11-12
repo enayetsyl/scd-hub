@@ -75,6 +75,8 @@ entry fast for a whole section (one row per child, one cell per question, except
 
 ## 4. GH-3 — Homework-honesty flag
 
+**Status:** BUILT 2026-11-13 on `feat/gh3-honesty-flag` (D-#1529), not yet promoted. `IntegrityCase` (server/src/modules/homework-integrity), `IntegrityService` (recompute on a confirmed class-test paper, nightly sweep `HWINT`, Office "আবার হিসাব করুন"), permissions `homework_integrity:view` / `:record` (Office + Principal), Office screen Reports → হোমওয়ার্ক যাচাই, and the teacher's read-only "ইঙ্গিত খোলা হয়েছে: n/3" line on the weekly assignment sheet (`childHintSteps`). Choices: homework counted only up to the date of the child's latest class test on the objective; a case whose gap later falls under 20 stays OPEN with updated numbers for the Office to close; a CLOSED case reopens (as a new OPEN case) only when the gap is still 20+ after new evidence; "term" for the recurring badge = the half of the academic year (before / after its midpoint). The extra-homework view in the app only previews unsent questions, so it shows no hint count yet.
+
 For each child × objective: **HW% = Σearned / Σavailable** over all non-superseded, non-excluded `MasteryEvidence`
 rows with source HW or AS this academic year up to the class test's date; **CT% = the same over CT evidence** for
 that objective. Recomputed whenever a CT paper is confirmed. **Flag when HW% − CT% ≥ 20 points** (at least one HW/AS

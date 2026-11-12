@@ -989,6 +989,8 @@ const ROLE_CHECK_DEFAULTS = {
     "staff_records:view_sensitive", "lesson_plans:view_all", "question_bank:view_all", "teaching_notes:view",
     "teaching_notes:view_all", "teaching_notes:send", "english_drive:view", "english_drive:view_all",
     "english_drive:send", "admin_dashboard:view",
+    // Homework-honesty check (GH-3, D-#1522): Office + Principal only; the Office reads the queue and records the outcome.
+    "homework_integrity:view", "homework_integrity:record",
     // Pop-up notices (D-#857): owner, 2026-10-26 — "office and principal send"; the Office sends
     // with no approval step, so every action is on for the Office template from day one.
     "popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian", "popup_notice:follow_up",

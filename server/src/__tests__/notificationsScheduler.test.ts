@@ -63,6 +63,11 @@ jest.mock("../modules/library/services/LibraryReminderService", () => ({
 jest.mock("../modules/hr/services/OffboardingService", () => ({
   runDueOffboardingRevocations: jest.fn().mockResolvedValue(0),
 }));
+// GH-3: the ticker also runs the homework-honesty sweep. Mock it so the scheduler test stays DB-free
+// (the sweep itself is covered in homeworkIntegrity.test.ts).
+jest.mock("../modules/homework-integrity/services/IntegrityService", () => ({
+  sweepYear: jest.fn().mockResolvedValue({ checked: 0, opened: 0, updated: 0, reopened: 0 }),
+}));
 // CO-3: the ticker also runs the observation response-escalation sweep. Mock it so the
 // scheduler test stays DB-free (the sweep itself is covered in observationEscalation.test.ts).
 jest.mock("../modules/classroom-observation/services/ObservationEscalationService", () => ({

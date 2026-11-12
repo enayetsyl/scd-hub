@@ -111,6 +111,17 @@ export const FEATURE_CATALOGUE = {
       issue: { en: "Mark gift given", bn: "উপহার দেওয়া হয়েছে চিহ্নিত করা", desc: "Tick a handover, undo a mis-tick", teacher: true, office: true, flags: [], designation: "class_teacher" },
     },
   },
+  // GH-3 (D-#1522, docs/prd-guardian-help.md section 4): the homework-honesty flag. Office / Principal only;
+  // a teacher never sees a case and no guardian is told about one.
+  homework_integrity: {
+    group: "teaching_and_trackers",
+    en: "Homework honesty check",
+    bn: "হোমওয়ার্ক যাচাই",
+    actions: {
+      view: { en: "See homework check cases", bn: "হোমওয়ার্ক যাচাইয়ের কেস দেখা", desc: "The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it", teacher: false, office: true, flags: [] },
+      record: { en: "Record the outcome", bn: "যাচাইয়ের ফলাফল লেখা", desc: "Close a case with what the Office found (guardian did it / child did it / unclear) and a note; recalculate now", teacher: false, office: true, flags: [] },
+    },
+  },
   // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md).
   mark_submission: {
     group: "teaching_and_trackers",

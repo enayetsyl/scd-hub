@@ -115,6 +115,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Teaching & trackers | `homework` | Homework | বাড়ির কাজ | 14 | trackers-homework-assignment |
 | Teaching & trackers | `assignment` | Weekly assignment | সাপ্তাহিক অ্যাসাইনমেন্ট | 15 | trackers-homework-assignment |
 | Teaching & trackers | `assignment_gift` | Weekly gift | সাপ্তাহিক উপহার | 3 | trackers-homework-assignment |
+| Teaching & trackers | `homework_integrity` | Homework honesty check | হোমওয়ার্ক যাচাই | 2 | trackers-homework-assignment |
 | Teaching & trackers | `mark_submission` | Mark submission | জমার হিসাব | 3 | trackers-homework-assignment |
 | Teaching & trackers | `work_claim` | Guardian "done at home" claims | অভিভাবকের জানানো | 5 | trackers-homework-assignment |
 | Teaching & trackers | `set_tracker` | Set tracker (legacy) | সেট ট্র্যাকার | 5 | trackers-classtest |
@@ -238,6 +239,12 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `assignment:remind` | Guardian chase ladder | অভিভাবককে রিমাইন্ডার | Chase list, ladder step, outcome, history, bulk sweep | — | on | | message:dispatch + assertFollowUpAdmin (isAdminStaff) |
 | `assignment:settings` | Rotation schedule | রোটেশন সূচি ঠিক করা | Term anchor, cadence, rotation cells; read schedule / grid / handout board | — | on | | roster:manage |
 | ~~`assignment:view_reports`~~ | RETIRED (D-#846) | — | Replaced by one switch per report: `reports:assignment_load`, `reports:as_declare_pending`, `reports:as_deliver_pending`, `reports:as_print_pending`, `reports:reconciliation` | — | — | | stored grants / role edits translate |
+
+#### `homework_integrity` — হোমওয়ার্ক যাচাই
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `homework_integrity:view` | See homework check cases | হোমওয়ার্ক যাচাইয়ের কেস দেখা | The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it (GH-3, D-#1522) | — | on | | new |
+| `homework_integrity:record` | Record the outcome | যাচাইয়ের ফলাফল লেখা | Close a case with what the Office found and a note; recalculate now (GH-3, D-#1522) | — | on | | new |
 
 #### `assignment_gift` — সাপ্তাহিক উপহার
 | permission | EN | BN | what it allows | T | O | flags | replaces |
