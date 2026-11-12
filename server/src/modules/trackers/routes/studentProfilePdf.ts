@@ -48,7 +48,9 @@ studentProfilePdfRouter.get("/:studentId", async (req: Request, res: Response) =
   // Tier 1 + tier 2, exactly as the GraphQL panels do it.
   let subjects: string[] | null;
   try {
-    ({ subjects } = await assertStudentProfileRead(ctx, req.params.studentId));
+    // YC-2: the gate follows the printed window's year (its last day).
+    const to = typeof req.query.to === "string" ? req.query.to : null;
+    ({ subjects } = await assertStudentProfileRead(ctx, req.params.studentId, { onKey: to }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Forbidden";
     res.status(403).json({ error: msg });

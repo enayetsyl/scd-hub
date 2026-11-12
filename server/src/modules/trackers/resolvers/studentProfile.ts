@@ -20,7 +20,8 @@
  *
  * Identity plane, derived at read time (D-#85), no corpus path (ADR-005).
  */
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
+import { enrolmentOf, enrolmentsInUse } from "../../foundation/services/EnrolmentService";
 import { builder } from "../../../schema";
 import { canSeeReadStatus } from "../../comments/resolvers/commentRead";
 import { ForbiddenError, allowedSubjectCodesForSection } from "../../../middleware/authz";
@@ -47,6 +48,7 @@ import {
   type ProfileGuardian,
   type ProfileLeave,
   type ProfileOffDay,
+  type ProfileYearOption,
   type StudentProfileAttendance,
   type StudentProfileComments,
   type StudentProfileHeader,
@@ -63,14 +65,20 @@ import {
 export async function assertStudentProfileRead(
   ctx: Parameters<typeof assertReportRead>[0],
   studentId: string,
+  window: { academicYearId?: string | null; onKey?: string | null } = {},
 ): Promise<{ subjects: string[] | null; sectionId: string; classId: string }> {
   const student = (await Student.findById(studentId).select("sectionId classId").lean()) as {
     sectionId: Types.ObjectId;
     classId: Types.ObjectId;
   } | null;
   if (!student) throw new ForbiddenError("শিক্ষার্থী পাওয়া যায়নি");
-  const sectionId = student.sectionId.toString();
-  const classId = student.classId.toString();
+  // YC-2 (D-#1461/#1472): the gate follows the WINDOW's year — the section the child sat
+  // in that year (or on the window's last day). The 2026 class teacher then passes on a
+  // 2026 window through the read-only past-year rule (authz `pastYearSectionTie`).
+  // No window, or no enrolment for it: today's section, exactly as before.
+  const placed = await profilePlacement(studentId, window);
+  const sectionId = (placed?.sectionId ?? student.sectionId).toString();
+  const classId = (placed?.classId ?? student.classId).toString();
   // PM: `student_profile:view` scoped, `student_profile:view_all` unscoped (tier 1) and
   // un-narrowed (tier 2); the class-teacher / confirmer / supervisor designations stay.
   await assertReportRead(ctx, sectionId, { gate: STUDENT_PROFILE_REPORT_GATE });
@@ -79,6 +87,23 @@ export async function assertStudentProfileRead(
     viewAll: STUDENT_PROFILE_REPORT_GATE.viewAll,
   });
   return { subjects: allowed === null ? null : [...allowed], sectionId, classId };
+}
+
+/** The child's enrolment for a profile window (null = use today's pointer). */
+async function profilePlacement(
+  studentId: string,
+  window: { academicYearId?: string | null; onKey?: string | null },
+): Promise<{ sectionId: Types.ObjectId; classId: Types.ObjectId } | null> {
+  if (!Types.ObjectId.isValid(studentId)) return null;
+  if (!window.academicYearId && !window.onKey) return null;
+  if (!(await enrolmentsInUse())) return null;
+  let row = null;
+  if (window.academicYearId && Types.ObjectId.isValid(window.academicYearId)) {
+    row = await enrolmentOf(studentId, { academicYearId: window.academicYearId });
+  } else if (window.onKey && /^\d{4}-\d{2}-\d{2}$/.test(window.onKey)) {
+    row = await enrolmentOf(studentId, { on: window.onKey }).catch(() => null);
+  }
+  return row && row.status !== "PLANNED" ? { sectionId: row.sectionId, classId: row.classId } : null;
 }
 
 const CountersRef = builder.objectRef<TrackerCounters>("StudentProfileCounters").implement({
@@ -176,7 +201,7 @@ builder.queryField("studentProfileHomework", (t) =>
       toKey: t.arg.string(panelArgs.toKey),
     },
     resolve: async (_root, args, ctx) => {
-      const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
+      const { subjects } = await assertStudentProfileRead(ctx, args.studentId, { onKey: args.toKey });
       return studentHomeworkPanel(args.studentId, {
         fromKey: args.fromKey,
         toKey: args.toKey,
@@ -199,7 +224,7 @@ builder.queryField("studentProfileAssignment", (t) =>
       toKey: t.arg.string(panelArgs.toKey),
     },
     resolve: async (_root, args, ctx) => {
-      const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
+      const { subjects } = await assertStudentProfileRead(ctx, args.studentId, { onKey: args.toKey });
       return studentAssignmentPanel(args.studentId, {
         fromKey: args.fromKey,
         toKey: args.toKey,
@@ -249,6 +274,15 @@ const AcademicYearRef = builder.objectRef<ProfileAcademicYear>("StudentProfileAc
   }),
 });
 
+const YearOptionRef = builder.objectRef<ProfileYearOption>("StudentProfileYearOption").implement({
+  description: "One academic year the child was enrolled in (YC-2 year picker).",
+  fields: (t) => ({
+    academicYearId: t.exposeString("academicYearId"),
+    label: t.exposeString("label"),
+    current: t.exposeBoolean("current"),
+  }),
+});
+
 /** The service stays auth-agnostic, so the resolver attaches the gate's answer. */
 type HeaderWithView = StudentProfileHeader & { fullView: boolean };
 
@@ -271,6 +305,15 @@ const HeaderRef = builder.objectRef<HeaderWithView>("StudentProfileHeader").impl
     classTeacherName: t.string({ nullable: true, resolve: (h) => h.classTeacherName }),
     guardians: t.field({ type: [GuardianRef], resolve: (h) => h.guardians }),
     academicYear: t.field({ type: AcademicYearRef, nullable: true, resolve: (h) => h.academicYear }),
+    enrolledYears: t.field({
+      type: [YearOptionRef],
+      description: "YC-2: the years the child was enrolled in (newest first) — the profile's year picker.",
+      resolve: (h) => h.enrolledYears ?? [],
+    }),
+    pastYear: t.boolean({
+      description: "YC-2: the header shows a past year; the profile is read-only for it.",
+      resolve: (h) => h.pastYear ?? false,
+    }),
     /** Does this caller see every subject, or only their own (§4)? */
     fullView: t.exposeBoolean("fullView"),
   }),
@@ -410,10 +453,14 @@ builder.queryField("studentProfileHeader", (t) =>
       "The profile header + the default window (current academic year to date, D-#358). Same tier-1 " +
       "gate as the panels; `fullView` reports whether this caller sees every subject.",
     authScopes: { hasPermission: "student_profile:view" },
-    args: { studentId: t.arg.string(panelArgs.studentId) },
+    args: {
+      studentId: t.arg.string(panelArgs.studentId),
+      // YC-2: the year picker. Omitted = the current year (old bundles send none).
+      academicYearId: t.arg.string({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
-      const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
-      const header = await studentProfileHeader(args.studentId);
+      const { subjects } = await assertStudentProfileRead(ctx, args.studentId, { academicYearId: args.academicYearId });
+      const header = await studentProfileHeader(args.studentId, new Date(), args.academicYearId);
       return { ...header, fullView: subjects === null };
     },
   }),
@@ -432,7 +479,7 @@ builder.queryField("studentProfileAttendance", (t) =>
       toKey: t.arg.string(panelArgs.toKey),
     },
     resolve: async (_root, args, ctx) => {
-      await assertStudentProfileRead(ctx, args.studentId);
+      await assertStudentProfileRead(ctx, args.studentId, { onKey: args.toKey });
       return studentProfileAttendance(args.studentId, args.fromKey, args.toKey);
     },
   }),
@@ -462,7 +509,7 @@ builder.queryField("studentProfileClassAttendance", (t) =>
       toKey: t.arg.string(panelArgs.toKey),
     },
     resolve: async (_root, args, ctx) => {
-      await assertStudentProfileRead(ctx, args.studentId);
+      await assertStudentProfileRead(ctx, args.studentId, { onKey: args.toKey });
       return classAttendanceComparison(args.studentId, args.fromKey, args.toKey);
     },
   }),
@@ -481,7 +528,7 @@ builder.queryField("studentProfileComments", (t) =>
       toKey: t.arg.string(panelArgs.toKey),
     },
     resolve: async (_root, args, ctx) => {
-      await assertStudentProfileRead(ctx, args.studentId);
+      await assertStudentProfileRead(ctx, args.studentId, { onKey: args.toKey });
       return studentProfileComments(args.studentId, args.fromKey, args.toKey);
     },
   }),

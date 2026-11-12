@@ -39,6 +39,7 @@ import {
   cohortOfRows,
   sectionMonthMetrics,
   schoolBestPresentDays,
+  periodPlacement,
   type StudentMonthMetrics,
   type SectionCohort,
 } from "./MonthlyMetricsService";
@@ -53,7 +54,6 @@ import {
   readMonthlyReportConfig,
   type MonthlyReportConfigShape,
 } from "./MonthlyReportConfigService";
-import { defaultProfileWindow } from "../../trackers/services/StudentProfileContextService";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class MonthlyReportError extends Error {
@@ -328,12 +328,12 @@ export async function buildMonthlyReport(
   const now = opts.now ?? new Date();
   const cfg = await readMonthlyReportConfig();
 
-  const student = (await Student.findById(studentId).select("sectionId classId").lean()) as unknown as
-    | { sectionId: Types.ObjectId; classId: Types.ObjectId }
-    | null;
+  // YC-2 (D-#1461): class / section / year are the PERIOD's (its enrolment), never the
+  // live Student or the current year — a December revision after the year change keeps 2026.
+  const student = await periodPlacement(studentId, periodKey, now);
   if (!student) throw new MonthlyReportError("Student not found");
 
-  const [snapshot, year] = await Promise.all([
+  const [snapshot] = await Promise.all([
     computeSnapshot(
       studentId,
       periodKey,
@@ -342,7 +342,6 @@ export async function buildMonthlyReport(
       opts.cohort ?? null,
       opts.schoolBest ?? null,
     ),
-    defaultProfileWindow(now),
   ]);
 
   const verdict = coverageVerdictOf(snapshot.metrics, cfg);
@@ -376,7 +375,7 @@ export async function buildMonthlyReport(
       studentId: new Types.ObjectId(studentId),
       sectionId: student.sectionId,
       classId: student.classId,
-      academicYearId: year ? new Types.ObjectId(year.academicYearId) : null,
+      academicYearId: student.academicYearId,
       periodKey,
       revision: latest.revision + 1,
       status: "DRAFT",
@@ -393,7 +392,7 @@ export async function buildMonthlyReport(
     studentId: new Types.ObjectId(studentId),
     sectionId: student.sectionId,
     classId: student.classId,
-    academicYearId: year ? new Types.ObjectId(year.academicYearId) : null,
+    academicYearId: student.academicYearId,
     periodKey,
     revision: 1,
     status: "DRAFT",

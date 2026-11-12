@@ -28,6 +28,10 @@ import { User } from "../modules/foundation/models/User";
 import { Guardian } from "../modules/foundation/models/Guardian";
 import { GuardianLink } from "../modules/foundation/models/GuardianLink";
 import { isAdminStaff } from "../modules/foundation/services/RoleScope";
+import { Class } from "../modules/foundation/models/Class";
+import { AcademicYear } from "../modules/foundation/models/AcademicYear";
+import { currentAcademicYearId } from "../modules/foundation/services/currentYear";
+import { enrolmentsInUse } from "../modules/foundation/services/EnrolmentService";
 
 export class ForbiddenError extends Error {
   constructor(msg = "Forbidden") {
@@ -113,6 +117,40 @@ async function readClassIdFor(scopes: ScopeItem[], sectionId: string, claimed: s
   return section?.classId ? section.classId.toString() : claimed;
 }
 
+/**
+ * YC-2 (PRD §6 Q8, D-#1472): a teacher keeps READ — never write — on a section of a PAST
+ * academic year they taught: its class teacher, or the holder of a routine teaching grant
+ * on it (an expired / lapsed grant included — the year change ends the 2026 routine).
+ * Returns null when the section's year is not past (nothing changes before the year
+ * change), or the teacher has no such tie. Never consulted by a write gate.
+ */
+export async function pastYearSectionTie(
+  userId: string,
+  sectionId: string,
+): Promise<{ classTeacher: boolean; subjectIds: string[] } | null> {
+  if (!/^[0-9a-f]{24}$/i.test(sectionId) || !/^[0-9a-f]{24}$/i.test(userId)) return null;
+  // Only once the year change exists (enrolment rows in use); a DB-free caller never reaches a query.
+  if (!(await enrolmentsInUse())) return null;
+  const currentId = await currentAcademicYearId();
+  if (!currentId) return null;
+  const section = await Section.findById(sectionId).select("classId classTeacherId").lean();
+  if (!section?.classId) return null;
+  const cls = await Class.findById(section.classId).select("academicYearId").lean();
+  if (!cls?.academicYearId || cls.academicYearId.equals(currentId)) return null;
+  const [mine, current] = await Promise.all([
+    AcademicYear.findById(cls.academicYearId).select("startDate").lean(),
+    AcademicYear.findById(currentId).select("startDate").lean(),
+  ]);
+  if (!mine || !current || new Date(mine.startDate).getTime() >= new Date(current.startDate).getTime()) return null;
+  const classTeacher = !!section.classTeacherId && section.classTeacherId.toString() === userId;
+  const grants = (await ScopeGrant.find({ teacherId: userId, kind: "teaching", source: "routine", sectionId })
+    .select("subjectId")
+    .lean()) as unknown as Array<{ subjectId?: { toString(): string } }>;
+  const subjectIds = [...new Set(grants.filter((g) => g.subjectId).map((g) => g.subjectId!.toString()))];
+  if (!classTeacher && subjectIds.length === 0) return null;
+  return { classTeacher, subjectIds };
+}
+
 /** Assert the caller can read the given section. Used in content/question resolvers. */
 export async function assertCanRead(
   ctx: AppContext,
@@ -125,7 +163,11 @@ export async function assertCanRead(
   if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   const realClassId = await readClassIdFor(scopes, sectionId, classId);
-  if (!canRead(scopes, sectionId, realClassId, subjectId)) throw new ForbiddenError();
+  if (canRead(scopes, sectionId, realClassId, subjectId)) return;
+  // YC-2 (Q8): read-only on a past year's section the teacher taught.
+  const past = ctx.auth ? await pastYearSectionTie(ctx.auth.userId as string, sectionId) : null;
+  if (past && (!subjectId || past.classTeacher || past.subjectIds.includes(subjectId))) return;
+  throw new ForbiddenError();
 }
 
 /**
@@ -207,6 +249,11 @@ export async function allowedSubjectCodesForSection(
     }
   }
 
+  // YC-2 (Q8): on a past year's section, the subjects the teacher taught there.
+  if (subjectIds.size === 0) {
+    const past = await pastYearSectionTie(userId, sectionId);
+    for (const id of past?.subjectIds ?? []) subjectIds.add(id);
+  }
   if (subjectIds.size === 0) return new Set();
   const subjects = await Subject.find({ _id: { $in: [...subjectIds] } })
     .select("code")

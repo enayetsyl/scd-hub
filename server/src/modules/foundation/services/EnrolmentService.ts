@@ -15,7 +15,7 @@
  * A crash after 1 or 2 leaves two ACTIVE rows or a stale pointer, which `checkInvariant` reports
  * (MULTIPLE_ACTIVE / POINTER_MISMATCH); it never loses the child's place.
  */
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { Enrolment, type IEnrolment, type EnrolmentOutcome, type EnrolmentStatus } from "../models/Enrolment";
 import { Student } from "../models/Student";
 import { Section } from "../models/Section";
@@ -383,4 +383,175 @@ export async function yearStartKey(academicYearId: Id): Promise<string | null> {
 export async function yearEndKey(academicYearId: Id): Promise<string | null> {
   const y = await AcademicYear.findById(oid(academicYearId)).select("endDate").lean();
   return y ? dhakaDayKey(y.endDate) : null;
+}
+
+// ---------------------------------------------------------------------------
+// YC-2 past-period readers (docs/prd-year-change.md §1.3/§1.4, D-#1461 YC-D2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Do the past-period readers read enrolments? Only when the database is connected and
+ * holds at least one live (ACTIVE / CLOSED) enrolment — prod after the backfill. Otherwise
+ * (an unbackfilled database, a DB-free caller such as a unit test with mocked models) every
+ * YC-2 reader runs its pre-YC-2 code unchanged (D-#1470). One indexed read per call.
+ */
+export async function enrolmentsInUse(): Promise<boolean> {
+  if (mongoose.connection.readyState !== 1) return false;
+  return !!(await Enrolment.exists({ status: { $in: ["ACTIVE", "CLOSED"] } }));
+}
+
+/**
+ * Where a child sat for a span of days. From an enrolment row, or - for a child who has
+ * NO enrolment at all (should not happen after the backfill; tests and an unbackfilled
+ * database) - from today's `Student` pointer over the whole requested range, so a
+ * missing row never empties a roster (`fromEnrolment: false`).
+ */
+export interface PlacementSpan {
+  studentId: string;
+  classId: string;
+  sectionId: string;
+  /** Null for a pointer fallback (read the class when needed). */
+  academicYearId: string | null;
+  /** First and last day of the span INSIDE the requested range. */
+  fromKey: string;
+  toKey: string;
+  fromEnrolment: boolean;
+}
+
+export interface PlacementFilter {
+  studentIds?: Id[];
+  sectionIds?: Id[];
+  classIds?: Id[];
+  /**
+   * Pointer fallback only: include inactive students too. Default false (the "today"
+   * readers this replaces all filter `active: true`); a by-id read (one child's history,
+   * the profile) passes true so the child is always found.
+   */
+  includeInactive?: boolean;
+}
+
+/**
+ * Every placement overlapping [from, to] for the filtered children. A child can have
+ * several (moved mid-range: the সম্মিলিত section until a split, then the half; or 2026
+ * then 2027 across the cut-over). Sorted by student, then `fromKey`.
+ */
+export async function placementSpans(filter: PlacementFilter, range: { from: string; to: string }): Promise<PlacementSpan[]> {
+  assertKey(range.from);
+  assertKey(range.to);
+  if (range.to < range.from) return [];
+  const restrict: Record<string, unknown> = {};
+  if (filter.studentIds) restrict.studentId = { $in: filter.studentIds.map(oid) };
+  if (filter.sectionIds) restrict.sectionId = { $in: filter.sectionIds.map(oid) };
+  if (filter.classIds) restrict.classId = { $in: filter.classIds.map(oid) };
+  const rows = (await Enrolment.find({
+    ...restrict,
+    status: { $in: ["ACTIVE", "CLOSED"] },
+    startKey: { $lte: range.to },
+    $or: [{ endKey: { $exists: false } }, { endKey: null }, { endKey: { $gte: range.from } }],
+  })
+    .select("studentId classId sectionId academicYearId startKey endKey")
+    .lean()) as unknown as Array<{
+    studentId: Types.ObjectId;
+    classId: Types.ObjectId;
+    sectionId: Types.ObjectId;
+    academicYearId: Types.ObjectId;
+    startKey: string;
+    endKey?: string | null;
+  }>;
+  const out: PlacementSpan[] = rows.map((r) => ({
+    studentId: r.studentId.toString(),
+    classId: r.classId.toString(),
+    sectionId: r.sectionId.toString(),
+    academicYearId: r.academicYearId.toString(),
+    fromKey: r.startKey > range.from ? r.startKey : range.from,
+    toKey: r.endKey && r.endKey < range.to ? r.endKey : range.to,
+    fromEnrolment: true,
+  }));
+
+  // Pointer fallback: children the filter names (by id or by their CURRENT section /
+  // class) who have no enrolment row at all.
+  const studentQuery: Record<string, unknown> = {};
+  if (filter.studentIds) studentQuery._id = { $in: filter.studentIds.map(oid) };
+  if (filter.sectionIds) studentQuery.sectionId = { $in: filter.sectionIds.map(oid) };
+  if (filter.classIds) studentQuery.classId = { $in: filter.classIds.map(oid) };
+  if (!filter.includeInactive) studentQuery.active = true;
+  const candidates = (await Student.find(studentQuery).select("_id classId sectionId").lean()) as unknown as Array<{
+    _id: Types.ObjectId;
+    classId: Types.ObjectId;
+    sectionId: Types.ObjectId;
+  }>;
+  if (candidates.length > 0) {
+    const withRows = new Set(
+      (
+        (await Enrolment.distinct("studentId", {
+          studentId: { $in: candidates.map((c) => c._id) },
+          status: { $in: ["ACTIVE", "CLOSED"] },
+        })) as Types.ObjectId[]
+      ).map(String),
+    );
+    for (const c of candidates) {
+      if (withRows.has(c._id.toString())) continue;
+      // No enrolment at all: fall back to today's pointer (YC-2 rule, D-#1470).
+      out.push({
+        studentId: c._id.toString(),
+        classId: c.classId.toString(),
+        sectionId: c.sectionId.toString(),
+        academicYearId: null,
+        fromKey: range.from,
+        toKey: range.to,
+        fromEnrolment: false,
+      });
+    }
+  }
+  return out.sort((a, b) => a.studentId.localeCompare(b.studentId) || a.fromKey.localeCompare(b.fromKey));
+}
+
+/** Each filtered child's placement ON a date (the latest-starting one if two touch it). */
+export async function placementsOn(on: string, filter: PlacementFilter = {}): Promise<Map<string, PlacementSpan>> {
+  const out = new Map<string, PlacementSpan>();
+  for (const s of await placementSpans(filter, { from: on, to: on })) {
+    const have = out.get(s.studentId);
+    if (!have || s.fromKey >= have.fromKey) out.set(s.studentId, s);
+  }
+  return out;
+}
+
+/** The span covering `key` in a child's (sorted) spans, or null. PURE. */
+export function spanOn<T extends { fromKey: string; toKey: string }>(spans: readonly T[], key: string): T | null {
+  let hit: T | null = null;
+  for (const s of spans) if (s.fromKey <= key && key <= s.toKey) hit = s;
+  return hit;
+}
+
+/**
+ * The child ids sitting in one section on a date - `sectionRoster(sectionId, { on })`
+ * plus the pointer fallback for children with no enrolment at all.
+ */
+export async function sectionRosterIdsOn(sectionId: Id, on: string): Promise<string[]> {
+  return [...(await placementsOn(on, { sectionIds: [sectionId] })).keys()];
+}
+
+/** Group spans by child. PURE. */
+export function spansByStudent<T extends { studentId: string }>(spans: readonly T[]): Map<string, T[]> {
+  const out = new Map<string, T[]>();
+  for (const s of spans) {
+    const list = out.get(s.studentId);
+    if (list) list.push(s);
+    else out.set(s.studentId, [s]);
+  }
+  return out;
+}
+
+/** The academic year whose dates hold `key` (the current one wins a tie), or null. */
+export async function yearCoveringKey(key: string): Promise<{ _id: Types.ObjectId; label: string; startDate: Date; endDate: Date } | null> {
+  assertKey(key);
+  const years = (await AcademicYear.find({}).select("label startDate endDate current").lean()) as unknown as Array<{
+    _id: Types.ObjectId;
+    label: string;
+    startDate: Date;
+    endDate: Date;
+    current?: boolean;
+  }>;
+  const hits = years.filter((y) => dhakaDayKey(y.startDate) <= key && key <= dhakaDayKey(y.endDate));
+  return hits.find((y) => y.current) ?? hits[0] ?? null;
 }

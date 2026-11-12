@@ -31,7 +31,8 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
-import { emptiedSectionCandidates, enrolledByOf, sittingBy } from "../classTestAnchor";
+import { emptiedSectionCandidates, enrolledByOf, examKeyOf, sittingBy } from "../classTestAnchor";
+import { enrolmentsInUse, placementSpans, type PlacementSpan } from "../../foundation/services/EnrolmentService";
 import {
   examReportStatus,
   deriveReportOwnership,
@@ -300,8 +301,29 @@ export async function reportsStatus(
     const exam = exams.find((e) => e.sectionId?.toString() === sid && e.classId);
     if (exam) emptiedCandidates.set(sid, await emptiedSectionCandidates(sid, exam.classId!.toString()));
   }
+  // YC-2 (D-#1461): the roster ON EACH EXAM DATE comes first (enrolment spans of these
+  // sections over the exams' date range; a child with no enrolment at all keeps today's
+  // pointer) - so an unfinished 2026 exam keeps its denominator after the year change.
+  // One batched read for the whole set (the D-#500 property).
+  const examKeys = exams.map((e) => examKeyOf(e.examDate)).filter((k): k is string => !!k).sort();
+  const spansBySection = new Map<string, PlacementSpan[]>();
+  if (sectionIds.length && examKeys.length && (await enrolmentsInUse())) {
+    for (const sp of await placementSpans({ sectionIds }, { from: examKeys[0], to: examKeys[examKeys.length - 1] })) {
+      const list = spansBySection.get(sp.sectionId);
+      if (list) list.push(sp);
+      else spansBySection.set(sp.sectionId, [sp]);
+    }
+  }
+  const onDateCount = (sid: string, key: string | null): number => {
+    if (!key) return 0;
+    const seen = new Set<string>();
+    for (const sp of spansBySection.get(sid) ?? []) if (sp.fromKey <= key && key <= sp.toKey) seen.add(sp.studentId);
+    return seen.size;
+  };
   const sectionRosterFor = (exam: (typeof exams)[number]): number => {
     const sid = exam.sectionId!.toString();
+    const onDate = onDateCount(sid, examKeyOf(exam.examDate));
+    if (onDate > 0) return onDate;
     const candidates = emptiedCandidates.get(sid);
     if (!candidates) return rosterBySection.get(sid) ?? 0;
     const by = enrolledByOf(exam.examDate);

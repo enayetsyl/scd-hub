@@ -28,6 +28,7 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentGiftAward, type GiftAwardKind } from "../models/AssignmentGiftAward";
 import { Student } from "../../foundation/models/Student";
+import { enrolmentOf, enrolmentsInUse } from "../../foundation/services/EnrolmentService";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
@@ -603,10 +604,18 @@ export async function recordGiftHandover(input: HandoverInput): Promise<GiftAwar
     );
   }
 
-  const student = (await Student.findById(input.studentId)
+  const live = (await Student.findById(input.studentId)
     .select("classId sectionId")
     .lean()) as unknown as { classId: Types.ObjectId; sectionId: Types.ObjectId } | null;
-  if (!student) throw new Error("শিক্ষার্থী পাওয়া যায়নি");
+  if (!live) throw new Error("শিক্ষার্থী পাওয়া যায়নি");
+  // YC-2 (D-#1461): stamp the class / section of the AWARD's year (its enrolment), so a
+  // late 2026 handover after the year change is not stamped with the 2027 class. A child
+  // with no enrolment in that year keeps today's pointer.
+  const ofYear =
+    Types.ObjectId.isValid(input.academicYearId) && (await enrolmentsInUse())
+      ? await enrolmentOf(input.studentId, { academicYearId: input.academicYearId })
+      : null;
+  const student = ofYear && ofYear.status !== "PLANNED" ? { classId: ofYear.classId, sectionId: ofYear.sectionId } : live;
 
   // Read the level off the class rather than trusting anything client-supplied.
   const cls = (await Class.findById(student.classId).select("level").lean()) as unknown as {
