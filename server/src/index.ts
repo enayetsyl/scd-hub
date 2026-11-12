@@ -46,6 +46,7 @@ import { meetingBriefPdfRouter } from "./modules/comments/routes/meetingBriefPdf
 import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPdf";
 import { monthlyCommentExportRouter } from "./modules/reports/routes/monthlyCommentExport";
 import { scholarshipAnalysisExportRouter } from "./modules/scholarship/routes/scholarshipAnalysisExport";
+import { reportCardPdfRouter } from "./modules/exams/routes/reportCardPdf";
 import { filesRouter } from "./routes/files";
 import { helpShotsRouter } from "./modules/help/routes/helpShots";
 import { triggersRouter } from "./routes/triggers";
@@ -200,6 +201,7 @@ app.use("/export/scholarship-analysis", scholarshipAnalysisExportRouter);
 app.use("/pdf/archive-cover", archiveCoverPdfRouter);
 app.use("/pdf/syllabus", syllabusPdfRouter);
 app.use("/pdf/staff-letter", staffLetterPdfRouter);
+app.use("/pdf/report-card", reportCardPdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.

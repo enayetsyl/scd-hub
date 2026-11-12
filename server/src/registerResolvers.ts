@@ -159,6 +159,15 @@ import "./modules/archive/resolvers/archive";
 import "./modules/exams/resolvers/exams";
 import "./modules/exams/resolvers/examSyllabus";
 import "./modules/exams/resolvers/examRoutine";
+// Exam cycle EX-1..EX-9 (docs/prd-exams.md, D-#375–#382): papers, duties, marks, recheck,
+// report card, custody chain, publish. Extends the one Exam record above.
+import "./modules/exams/resolvers/exam";
+import "./modules/exams/resolvers/examAssignment";
+import "./modules/exams/resolvers/examMark";
+import "./modules/exams/resolvers/examRecheck";
+import "./modules/exams/resolvers/examReportCard";
+import "./modules/exams/resolvers/examCustody";
+import "./modules/exams/resolvers/examPublish";
 import "./modules/scholarship/resolvers/scholarship";
 import "./modules/mastery/resolvers/masteryCatalogue";
 import "./modules/mastery/resolvers/masteryWork";
