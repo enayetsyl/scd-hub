@@ -3,9 +3,13 @@
  * শাখা × subject. Each question names a LOCKED learning outcome and a question type; its marks
  * come from the question-type table (D-#777) and are shown, never typed. A question is either
  * a gold bank question tagged with that outcome or the teacher's own text (D-#780).
+ *
+ * PR-B (D-#1314): a switch adds an EARLIER class's codes (same subject) — pick the class, then the
+ * same picker for that class; marks come from that class's table, and the item chips show the class.
+ * A sheet made only of earlier-class codes is titled "ভিত্তি যাচাই" unless the teacher names it.
  */
 import React, { useMemo, useState } from "react";
-import { View } from "react-native";
+import { Switch, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import {
@@ -19,7 +23,7 @@ import {
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, H2 } from "../../components/ui";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { levelFill } from "./masteryStateUi";
-import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme";
@@ -28,9 +32,22 @@ import type { MasteryStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryNewPaper">;
 
 const tokenFor = (level: number) => (level === -1 ? "NUR" : level === 0 ? "KG" : `C${level}`);
+/** Class order (NUR < KG < C1 … C6) and back to a roster level for the bank filter. */
+const CLASS_ORDER = ["NUR", "KG", "C1", "C2", "C3", "C4", "C5", "C6"];
+const levelFor = (token: string) => (token === "NUR" ? -1 : token === "KG" ? 0 : Number(token.slice(1)));
+const tokenOfCode = (code: string) => /^LO-(NUR|KG|C\d)-/.exec(code)?.[1] ?? "";
 const todayDhaka = () => new Date(Date.now() + 6 * 3_600_000).toISOString().slice(0, 10);
 
-type Draft = { origin: "BANK" | "TEACHER"; artifactId?: string; textBn?: string; loCode: string; questionTypeCode: string; label: string };
+type Draft = {
+  origin: "BANK" | "TEACHER";
+  artifactId?: string;
+  textBn?: string;
+  loCode: string;
+  questionTypeCode: string;
+  label: string;
+  /** Snapshot of the marks shown when added (an earlier-class code uses its own class's table). */
+  marks: number;
+};
 
 function questionText(payloadJson: string): string {
   try {
@@ -57,15 +74,21 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   const [text, setText] = useState("");
   const [qt, setQt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [earlierOn, setEarlierOn] = useState(false);
+  const [earlierToken, setEarlierToken] = useState<string | null>(null);
+  const earlierTokens = CLASS_ORDER.slice(0, Math.max(0, CLASS_ORDER.indexOf(classToken)));
+  // The catalogue the picker shows: the section's own class, or the chosen earlier class.
+  const pickToken = earlierOn && earlierToken ? earlierToken : classToken;
+  const [rubricLabels, setRubricLabels] = useState<Record<string, string>>({});
 
   const [{ data: catData, fetching: catFetching, error: catErr }] = useQuery({
     query: MASTERY_CATALOGUE_QUERY,
-    variables: { classToken, subject },
+    variables: { classToken: pickToken, subject },
   });
   const [{ data: hwData }] = useQuery({ query: MASTERY_HOMEWORK_OPTIONS_QUERY, variables: { sectionId, subject } });
   const [{ data: bankData, fetching: bankFetching }] = useQuery({
     query: MASTERY_BANK_QUESTIONS_QUERY,
-    variables: { loCodes: lo ? [lo] : [], subject, classLevel },
+    variables: { loCodes: lo ? [lo] : [], subject, classLevel: levelFor(pickToken) },
     pause: !lo || source === "RUBRIC" || mode !== "BANK",
   });
   const [create, createPaper] = useMutation(CREATE_MASTERY_PAPER);
@@ -81,17 +104,22 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   }, [loRow, qts]);
   const qtMarks = new Map(qts.map((q) => [q.code, q.marks ?? 0]));
   const bank = (bankData?.questions ?? []) as { id: string; qid: string | null; payloadJson: string }[];
-  const total = items.reduce((s, i) => s + (qtMarks.get(i.questionTypeCode) ?? 0), 0);
+  const total = items.reduce((s, i) => s + i.marks, 0);
+  const chosenCodes = source === "RUBRIC" ? rubric : items.map((i) => i.loCode);
+  const earlierOnly = chosenCodes.length > 0 && chosenCodes.every((c) => tokenOfCode(c) !== classToken);
 
   function addItem(): void {
     if (!lo || !qt) return;
     if (mode === "BANK") {
       const b = bank.find((x) => x.id === artifactId);
       if (!b) return;
-      setItems((xs) => [...xs, { origin: "BANK", artifactId: b.id, loCode: lo, questionTypeCode: qt, label: questionText(b.payloadJson) || (b.qid ?? b.id) }]);
+      setItems((xs) => [
+        ...xs,
+        { origin: "BANK", artifactId: b.id, loCode: lo, questionTypeCode: qt, label: questionText(b.payloadJson) || (b.qid ?? b.id), marks: qtMarks.get(qt) ?? 0 },
+      ]);
     } else {
       if (!text.trim()) return;
-      setItems((xs) => [...xs, { origin: "TEACHER", textBn: text.trim(), loCode: lo, questionTypeCode: qt, label: text.trim() }]);
+      setItems((xs) => [...xs, { origin: "TEACHER", textBn: text.trim(), loCode: lo, questionTypeCode: qt, label: text.trim(), marks: qtMarks.get(qt) ?? 0 }]);
       setText("");
     }
     setArtifactId(null);
@@ -106,7 +134,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
       date,
       title: title.trim() || null,
       hwItemId: source === "HW" ? hwItemId : null,
-      items: source === "RUBRIC" ? [] : items.map(({ label: _l, ...i }) => i),
+      items: source === "RUBRIC" ? [] : items.map(({ label: _l, marks: _m, ...i }) => i),
       rubricLoCodes: source === "RUBRIC" ? rubric : [],
     });
     if (res.error) {
@@ -132,6 +160,44 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
       </ChipRow>
       <Field label={STR.msDate} value={date} onChangeText={setDate} />
       <Field label={STR.msTitleOpt} value={title} onChangeText={setTitle} />
+      {earlierOnly && !title.trim() ? <Muted>{`${STR.msTitleOpt}: ${STR.msEarlierOnlyTitle}`}</Muted> : null}
+      {earlierTokens.length > 0 ? (
+        <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+            <Switch
+              value={earlierOn}
+              onValueChange={(v) => {
+                setEarlierOn(v);
+                if (!v) setEarlierToken(null);
+                setLo(null);
+                setQt(null);
+                setArtifactId(null);
+              }}
+            />
+            <Body style={{ flex: 1 }}>{levelFill(STR.msEarlierAdd, lv)}</Body>
+          </View>
+          {earlierOn ? (
+            <>
+              <Muted>{STR.msEarlierPickClass}</Muted>
+              <ChipRow>
+                {earlierTokens.map((t) => (
+                  <Chip
+                    key={t}
+                    label={masteryClassLabel(t)}
+                    selected={earlierToken === t}
+                    onPress={() => {
+                      setEarlierToken(t);
+                      setLo(null);
+                      setQt(null);
+                      setArtifactId(null);
+                    }}
+                  />
+                ))}
+              </ChipRow>
+            </>
+          ) : null}
+        </Card>
+      ) : null}
       {source === "HW" && (hwData?.masteryHomeworkOptions ?? []).length > 0 ? (
         <>
           <Muted>{STR.msLinkHw}</Muted>
@@ -158,10 +224,32 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
             {rubricLos.map((o) => {
               const on = rubric.includes(o.code);
               return (
-                <Chip key={o.code} label={o.labelBn} selected={on} onPress={() => setRubric((r) => (on ? r.filter((x) => x !== o.code) : [...r, o.code]))} />
+                <Chip
+                  key={o.code}
+                  label={o.labelBn}
+                  selected={on}
+                  onPress={() => {
+                    setRubricLabels((m) => ({ ...m, [o.code]: o.labelBn }));
+                    setRubric((r) => (on ? r.filter((x) => x !== o.code) : [...r, o.code]));
+                  }}
+                />
               );
             })}
           </ChipRow>
+          {rubric.some((c) => tokenOfCode(c) !== pickToken) ? (
+            <ChipRow>
+              {rubric
+                .filter((c) => tokenOfCode(c) !== pickToken)
+                .map((c) => (
+                  <Chip
+                    key={c}
+                    label={`${masteryClassLabel(tokenOfCode(c))} · ${rubricLabels[c] ?? c}`}
+                    selected
+                    onPress={() => setRubric((r) => r.filter((x) => x !== c))}
+                  />
+                ))}
+            </ChipRow>
+          ) : null}
         </Card>
       ) : (
         <Card>
@@ -230,8 +318,9 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
               <Body style={{ flexShrink: 1 }}>
                 {bnNum(idx + 1)}. {i.label}
               </Body>
+              {tokenOfCode(i.loCode) !== classToken ? <Badge text={masteryClassLabel(tokenOfCode(i.loCode))} tone="info" /> : null}
               <Muted>
-                {i.loCode} · {i.questionTypeCode} · {bnNum(qtMarks.get(i.questionTypeCode) ?? 0)}
+                {i.loCode} · {i.questionTypeCode} · {bnNum(i.marks)}
               </Muted>
               <Button title={STR.msDelete} variant="ghost" onPress={() => setItems((xs) => xs.filter((_, j) => j !== idx))} />
             </View>
