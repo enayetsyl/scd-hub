@@ -96,6 +96,8 @@ QuestionReviewRoundRef.implement({
     submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
     questionText: t.string({ nullable: true, resolve: (r) => r.questionText }),
     questionType: t.string({ nullable: true, resolve: (r) => r.questionType }),
+    /** PR-G: the school question type (QT-…) the question carries, or null. */
+    qtCode: t.string({ nullable: true, resolve: (r) => r.qtCode }),
     marks: t.float({ nullable: true, resolve: (r) => r.marks }),
     topicTag: t.string({ nullable: true, resolve: (r) => r.topicTag }),
     payloadJson: t.string({ nullable: true, resolve: (r) => r.payloadJson }),
@@ -538,6 +540,8 @@ builder.queryField("myQuestionReviews", (t) =>
       classLevel: t.arg.int({ required: false }),
       chapter: t.arg.int({ required: false }),
       questionType: t.arg.string({ required: false }),
+      /** PR-G: only questions carrying this school question type (QT-…). */
+      qtCode: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
       important: t.arg.boolean({ required: false }),
       undecided: t.arg.boolean({ required: false }),
@@ -552,6 +556,7 @@ builder.queryField("myQuestionReviews", (t) =>
         classLevel: args.classLevel,
         chapter: args.chapter,
         questionType: args.questionType,
+        qtCode: args.qtCode,
         search: args.search,
         important: args.important,
         undecided: args.undecided,
@@ -575,6 +580,8 @@ builder.queryField("myQuestionReviewCount", (t) =>
       classLevel: t.arg.int({ required: false }),
       chapter: t.arg.int({ required: false }),
       questionType: t.arg.string({ required: false }),
+      /** PR-G: only questions carrying this school question type (QT-…). */
+      qtCode: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
       important: t.arg.boolean({ required: false }),
       undecided: t.arg.boolean({ required: false }),
@@ -586,6 +593,7 @@ builder.queryField("myQuestionReviewCount", (t) =>
         classLevel: args.classLevel,
         chapter: args.chapter,
         questionType: args.questionType,
+        qtCode: args.qtCode,
         search: args.search,
         important: args.important,
         undecided: args.undecided,

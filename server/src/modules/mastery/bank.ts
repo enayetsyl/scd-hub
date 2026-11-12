@@ -15,6 +15,20 @@ import { MASTERY_LO_CODE_RE, MASTERY_SUBJECTS, masteryClassTokenForLevel } from 
 import type { MasteryClassToken, MasterySubject } from "@scd/shared";
 import { MasteryOutcome, treeShapeOf } from "./models/MasteryOutcome";
 import { MasteryCatalogueReview } from "./models/MasteryCatalogueReview";
+import { MasteryQuestionType } from "./models/MasteryQuestionType";
+
+/** A school question-type code as the bank carries it in the payload's `lesson_ref` (PR-G). */
+export const QUESTION_TYPE_CODE_RE = /^QT-[A-Z0-9]+(-[A-Z0-9]+)*$/;
+
+/**
+ * The school question type a bank question carries (PR-G): `lesson_ref` when it is a `QT-` code,
+ * else null — a `QCAT-` exercise family or a lesson handle is not a type. Same free-text field the
+ * QCAT categories use (D-#511/#513), so there is no schema change.
+ */
+export function questionTypeCodeOf(payload: Record<string, unknown> | null | undefined): string | null {
+  const v = payload?.lesson_ref;
+  return typeof v === "string" && QUESTION_TYPE_CODE_RE.test(v) ? v : null;
+}
 
 export function loCodesOf(tags: Record<string, unknown> | null | undefined, payload: Record<string, unknown> | null | undefined): string[] {
   const list = (payload?.lo_codes ?? tags?.lo_codes) as unknown;
@@ -93,8 +107,15 @@ export async function masteryImportCheck(envelope: Record<string, unknown>): Pro
 
   const pair = isPlan ? null : envelopePairOf(envelope);
   const locked = pair ? await bankLockedByReview(pair.classToken, pair.subject) : false;
-  if (pair && locked) return lockedCheck(pair, codes);
+  const payload = isPlan ? null : ((envelope.payload as Record<string, unknown> | undefined) ?? null);
+  if (pair && locked) return lockedCheck(pair, codes, payload);
 
+  // Before lock a QT- finding is only a warning (PR-G), whatever the objective's status.
+  if (pair) {
+    for (const f of await questionTypeFindings(pair, codes[0] ?? null, payload)) {
+      out.warnings.push(`[MASTERY-QT] ${f} — imported, but check it before the list is locked`);
+    }
+  }
   if (codes.length === 0) return out;
   const rows = await MasteryOutcome.find({ code: { $in: codes } }).select("code status").lean();
   const status = new Map(rows.map((r) => [r.code, r.status]));
@@ -110,6 +131,7 @@ export async function masteryImportCheck(envelope: Record<string, unknown>): Pro
 async function lockedCheck(
   pair: { classToken: MasteryClassToken; subject: MasterySubject },
   codes: string[],
+  payload: Record<string, unknown> | null,
 ): Promise<MasteryImportCheck> {
   const out: MasteryImportCheck = { warnings: [], refusals: [] };
   const where = `${pair.classToken} ${pair.subject}`;
@@ -155,6 +177,40 @@ async function lockedCheck(
   }
   if (row.status === "DRAFT") {
     out.warnings.push(`[MASTERY-LO] ${code} is still DRAFT in the catalogue — imported, used once the catalogue is locked`);
+  }
+  for (const f of await questionTypeFindings(pair, code, payload)) {
+    out.refusals.push(`[MASTERY-QT] ${f} — set lesson_ref to a type ${code} allows, with the table's marks (the ${where} objective list is locked)`);
+  }
+  return out;
+}
+
+/**
+ * PR-G: what is wrong with the question's `QT-` code, if it carries one. The code must be an
+ * ACTIVE type of the question's class × subject and one of the objective's `questionTypeCodes`,
+ * and the question's `marks` must equal the type's marks when the table has them. No `QT-` code
+ * (a QCAT- value, nothing) is no finding. Locked list: refusals; before lock: warnings.
+ */
+export async function questionTypeFindings(
+  pair: { classToken: MasteryClassToken; subject: MasterySubject },
+  loCode: string | null,
+  payload: Record<string, unknown> | null,
+): Promise<string[]> {
+  const qt = questionTypeCodeOf(payload);
+  if (!qt) return [];
+  const where = `${pair.classToken} ${pair.subject}`;
+  const type = await MasteryQuestionType.findOne({ classToken: pair.classToken, subject: pair.subject, code: qt }).select("code marks active").lean();
+  if (!type) return [`${qt} is not a question type of ${where}`];
+  if (!type.active) return [`${qt} is an inactive question type of ${where}`];
+  const out: string[] = [];
+  if (loCode) {
+    const o = await MasteryOutcome.findOne({ code: loCode, classToken: pair.classToken, subject: pair.subject }).select("questionTypeCodes").lean();
+    if (o && !(o.questionTypeCodes ?? []).includes(qt)) {
+      out.push(`${qt} is not one of the question types ${loCode} allows (${(o.questionTypeCodes ?? []).join(", ") || "none"})`);
+    }
+  }
+  const marks = payload?.marks;
+  if (typeof type.marks === "number" && typeof marks === "number" && marks !== type.marks) {
+    out.push(`the question's marks (${marks}) differ from ${qt}'s marks in the table (${type.marks})`);
   }
   return out;
 }

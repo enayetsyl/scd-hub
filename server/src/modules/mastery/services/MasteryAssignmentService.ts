@@ -44,7 +44,7 @@ import {
 import { computeSection, liveSectionRows, lockedOutcomes, sectionLabel } from "./MasteryDiagnosisService";
 import { buildPartA, buildPartB, pickQuestion, type BankQuestion, type BuilderContext, type OutcomeInfo } from "../assignmentBuilder";
 import { sectionOutcomeSummary } from "../diagnosis";
-import { loCodeMongoFilter, loCodesOf } from "../bank";
+import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../bank";
 import { groupStimulusParts, partLabelsByItem, printLabel, printPlan, stimulusRefOf } from "../parts";
 import { isoWeekKey } from "../evidence";
 import { notifyAssignmentSent } from "../notify";
@@ -89,6 +89,7 @@ export async function goldBank(codes: string[]): Promise<(BankQuestion & { textB
       loCodes: loCodesOf(env.tags as Record<string, unknown>, payload),
       textBn: typeof text === "string" ? text : null,
       stimulusRef: stimulusRefOf(payload),
+      qtCode: questionTypeCodeOf(payload),
     }];
   });
 }
@@ -488,9 +489,11 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       for (const q of (await openExtraSeen(a.sectionId, a.subject)).get(studentId) ?? []) seen.add(q);
       const exposure = new Map<string, number>();
       for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
-      const next = pickQuestion(cur.loCode, seen, { bank: await goldBank([cur.loCode]), exposure });
+      // PR-G: the item keeps its type and marks, so a swap-in that carries a different type is not a candidate.
+      const goldHere = await goldBank([cur.loCode]);
+      const next = pickQuestion(cur.loCode, seen, { bank: goldHere.filter((q) => !q.qtCode || q.qtCode === cur.questionTypeCode), exposure });
       if (!next) throw new MasteryWorkError("এই কোডে এই শিক্ষার্থীর জন্য আর নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন।");
-      const bank = (await goldBank([cur.loCode])).find((q) => q.qid === next.qid);
+      const bank = goldHere.find((q) => q.qid === next.qid);
       sheet.items.splice(i, 1, {
         origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
         chapterNumber: cur.chapterNumber ?? null, questionTypeCode: cur.questionTypeCode, marks: cur.marks, band: cur.band,

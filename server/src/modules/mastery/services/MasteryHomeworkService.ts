@@ -42,7 +42,7 @@ import {
 } from "./MasteryWorkService";
 import { computeSection, liveSectionRows, lockedOutcomes } from "./MasteryDiagnosisService";
 import { goldBank, marksTable } from "./MasteryAssignmentService";
-import { pickQuestion, typeFor, type BankQuestion, type BuilderLayout, type OutcomeInfo } from "../assignmentBuilder";
+import { pickTyped, typeFor, typeOfQuestion, type BankQuestion, type BuilderLayout, type OutcomeInfo } from "../assignmentBuilder";
 import { isTaggedRow } from "../rollup";
 import { notifyExtraHomework } from "../notify";
 
@@ -167,18 +167,19 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
       out.gaps.push(code);
       continue;
     }
-    const picked: BankQuestion[] = [];
+    // PR-G: each question comes with its own type — a typed one only as that type.
+    const picked: { q: BankQuestion; qt: string }[] = [];
     while (picked.length < perObjective && out.items.length + picked.length < maxItems) {
-      const q = pickQuestion(code, avoid, { bank, exposure });
-      if (!q) break;
-      avoid.add(q.qid);
-      picked.push(q);
+      const p = pickTyped(lo, avoid, { bank, exposure, marksOf: marks, layout: OPEN_LAYOUT });
+      if (!p) break;
+      avoid.add(p.q.qid);
+      picked.push(p);
     }
     if (picked.length > 0) {
-      for (const q of picked) {
+      for (const { q, qt } of picked) {
         out.items.push({
           origin: "BANK", artifactId: q.artifactId, qid: q.qid, textBn: q.textBn ?? null, loCode: code,
-          questionTypeCode: type, marks: marks.get(type)!, fromBook: false,
+          questionTypeCode: qt, marks: marks.get(qt)!, fromBook: false,
         });
       }
       continue;
@@ -304,10 +305,9 @@ function proposeFor(x: ExtraContext, studentId: string): Omit<ExtraStudent, "nam
     for (const [code, s] of mine) {
       if (items.length >= x.maxQuestions) break;
       const o = x.outcomes.get(code)!;
-      const type = typeFor({ code, chapterNumber: o.chapterNumber, questionTypeCodes: o.questionTypeCodes }, { marksOf: x.marks, layout: OPEN_LAYOUT });
-      if (!type) continue;
-      const q = pickQuestion(code, avoid, x);
-      if (!q) continue;
+      const p = pickTyped({ code, chapterNumber: o.chapterNumber, questionTypeCodes: o.questionTypeCodes }, avoid, { ...x, marksOf: x.marks, layout: OPEN_LAYOUT });
+      if (!p) continue;
+      const { q, qt: type } = p;
       avoid.add(q.qid);
       progressed = true;
       const last = ymd(s.lastEvidenceAt);
@@ -377,8 +377,12 @@ export async function createExtraHomework(
       const q = bankBy.get(it.artifactId);
       if (!q || !q.loCodes.includes(it.loCode)) throw new MasteryWorkError(`${who}: প্রশ্নটি গোল্ড ব্যাংকে ${it.loCode}-এর সাথে ট্যাগ করা নয়।`);
       if (seen.has(q.qid)) throw new MasteryWorkError(`${who}: প্রশ্ন ${q.qid} আগেই দেখেছে।`);
-      const type = typeFor({ code: o.code, chapterNumber: o.chapterNumber, questionTypeCodes: o.questionTypeCodes }, { marksOf: x.marks, layout: OPEN_LAYOUT });
-      if (!type) throw new MasteryWorkError(`${it.loCode}-এর প্রশ্নের ধরনের নম্বর ঠিক করা নেই।`);
+      const type = typeOfQuestion(q, { code: o.code, chapterNumber: o.chapterNumber, questionTypeCodes: o.questionTypeCodes }, { marksOf: x.marks, layout: OPEN_LAYOUT });
+      if (!type) {
+        throw new MasteryWorkError(
+          q.qtCode ? `${who}: প্রশ্ন ${q.qid}-এর ধরন ${q.qtCode} এই কোডের জন্য চলে না।` : `${it.loCode}-এর প্রশ্নের ধরনের নম্বর ঠিক করা নেই।`,
+        );
+      }
       const key = `${it.artifactId}|${it.loCode}`;
       let no = itemKey.get(key);
       if (no === undefined) {

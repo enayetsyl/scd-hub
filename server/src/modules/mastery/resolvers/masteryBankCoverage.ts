@@ -10,7 +10,7 @@
  * who locks the list) and `mastery:review` (the reviewer). Whole school, curriculum plane only.
  */
 import { builder } from "../../../schema";
-import { bankCoverage, type BankCoveragePair, type BankCoverageRow, type BankCoverageView } from "../services/MasteryBankCoverageService";
+import { bankCoverage, type BankCoverageCell, type BankCoveragePair, type BankCoverageRow, type BankCoverageView } from "../services/MasteryBankCoverageService";
 
 const PairRef = builder.objectRef<BankCoveragePair>("MasteryBankCoveragePair");
 PairRef.implement({
@@ -18,6 +18,17 @@ PairRef.implement({
     classToken: t.exposeString("classToken"),
     subject: t.exposeString("subject"),
     locked: t.exposeBoolean("locked"),
+  }),
+});
+
+const CellRef = builder.objectRef<BankCoverageCell>("MasteryBankCoverageCell");
+CellRef.implement({
+  description: "Gold / pending questions of one objective for one school question type (PR-G); typeCode null = no type.",
+  fields: (t) => ({
+    typeCode: t.string({ nullable: true, resolve: (c) => c.typeCode }),
+    goldCount: t.exposeInt("goldCount"),
+    pendingCount: t.exposeInt("pendingCount"),
+    zero: t.exposeBoolean("zero"),
   }),
 });
 
@@ -37,6 +48,7 @@ RowRef.implement({
     exercises: t.exposeStringList("exercises"),
     goldCount: t.exposeInt("goldCount"),
     pendingCount: t.exposeInt("pendingCount"),
+    cells: t.field({ type: [CellRef], resolve: (r) => r.cells }),
   }),
 });
 
@@ -66,6 +78,7 @@ ViewRef.implement({
     rows: t.field({ type: [RowRef], resolve: (v) => v.rows }),
     totals: t.field({ type: TotalsRef, resolve: (v) => v.totals }),
     brief: t.exposeString("brief", { description: "The rows with no gold question, as a brief for the next question batch." }),
+    typeCsv: t.exposeString("typeCsv", { description: "PR-G: objective, type, gold, pending per cell as CSV." }),
   }),
 });
 

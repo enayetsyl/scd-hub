@@ -18,9 +18,10 @@
  * Part A (if on): the layout's outcomes, else the section's weakest (weak % ≥ the trigger line,
  * else the highest > 0); questions nobody in the section has seen where possible.
  *
- * A bank question carries no school question-type code (the bank's `question_type` is an answer
- * form, not QT-…), so a bank pick takes the outcome's first allowed type within the layout; the
- * teacher can change it on review (D-#809).
+ * A bank question may carry its school question type (PR-G: a `QT-` code in `lesson_ref`, `qtCode`
+ * here). Such a question is offered ONLY as that type — and only when the objective, the layout
+ * and the room left allow it. A question without one (a legacy `QCAT-` / `TOP-` row) falls back
+ * to the outcome's first allowed type within the layout; the teacher can change it on review (D-#809).
  *
  * ক/খ parts (D-#926): a part question carries its stem's `stimulusRef`; selection is unchanged
  * (each part is picked for its own code), and the parts of one stem that land on a sheet are
@@ -35,6 +36,8 @@ export interface BankQuestion {
   textBn?: string | null;
   /** ক/খ parts (D-#926): the stimulus (shared stem) this question hangs under. */
   stimulusRef?: string | null;
+  /** PR-G: the school question type the question carries (`lesson_ref` = QT-…), or null. */
+  qtCode?: string | null;
 }
 
 export interface OutcomeInfo {
@@ -106,6 +109,47 @@ export function typeFor(
   return allowOver ? [...usable].sort((a, b) => marks(a) - marks(b))[0] ?? null : null;
 }
 
+/**
+ * The type a bank question takes for `lo` (PR-G), or null when it cannot be offered. A question
+ * with a `qtCode` takes only that type, and only if the objective allows it, the layout allows it,
+ * the table has its marks and (with `room`) the marks fit — or `allowOver` for an empty sheet.
+ * A question without one takes `typeFor`'s choice, exactly as before.
+ */
+export function typeOfQuestion(
+  q: Pick<BankQuestion, "qtCode">,
+  lo: OutcomeInfo,
+  ctx: Pick<BuilderContext, "marksOf" | "layout">,
+  room?: number,
+  allowOver = false,
+): string | null {
+  if (!q.qtCode) return typeFor(lo, ctx, room, allowOver);
+  const t = q.qtCode;
+  if (!lo.questionTypeCodes.includes(t)) return null;
+  if (ctx.layout.questionTypeCodes.length > 0 && !ctx.layout.questionTypeCodes.includes(t)) return null;
+  const m = ctx.marksOf.get(t) ?? 0;
+  if (m <= 0) return null;
+  if (room !== undefined && m > room + 1e-9 && !allowOver) return null;
+  return t;
+}
+
+/** The best unseen gold question for `lo` together with the type it takes (PR-G), or null. */
+export function pickTyped(
+  lo: OutcomeInfo,
+  avoid: Set<string>,
+  ctx: Pick<BuilderContext, "bank" | "exposure" | "marksOf" | "layout">,
+  room?: number,
+  allowOver = false,
+): { q: BankQuestion; qt: string } | null {
+  const cands = ctx.bank
+    .filter((q) => q.loCodes.includes(lo.code) && !avoid.has(q.qid))
+    .sort((a, b) => (ctx.exposure.get(a.qid) ?? 0) - (ctx.exposure.get(b.qid) ?? 0) || a.qid.localeCompare(b.qid));
+  for (const q of cands) {
+    const qt = typeOfQuestion(q, lo, ctx, room, allowOver);
+    if (qt) return { q, qt };
+  }
+  return null;
+}
+
 /** The best unseen gold question for `lo`, or null. */
 export function pickQuestion(
   loCode: string,
@@ -163,14 +207,13 @@ export function buildPartB(
         // Fit the type to the marks still open on the sheet (D-#829). Bands stay soft (a band's
         // unused marks carry on); the sheet's target is the hard line.
         const room = target - total();
-        const qt = typeFor(info, ctx, room, total() === 0);
-        if (!qt) {
+        // No usable type at all under the layout: nothing to offer (and nothing to warn about).
+        if (!typeFor(info, ctx)) {
           dead.add(lo);
           continue;
         }
         const seen = new Set([...(states.get(lo)?.seenQids ?? []), ...used]);
-        const q = pickQuestion(lo, seen, ctx);
-        if (!q) {
+        if (!pickQuestion(lo, seen, ctx)) {
           if (round === 0 && !gapWarned.has(lo)) {
             warnings.push({ code: "NO_UNSEEN_QUESTION", loCode: lo });
             gapWarned.add(lo);
@@ -178,6 +221,14 @@ export function buildPartB(
           dead.add(lo);
           continue;
         }
+        // The question and its type together (PR-G): a typed question is offered only as its own
+        // type, and only if it fits the room left; an untyped one takes the largest type that fits.
+        const pick = pickTyped(info, seen, ctx, room, total() === 0);
+        if (!pick) {
+          dead.add(lo);
+          continue;
+        }
+        const { q, qt } = pick;
         const marks = ctx.marksOf.get(qt)!;
         used.add(q.qid);
         items.push({
@@ -234,10 +285,11 @@ export function buildPartA(
     for (const lo of los) {
       if (items.reduce((s, i) => s + i.marks, 0) >= layout.partAMarks) break;
       const info = ctx.outcomes.get(lo);
-      const qt = info ? typeFor(info, ctx) : null;
-      if (!info || !qt) continue;
-      const q = pickQuestion(lo, new Set([...used, ...seenBySection, ...hardAvoid]), ctx) ?? pickQuestion(lo, new Set([...used, ...hardAvoid]), ctx);
-      if (!q) continue;
+      if (!info || !typeFor(info, ctx)) continue;
+      const pick =
+        pickTyped(info, new Set([...used, ...seenBySection, ...hardAvoid]), ctx) ?? pickTyped(info, new Set([...used, ...hardAvoid]), ctx);
+      if (!pick) continue;
+      const { q, qt } = pick;
       used.add(q.qid);
       items.push({
         origin: "BANK", artifactId: q.artifactId, qid: q.qid, textBn: q.textBn ?? null, loCode: lo,

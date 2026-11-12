@@ -517,6 +517,7 @@ export const MASTERY_BANK_QUESTIONS_QUERY = gql`
       qid
       loCodes
       questionType
+      qtCode
       marks
       payloadJson
     }

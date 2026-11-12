@@ -34,7 +34,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { personName } from "../../../lib/personName";
 import { getPolicy, isMasteryEnabled, ensureDefaultTags } from "./MasteryCatalogueService";
-import { loCodesOf } from "../bank";
+import { loCodesOf, questionTypeCodeOf } from "../bank";
 import { groupStimulusParts, printPlan, stimulusRefOf } from "../parts";
 import { computeEvidence, isoWeekKey, type ResultLike, type TagLike } from "../evidence";
 import { reapplyExclusions } from "../exclusions";
@@ -229,6 +229,11 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
       const env = art.envelopeJson as Record<string, unknown>;
       const los = loCodesOf(env.tags as Record<string, unknown>, env.payload as Record<string, unknown>);
       if (!los.includes(it.loCode)) throw new MasteryWorkError(`প্রশ্নটি ${it.loCode}-এর সাথে ট্যাগ করা নয়।`);
+      // PR-G: a bank question that carries its school type is used as that type only.
+      const own = questionTypeCodeOf(env.payload as Record<string, unknown>);
+      if (own && own !== it.questionTypeCode) {
+        throw new MasteryWorkError(`প্রশ্নটির ধরন ${own} — ${it.questionTypeCode} হিসেবে দেওয়া যায় না।`);
+      }
       artifactId = art._id as Types.ObjectId;
       qid = (env.payload as Record<string, unknown>)?.qid as string | undefined;
       stimulusRef = stimulusRefOf(env.payload as Record<string, unknown>);

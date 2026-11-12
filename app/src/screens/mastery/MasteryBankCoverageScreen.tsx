@@ -38,6 +38,14 @@ export default function MasteryBankCoverageScreen({ route }: { route: { params?:
   const v = data?.masteryBankCoverage as BankCoverage | undefined;
   const rows = v?.rows ?? [];
 
+  const [copiedTable, setCopiedTable] = useState(false);
+  async function onCopyTable(): Promise<void> {
+    if (!v?.typeCsv) return;
+    await Clipboard.setStringAsync(v.typeCsv);
+    setCopiedTable(true);
+    setTimeout(() => setCopiedTable(false), 2000);
+  }
+
   async function onCopy(): Promise<void> {
     if (!v?.brief) return;
     await Clipboard.setStringAsync(v.brief);
@@ -128,6 +136,19 @@ export default function MasteryBankCoverageScreen({ route }: { route: { params?:
                         {r.parentLabelBn ? ` · ${r.parentLabelBn}` : ""} · {r.code}
                         {r.pendingCount > 0 ? ` · ${fill(STR.bcPending, { n: bnNum(r.pendingCount) })}` : ""}
                       </Muted>
+                      {/* PR-G: gold questions per school question type; an allowed type with none is red. */}
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: 2 }}>
+                        {r.cells
+                          .filter((c) => c.typeCode !== null || c.goldCount > 0 || c.pendingCount > 0)
+                          .map((c) => (
+                            <Text
+                              key={c.typeCode ?? "none"}
+                              style={{ fontSize: 12, color: c.zero ? colors.error : colors.textSecondary, fontWeight: c.zero ? "700" : "400" }}
+                            >
+                              {c.typeCode ?? STR.bcNoType} {bnNum(c.goldCount)}
+                            </Text>
+                          ))}
+                      </View>
                     </View>
                     <Body style={{ fontWeight: "700", color: gap ? colors.error : colors.textPrimary }}>{bnNum(r.goldCount)}</Body>
                   </View>
@@ -135,6 +156,14 @@ export default function MasteryBankCoverageScreen({ route }: { route: { params?:
               })}
             </Card>
           ))}
+
+          {rows.length > 0 ? (
+            <Card>
+              <Body style={{ fontWeight: "700" }}>{STR.bcTypeTableTitle}</Body>
+              <Muted>{STR.bcTypeTableHint}</Muted>
+              <Button title={copiedTable ? STR.bcCopied : STR.bcCopyTypeTable} variant="secondary" onPress={onCopyTable} />
+            </Card>
+          ) : null}
 
           {v.totals.zeroRows > 0 ? (
             <Card>

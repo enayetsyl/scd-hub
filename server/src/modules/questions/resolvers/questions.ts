@@ -30,7 +30,7 @@ import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
 import { QUESTION_CATEGORIES, callerHasPermission } from "@scd/shared";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
-import { loCodeMongoFilter, loCodesOf } from "../../mastery/bank";
+import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../../mastery/bank";
 
 type LeanArtifact = FlattenMaps<IContentArtifact> & { _id: Types.ObjectId };
 
@@ -56,6 +56,8 @@ interface QuestionArtifactShape {
   questionType?: string | null;
   /** Exercise family (D-#511) — payload lesson_ref. */
   category?: string | null;
+  /** PR-G: the school question type (`lesson_ref` = QT-…) the question carries, else null. */
+  qtCode?: string | null;
   paperRole?: string | null;
   bloomLevel?: string | null;
   difficulty?: string | null;
@@ -85,6 +87,7 @@ QuestionArtifactRef.implement({
     loCodes: t.stringList({ resolve: (q) => q.loCodes }),
     questionType: t.string({ nullable: true, resolve: (q) => q.questionType ?? null }),
     category: t.string({ nullable: true, resolve: (q) => q.category ?? null }),
+    qtCode: t.string({ nullable: true, resolve: (q) => q.qtCode ?? null }),
     paperRole: t.string({ nullable: true, resolve: (q) => q.paperRole ?? null }),
     bloomLevel: t.string({ nullable: true, resolve: (q) => q.bloomLevel ?? null }),
     difficulty: t.string({ nullable: true, resolve: (q) => q.difficulty ?? null }),
@@ -121,6 +124,7 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
     loCodes: loCodesOf(tags, payload),
     questionType: (payload.question_type as string | undefined) ?? null,
     category: (payload.lesson_ref as string | undefined) ?? null,
+    qtCode: questionTypeCodeOf(payload),
     paperRole: (payload.paper_role as string | undefined) ??
                (tags.paper_role as string | undefined) ?? null,
     bloomLevel: (payload.bloom_level as string | undefined) ??
@@ -177,6 +181,8 @@ builder.queryField("questions", (t) =>
       /** Chapter numbers, from the artifact's own address (D-#524). */
       chapters: t.arg.intList({ required: false }),
       category: t.arg.string({ required: false }),
+      /** PR-G: only questions carrying this school question type (QT-…). */
+      qtCode: t.arg.string({ required: false }),
       bloomLevel: t.arg.string({ required: false }),
       difficulty: t.arg.string({ required: false }),
       paperRole: t.arg.string({ required: false }),
@@ -267,6 +273,8 @@ builder.queryField("questions", (t) =>
       // Mastery LO filter (D-#785) — ANDed like every other $or clause.
       const loCodes = (args.loCodes ?? []).filter((c) => c.trim());
       if (loCodes.length > 0) ands.push(loCodeMongoFilter(loCodes) as FilterQuery<IContentArtifact>);
+      // PR-G: the school question type, from the payload's lesson_ref.
+      if (args.qtCode) ands.push({ "envelopeJson.payload.lesson_ref": args.qtCode } as FilterQuery<IContentArtifact>);
 
       // Free-text search: question body as typed + digit-normalised qid.
       const rawSearch = args.search?.trim();
