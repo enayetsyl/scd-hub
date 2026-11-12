@@ -323,6 +323,9 @@ updated in YC-9 to choose the class by current year and to close and open enrolm
 
 ## 4. Class 6 onboarding (teaching side)
 
+**Built 2026-11-12 (YC-3, D-#1480–#1483).** Row-by-row result (done before / built / left) is in
+`docs/overnight-handoff-yc3.md`.
+
 **The other session covers the content side:** the import contract, `SUBJECTS`, and the `C[1-5]` patterns in
 `docs/import-contract.schema.json`. I could not see its branch. YC-3 must start from `dev` after that
 work merges, and re-check each line below, because `shared/vocab.ts` is a serialized contract file

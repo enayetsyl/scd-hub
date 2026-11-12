@@ -31,7 +31,7 @@ import { getPolicy, isMasteryEnabled } from "./MasteryCatalogueService";
 import { MasteryWorkError, assertMayWork, dayOf, nextPaperId, rosterOf, sectionContext, type Auth } from "./MasteryWorkService";
 import { computeSection, liveSectionRows, sectionLabel } from "./MasteryDiagnosisService";
 import { goldBank, marksTable } from "./MasteryAssignmentService";
-import { pickQuestion, typeFor } from "../assignmentBuilder";
+import { pickTyped, typeFor } from "../assignmentBuilder";
 import { sectionOutcomeSummary, type DiagnosisPolicy } from "../diagnosis";
 import { notifyExtraClass, notifyProposal, outcomeNaming } from "../notify";
 
@@ -289,14 +289,16 @@ export async function buildRetest(id: string, auth: Auth): Promise<ActionDetail>
     const seen = new Set(rows.filter((r) => r.studentId === sid && r.qid).map((r) => r.qid as string));
     const mine: number[] = [];
     for (let k = 0; k < RETEST_QUESTIONS; k++) {
-      const q = pickQuestion(a.loCode, seen, { bank, exposure });
-      if (!q) break;
+      // PR-G: a typed bank question is re-tested as its own type; the rest take the objective's first type.
+      const p = pickTyped(info, seen, { bank, exposure, marksOf: marks, layout: { questionTypeCodes: [] } as never });
+      if (!p) break;
+      const { q, qt: itemType } = p;
       seen.add(q.qid);
       exposure.set(q.qid, (exposure.get(q.qid) ?? 0) + 1);
       let no = noOf.get(q.qid);
       if (!no) {
         no = items.length + 1;
-        items.push({ itemNo: no, origin: "BANK", artifactId: oid(q.artifactId), qid: q.qid, loCodes: [a.loCode], chapterNumber: info.chapterNumber, questionTypeCode: qt, marks: marks.get(qt)! });
+        items.push({ itemNo: no, origin: "BANK", artifactId: oid(q.artifactId), qid: q.qid, loCodes: [a.loCode], chapterNumber: info.chapterNumber, questionTypeCode: itemType, marks: marks.get(itemType)! });
         noOf.set(q.qid, no);
       }
       mine.push(no);

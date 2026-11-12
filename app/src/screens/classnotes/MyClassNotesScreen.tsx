@@ -73,9 +73,9 @@ function canCarryHomework(slot: RoutineSlotT): boolean {
   return slot.groupType === "section" && !!slot.classId && slot.subject !== "QURAN";
 }
 
-/** Session plans exist only for section periods of Classes 1–5 (D-#820); the server has the final say. */
+/** Session plans exist only for section periods of Classes 1–6 (D-#820; Class 6 from YC-3); the server has the final say. */
 function mayHavePlan(slot: RoutineSlotT): boolean {
-  return canCarryHomework(slot) && (slot.classLevel ?? 0) >= 1 && (slot.classLevel ?? 0) <= 5;
+  return canCarryHomework(slot) && (slot.classLevel ?? 0) >= 1 && (slot.classLevel ?? 0) <= 6;
 }
 
 
@@ -313,7 +313,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
             {slot.startTime && slot.endTime ? ` · ${bnNum(slot.startTime)}–${bnNum(slot.endTime)}` : ""}
           </Body>
           <Muted>
-            {routineSubjectLabel(slot.subject)}
+            {routineSubjectLabel(slot.subject, slot.classLevel)}
             {slot.groupName ? ` · ${slot.groupName}` : ""}
           </Muted>
         </View>

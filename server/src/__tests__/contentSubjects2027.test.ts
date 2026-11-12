@@ -71,13 +71,14 @@ describe("vocab (pure)", () => {
   it("content subjects gain ISLAM, ICT, BAN2, ENG2 with Bangla labels; Class 6 is the top content class", () => {
     for (const s of ["ISLAM", "ICT", "BAN2", "ENG2"]) expect(SUBJECTS).toContain(s);
     expect(SUBJECT_LABELS_BN.ICT).toBe("তথ্য ও যোগাযোগ প্রযুক্তি");
-    expect(SUBJECT_LABELS_BN.BAN2).toBe("বাংলা ২য় পত্র");
-    expect(SUBJECT_LABELS_BN.ENG2).toBe("ইংরেজি ২য় পত্র");
+    expect(SUBJECT_LABELS_BN.BAN2).toBe("বাংলা দ্বিতীয় পত্র");
+    expect(SUBJECT_LABELS_BN.ENG2).toBe("ইংরেজি দ্বিতীয় পত্র");
     expect(SUBJECT_LABELS_BN.ISLAM).toBe("ইসলাম শিক্ষা");
     expect(CLASS_LEVEL_MAX).toBe(6);
     expect([...NCTB_GENERAL_SUBJECTS]).toEqual(["BAN", "ENG", "MATH", "SCI", "BGS"]);
-    // The operational Subject collection is unchanged (no ICT / BAN2 / ENG2 rows).
-    expect([...FOUNDATION_SUBJECTS]).toEqual(["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM"]);
+    // The operational Subject collection gained ICT / BAN2 / ENG2 in YC-3 (D-#1480): a Class 6
+    // routine grant binds a Subject row.
+    expect([...FOUNDATION_SUBJECTS]).toEqual(["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"]);
     expect(MASTERY_SUBJECTS).toEqual(expect.arrayContaining(["ICT", "BAN2", "ENG2", "ARABIC", "ISLAM"]));
   });
 

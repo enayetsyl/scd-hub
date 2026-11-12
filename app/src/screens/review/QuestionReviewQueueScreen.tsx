@@ -71,6 +71,14 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [chapter, setChapter] = useState<number | null>(null);
   const [questionType, setQuestionType] = useState<string | null>(null);
+  /** PR-G: the school question type (QT-…) the question carries. */
+  const [qtCode, setQtCode] = useState<string | null>(null);
+  /** What is typed in the field; it reaches `qtCode` (and so the query) after a short pause. */
+  const [qtInput, setQtInput] = useState("");
+  useEffect(() => {
+    const h = setTimeout(() => setQtCode(qtInput.trim() === "" ? null : qtInput.trim().toUpperCase()), 400);
+    return () => clearTimeout(h);
+  }, [qtInput]);
   const [important, setImportantOnly] = useState(false);
   const [undecided, setUndecided] = useState(false);
 
@@ -88,10 +96,11 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
       classLevel,
       chapter,
       questionType,
+      qtCode,
       important: important ? true : null,
       undecided: undecided ? true : null,
     }),
-    [subject, classLevel, chapter, questionType, important, undecided],
+    [subject, classLevel, chapter, questionType, qtCode, important, undecided],
   );
 
   const [{ data, fetching, error }, refetch] = useQuery({
@@ -367,6 +376,13 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
             />
           ))}
         </ChipRow>
+        <Field
+          label={STR.qbQtCode}
+          value={qtInput}
+          onChangeText={setQtInput}
+          placeholder="QT-FILL"
+          autoCapitalize="characters"
+        />
         {chapterOptions.length > 0 ? (
           <ChipRow>
             <Chip label={STR.all} selected={chapter === null} onPress={() => setChapter(null)} />
@@ -438,6 +454,9 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
                   <Badge text={subjectLabel(round.subject)} />
                   <Badge text={classLevelLabel(round.classLevel)} />
                   {round.marks != null ? <Badge text={`${STR.qrMarks} ${bnNum(round.marks)}`} /> : null}
+                  {/* PR-G: the objective code and the school question type, side by side. */}
+                  {round.topicTag ? <Badge text={round.topicTag} tone="muted" /> : null}
+                  {round.qtCode ? <Badge text={round.qtCode} tone="gold" /> : null}
                   {decided && round.verdict ? (
                     <Badge
                       text={reviewVerdictLabel(round.verdict)}

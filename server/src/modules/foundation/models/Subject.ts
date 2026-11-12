@@ -1,9 +1,10 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { NCTB_GENERAL_SUBJECTS } from "@scd/shared";
 
-/** The operational Subject collection: the five NCTB general subjects + ISLAM. Pinned to the
- *  general list so the 2027 content codes (ICT, BAN2, ENG2) do not leak into it (D-#1310). */
-export const FOUNDATION_SUBJECTS = [...NCTB_GENERAL_SUBJECTS, "ISLAM"] as const;
+/** The operational Subject collection: the five NCTB general subjects + ISLAM, and since YC-3
+ *  (D-#1480) the Class 6 teaching subjects ICT, BAN2, ENG2 — routine grants bind a `Subject` row,
+ *  so a Class 6 teacher needs one. Rows are added on prod by `server/scripts/class6-onboarding-data.ts`. */
+export const FOUNDATION_SUBJECTS = [...NCTB_GENERAL_SUBJECTS, "ISLAM", "ICT", "BAN2", "ENG2"] as const;
 export type FoundationSubjectCode = (typeof FOUNDATION_SUBJECTS)[number];
 
 export interface ISubject extends Document {

@@ -260,7 +260,8 @@ describe("schedule CRUD validation", () => {
     await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: -1 })).resolves.toBeDefined(); // Nursery
     // classLevel is validated before the schedule/dup lookup, so section reuse is irrelevant here.
     await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: -2 })).rejects.toThrow(/roster classes/);
-    await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: 6 })).rejects.toThrow(/roster classes/);
+    // Class 6 joined the roster in YC-3 (D-#1480); 7 is outside it.
+    await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: 7 })).rejects.toThrow(/roster classes/);
   });
 
   // D-#728: a C4 section sent with C5's class would read as C5 and mint C5 asIds.

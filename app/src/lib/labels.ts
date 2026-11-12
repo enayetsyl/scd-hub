@@ -358,6 +358,7 @@ import {
 } from "@scd/shared";
 import { IMPROVEMENT_REASON_LABELS_BN, IMPROVEMENT_REASON_LABELS_EN, type ImprovementReason } from "@scd/shared";
 import { LESSON_NONE_REASON_LABELS_BN, type LessonNoneReason } from "@scd/shared";
+import { PAPER_SPLIT_FROM_LEVEL, subjectLabel as sharedSubjectLabel } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
 
@@ -854,7 +855,8 @@ export const hrCategoryLabel = (v?: string | null): string =>
   (v && pick(HR_CATEGORY_LABELS_BN, HR_CATEGORY_LABELS_EN)[v as HrCategory]) || v || DASH;
 
 // Homework tracker (HW-T1..T4)
-export const hwSubjectLabel = (v?: string | null): string =>
+export const hwSubjectLabel = (v?: string | null, level?: number | null): string =>
+  (v && level != null && level >= PAPER_SPLIT_FROM_LEVEL ? subjectLabelAt(v, level) : "") ||
   (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) ||
   // D-#1310: the mastery screens also name the Class 6 content subjects (ICT, BAN2, ENG2).
   (v && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[v as Subject]) || v || DASH;
@@ -1107,8 +1109,14 @@ export const minutesToHHMM = (m?: number | null): string => {
 };
 
 // Routine / timetable (R-1..R-3)
-export const routineSubjectLabel = (v?: string | null): string =>
+export const routineSubjectLabel = (v?: string | null, level?: number | null): string =>
+  (v && level != null && level >= PAPER_SPLIT_FROM_LEVEL ? subjectLabelAt(v, level) : "") ||
   (v && pick(ROUTINE_SUBJECT_LABELS_BN, ROUTINE_SUBJECT_LABELS_EN)[v as RoutineSubject]) || v || DASH;
+
+/** A subject's name AT a class level, in the active language — the shared `subjectLabel`
+ *  (Class 6: বাংলা/ইংরেজি প্রথম পত্র, দ্বিতীয় পত্র; YC-3, D-#1481). */
+export const subjectLabelAt = (v: string, level?: number | null): string =>
+  sharedSubjectLabel(v, level, _lang === "en" ? "en" : "bn");
 
 // Exam syllabus (SY-1..SY-6) — labels come from vocab.ts, never re-typed here.
 export const syllabusStatusLabel = (v?: string | null): string =>
@@ -1930,6 +1938,7 @@ const STR_BN = {
   quNeverUsed: "এখনো কোনো সেটে ব্যবহার হয়নি।",
   qbChapter: "অধ্যায়",
   qbCategory: "প্রশ্নের ধরন-শ্রেণি",
+  qbQtCode: "স্কুলের প্রশ্নের ধরন (QT-…)",
   qbTopicTagAny: "যেকোনো টপিক",
   qbSelectQuestion: "প্রশ্ন নির্বাচন করুন",
   qbDeselectQuestion: "নির্বাচন বাতিল করুন",
@@ -5847,6 +5856,10 @@ const STR_BN = {
   bcCopied: "কপি হয়েছে",
   bcShowBrief: "ব্রিফ দেখুন",
   bcHideBrief: "ব্রিফ লুকান",
+  bcNoType: "ধরন নেই",
+  bcTypeTableTitle: "ধরন অনুযায়ী তালিকা",
+  bcTypeTableHint: "প্রতিটি শিখনফল ও প্রশ্নের ধরনে অনুমোদিত প্রশ্ন কয়টি — কপি করে শিটে বসান।",
+  bcCopyTypeTable: "ধরন-তালিকা কপি করুন",
   mdWin30: "শেষ ৩০ দিন",
   mdWin90: "শেষ ৯০ দিন",
   mdWinYear: "এই শিক্ষাবর্ষ",
@@ -5885,10 +5898,10 @@ const STR_BN = {
   mdOutRowHwGap: "বাড়ির কাজ জমা: উপরের − নিচের ভাগ",
   mdOutRowAttGap: "উপস্থিতি: উপরের − নিচের ভাগ",
   mdOutRowBelow85: "৮৫%-এর নিচে − বাকিরা",
-  mdOutRowSenior: "চতুর্থ ও পঞ্চম: উপস্থিতি → ফলাফল",
+  mdOutRowSenior: "চতুর্থ–ষষ্ঠ: উপস্থিতি → ফলাফল",
   mdOutLegend: "সম্পর্ক: গাঢ় = স্পষ্ট, ধূসর = আকস্মিকতা থেকে আলাদা করা যায় না · ব্যবধান ক্লাস টেস্টের নম্বরে; ঋণাত্মক = পিছিয়ে",
   mdFNotCertain: "(সংখ্যা কম — পরিসংখ্যানগতভাবে এখনো নিশ্চিত নয়।)",
-  mdFSenior: "চতুর্থ ও পঞ্চম শ্রেণিতে উপস্থিতি ফলাফলের সঙ্গে জোরালোভাবে চলে (সম্পর্ক {r}, {n} জন)।",
+  mdFSenior: "চতুর্থ–ষষ্ঠ শ্রেণিতে উপস্থিতি ফলাফলের সঙ্গে জোরালোভাবে চলে (সম্পর্ক {r}, {n} জন)।",
   mdFLongAbsent: "{n} জন শিক্ষার্থী হাজিরার দিনের অর্ধেকের বেশি অনুপস্থিত — শ্রেণির গড় এদের কারণে বদলে যায়।",
   mdHwQual: "বাড়ির কাজের মান",
   mdAsQual: "অ্যাসাইনমেন্টের মান",
@@ -6702,6 +6715,8 @@ const STR_BN = {
   spPrintSheet: "প্রোফাইল প্রিন্ট (PDF)",
   spPrintFailed: "PDF তৈরি করা যায়নি",
   spNoStudent: "কোনো শিক্ষার্থী নির্বাচন করা হয়নি",
+  spAcademicYear: "শিক্ষাবর্ষ",
+  spPastYearReadOnly: "আগের শিক্ষাবর্ষ — শ্রেণি, শাখা ও তথ্য সেই বছরের; শুধু দেখা যাবে।",
   // Tabbed profile (2026-09-30)
   spTabDashboard: "ড্যাশবোর্ড",
   spTabProfile: "প্রোফাইল",
@@ -7895,6 +7910,10 @@ const STR_BN = {
   msAsEnterMarks: "নম্বর তুলুন",
   msAsSentNote: "এখন থেকে শিট বদলানো যায় না; নম্বর তোলা হয় সাধারণ কাজের মতো, প্রত্যেকের নিজের প্রশ্নে।",
   msAsNoUnseen: "{lo}: এই শিক্ষার্থীর জন্য নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন বা এ সপ্তাহ বাদ দিন",
+  msAsNoMarks: "{lo}: প্রশ্নের ধরনের নম্বর ঠিক করা নেই — নম্বর-তালিকায় নম্বর দেওয়া পর্যন্ত প্রশ্নটি বাছা যাবে না",
+  msQtNotActive: "প্রশ্নটির ধরন {qt} এই শ্রেণি-বিষয়ের চালু তালিকায় নেই — যোগ করা যাবে না।",
+  msQtNoMarks: "প্রশ্নটির ধরন {qt}-এর নম্বর ঠিক করা নেই — আগে নম্বর-তালিকায় নম্বর দিন।",
+  bcNoMarksNote: "নম্বর ঠিক করা নেই এমন ধরন: {types} — এই ধরনের প্রশ্ন বাছা যাবে না",
   msAsNothing: "অনুশীলনের মতো কিছু নেই — সব আয়ত্তে বা যাচাই হয়নি",
   msAsSwap: "বদলান",
   msAsRemove: "সরান",
@@ -10205,6 +10224,7 @@ const STR_EN: StrTable = {
   quNeverUsed: "Not used in any set yet.",
   qbChapter: "Chapter",
   qbCategory: "Question category",
+  qbQtCode: "School question type (QT-…)",
   qbTopicTagAny: "Any topic",
   qbSelectQuestion: "Select question",
   qbDeselectQuestion: "Deselect question",
@@ -14072,6 +14092,10 @@ const STR_EN: StrTable = {
   bcCopied: "Copied",
   bcShowBrief: "Show brief",
   bcHideBrief: "Hide brief",
+  bcNoType: "no type",
+  bcTypeTableTitle: "Objective × type table",
+  bcTypeTableHint: "Gold questions per objective and school question type — copy it into a sheet.",
+  bcCopyTypeTable: "Copy the type table",
   mdWin30: "Last 30 days",
   mdWin90: "Last 90 days",
   mdWinYear: "This academic year",
@@ -14110,10 +14134,10 @@ const STR_EN: StrTable = {
   mdOutRowHwGap: "Homework submitted: top − bottom third",
   mdOutRowAttGap: "Attendance: top − bottom third",
   mdOutRowBelow85: "Below 85% − everyone else",
-  mdOutRowSenior: "Class 4 + 5: attendance → result",
+  mdOutRowSenior: "Class 4–6: attendance → result",
   mdOutLegend: "Correlations: bold = clear link, grey = not distinguishable from chance · gaps in class-test marks; negative = behind",
   mdFNotCertain: "(Small group — not statistically certain yet.)",
-  mdFSenior: "In Class 4 and Class 5 attendance tracks results strongly (correlation {r}, {n} students).",
+  mdFSenior: "In Classes 4–6 attendance tracks results strongly (correlation {r}, {n} students).",
   mdFLongAbsent: "{n} students were absent on more than half their marked days — they move class averages on their own.",
   mdHwQual: "Homework quality",
   mdAsQual: "Assignment quality",
@@ -14922,6 +14946,8 @@ const STR_EN: StrTable = {
   spPrintSheet: "Print profile (PDF)",
   spPrintFailed: "Could not generate the PDF",
   spNoStudent: "No student selected",
+  spAcademicYear: "Academic year",
+  spPastYearReadOnly: "A past academic year — that year's class, section and records; view only.",
   // Tabbed profile (2026-09-30)
   spTabDashboard: "Dashboard",
   spTabProfile: "Profile",
@@ -16104,6 +16130,10 @@ const STR_EN: StrTable = {
   msAsEnterMarks: "Enter marks",
   msAsSentNote: "Sheets can no longer change; marks are entered like any sheet, each on their own questions.",
   msAsNoUnseen: "{lo}: no unseen gold question for this student — write one or skip it this week",
+  msAsNoMarks: "{lo}: the question type has no marks in the table — the question cannot be picked until marks are set",
+  msQtNotActive: "This question's type {qt} is not in the active list of this class × subject — it cannot be added.",
+  msQtNoMarks: "This question's type {qt} has no marks yet — set them in the marks table first.",
+  bcNoMarksNote: "Types with no marks yet: {types} — questions of these types cannot be picked",
   msAsNothing: "Nothing to practise — all mastered or not yet assessed",
   msAsSwap: "Swap",
   msAsRemove: "Remove",

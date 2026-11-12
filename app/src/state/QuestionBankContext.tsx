@@ -21,6 +21,8 @@ export interface QbFilters {
   chapters: number[];
   /** Exercise family (D-#511) — only offered where the chosen slice has any. */
   category: string | null;
+  /** PR-G: the school question type (QT-…) the question carries. */
+  qtCode: string | null;
   paperRole: string | null;
   difficulty: string | null;
   bloomLevel: string | null;
@@ -40,6 +42,7 @@ export const EMPTY_FILTERS: QbFilters = {
   questionTypes: [],
   chapters: [],
   category: null,
+  qtCode: null,
   paperRole: null,
   difficulty: null,
   bloomLevel: null,
@@ -121,6 +124,7 @@ export function normalizeFilters(raw: unknown): QbFilters {
     questionTypes: strList(r.questionTypes, r.questionType),
     chapters: numList(r.chapters),
     category: str(r.category),
+    qtCode: str(r.qtCode),
     paperRole: str(r.paperRole),
     difficulty: str(r.difficulty),
     bloomLevel: str(r.bloomLevel),

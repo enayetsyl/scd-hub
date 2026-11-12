@@ -15,6 +15,12 @@ import { Student } from "../../modules/foundation/models/Student";
 import { SectionMerge } from "../../modules/foundation/models/SectionMerge";
 import { Enrolment } from "../../modules/foundation/models/Enrolment";
 import { Audit } from "../../modules/platform/models/Audit";
+import { SubjectGroup } from "../../modules/routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../../modules/routine/models/SubjectGroupMembership";
+import { StudentAttendanceDay } from "../../modules/attendance/models/StudentAttendanceDay";
+import { Subject } from "../../modules/foundation/models/Subject";
+import { ScopeGrant } from "../../modules/foundation/models/ScopeGrant";
+import { User } from "../../modules/foundation/models/User";
 
 export interface YearFixture {
   y2026: Types.ObjectId;
@@ -187,4 +193,300 @@ export async function seedProdSplit(
     meta: { classId: classId.toString(), movedStudents: opts.movedStudents ?? 3, byGender: true, ...(effective ? { effective } : {}) },
   });
   return { classId, combined, boys, girls, kids, effective };
+}
+
+// ---------------------------------------------------------------------------
+// YC-2: past-period readers (docs/prd-year-change.md §5 YC-2 acceptance)
+// ---------------------------------------------------------------------------
+
+export interface PastReadersFixture {
+  years: YearFixture;
+  /** 2026: Nursery (Main) and Class 3 বালক; 2027: KG (Main) and Class 4 বালক — where they move up to. */
+  nursery2026: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c3Boys2026: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  kg2027: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c4Boys2027: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  /** The Quran group the Class 3 boys are captured on (unchanged by the year change, Q11). */
+  quranGroupId: Types.ObjectId;
+  /** T-N1..T-N3 (Nursery) and T-B1..T-B3 (Class 3 বালক). */
+  nursery: Types.ObjectId[];
+  boys: Types.ObjectId[];
+  /** Class teacher of the 2026 Class 3 বালক section only. */
+  classTeacher2026: Types.ObjectId;
+  /** Who marked the attendance days. */
+  marker: Types.ObjectId;
+  /** Section / group days in October and December 2026 (see the builder). */
+  dayKeys: string[];
+}
+
+/**
+ * YC-2: a small 2026 school after the backfill — every child has one 2026 ACTIVE enrolment
+ * from 2026-01-01 — with attendance on a Nursery SECTION and on a Class 3 Quran GROUP, and
+ * the 2027 sections the children move up to. Uses `seedYears()` (2026 current).
+ */
+export async function seedPastReadersWorld(): Promise<PastReadersFixture> {
+  const years = await seedYears();
+  const classTeacher2026 = new Types.ObjectId();
+  const marker = new Types.ObjectId();
+  const mkPlace = async (level: number, year: Types.ObjectId, code: string, nameBn: string, ct?: Types.ObjectId) => {
+    const classId = (await Class.create({ level, nameBn: `${nameBn} ${level}`, academicYearId: year }))._id;
+    const sectionId = (await Section.create({ classId, code, nameBn, active: true, ...(ct ? { classTeacherId: ct } : {}) }))._id;
+    return { classId, sectionId };
+  };
+  const nursery2026 = await mkPlace(-1, years.y2026, "Main", "মূল");
+  const c3Boys2026 = await mkPlace(3, years.y2026, "Boys", "বালক", classTeacher2026);
+  const kg2027 = await mkPlace(0, years.y2027, "Main", "মূল");
+  const c4Boys2027 = await mkPlace(4, years.y2027, "Boys", "বালক");
+
+  const kid = async (schoolId: string, name: string, place: { classId: Types.ObjectId; sectionId: Types.ObjectId }) => {
+    const s = await Student.create({ schoolId, name, gender: "male", classId: place.classId, sectionId: place.sectionId, active: true });
+    await Enrolment.create({
+      studentId: s._id,
+      academicYearId: years.y2026,
+      classId: place.classId,
+      classLevel: (await Class.findById(place.classId).lean())!.level,
+      sectionId: place.sectionId,
+      status: "ACTIVE",
+      startKey: "2026-01-01",
+    });
+    return s._id;
+  };
+  const nursery = [await kid("T-N1", "Test Child N1", nursery2026), await kid("T-N2", "Test Child N2", nursery2026), await kid("T-N3", "Test Child N3", nursery2026)];
+  const boys = [await kid("T-B1", "Test Child B1", c3Boys2026), await kid("T-B2", "Test Child B2", c3Boys2026), await kid("T-B3", "Test Child B3", c3Boys2026)];
+
+  // The class teacher also teaches MATH there (a routine grant, as in prod).
+  const math = (await Subject.findOne({ code: "MATH" })) ?? (await Subject.create({ code: "MATH", nameBn: "গণিত" }));
+  await ScopeGrant.create({
+    teacherId: classTeacher2026,
+    kind: "teaching",
+    source: "routine",
+    classId: c3Boys2026.classId,
+    sectionId: c3Boys2026.sectionId,
+    subjectId: math._id,
+    createdBy: marker,
+  });
+
+  const quranGroupId = (await SubjectGroup.create({ track: "quran", level: "Nazera", gender: "boys", code: "QN-B", nameBn: "নাজেরা বালক" }))._id;
+  for (const b of boys) await SubjectGroupMembership.create({ groupId: quranGroupId, studentId: b, track: "quran" });
+
+  const day = async (unit: { sectionId?: Types.ObjectId; subjectGroupId?: Types.ObjectId }, dateKey: string, absent: Types.ObjectId[]) =>
+    StudentAttendanceDay.create({ ...unit, dateKey, absentStudentIds: absent, markedBy: marker, markedAt: new Date(`${dateKey}T03:00:00.000Z`) });
+  const dayKeys = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-12-10"];
+  await day({ sectionId: nursery2026.sectionId }, "2026-10-05", [nursery[0]]);
+  await day({ subjectGroupId: quranGroupId }, "2026-10-05", [boys[1]]);
+  await day({ sectionId: nursery2026.sectionId }, "2026-10-06", []);
+  await day({ subjectGroupId: quranGroupId }, "2026-10-06", [boys[1], boys[2]]);
+  await day({ sectionId: nursery2026.sectionId }, "2026-10-07", [nursery[1]]);
+  await day({ subjectGroupId: quranGroupId }, "2026-10-07", []);
+  await day({ sectionId: nursery2026.sectionId }, "2026-12-10", []);
+  await day({ subjectGroupId: quranGroupId }, "2026-12-10", []);
+
+  return { years, nursery2026, c3Boys2026, kg2027, c4Boys2027, quranGroupId, nursery, boys, classTeacher2026, marker, dayKeys };
+}
+
+/**
+ * YC-2: a SIMULATED cut-over (the YC-4 engine does not exist yet). Every 2026 ACTIVE
+ * enrolment closes on 2027-01-02 as PROMOTED; the 2027 one opens on 2027-01-03 in the
+ * section one level up (Nursery → KG, Class 3 বালক → Class 4 বালক); the Student pointers
+ * move; the 2026 routine grants lapse; the current year flips to 2027 last.
+ */
+export async function simulateCutover(w: PastReadersFixture): Promise<void> {
+  const up = new Map([
+    [w.nursery2026.sectionId.toString(), w.kg2027],
+    [w.c3Boys2026.sectionId.toString(), w.c4Boys2027],
+  ]);
+  const actives = await Enrolment.find({ academicYearId: w.years.y2026, status: "ACTIVE" });
+  for (const e of actives) {
+    const to = up.get(e.sectionId.toString());
+    if (!to) continue;
+    await Enrolment.create({
+      studentId: e.studentId,
+      academicYearId: w.years.y2027,
+      classId: to.classId,
+      classLevel: (await Class.findById(to.classId).lean())!.level,
+      sectionId: to.sectionId,
+      status: "ACTIVE",
+      startKey: "2027-01-03",
+    });
+    await Student.updateOne({ _id: e.studentId }, { $set: { classId: to.classId, sectionId: to.sectionId } });
+    e.status = "CLOSED";
+    e.endKey = "2027-01-02";
+    e.outcome = "PROMOTED";
+    await e.save();
+  }
+  // The 2026 routine ends with the year: its grants lapse (YC-6 future-dates this to
+  // 2027-01-03; the test clock is earlier, so the lapse is stamped in the past here).
+  await ScopeGrant.updateMany(
+    { kind: "teaching", source: "routine", sectionId: { $in: [w.nursery2026.sectionId, w.c3Boys2026.sectionId] } },
+    { $set: { expiresAt: new Date(Date.now() - 60_000) } },
+  );
+  await AcademicYear.updateMany({}, { $set: { current: false } });
+  await AcademicYear.updateOne({ _id: w.years.y2027 }, { $set: { current: true } });
+}
+
+// ---------------------------------------------------------------------------
+// D-#1476: the prod split shape AFTER the enrolment reshape
+// ---------------------------------------------------------------------------
+
+export interface ProdSplitWorld {
+  years: YearFixture;
+  classId: Types.ObjectId;
+  /** The emptied সম্মিলিত section, and the two halves. */
+  combined: Types.ObjectId;
+  boys: Types.ObjectId;
+  girls: Types.ObjectId;
+  /** Class teacher of the Girls half only. */
+  girlsTeacher: Types.ObjectId;
+  marker: Types.ObjectId;
+  /** T-X1, T-X2 (Boys) and T-X3, T-X4 (Girls). */
+  kids: Types.ObjectId[];
+  /** Attendance days: before and after the 2026-10-01 split. */
+  dayKeys: string[];
+}
+
+/**
+ * A C4 as prod has it after the gender split and the lead's enrolment reshape (D-#1476): the
+ * combined section holds nobody; the four children sit in the halves; each has exactly ONE
+ * ACTIVE 2026 enrolment from 2026-01-01 in their half (written by `Enrolment.create`, the
+ * shape `backfillEnrolments` now produces); attendance days sit on the halves (copied by the
+ * split, D-#872) and also on the old combined section. Created Jan 2026.
+ */
+export async function seedProdSplitWorld(): Promise<ProdSplitWorld> {
+  const years = await seedYears();
+  const classId = (await Class.create({ level: 4, nameBn: "Class 4 (split)", academicYearId: years.y2026 }))._id;
+  const girlsTeacher = new Types.ObjectId();
+  const marker = new Types.ObjectId();
+  const mk = async (code: string, nameBn: string, ct?: Types.ObjectId): Promise<Types.ObjectId> =>
+    (await Section.create({ classId, code, nameBn, active: true, ...(ct ? { classTeacherId: ct } : {}) }))._id;
+  const combined = await mk("ALL", "সম্মিলিত");
+  const boys = await mk("Boys", "বালক");
+  const girls = await mk("Girls", "বালিকা", girlsTeacher);
+  const kid = async (n: number, gender: "male" | "female", sectionId: Types.ObjectId): Promise<Types.ObjectId> => {
+    const s = await Student.create({ schoolId: `T-X${n}`, name: `Split Child ${n}`, gender, classId, sectionId, active: true });
+    await Student.collection.updateOne({ _id: s._id }, { $set: { createdAt: new Date("2026-01-05T06:00:00Z") } });
+    await Enrolment.create({ studentId: s._id, academicYearId: years.y2026, classId, classLevel: 4, sectionId, status: "ACTIVE", startKey: "2026-01-01" });
+    return s._id;
+  };
+  const kids = [await kid(1, "male", boys), await kid(2, "male", boys), await kid(3, "female", girls), await kid(4, "female", girls)];
+  // The Girls class teacher also teaches MATH there (a routine grant, as in prod).
+  const math = (await Subject.findOne({ code: "MATH" })) ?? (await Subject.create({ code: "MATH", nameBn: "গণিত" }));
+  await ScopeGrant.create({ teacherId: girlsTeacher, kind: "teaching", source: "routine", classId, sectionId: girls, subjectId: math._id, createdBy: marker });
+
+  const marker2 = marker;
+  const day = (sectionId: Types.ObjectId, dateKey: string, absent: Types.ObjectId[]) =>
+    StudentAttendanceDay.create({ sectionId, dateKey, absentStudentIds: absent, markedBy: marker2, markedAt: new Date(`${dateKey}T03:00:00.000Z`) });
+  const dayKeys = ["2026-09-14", "2026-09-15", "2026-10-12"];
+  for (const k of dayKeys) {
+    await day(boys, k, [kids[0]]);
+    await day(girls, k, k === "2026-09-15" ? [] : [kids[3]]);
+  }
+  // The original combined-section day of 14 Sept (the split copied it to the halves, it was not moved).
+  await day(combined, "2026-09-14", [kids[0], kids[3]]);
+  return { years, classId, combined, boys, girls, girlsTeacher, marker, kids, dayKeys };
+}
+
+// ---------------------------------------------------------------------------
+// YC-4: the year-change engine world
+// ---------------------------------------------------------------------------
+
+export interface EngineWorld {
+  years: YearFixture;
+  /** 2026 places: C2 Main, C4 Boys, C5 Boys, C5 Girls. */
+  c2Main: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c4Boys: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c5Boys: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  c5Girls: { classId: Types.ObjectId; sectionId: Types.ObjectId };
+  /** Teacher of the 2026 C4 Boys section; a second teacher for manual picks. */
+  teacher4: Types.ObjectId;
+  teacherOther: Types.ObjectId;
+  /** C2 boy, moves up to C3 Boys. */
+  c2Up: Types.ObjectId;
+  /** C2 girl, REPEATS (stays in C2 Main). */
+  c2Repeat: Types.ObjectId;
+  /** C4 boy, moves up to C5 Boys. */
+  c4Up: Types.ObjectId;
+  /** C4 girl, LEFT. */
+  c4Leaver: Types.ObjectId;
+  /** C5 girl (scholarship flag set), moves up to C6 Girls. */
+  c5Girl: Types.ObjectId;
+  /** C5 boy (scholarship flag set), moves up to C6 Boys. */
+  c5Boy: Types.ObjectId;
+  /** C5 boy (scholarship flag set), LEFT. */
+  c5Leaver: Types.ObjectId;
+  /** The default decisions: everyone promoted except these. */
+  promotions: Array<{ studentId: string; decision: "PROMOTE" | "REPEAT" | "LEFT" }>;
+  /** Two Class 6 admissions: a boy and a girl. */
+  admissions: Array<{ schoolId: string; name: string; gender: "male" | "female"; level: number; guardianPhone: string }>;
+  principal: { userId: string; role: "PRINCIPAL" };
+  office: { userId: string; role: "OFFICE" };
+}
+
+/**
+ * Years 2026 (current) / 2027 / 2029 and a small 2026 school: seven children (T-E1..T-E7) each with
+ * ONE ACTIVE 2026 enrolment from 2026-01-01, a class teacher on C4 Boys, and the planned outcome
+ * list of the brief (one repeater in C2, one leaver in C4, one more in C5, two C6 admissions).
+ * The 2027 side is empty: `applyPrepare` creates it.
+ */
+export async function seedEngineWorld(): Promise<EngineWorld> {
+  const years = await seedYears();
+  const teacher4 = (await User.create({ name: "Test Teacher Four", phone: "01700000401", passwordHash: "x", role: "TEACHER" }))._id;
+  const teacherOther = (await User.create({ name: "Test Teacher Other", phone: "01700000402", passwordHash: "x", role: "TEACHER" }))._id;
+  const place = async (level: number, code: string, nameBn: string, ct?: Types.ObjectId) => {
+    const classId = (await Class.create({ level, nameBn: `Class ${level} (2026)`, academicYearId: years.y2026 }))._id;
+    const sectionId = (await Section.create({ classId, code, nameBn, active: true, ...(ct ? { classTeacherId: ct } : {}) }))._id;
+    return { classId, sectionId };
+  };
+  const c2Main = await place(2, "Main", "মূল");
+  const c4Boys = await place(4, "Boys", "বালক", teacher4);
+  const c5Boys = await place(5, "Boys", "বালক");
+  const c5Girls = await place(5, "Girls", "বালিকা");
+
+  const kid = async (n: number, gender: "male" | "female", p: { classId: Types.ObjectId; sectionId: Types.ObjectId }, level: number, flag = false) => {
+    const s = await Student.create({
+      schoolId: `T-E${n}`,
+      name: `Engine Child ${n}`,
+      gender,
+      classId: p.classId,
+      sectionId: p.sectionId,
+      active: true,
+      ...(flag ? { scholarshipExcluded: true } : {}),
+    });
+    await Enrolment.create({ studentId: s._id, academicYearId: years.y2026, classId: p.classId, classLevel: level, sectionId: p.sectionId, status: "ACTIVE", startKey: "2026-01-01" });
+    return s._id;
+  };
+  const c2Up = await kid(1, "male", c2Main, 2);
+  const c2Repeat = await kid(2, "female", c2Main, 2);
+  const c4Up = await kid(3, "male", c4Boys, 4);
+  const c4Leaver = await kid(4, "female", c4Boys, 4);
+  const c5Girl = await kid(5, "female", c5Girls, 5, true);
+  const c5Boy = await kid(6, "male", c5Boys, 5, true);
+  const c5Leaver = await kid(7, "male", c5Boys, 5, true);
+
+  return {
+    years,
+    c2Main,
+    c4Boys,
+    c5Boys,
+    c5Girls,
+    teacher4,
+    teacherOther,
+    c2Up,
+    c2Repeat,
+    c4Up,
+    c4Leaver,
+    c5Girl,
+    c5Boy,
+    c5Leaver,
+    promotions: [
+      { studentId: c2Repeat.toString(), decision: "REPEAT" },
+      { studentId: c4Leaver.toString(), decision: "LEFT" },
+      { studentId: c5Leaver.toString(), decision: "LEFT" },
+    ],
+    admissions: [
+      { schoolId: "T-A1", name: "Admission Boy", gender: "male", level: 6, guardianPhone: "01800000001" },
+      { schoolId: "T-A2", name: "Admission Girl", gender: "female", level: 6, guardianPhone: "01800000002" },
+    ],
+    principal: { userId: new Types.ObjectId().toString(), role: "PRINCIPAL" },
+    office: { userId: new Types.ObjectId().toString(), role: "OFFICE" },
+  };
 }

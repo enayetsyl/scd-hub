@@ -12,8 +12,9 @@
  * `Subject` doc).
  */
 
-/** Subjects whose Section slots bind a routine teaching grant: the 5 content subjects + ISLAM. */
-export const ROUTINE_GRANT_SUBJECTS: readonly string[] = ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM"];
+/** Subjects whose Section slots bind a routine teaching grant: the 5 content subjects + ISLAM, and
+ *  the Class 6 subjects ICT, BAN2, ENG2 (YC-3, D-#1480). */
+export const ROUTINE_GRANT_SUBJECTS: readonly string[] = ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"];
 
 export interface GrantPlanInput {
   groupType: string;

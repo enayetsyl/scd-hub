@@ -237,6 +237,15 @@ export function FilterSheet({
               </>
             ) : null}
 
+            {/* PR-G: the school question type the question carries (QT-…). */}
+            <Field
+              label={STR.qbQtCode}
+              value={draft.qtCode ?? ""}
+              onChangeText={(t) => set("qtCode", t.trim() === "" ? null : t.trim().toUpperCase())}
+              placeholder="QT-FILL"
+              autoCapitalize="characters"
+            />
+
             <Muted style={styles.groupGap}>{STR.paperRole}</Muted>
             <ChipRow>
               {PAPER_ROLES.map((p) => (

@@ -10,7 +10,7 @@ import { ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, subjectsForClassLevel } from "@scd/shared";
 import { CREATE_CT_QUESTION_REQUEST } from "../../graphql/classTest";
 import { ACADEMIC_YEARS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Select } from "../../components/ui";
@@ -76,7 +76,7 @@ export default function CtQuestionRequestScreen(): React.ReactElement {
           <Select
             label={STR.subject}
             value={subject}
-            options={HW_SUBJECTS.map((s) => ({ label: hwSubjectLabel(s), value: s }))}
+            options={subjectsForClassLevel(HW_SUBJECTS, section?.classLevel).map((s) => ({ label: hwSubjectLabel(s), value: s }))}
             onChange={setSubject}
             placeholder={STR.subject}
           />

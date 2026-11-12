@@ -38,7 +38,7 @@ SUBJECT_NAME = {"BAN": "বাংলা", "ENG": "English", "MATH": "গণি�
                 "BGS": "বাংলাদেশ ও বিশ্বপরিচয়",
                 # scd-hub D-#1310/#1440: the app's content codes — ISLAM is the only spelling (ISL dropped) — and the Class 6 papers.
                 "ISLAM": "ইসলাম শিক্ষা", "ICT": "তথ্য ও যোগাযোগ প্রযুক্তি",
-                "BAN2": "বাংলা ২য় পত্র", "ENG2": "English 2nd Paper"}
+                "BAN2": "বাংলা দ্বিতীয় পত্র", "ENG2": "English 2nd Paper"}
 
 SEGMENT_DISPLAY = {  # frozen bilingual headings (§E / corpus)
     "Opening": "সূচনা / Opening",

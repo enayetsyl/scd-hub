@@ -82,6 +82,8 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
       {s.warnings.map((w, i) =>
         w.code === "NO_UNSEEN_QUESTION" ? (
           <Notice key={i} tone="warn" message={fill(STR.msAsNoUnseen, { lo: w.labelBn ?? w.loCode ?? "" })} />
+        ) : w.code === "TYPE_HAS_NO_MARKS" ? (
+          <Notice key={i} tone="warn" message={fill(STR.msAsNoMarks, { lo: w.labelBn ?? w.loCode ?? "" })} />
         ) : (
           <Notice key={i} tone="info" message={STR.msAsNothing} />
         ),

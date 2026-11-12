@@ -18,11 +18,12 @@ import type { LessonNoneReason } from "@scd/shared";
 import { LESSON_NONE_REASONS, MASTERY_LO_CODE_RE } from "@scd/shared";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { Class } from "../../foundation/models/Class";
-import { Student } from "../../foundation/models/Student";
 import { ClassNote, type IClassNote } from "../../routine/models/ClassNote";
 import { RoutineSlot, type IRoutineSlot } from "../../routine/models/RoutineSlot";
 import { dateKeyOf } from "../../attendance/dates";
-import { resolveUnitsForIds } from "../../attendance/attendanceUnit";
+import { resolveUnits, resolveUnitsForIds, studentLitesOn } from "../../attendance/attendanceUnit";
+import { Student } from "../../foundation/models/Student";
+import { enrolmentsInUse } from "../../foundation/services/EnrolmentService";
 import { LessonDelivery, type ILessonDelivery } from "../models/LessonDelivery";
 import { isLessonPlanQuestionOn } from "./LessonPlanQuestionSwitch";
 
@@ -338,9 +339,21 @@ export async function recordDelivery(
   if (!prepared) return null;
   const { level, sessions, noneReason, noneNote } = prepared;
 
-  const roster =(await Student.find({ sectionId: note.groupId, active: true }).select("_id").lean()) as unknown as Array<{
-    _id: Types.ObjectId;
-  }>;
+  // YC-2 (D-#1461): the roster of the note's DATE (its enrolments; a child with no
+  // enrolment at all keeps today's pointer) — re-editing a 2026 note after the year change
+  // keeps its 2026 children instead of re-snapshotting an emptied section.
+  let roster: Array<{ _id: Types.ObjectId }>;
+  let unitsByStudent: Map<string, { unitType: string; unitId: string }>;
+  if (await enrolmentsInUse()) {
+    const lites = await studentLitesOn(dateKeyOf(new Date(note.date)), { sectionIds: [String(note.groupId)] });
+    roster = lites.map((l) => ({ _id: new Types.ObjectId(l.id) }));
+    unitsByStudent = await resolveUnits(lites);
+  } else {
+    roster = (await Student.find({ sectionId: note.groupId, active: true }).select("_id").lean()) as unknown as Array<{
+      _id: Types.ObjectId;
+    }>;
+    unitsByStudent = await resolveUnitsForIds(roster.map((s) => String(s._id)));
+  }
   const set: Record<string, unknown> = {
     slotId: note.slotId,
     sectionId: note.groupId,
@@ -350,7 +363,7 @@ export async function recordDelivery(
     teacherId: note.publishedBy,
     sessions,
     rosterStudentIds: roster.map((s) => s._id),
-    attendanceUnits: [...new Set([...(await resolveUnitsForIds(roster.map((s) => String(s._id)))).values()].map((u) => `${u.unitType}:${u.unitId}`))],
+    attendanceUnits: [...new Set([...unitsByStudent.values()].map((u) => `${u.unitType}:${u.unitId}`))],
     updatedBy: new Types.ObjectId(actorId),
   };
   // A correction can flip sessions ⇄ reason, so the side not given is cleared.

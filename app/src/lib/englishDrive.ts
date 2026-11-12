@@ -94,8 +94,8 @@ export function parseBlockSet(stem: string): number[] {
 export function parseEnglishDriveFilename(filename: string): ParsedEnglishDriveName {
   const stem = filename.replace(/\.md$/i, "").toUpperCase();
 
-  // Class: C1..C5 not followed by another digit (so C12 is not class 1).
-  const classMatch = /C([1-5])(?!\d)/.exec(stem);
+  // Class: C1..C6 not followed by another digit (so C12 is not class 1).
+  const classMatch = /C([1-6])(?!\d)/.exec(stem);
   // Block: B03 / Block3 / B 3 — the first B-number run.
   const blockMatch = /B(?:LOCK)?[\s_-]?0*(\d+)/.exec(stem);
   // Version: a separated v-number (v2, _V10) — never digits glued to the kind.

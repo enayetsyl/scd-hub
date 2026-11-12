@@ -144,7 +144,8 @@ export async function startAssistSession(
   const auth = assertChat(authIn);
   if (!Number.isInteger(input.classLevel) || input.classLevel < -1 || input.classLevel > 12) throw new AiAssistError("শ্রেণি সঠিক নয়");
   const subject = (input.subject ?? "").trim().toUpperCase();
-  if (!/^[A-Z_]{2,20}$/.test(subject)) throw new AiAssistError("বিষয় সঠিক নয়");
+  // A subject code may carry a digit after its first letter (BAN2, ENG2; YC-3, D-#1480).
+  if (!/^[A-Z][A-Z0-9_]{1,19}$/.test(subject)) throw new AiAssistError("বিষয় সঠিক নয়");
   const chapter = input.chapter?.trim() || undefined;
   const sessionIndex = chapter && input.sessionIndex && input.sessionIndex >= 1 ? Math.floor(input.sessionIndex) : undefined;
   const title = [`C${input.classLevel}`, subject, chapter ? `অধ্যায় ${chapter}` : null, sessionIndex ? `সেশন ${sessionIndex}` : null].filter(Boolean).join(" · ");

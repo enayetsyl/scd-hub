@@ -26,7 +26,7 @@ import { fill, subjectLabel, termLabel } from "./common";
 
 type Props = NativeStackScreenProps<ExamPapersStackParamList, "ReferencePapers">;
 
-const SUBJECTS = ["BAN", "ENG", "MATH", "ISLAM", "SCI", "BGS", "ARABIC"] as const;
+const SUBJECTS = ["BAN", "ENG", "MATH", "ISLAM", "SCI", "BGS", "ARABIC", "ICT", "BAN2", "ENG2"] as const;
 
 function UploadCard({ onDone }: { onDone: (m: { tone: "ok" | "danger"; text: string }) => void }): React.ReactElement {
   const [year, setYear] = useState(String(new Date().getFullYear()));

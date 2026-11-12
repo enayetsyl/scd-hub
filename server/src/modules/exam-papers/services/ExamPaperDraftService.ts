@@ -15,7 +15,7 @@
  */
 import crypto from "node:crypto";
 import { Types } from "mongoose";
-import { EXAM_TERMS, ROSTER_CLASS_LABELS_BN, callerHasPermission } from "@scd/shared";
+import { EXAM_TERMS, ROSTER_CLASS_LABELS_BN, ROSTER_CLASS_LEVEL_MAX, ROSTER_CLASS_LEVEL_MIN, callerHasPermission } from "@scd/shared";
 import type { RosterClassLevel } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -69,7 +69,8 @@ export function validateDraftPayload(p: any): string[] {
   if (!p || typeof p !== "object") return ["not an object"];
   if (p.schema !== "scd.exam-paper-draft/v1") e("schema must be scd.exam-paper-draft/v1");
   if (typeof p.key !== "string" || !/^[a-z0-9-]+$/i.test(p.key)) e("key missing/invalid");
-  if (!Number.isInteger(p.classLevel) || p.classLevel < -1 || p.classLevel > 5) e("classLevel must be -1..5");
+  if (!Number.isInteger(p.classLevel) || p.classLevel < ROSTER_CLASS_LEVEL_MIN || p.classLevel > ROSTER_CLASS_LEVEL_MAX)
+    e(`classLevel must be ${ROSTER_CLASS_LEVEL_MIN}..${ROSTER_CLASS_LEVEL_MAX}`);
   if (typeof p.subject !== "string" || !p.subject) e("subject missing");
   if (!(p.fullMarks > 0)) e("fullMarks missing");
   if (!p.exam || !(EXAM_TERMS as readonly string[]).includes(p.exam.term) || !Number.isInteger(p.exam.year)) e("exam {term, year} missing");

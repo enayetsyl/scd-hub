@@ -28,6 +28,8 @@ export interface IStudent extends Document {
    *  only: she stays in every class list, tracker, attendance and report. */
   scholarshipExcluded?: boolean;
   active: boolean;
+  /** Year-change run that admitted this child (YC-4): inactive until the cut-over. */
+  yearChangeRunId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +49,7 @@ const StudentSchema = new Schema<IStudent>(
     bloodGroup: { type: String, trim: true },
     scholarshipExcluded: { type: Boolean },
     active: { type: Boolean, default: true },
+    yearChangeRunId: { type: String },
   },
   { timestamps: true },
 );

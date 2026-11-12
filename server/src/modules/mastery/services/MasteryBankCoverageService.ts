@@ -16,7 +16,8 @@ import { MasteryOutcome, outcomeBookRef, treeShapeOf, type IMasteryOutcome } fro
 import { MasteryChapter } from "../models/MasteryChapter";
 import { MasteryCatalogueReview } from "../models/MasteryCatalogueReview";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
-import { loCodeMongoFilter, loCodesOf } from "../bank";
+import { MasteryQuestionType } from "../models/MasteryQuestionType";
+import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../bank";
 import { masteryLevelLabels } from "./MasteryReviewService";
 
 export interface BankCoveragePair {
@@ -24,6 +25,17 @@ export interface BankCoveragePair {
   subject: string;
   /** The list is locked: a LOCKED review round, or (a flat list with no round) every row LOCKED. */
   locked: boolean;
+}
+
+/** One objective × type cell (PR-G). `typeCode` null = questions that carry no `QT-` code ("no type"). */
+export interface BankCoverageCell {
+  typeCode: string | null;
+  goldCount: number;
+  pendingCount: number;
+  /** An allowed type of the objective with no gold question — the screen highlights it. */
+  zero: boolean;
+  /** The type is active but has no marks in the table — its questions cannot be picked yet. */
+  noMarks: boolean;
 }
 
 export interface BankCoverageRow {
@@ -41,6 +53,8 @@ export interface BankCoverageRow {
   goldCount: number;
   /** Current questions naming it that are not gold yet (draft / in review). */
   pendingCount: number;
+  /** PR-G: gold / pending per allowed type, then any other type carried, then the "no type" cell. */
+  cells: BankCoverageCell[];
 }
 
 export interface BankCoverageView {
@@ -53,6 +67,10 @@ export interface BankCoverageView {
   totals: { rows: number; zeroRows: number; gold: number; rubricRows: number };
   /** The gaps as a brief for the next question batch (plain text, ready to paste). */
   brief: string;
+  /** PR-G: active types of this class × subject with no marks in the table (questions of these types cannot be picked). */
+  noMarksTypes: string[];
+  /** PR-G: the objective × type table as CSV (objective,type,gold,pending) — "-" is the no-type cell. */
+  typeCsv: string;
 }
 
 /** A row the bank must cover: tagged, assessed by a question, live (not retired / rejected / merged). */
@@ -99,16 +117,18 @@ export async function bankCoverage(
   const pick = classToken && subject ? pairs.find((p) => p.classToken === classToken && p.subject === subject) : pairs[0];
   const empty: BankCoverageView = {
     pairs, classToken: pick?.classToken ?? classToken ?? null, subject: pick?.subject ?? subject ?? null, locked: pick?.locked ?? false,
-    chapters: [], rows: [], totals: { rows: 0, zeroRows: 0, gold: 0, rubricRows: 0 }, brief: "",
+    chapters: [], rows: [], totals: { rows: 0, zeroRows: 0, gold: 0, rubricRows: 0 }, brief: "", typeCsv: "", noMarksTypes: [],
   };
   if (!pick) return empty;
   const ct = pick.classToken as MasteryClassToken;
   const subj = pick.subject as MasterySubject;
 
-  const [outcomes, chapters] = await Promise.all([
+  const [outcomes, chapters, typeRows] = await Promise.all([
     MasteryOutcome.find({ classToken: ct, subject: subj }).lean(), // bounded: one class × subject list
     MasteryChapter.find({ classToken: ct, subject: subj }).sort({ order: 1, number: 1 }).lean(),
+    MasteryQuestionType.find({ classToken: ct, subject: subj, active: true }).select("code marks").lean(),
   ]);
+  const noMarks = new Set(typeRows.filter((t) => typeof t.marks !== "number").map((t) => t.code));
   const live = outcomes.filter(isLiveRow);
   const labelOf = new Map(live.map((o) => [o.code, o.labelBn]));
   const tagged = live.filter((o) => treeShapeOf(o).tagged);
@@ -118,17 +138,43 @@ export async function bankCoverage(
   const codes = bankRows.map((o) => o.code);
   const gold = new Map<string, number>();
   const pending = new Map<string, number>();
+  // PR-G: the same counts split by the question's own type — key `code|QT-…` (`code|` = no type).
+  const goldByType = new Map<string, number>();
+  const pendingByType = new Map<string, number>();
   if (codes.length > 0) {
     const arts = await ContentArtifact.find({ docType: "question", current: true, retiredAt: null, ...loCodeMongoFilter(codes) })
-      .select("reviewStatus envelopeJson.tags")
+      .select("reviewStatus envelopeJson.tags envelopeJson.payload.lesson_ref")
       .lean(); // bounded: one class × subject's questions, tags only
     const want = new Set(codes);
     for (const a of arts) {
-      const tags = ((a.envelopeJson ?? {}) as Record<string, unknown>).tags as Record<string, unknown> | undefined;
+      const env = (a.envelopeJson ?? {}) as Record<string, unknown>;
+      const tags = env.tags as Record<string, unknown> | undefined;
+      const qt = questionTypeCodeOf(env.payload as Record<string, unknown> | undefined) ?? "";
       const into = a.reviewStatus === "gold" ? gold : pending;
-      for (const c of new Set(loCodesOf(tags, null))) if (want.has(c)) into.set(c, (into.get(c) ?? 0) + 1);
+      const byType = a.reviewStatus === "gold" ? goldByType : pendingByType;
+      for (const c of new Set(loCodesOf(tags, null))) {
+        if (!want.has(c)) continue;
+        into.set(c, (into.get(c) ?? 0) + 1);
+        byType.set(`${c}|${qt}`, (byType.get(`${c}|${qt}`) ?? 0) + 1);
+      }
     }
   }
+  const cellsOf = (code: string, allowed: string[]): BankCoverageCell[] => {
+    const carried = new Set<string>();
+    for (const k of [...goldByType.keys(), ...pendingByType.keys()]) {
+      const [c, t] = k.split("|");
+      if (c === code && t) carried.add(t);
+    }
+    const types = [...allowed, ...[...carried].filter((t) => !allowed.includes(t)).sort()];
+    const cell = (t: string): BankCoverageCell => ({
+      typeCode: t || null,
+      goldCount: goldByType.get(`${code}|${t}`) ?? 0,
+      pendingCount: pendingByType.get(`${code}|${t}`) ?? 0,
+      zero: t !== "" && allowed.includes(t) && (goldByType.get(`${code}|${t}`) ?? 0) === 0,
+      noMarks: t !== "" && noMarks.has(t),
+    });
+    return [...types.map(cell), cell("")];
+  };
 
   const orderOf = new Map(bankRows.map((o) => [o.code, o.order ?? 0]));
   const rows: BankCoverageRow[] = bankRows
@@ -147,6 +193,7 @@ export async function bankCoverage(
         exercises: outcomeBookRef(o).exercises,
         goldCount: gold.get(o.code) ?? 0,
         pendingCount: pending.get(o.code) ?? 0,
+        cells: cellsOf(o.code, o.questionTypeCodes ?? []),
       };
     })
     .sort((a, b) => (a.chapterNumber ?? 999) - (b.chapterNumber ?? 999) || (orderOf.get(a.code) ?? 0) - (orderOf.get(b.code) ?? 0) || a.code.localeCompare(b.code));
@@ -162,8 +209,17 @@ export async function bankCoverage(
       rubricRows,
     },
   };
+  view.noMarksTypes = [...noMarks].sort();
   view.brief = await coverageBrief(view, now);
+  view.typeCsv = coverageTypeCsv(view);
   return view;
+}
+
+/** PR-G: objective, type, gold, pending — one line per cell; "-" is the no-type cell. */
+export function coverageTypeCsv(view: Pick<BankCoverageView, "rows">): string {
+  const lines = ["objective,type,gold,pending"];
+  for (const r of view.rows) for (const c of r.cells) lines.push(`${r.code},${c.typeCode ?? "-"},${c.goldCount},${c.pendingCount}`);
+  return lines.join("\n");
 }
 
 /**

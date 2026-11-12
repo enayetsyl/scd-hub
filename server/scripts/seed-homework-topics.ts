@@ -23,7 +23,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 import { connectDb, disconnectDb, mongoose } from "../src/db";
 import { HomeworkTopic } from "../src/modules/trackers/models/HomeworkTopic";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, subjectsForClassLevel } from "@scd/shared";
 
 const COMMIT = process.argv.includes("--commit");
 const ALLOWED_DBS = ["scdhub_local", "scdhub_dev", "scdhub_prod"];
@@ -115,8 +115,9 @@ async function main(): Promise<void> {
 
   // --- generic fallback per (subject, class) ---
   const generic = [];
-  for (const subject of HW_SUBJECTS) {
-    for (const cl of CLASS_LEVELS) {
+  for (const cl of CLASS_LEVELS) {
+    // ICT / BAN2 / ENG2 start in Class 6 (YC-3); Class 6 topics come from class6-onboarding-data.ts.
+    for (const subject of subjectsForClassLevel(HW_SUBJECTS, cl)) {
       generic.push({
         classLevel: cl,
         subject,

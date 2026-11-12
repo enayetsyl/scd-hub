@@ -30,6 +30,7 @@
 import { StudentAttendanceDay } from "../models/StudentAttendanceDay";
 import { TeacherAttendanceDay } from "../models/TeacherAttendanceDay";
 import { Student } from "../../foundation/models/Student";
+import { enrolmentsInUse, placementSpans, spanOn, spansByStudent } from "../../foundation/services/EnrolmentService";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
@@ -341,6 +342,124 @@ async function resolveStudentUnits(
  * and only the legacy/cutover branch varies per date.
  */
 async function rankStudentsByUnit(
+  fromKey: string,
+  toKey: string,
+  axis: "school" | "class" | "section",
+  axisValue: string | undefined,
+): Promise<RankResult> {
+  if (!(await enrolmentsInUse())) return rankStudentsByUnitLive(fromKey, toKey, axis, axisValue);
+  // YC-2 (D-#1461): who sat in the class / section on EACH day of the window - the
+  // enrolment spans (a child with no enrolment at all keeps today's pointer). A 2026
+  // window after the year change still ranks the 2026 children in their 2026 classes.
+  const spanFilter =
+    axis === "class" ? { classIds: [axisValue as string] } : axis === "section" ? { sectionIds: [axisValue as string] } : {};
+  const spans = await placementSpans(spanFilter, { from: fromKey, to: toKey });
+  const spansOf = spansByStudent(spans);
+  const students = spansOf.size
+    ? await Student.find({ _id: { $in: [...spansOf.keys()] } }).select("name nameBn").lean()
+    : [];
+  if (students.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked(false) };
+
+  // Every day record in the window, BOTH shapes — a student's unit decides which
+  // one covers them, so neither shape can be filtered out up front.
+  const days = (await StudentAttendanceDay.find({ dateKey: { $gte: fromKey, $lte: toKey } })
+    .select("sectionId subjectGroupId dateKey absentStudentIds")
+    .lean()) as unknown as Array<{
+    sectionId?: { toString(): string };
+    subjectGroupId?: { toString(): string };
+    dateKey: string;
+    absentStudentIds?: Array<{ toString(): string }>;
+  }>;
+  if (days.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked(false) };
+
+  // date → (units marked that date, students marked absent that date)
+  const byDate = new Map<string, { units: Set<string>; absent: Set<string> }>();
+  for (const d of days) {
+    let e = byDate.get(d.dateKey);
+    if (!e) {
+      e = { units: new Set(), absent: new Set() };
+      byDate.set(d.dateKey, e);
+    }
+    const u = d.subjectGroupId
+      ? unitKey({ unitType: "subjectgroup", unitId: d.subjectGroupId.toString() })
+      : d.sectionId
+        ? unitKey({ unitType: "section", unitId: d.sectionId.toString() })
+        : null;
+    if (u) e.units.add(u);
+    for (const sid of d.absentStudentIds ?? []) e.absent.add(sid.toString());
+  }
+
+  // The date-independent inputs to unit resolution (the class comes from each span).
+  const studentIds = students.map((s) => s._id.toString());
+  const quranGroup = await quranGroupByStudent(studentIds);
+  const classIds = [...new Set(spans.map((s) => s.classId))];
+  const classes = await Class.find({ _id: { $in: classIds } }).select("nameBn level").lean();
+  const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+  const classNameOf = new Map(
+    classes.map((c) => [c._id.toString(), (c as { nameBn?: string }).nameBn ?? String(c.level)]),
+  );
+  const sections = await Section.find({ _id: { $in: [...new Set(spans.map((s) => s.sectionId))] } })
+    .select("code nameBn")
+    .lean();
+  const sectionNameOf = new Map(
+    sections.map((s) => [s._id.toString(), (s as { nameBn?: string; code?: string }).nameBn ?? s.code ?? ""]),
+  );
+
+  const dates = [...byDate.keys()].sort();
+  const measuredUnits = new Set<string>();
+  const rows = students.flatMap((s) => {
+    const id = s._id.toString();
+    const mine = spansOf.get(id) ?? [];
+    const group = quranGroup.get(id);
+    const groupKey = group ? unitKey({ unitType: "subjectgroup", unitId: group }) : null;
+
+    let held = 0;
+    let absent = 0;
+    for (const date of dates) {
+      const sp = spanOn(mine, date);
+      if (!sp) continue; // not in this class / section that day
+      const e = byDate.get(date)!;
+      const level = levelOf.get(sp.classId) ?? 0;
+      const sectionKey = unitKey({ unitType: "section", unitId: sp.sectionId });
+      // The D-#292 legacy shape: before the cutover EVERYONE was section-captured.
+      const myUnit =
+        isLegacyAttendanceDate(date) || isNurseryKg(level) || !groupKey ? sectionKey : groupKey;
+      if (!e.units.has(myUnit)) continue; // their unit did not mark that day
+      held += 1;
+      measuredUnits.add(myUnit);
+      if (e.absent.has(id)) absent += 1;
+    }
+    if (held === 0) return [];
+    // The row is labelled by the child's LAST placement in the window.
+    const lastSpan = mine[mine.length - 1];
+    const cls = classNameOf.get(lastSpan.classId);
+    const sec = sectionNameOf.get(lastSpan.sectionId) ?? "";
+    return [{
+      id,
+      name: personName(s as { name: string; nameBn?: string }),
+      unitLabel: cls ? `${cls} · ${sec}` : sec,
+      classLabel: cls,
+      classLevel: levelOf.get(lastSpan.classId) ?? 0,
+      heldDays: held,
+      absentDays: absent,
+      presentPct: pct(held, absent),
+      belowFloor: held < MIN_HELD_DAYS,
+    }];
+  });
+
+  return {
+    fromKey,
+    toKey,
+    rows: rankRows(rows),
+    unitCount: measuredUnits.size,
+    lastMarkedKey: await lastMarked(false),
+  };
+}
+
+/** Pre-YC-2 section-shaped ranking: today's class / section (no enrolment rows in use). */
+async function rankStudentsByUnitLive(
   fromKey: string,
   toKey: string,
   axis: "school" | "class" | "section",

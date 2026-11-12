@@ -62,7 +62,7 @@ export const EMPTY_ECHO: RotaConstraintEcho = {
   intensive: [],
   excluded: [],
   caps: [],
-  classLevels: [1, 2, 3, 4, 5],
+  classLevels: [1, 2, 3, 4, 5, 6],
   perDay: 1,
 };
 
@@ -110,7 +110,7 @@ export interface PeriodClock {
 
 export interface CandidateFilter {
   /** Roster levels a review may target. Nursery (-1) and KG (0) are excluded by
-   *  passing [1,2,3,4,5] — the owner's rule, not a default of this function. */
+   *  passing [1,2,3,4,5,6] — the owner's rule, not a default of this function. */
   classLevels: number[];
   excludeTeacherIds: string[];
 }
@@ -304,7 +304,7 @@ export function normalizeEcho(raw: unknown): RotaConstraintEcho {
     }).filter((x) => x.teacherName && x.max > 0),
     classLevels: arr(o.classLevels).map(Number).filter((n) => Number.isFinite(n)).length
       ? arr(o.classLevels).map(Number).filter((n) => Number.isFinite(n))
-      : [1, 2, 3, 4, 5],
+      : [1, 2, 3, 4, 5, 6],
     perDay: Number(o.perDay ?? 1) || 1,
   };
 }
