@@ -1,6 +1,6 @@
 # PRD — Guardian help: missed-lesson home guide, per-question homework marks, homework-honesty flag, question hints
 
-**Status:** PLANNED 2026-11-13 (owner rulings below). Nothing built.
+**Status:** PLANNED 2026-11-13 (owner rulings below). **GH-4 BUILT 2026-11-13 (D-#1528)** — branch `feat/gh4-missed-lesson-guide`; GH-1..3 not built.
 **Decision block:** D-#1520–#1529 (YC-5 holds D-#1500+; origin/dev max D-#1498 on 2026-11-13).
 **Builds on:** lesson progress (`docs/prd-lesson-progress.md`, LP-1..3 live; LP-4 = PR #1151, never merged),
 mastery (`MasteryPaper` / `MasteryResult` / `MasteryEvidence`, `MasteryGuardianService`), the guardian portal
@@ -98,6 +98,8 @@ case list.
 3. **Guardian view:** each missed period shows the class note text, the homework, the home guide and its classwork
    questions (with GH-1 hints where the items are bank questions).
 4. Needs the lesson-progress switch ON in 2027 (a missed period is known only when the teacher marks the plan).
+
+**Status — BUILT 2026-11-13 (D-#1528).** LP-4 merged back in (conflicts resolved against dev); the notice moved from 18:00 to **13:00** (a class marked later, or with no attendance yet, rides the next school day's 13:00 notice and is stamped `missedNoticeAt` once covered, so it is never noticed twice; look-back 7 days). `SessionHomeGuide` store keyed (classToken, subject, chapter, sessionIndex), loader `importSessionHomeGuides` (dry run default; all-or-nothing) behind the Principal-only `home_guide:import`, plus `server/scripts/import-session-home-guides.ts`. The guardian screen shows each missed period's class note, the linked homework, the session's guide steps and its classwork items; where no guide is loaded it says so. The GH-1 hint tie-in ("with GH-4 hints where the items are bank questions") waits for GH-1. Draft help guide `child-missed-lessons`. Open: the agents still have to write the `<plan>_homeguide.json` packs and the Principal has to load them.
 
 ## 6. Acceptance (headline)
 

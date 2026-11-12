@@ -281,6 +281,9 @@ export function notificationTarget(
       return refs?.workClaimTracker === "HOMEWORK"
         ? { tab: "GuardianHomeworkTab", screen: "ChildHomework" }
         : { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" };
+    // LP-4 (D-#828): guardian-only — the child's missed-lessons list.
+    case "LESSON_MISSED":
+      return guardian ? { tab: "GuardianHomeTab", screen: "ChildMissedLessons" } : { tab: "HomeTab", screen: "Today" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }

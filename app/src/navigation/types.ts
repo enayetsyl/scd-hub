@@ -262,6 +262,8 @@ export type GuardianHomeStackParamList = {
   ChildMastery: undefined;
   /** D-#855: আমার বার্তা — the pop-ups this guardian received (90 days). Never first. */
   MyPopups: undefined;
+  /** LP-4 (D-#828): the classes the child missed while a lesson-plan session was taught. */
+  ChildMissedLessons: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   // Optional deep-link params (D-#452 weekly digest): preselect the child and

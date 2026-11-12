@@ -394,6 +394,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
   // D-#855: every pop-up the school sent this family, to read again.
   { type: "item", route: "GuardianHomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
+  // LP-4 (D-#828): the lessons the child missed (with what was taught that day).
+  { type: "item", route: "GuardianHomeTab", screen: "ChildMissedLessons", labelKey: "gpMissedLessons", icon: "📘" },
 ];
 
 // prd-help-centre (D-#968): one entry for every login, last in the default order.
