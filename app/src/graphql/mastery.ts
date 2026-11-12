@@ -1211,6 +1211,11 @@ const SHEET_FIELDS = `
     labelBn
     questionTypeCodes
   }
+  typeChoices {
+    code
+    labelBn
+    marks
+  }
 `;
 
 export const MASTERY_ASSIGNMENT_QUERY = gql`
@@ -1364,6 +1369,7 @@ export type MasteryAssignmentSheetData = {
   items: MasteryAssignmentQuestionRow[];
   warnings: MasteryAssignmentWarningRow[];
   outcomeChoices: { loCode: string; labelBn: string; questionTypeCodes: string[] }[];
+  typeChoices: { code: string; labelBn: string; marks: number }[];
 };
 
 // ---------------------------------------------------------------------------

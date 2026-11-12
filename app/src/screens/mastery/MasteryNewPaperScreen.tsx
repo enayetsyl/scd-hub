@@ -166,7 +166,8 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   const loRow = questionLos.find((o) => o.code === lo);
   const qtChoices = useMemo(() => {
     const preferred = loRow?.questionTypeCodes ?? [];
-    return preferred.length > 0 ? qts.filter((q) => preferred.includes(q.code)) : qts;
+    // PR-K: the objective's list is a suggestion — suggested types first, never a restriction.
+    return preferred.length > 0 ? [...qts].sort((a, b) => Number(preferred.includes(b.code)) - Number(preferred.includes(a.code))) : qts;
   }, [loRow, qts]);
   const qtMarks = new Map(qts.map((q) => [q.code, q.marks ?? 0]));
   const bank = (bankData?.questions ?? []) as { id: string; qid: string | null; payloadJson: string; qtCode?: string | null }[];

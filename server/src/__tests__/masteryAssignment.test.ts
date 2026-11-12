@@ -254,11 +254,18 @@ describe("weekly assignment (DB)", () => {
 
   it("edit: swap gives a different unseen question; add own; remove; edited sheets survive a rebuild", async () => {
     const before = await sheetDetail(assignmentId, sids[0], TEACHER);
-    const i = before.items.findIndex((q) => q.origin === "BANK" && q.loCode === "LO-C3-MATH-07-03");
+    // PR-K: the add-own chips offer every active type of the marks table that has marks.
+    expect(before.typeChoices.map((t) => t.code).sort()).toEqual(["QT-SHORT", "QT-SOLVE", "QT-WORD"]);
+    expect(before.typeChoices.find((t) => t.code === "QT-WORD")?.marks).toBe(5);
+    const i =before.items.findIndex((q) => q.origin === "BANK" && q.loCode === "LO-C3-MATH-07-03");
     const swapped = await editSheet(assignmentId, sids[0], { op: "SWAP", index: i }, TEACHER);
     expect(swapped.items[i].qid).not.toBe(before.items[i].qid);
     expect(swapped.items[i].qid).not.toBe("QP-MATH-C3-U07-Q91001");
-    await expect(editSheet(assignmentId, sids[0], { op: "ADD_OWN", loCode: "LO-C3-MATH-07-02", questionTypeCode: "QT-WORD", textBn: "x" }, TEACHER)).rejects.toThrow(/ধরন নয়/);
+    await expect(editSheet(assignmentId, sids[0], { op: "ADD_OWN", loCode: "LO-C3-MATH-07-02", questionTypeCode: "QT-NOPE", textBn: "x" }, TEACHER)).rejects.toThrow(/নম্বর ঠিক করা নেই/);
+    // PR-K: a table type outside the objective's suggested list is accepted.
+    const outside = await editSheet(assignmentId, sids[0], { op: "ADD_OWN", loCode: "LO-C3-MATH-07-02", questionTypeCode: "QT-WORD", textBn: "x" }, TEACHER);
+    expect(outside.items[outside.items.length - 1]).toMatchObject({ origin: "TEACHER", questionTypeCode: "QT-WORD", marks: 5 });
+    await editSheet(assignmentId, sids[0], { op: "REMOVE", index: outside.items.length - 1 }, TEACHER);
     const added = await editSheet(assignmentId, sids[0], { op: "ADD_OWN", loCode: "LO-C3-MATH-07-02", questionTypeCode: "QT-SHORT", textBn: "৬৩ ÷ ৯ = ?" }, TEACHER);
     expect(added.items[added.items.length - 1]).toMatchObject({ origin: "TEACHER", marks: 1, band: "TEACHER" });
     const removed = await editSheet(assignmentId, sids[0], { op: "REMOVE", index: 0 }, TEACHER);

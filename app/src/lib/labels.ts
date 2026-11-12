@@ -7782,6 +7782,7 @@ const STR_BN = {
   msTagSaved: "ট্যাগ সংরক্ষণ হয়েছে",
   msOutcomes: "{objective}",
   msQuestionTypes: "প্রশ্নের ধরন",
+  msQuestionTypesSuggested: "প্রস্তাবিত প্রশ্নের ধরন",
   msNoReach: "এই পাতা দেখার অনুমতি নেই।",
   // --- Mastery M-2: work sheets + exceptions-only entry ---
   msWork: "প্রশ্নভিত্তিক নম্বর",
@@ -16036,6 +16037,7 @@ const STR_EN: StrTable = {
   msTagSaved: "Tag saved",
   msOutcomes: "{objective} list",
   msQuestionTypes: "Question types",
+  msQuestionTypesSuggested: "Suggested question types",
   msNoReach: "You don't have access to this page.",
   // --- Mastery M-2: work sheets + exceptions-only entry ---
   msWork: "Per-question marks",

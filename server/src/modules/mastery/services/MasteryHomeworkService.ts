@@ -163,11 +163,6 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
     }
     const o = info.get(code)!;
     const lo: OutcomeInfo = { code, chapterNumber: o.chapterNumber ?? null, questionTypeCodes: o.questionTypeCodes ?? [] };
-    const type = typeFor(lo, { marksOf: marks, layout: OPEN_LAYOUT });
-    if (!type) {
-      out.gaps.push(code);
-      continue;
-    }
     // PR-G: each question comes with its own type — a typed one only as that type.
     const picked: { q: BankQuestion; qt: string }[] = [];
     while (picked.length < perObjective && out.items.length + picked.length < maxItems) {
@@ -185,8 +180,10 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
       }
       continue;
     }
+    // The book-exercise fallback needs a type with marks to hang the item on.
+    const type = typeFor(lo, { marksOf: marks, layout: OPEN_LAYOUT });
     const exercises = outcomeBookRef(o).exercises ?? [];
-    if (exercises.length > 0) {
+    if (type && exercises.length > 0) {
       out.items.push({
         origin: "TEACHER", artifactId: null, qid: null,
         textBn: `বইয়ের অনুশীলনী: ${exercises.join("; ")}`,
