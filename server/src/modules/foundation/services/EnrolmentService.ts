@@ -23,6 +23,7 @@ import { Class } from "../models/Class";
 import { AcademicYear } from "../models/AcademicYear";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { currentAcademicYearId } from "./currentYear";
+import { writeAudit } from "../../platform/services/AuditService";
 
 export class EnrolmentError extends Error {}
 
@@ -131,26 +132,144 @@ export async function closeEnrolment(
 /**
  * Move one child to another section from `onKey` (the first day in the new section). The old
  * enrolment closes MOVED the day before. Write order is documented in the file header.
+ * A child with NO enrolment yet (before the backfill has run) still moves: the missing rows are
+ * created instead of throwing. Audited as ENROLMENT_MOVED.
  */
 export async function moveStudent(studentId: Id, toSectionId: Id, onKey: string, actor?: Id): Promise<IEnrolment> {
   assertKey(onKey);
   const student = await Student.findById(oid(studentId));
   if (!student) throw new EnrolmentError("Student not found.");
   if (!student.active) throw new EnrolmentError("Student is not active.");
-  const old = await Enrolment.findOne({ studentId: student._id, status: "ACTIVE" }).sort({ startKey: -1 });
-  if (!old) throw new EnrolmentError("Student has no active enrolment.");
-  if (old.sectionId.equals(oid(toSectionId))) throw new EnrolmentError("Student is already in that section.");
-  if (onKey <= old.startKey) throw new EnrolmentError("The move date must be after the current enrolment started.");
   const place = await placeOfSection(toSectionId);
-  if (!place.academicYearId.equals(old.academicYearId)) {
-    throw new EnrolmentError("A mid-year move stays inside one year (D-#1462).");
+  const old = await Enrolment.findOne({ studentId: student._id, academicYearId: place.academicYearId, status: "ACTIVE" }).sort({ startKey: -1 });
+  if (old) {
+    if (old.sectionId.equals(oid(toSectionId))) throw new EnrolmentError("Student is already in that section.");
+    if (onKey <= old.startKey) throw new EnrolmentError("The move date must be after the current enrolment started.");
+  } else {
+    const other = await Enrolment.findOne({ studentId: student._id, status: "ACTIVE" });
+    if (other) throw new EnrolmentError("A mid-year move stays inside one year (D-#1462).");
+    if (student.sectionId.equals(oid(toSectionId))) throw new EnrolmentError("Student is already in that section.");
   }
+  const fromSectionId = old ? old.sectionId : student.sectionId;
 
-  // 1. new enrolment  2. Student pointer  3. close the old one.
-  const next = await openEnrolment({ studentId: student._id, sectionId: toSectionId, startKey: onKey, createdBy: actor });
-  await Student.updateOne({ _id: student._id }, { $set: { classId: place.classId, sectionId: oid(toSectionId) } });
-  await closeEnrolment(old._id, { endKey: dayBefore(onKey), outcome: "MOVED" });
+  const next = await applyEnrolmentMove(student._id, old, place, toSectionId, onKey, fromSectionId, actor, async () => {
+    await Student.updateOne({ _id: student._id }, { $set: { classId: place.classId, sectionId: oid(toSectionId) } });
+  });
+  await writeAudit({
+    eventKind: "ENROLMENT_MOVED",
+    actorId: actor,
+    targetId: student._id,
+    targetKind: "Student",
+    meta: { fromSectionId: fromSectionId.toString(), toSectionId: toSectionId.toString(), onKey },
+  });
   return next;
+}
+
+type Place = Awaited<ReturnType<typeof placeOfSection>>;
+
+/**
+ * Shared core of a move. `old` is the child's ACTIVE enrolment in the target year, or null when
+ * the backfill has not reached them (then the missing rows are created: a CLOSED MOVED row for
+ * `fromSectionId` from the year start, when that fits, and the ACTIVE row in the new section).
+ * `pointer` runs after "write the new row" and before "close the old row" (header write order).
+ */
+async function applyEnrolmentMove(
+  studentId: Types.ObjectId,
+  old: IEnrolment | null,
+  place: Place,
+  toSectionId: Id,
+  onKey: string,
+  fromSectionId: Id | undefined,
+  actor: Id | undefined,
+  pointer: () => Promise<void>,
+): Promise<IEnrolment> {
+  if (old && old.startKey >= onKey) {
+    // Same-day correction (e.g. merge then split on one date): re-point the row, no empty span.
+    old.sectionId = oid(toSectionId);
+    old.classId = place.classId;
+    old.classLevel = place.classLevel;
+    await old.save();
+    await pointer();
+    return old;
+  }
+  const next = await openEnrolment({ studentId, sectionId: toSectionId, startKey: onKey, createdBy: actor });
+  await pointer();
+  if (old) {
+    await closeEnrolment(old._id, { endKey: dayBefore(onKey), outcome: "MOVED" });
+    return next;
+  }
+  // No row existed: best-effort history for the span before the move; never blocks the move.
+  const yearStart = await yearStartKey(place.academicYearId);
+  if (fromSectionId && yearStart && yearStart < onKey && !oid(fromSectionId).equals(oid(toSectionId))) {
+    const had = await Enrolment.exists({ studentId, academicYearId: place.academicYearId, _id: { $ne: next._id } });
+    const from = had ? null : await placeOfSection(fromSectionId).catch(() => null);
+    if (from && from.academicYearId.equals(place.academicYearId)) {
+      await Enrolment.create({
+        studentId,
+        academicYearId: from.academicYearId,
+        classId: from.classId,
+        classLevel: from.classLevel,
+        sectionId: oid(fromSectionId),
+        status: "CLOSED",
+        outcome: "MOVED",
+        startKey: yearStart,
+        endKey: dayBefore(onKey),
+        ...(actor ? { createdBy: oid(actor) } : {}),
+      });
+    }
+  }
+  return next;
+}
+
+/**
+ * Enrolment side of a BULK section move (section merge / split, the split skill). The caller has
+ * ALREADY updated `Student.sectionId` (and rehomed records - this never touches which records
+ * move). Per child: ACTIVE row present -> close it MOVED and open the next; row absent (prod before
+ * the backfill) -> create what is missing; already in the target section -> nothing. A failure for
+ * one child is returned, never thrown, so the merge/split itself is not undone half way.
+ */
+export async function recordSectionMove(args: {
+  studentIds: Id[];
+  toSectionId: Id;
+  onKey?: string;
+  /** studentId -> the section they were in before (used only to rebuild history when no row exists). */
+  from?: Map<string, Id>;
+  actor?: Id;
+}): Promise<{ moved: number; failed: string[] }> {
+  const onKey = args.onKey ?? dhakaDayKey(new Date());
+  assertKey(onKey);
+  const place = await placeOfSection(args.toSectionId);
+  const ids = args.studentIds.map(oid);
+  const actives = await Enrolment.find({ studentId: { $in: ids }, academicYearId: place.academicYearId, status: "ACTIVE" });
+  const activeOf = new Map(actives.map((e) => [e.studentId.toString(), e]));
+  let moved = 0;
+  const failed: string[] = [];
+  for (const id of ids) {
+    const key = id.toString();
+    try {
+      const old = activeOf.get(key) ?? null;
+      if (old && old.sectionId.equals(oid(args.toSectionId))) continue;
+      await applyEnrolmentMove(id, old, place, args.toSectionId, onKey, old ? old.sectionId : args.from?.get(key), args.actor, async () => undefined);
+      moved++;
+    } catch (err) {
+      failed.push(`${key}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return { moved, failed };
+}
+
+/**
+ * `createStudent`: open the child's ACTIVE enrolment in their class's year, starting today.
+ * Idempotent (a child who already has an ACTIVE row in that year is left alone).
+ */
+export async function openEnrolmentForNewStudent(
+  student: { _id: Types.ObjectId; sectionId: Types.ObjectId },
+  actor?: Id,
+): Promise<IEnrolment> {
+  const place = await placeOfSection(student.sectionId);
+  const have = await Enrolment.findOne({ studentId: student._id, academicYearId: place.academicYearId, status: "ACTIVE" });
+  if (have) return have;
+  return openEnrolment({ studentId: student._id, sectionId: student.sectionId, startKey: dhakaDayKey(new Date()), createdBy: actor });
 }
 
 export type InvariantKind = "NO_ACTIVE_ENROLMENT" | "POINTER_MISMATCH" | "MULTIPLE_ACTIVE" | "INACTIVE_WITH_ACTIVE_ENROLMENT";

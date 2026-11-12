@@ -105,6 +105,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   GUARDIAN_LINK: { bn: "অভিভাবক সংযুক্ত করেছেন", en: "Linked a guardian", group: "ROSTER" },
   SECTIONS_MERGED: { bn: "শাখা একত্র করেছেন", en: "Merged sections", group: "ROSTER" },
   SECTIONS_SPLIT: { bn: "শাখা আলাদা করেছেন", en: "Split sections", group: "ROSTER" },
+  ENROLMENT_MOVED: { bn: "একজন শিক্ষার্থীকে অন্য শাখায় সরিয়েছেন", en: "Moved a student to another section", group: "ROSTER" },
   ATTENDANCE_DAYS_COPIED: { bn: "বন্ধ গ্রুপের উপস্থিতি নতুন গ্রুপে কপি হয়েছে", en: "Copied a retired group's attendance days", group: "ATTENDANCE" },
   ACADEMIC_YEAR_CREATED: { bn: "শিক্ষাবর্ষ যোগ করেছেন", en: "Created an academic year", group: "ROSTER" },
   ACADEMIC_YEAR_SET_CURRENT: { bn: "চলতি শিক্ষাবর্ষ বদলেছেন", en: "Switched the current academic year", group: "ROSTER" },

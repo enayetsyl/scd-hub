@@ -15,6 +15,7 @@ import { Student } from "../models/Student";
 import { SectionMerge } from "../models/SectionMerge";
 import { writeAudit } from "../../platform/services/AuditService";
 import { rehomeStudentRecords } from "../../trackers/services/recordRehome";
+import { recordSectionMove } from "./EnrolmentService";
 
 export class SectionMergeError extends Error {
   constructor(message: string) {
@@ -105,6 +106,14 @@ export async function mergeSections(
     // Their homework/assignment records follow them, or the combined section's
     // workspaces cannot see work issued before the merge.
     await rehomeStudentRecords(moves.map((m) => m.studentId), combined._id);
+    // YC-1: close each child's enrolment MOVED and open the combined one (rows created if absent).
+    const enr = await recordSectionMove({
+      studentIds: moves.map((m) => m.studentId),
+      toSectionId: combined._id,
+      from: new Map(moves.map((m) => [m.studentId.toString(), m.fromSectionId])),
+      actor: actorId,
+    });
+    if (enr.failed.length) console.error("[SectionMerge] enrolment rows not written:", enr.failed);
   }
   await Section.updateMany({ _id: { $in: sourceIds } }, { $set: { active: false } });
 
@@ -172,6 +181,13 @@ export async function splitSections(
   for (const [dest, ids] of byDest) {
     await Student.updateMany({ _id: { $in: ids } }, { $set: { sectionId: new Types.ObjectId(dest) } });
     await rehomeStudentRecords(ids, dest);
+    const enr = await recordSectionMove({
+      studentIds: ids,
+      toSectionId: dest,
+      from: new Map(ids.map((i) => [i.toString(), merge.combinedSectionId])),
+      actor: actorId,
+    });
+    if (enr.failed.length) console.error("[SectionSplit] enrolment rows not written:", enr.failed);
     moved += ids.length;
   }
 

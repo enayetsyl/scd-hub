@@ -10,6 +10,7 @@ import {
 } from "../services/StudentDirectoryService";
 import type { Types } from "mongoose";
 import { ForbiddenError } from "../../../middleware/authz";
+import { openEnrolmentForNewStudent } from "../services/EnrolmentService";
 
 type StudentShape = Pick<
   IStudent,
@@ -170,12 +171,16 @@ builder.mutationField("createStudent", (t) =>
       classId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
     },
-    resolve: async (_root, args) =>
-      Student.create({
+    resolve: async (_root, args, ctx) => {
+      const student = await Student.create({
         schoolId: args.schoolId,
         name: args.name,
         classId: args.classId,
         sectionId: args.sectionId,
-      }),
+      });
+      // YC-1: the child's dated place (ACTIVE enrolment from today) is written with the Student.
+      await openEnrolmentForNewStudent(student, ctx.auth?.userId);
+      return student;
+    },
   }),
 );
