@@ -80,3 +80,11 @@ flat key map validated per key and rendered field by field on the policy screen,
    unchanged and green).
 
 Help: reading guide `mastery-homework-from-lesson`; `notes-lesson-mark` intro updated.
+
+## PR-K — the class-note link fills the draft (D-#1425)
+Opening the new-sheet screen from the class note's "এই পাঠের বাড়ির কাজ তৈরি করুন" link passes
+`fromLesson: true`; the screen then runs the same fill as "আজকের পাঠ থেকে খসড়া" once on arrival, with no
+tap. Nothing is saved (the teacher still reviews and presses **কাজ তৈরি**); the button stays for a re-fill.
+Opening the screen any other way (no `fromLesson`) is unchanged. The fill itself is the server read
+`masteryHomeworkDraft`, already covered by its own suite; the auto-run is a one-shot `useEffect` guarded by
+a ref, so it cannot loop or double-fire.

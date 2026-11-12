@@ -38,6 +38,7 @@ import {
   checkTreeInvariants,
   formatTreeViolation,
   parseMasteryLoCode,
+  masteryPartnerSubject,
   type MasteryClassToken,
   type MasteryReviewEventAction,
   type MasterySubject,
@@ -324,9 +325,16 @@ async function loadPair(classToken: MasteryClassToken, subject: MasterySubject):
   const [rows, domains, external, qts, chapters] = await Promise.all([
     MasteryOutcome.find({ classToken, subject }).sort({ order: 1, code: 1 }).lean<Row[]>(),
     MasteryDomain.find({ subject, active: true }).select("code").lean(),
-    earlier.length
-      ? MasteryOutcome.find({ subject, classToken: { $in: earlier }, status: { $ne: "RETIRED" } }).select("code").lean()
-      : Promise.resolve([] as { code: string }[]),
+    // PR-P: a BAN2 / ENG2 pair may also name live BAN / ENG codes of this class or earlier.
+    MasteryOutcome.find({
+      status: { $ne: "RETIRED" },
+      $or: [
+        ...(earlier.length ? [{ subject, classToken: { $in: earlier } }] : []),
+        ...(masteryPartnerSubject(subject) ? [{ subject: masteryPartnerSubject(subject), classToken: { $in: [...earlier, classToken] } }] : []),
+      ],
+    })
+      .select("code")
+      .lean(),
     MasteryQuestionType.find({ classToken, subject }).select("code").lean(),
     MasteryChapter.find({ classToken, subject }).select("number").lean(),
   ]);
@@ -482,6 +490,8 @@ export interface ReviewQueueView {
   chapters: { number: number; titleBn: string }[];
   domains: { code: string; labelBn: string }[];
   questionTypes: { code: string; labelBn: string }[];
+  /** Labels of earlier-step codes that live outside this pair (earlier class / partner paper, PR-P). */
+  externalLabels: { code: string; labelBn: string }[];
   rows: ReviewRowView[];
   threads: ReviewThreadView[];
   unmapped: ReviewUnmappedView[];
@@ -631,6 +641,10 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
   const openPerCode = new Map<string, number>();
   for (const t of threads) if (t.open && t.code) openPerCode.set(t.code, (openPerCode.get(t.code) ?? 0) + 1);
   const all = [...ws.rows.values()];
+  const outside = [...new Set(all.flatMap((o) => o.prereqCodes ?? []))].filter((c) => !ws.rows.has(c));
+  const externalLabels = outside.length
+    ? (await MasteryOutcome.find({ code: { $in: outside } }).select("code labelBn").lean()).map((o) => ({ code: o.code, labelBn: o.labelBn }))
+    : [];
   const decided = roundRows(all, r);
   const assignedToMe = isAssigned(r, caller.userId);
   const writer = caller.canSettings || assignedToMe;
@@ -651,6 +665,7 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
     chapters: chapters.map((c) => ({ number: c.number, titleBn: c.titleBn })),
     domains: domains.filter((d) => d.active).map((d) => ({ code: d.code, labelBn: d.labelBn })),
     questionTypes: qts.filter((q) => q.active !== false).map((q) => ({ code: q.code, labelBn: q.labelBn })),
+    externalLabels,
     rows: all.map((o) => {
       const t = treeShapeOf(o);
       const b = outcomeBookRef(o);

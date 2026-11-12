@@ -15,7 +15,7 @@
  * marked taught that day (bank questions nobody has seen; the book's exercises when there are none);
  * the teacher edits and saves as usual, with that day's tracker homework pre-selected as the link.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Switch, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useClient, useMutation, useQuery } from "urql";
@@ -147,6 +147,17 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
       ...(d.rubricCodes.length ? [fill(STR.msDraftRubric, { codes: short(d.rubricCodes) })] : []),
     ]);
   }
+
+  // PR-K (D-#1425): arriving from the class-note link loads the lesson draft once, without a tap.
+  // Any other way in (no `fromLesson`) is unchanged. Nothing is saved; the teacher still reviews and saves.
+  const autoDrafted = useRef(false);
+  useEffect(() => {
+    if (route.params.fromLesson && !autoDrafted.current) {
+      autoDrafted.current = true;
+      void draftFromLesson();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const outcomes = ((catData?.masteryCatalogue?.outcomes ?? []) as MasteryOutcomeRow[]).filter((o) => o.status === "LOCKED");
   const qts = ((catData?.masteryCatalogue?.questionTypes ?? []) as MasteryQuestionTypeRow[]).filter((q) => q.active && q.marks !== null);

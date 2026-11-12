@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://school.local/scd/SCD_PlanSchema_v2.json",
   "title": "SCD Plan Schema v2 (unified Chapter Plan + Session Plan; Nursery–Class 10; + Islamic Studies)",
-  "description": "Supersedes LOCKED_C5_PlanSchema_v1 (Project 03). v2 changes ONLY: class_level accepts 'NUR', 'KG' or 1–10; subject adds ISL (ইসলাম শিক্ষা, anchor পাঠ or অধ্যায়); topic_tag and rc_id patterns accept CNUR, CKG, C1–C10. SCD amendment 2026-11-11 (D-#1310, scd-hub): subject also accepts the app content codes ISLAM (= ISL, the canonical app code), ICT, BAN2 (Bangla 2nd paper), ENG2 (English 2nd paper), and the subject part of topic_tag / rc_id may carry a digit (BAN2). Every v1-valid plan stays v2-valid. Shape authority: LOCKED_ChapterPlan_Layout_Instruction_v3_3 + LOCKED_SessionPlan_Layout_Instruction_v11. Enforces shape only; arithmetic, cross-field, numeral, surface-purity and cross-plan checks live in validate_plan.py.",
+  "description": "Supersedes LOCKED_C5_PlanSchema_v1 (Project 03). v2 changes ONLY: class_level accepts 'NUR', 'KG' or 1–10; subject adds ISLAM (ইসলাম শিক্ষা, anchor পাঠ or অধ্যায়); topic_tag and rc_id patterns accept CNUR, CKG, C1–C10. SCD amendment 2026-11-11 (D-#1310, scd-hub): subject also accepts the app content codes ICT, BAN2 (Bangla 2nd paper), ENG2 (English 2nd paper), and the subject part of topic_tag / rc_id may carry a digit (BAN2). SCD amendment 2026-11-12 (D-#1440): the P09 spelling ISL is DROPPED — ISLAM is the only code for Islamic Studies; BAN2 plans use the anchor অধ্যায় and ENG2 plans use Unit. Every v1-valid plan stays v2-valid. Shape authority: LOCKED_ChapterPlan_Layout_Instruction_v3_3 + LOCKED_SessionPlan_Layout_Instruction_v11. Enforces shape only; arithmetic, cross-field, numeral, surface-purity and cross-plan checks live in validate_plan.py.",
   "type": "object",
   "required": [
     "schema_version",
@@ -45,7 +45,6 @@
         "MATH",
         "SCI",
         "BGS",
-        "ISL",
         "ISLAM",
         "ICT",
         "BAN2",
@@ -219,10 +218,7 @@
       "if": {
         "properties": {
           "subject": {
-            "enum": [
-              "ISL",
-              "ISLAM"
-            ]
+            "const": "ISLAM"
           }
         }
       },
@@ -240,6 +236,14 @@
           }
         }
       }
+    },
+    {
+      "if": { "properties": { "subject": { "const": "BAN2" } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অধ্যায়" } } } } }
+    },
+    {
+      "if": { "properties": { "subject": { "const": "ENG2" } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "Unit" } } } } }
     }
   ],
   "$defs": {

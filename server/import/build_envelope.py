@@ -82,6 +82,36 @@ def derive_content_version(source_file, plan):
     return str(sv) if sv else None
 
 
+FOOTER_LO_KEY = "objective codes"
+
+
+def footer_lo_codes(plan):
+    """PR-O (D-#1445): the plan's free-form footer key `Objective codes` -> a de-duplicated,
+    order-kept list (comma/semicolon/newline separated, or already a JSON list). [] when the
+    key is missing or empty. No pattern check here: a malformed code is carried through so the
+    import gate refuses it by name."""
+    footer = plan.get("footer")
+    if not isinstance(footer, dict):
+        return []
+    raw = None
+    for k, v in footer.items():
+        if isinstance(k, str) and k.strip().lower() == FOOTER_LO_KEY:
+            raw = v
+            break
+    if isinstance(raw, list):
+        parts = [x for x in raw if isinstance(x, str)]
+    elif isinstance(raw, str):
+        parts = re.split(r"[,;\n]", raw)
+    else:
+        return []
+    out = []
+    for t in parts:
+        t = t.strip()
+        if t and t not in out:
+            out.append(t)
+    return out
+
+
 def plan_branch_required(env_schema, doc_type):
     """The extra top-level fields the envelope schema requires for this plan doc_type."""
     extra = set()
@@ -165,8 +195,8 @@ def main():
     envelope = {
         "envelope_version": env_version,
         "doc_type": plan_type,
-        # The P09 plan tools spell Islamic Studies "ISL"; the envelope code is "ISLAM" (D-#1310).
-        "subject": {"ISL": "ISLAM"}.get(plan.get("subject"), plan.get("subject")),
+        # D-#1440: Islamic Studies is "ISLAM" everywhere; the old plan spelling "ISL" is gone.
+        "subject": plan.get("subject"),
         "class_level": plan.get("class_level"),
         "address": address,
         "curation_tag": plan.get("curation_tag"),
@@ -176,6 +206,11 @@ def main():
         "rendered_markdown": md_text,
         "payload": plan,
     }
+    # PR-O: a SESSION plan's footer `Objective codes` -> tags.lo_codes. A chapter plan takes none.
+    if plan_type == "session_plan":
+        lo = footer_lo_codes(plan)
+        if lo:
+            envelope["tags"] = {"lo_codes": lo}
     # Drop optional top-level keys we couldn't source (pinned_to is optional).
     if envelope["pinned_to"] is None:
         del envelope["pinned_to"]

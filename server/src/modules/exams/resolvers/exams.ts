@@ -18,7 +18,7 @@ import { Types } from "mongoose";
 import { Exam, type ICtAggregation, type IGradeBand } from "../models/Exam";
 import { examCtAggregation, examGradeScale, examStatus } from "../examDefaults";
 import { createExam, updateExam } from "../services/ExamService";
-import { assertSyllabusReader } from "../services/ExamSyllabusReadService";
+import { assertExamPicker } from "../services/ExamSyllabusReadService";
 
 export interface ExamShape {
   id: string;
@@ -131,8 +131,9 @@ builder.queryFields((t) => ({
     authScopes: { authenticated: true },
     args: { academicYearId: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
-      // Staff need exam_syllabus:view (PM, D-#790); a guardian keeps the picker (F-10).
-      assertSyllabusReader(ctx);
+      // Staff need exam_syllabus:view (PM, D-#790) or any exam-cycle view (D-#1435); a guardian
+      // keeps the picker (F-10).
+      assertExamPicker(ctx);
       const q: Record<string, unknown> = {};
       if (args.academicYearId) q.academicYearId = args.academicYearId;
       const rows = (await Exam.find(q).sort({ createdAt: -1 }).lean()) as unknown as ExamRowLike[];

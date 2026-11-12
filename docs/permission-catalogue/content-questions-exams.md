@@ -450,11 +450,13 @@ App gates: stack `ExamPapersTab` on any of the five; drawer leaf প্রশ্
 | examReportCard, examClassReportCards, examCommentSuggestions | `exam_results:view` |
 | setExamReportComment | `exam_results:comment` |
 | submitExamResults | `exam_results:submit` |
-| approveExamResults, sendBackExamResults, unpublishExamResults | `exam_results:publish` |
+| approveExamResults, sendBackExamResults, unpublishExamResults | `exam_results:publish` — Principal-only by default (D-#1435); the Office submits and works on any paper (`edit_all`) but does not approve or publish |
 | GET /pdf/report-card/:examId/:studentId, GET /pdf/report-card/:examId?classId= (class bundle, staff only) | `exam_results:view` (callerHasPermission); guardian: `guardian:read_child` + linked child + exam published |
 | examCustodyEvents, examCustodyEventsPage, examCustodyBalance, examCustodyExceptions | `exam_custody:view` |
 | examCustodyRecipients, recordExamCustodyHandover, cancelExamCustodyHandover | `exam_custody:hand_over`; svc: only the giver cancels |
 | myPendingCustodyAcknowledgements, acknowledgeExamCustodyHandover | `exam_custody:acknowledge`; svc: only the named receiver |
+
+The `exams` list (the exam picker) answers for `exam_syllabus:view`, or any `exam_results:view` / `exam_custody:view` holder (D-#1435); a guardian is unchanged.
 
 Recipients (D-#796): a custody dispute → `holdersOf("exam_results:settings")`; results submitted → `holdersOf("exam_results:publish")`; handover → the named receiver; the receiver picker lists `holdersOf("exam_custody:acknowledge")`.
 

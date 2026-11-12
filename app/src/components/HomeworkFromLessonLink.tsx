@@ -44,7 +44,7 @@ export function HomeworkFromLessonLink({
       onPress={() =>
         nav.navigate("MasteryTab", {
           screen: "MasteryNewPaper",
-          params: { sectionId, subject, classLevel: sw.classLevel, date },
+          params: { sectionId, subject, classLevel: sw.classLevel, date, fromLesson: true },
           initial: false,
         })
       }

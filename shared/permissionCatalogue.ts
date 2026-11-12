@@ -309,7 +309,7 @@ export const FEATURE_CATALOGUE = {
       reopen: { en: "Re-open a tabulated paper", bn: "সংকলিত বিষয়পত্র আবার খোলা", desc: "Unlock a tabulated paper with a reason", teacher: false, office: true, flags: [] },
       comment: { en: "Write the school comment", bn: "রিপোর্ট কার্ডে স্কুলের মন্তব্য লেখা", desc: "The Comment from School line on a student's card", teacher: false, office: true, flags: [] },
       submit: { en: "Send results for approval", bn: "ফলাফল অনুমোদনে পাঠানো", desc: "Submit the card set once every paper is tabulated", teacher: true, office: true, flags: [] },
-      publish: { en: "Approve & publish results", bn: "ফলাফল অনুমোদন ও প্রকাশ", desc: "Approve and publish, send back with a reason, unpublish", teacher: false, office: true, flags: [] },
+      publish: { en: "Approve & publish results", bn: "ফলাফল অনুমোদন ও প্রকাশ", desc: "Approve and publish, send back with a reason, unpublish", teacher: false, office: false, flags: [] },
     },
   },
   // The two-signature script custody chain (EX-6..EX-8, D-#382).

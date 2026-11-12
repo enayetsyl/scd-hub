@@ -26,6 +26,8 @@ if (!fs.existsSync(DIST)) {
   process.exit(2);
 }
 const { checkTreeInvariants, readTreeFile, readDomainsFile, expandExerciseRef, TREE_RULES, formatTreeViolation } = require(DIST);
+const { masteryPartnerSubject } = require(path.resolve(import.meta.dirname, "../../shared/dist/masteryPartners.js"));
+const { parseMasteryLoCode } = require(path.resolve(import.meta.dirname, "../../shared/dist/vocab.js"));
 
 const args = process.argv.slice(2);
 const invAt = args.indexOf("--inventory");
@@ -52,7 +54,16 @@ if (domains.subject !== tree.subject) {
   process.exit(1);
 }
 
+// A 2nd-paper tree (BAN2 / ENG2) may name partner-paper (BAN / ENG) codes. The file cannot see the
+// live catalogue, so those are accepted as external here; the import resolves them (PR-P).
+const partner = masteryPartnerSubject(tree.subject);
+const inTree = new Set(tree.nodes.map((n) => n.code));
+const externalCodes = partner
+  ? [...new Set(tree.nodes.flatMap((n) => n.prereqCodes))].filter((c) => !inTree.has(c) && parseMasteryLoCode(c)?.subject === partner)
+  : [];
+
 const violations = checkTreeInvariants({
+  externalCodes,
   classToken: tree.classToken,
   subject: tree.subject,
   nodes: tree.nodes,

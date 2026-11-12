@@ -267,11 +267,12 @@ export const QUESTION_TIME_RATES: Record<Subject, Record<QuestionType, number>> 
   MATH: { mcq: 1.3, short_answer: 2.0, true_false: 1.0, fill_blank: 1.2, matching: 1.0, descriptive: 1.25 },
   SCI:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
   BGS:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
-  // D-#1310: the 2027 subjects borrow the nearest seeded row until real timings exist.
-  ISLAM: { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
-  ICT:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
-  BAN2: { mcq: 1.0, short_answer: 1.5, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 2.0 },
-  ENG2: { mcq: 1.0, short_answer: 1.2, true_false: 0.8, fill_blank: 0.8, matching: 0.8, descriptive: 2.0 },
+  // D-#1440 (owner 2026-11-12): the 2027 subjects use the school standard — 3 hours for 100 marks
+  // = 1.8 minutes per mark — for every question type (replaces the borrowed rows of D-#1310).
+  ISLAM: { mcq: 1.8, short_answer: 1.8, true_false: 1.8, fill_blank: 1.8, matching: 1.8, descriptive: 1.8 },
+  ICT:  { mcq: 1.8, short_answer: 1.8, true_false: 1.8, fill_blank: 1.8, matching: 1.8, descriptive: 1.8 },
+  BAN2: { mcq: 1.8, short_answer: 1.8, true_false: 1.8, fill_blank: 1.8, matching: 1.8, descriptive: 1.8 },
+  ENG2: { mcq: 1.8, short_answer: 1.8, true_false: 1.8, fill_blank: 1.8, matching: 1.8, descriptive: 1.8 },
 };
 
 /** Fallback when a question carries a subject or type the grid does not know. */

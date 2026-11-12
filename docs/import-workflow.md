@@ -57,6 +57,16 @@ the app builds the envelope itself via `server/import/build_envelope.py`, then r
   paired `.md` **verbatim** (ADR-006 — the app never re-renders). The plan JSON becomes `payload`,
   UNCHANGED. If a required envelope field has no source and no sensible default, the build refuses with
   a clear message — nothing is fabricated.
+- **Objective codes (PR-O, D-#1445).** A **session plan**'s free-form `footer` may carry the key
+  `Objective codes` — a comma-, semicolon- or newline-separated list of tagged objective codes (for
+  example `LO-C1-MATH-07-01.1, LO-C1-MATH-07-02`). `build_envelope.py` puts the parsed, de-duplicated
+  list in the envelope's `tags.lo_codes` (the plan JSON stays the `payload`, unchanged); an empty or
+  missing key sets no tags, and a **chapter plan** takes none. `validate_import.py` then checks the
+  pattern, class and subject of each code (a bad code fails with the code named) and that the footer list
+  and `tags.lo_codes` agree. The class-note lesson picker reads `tags.lo_codes`
+  (`sessionPlansFor` → `planLoCodes`). `render_plan.py` writes the footer inside the
+  `<!-- INTERNAL FOOTER … -->` comment, so the codes never show in the teacher-facing Markdown.
+  Cases: `server/import/cases/lo-codes/*c1_math_plan_footer*`; test: `planFooterLoCodes.test.ts`.
 - **Pairing rule (the contract):** a plan JSON pairs to its Markdown by matched **filename stem**
   (`X.json` ↔ `X.md`); the `.md` carries no machine link, so the stem is the join. **Orphans are
   rejected** — a plan with no `.md`, or an `.md` with no plan, fails with a clear message (a plan is
