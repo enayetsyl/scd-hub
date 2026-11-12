@@ -60,22 +60,35 @@
 
 import { DEFAULT_ADVICE_LETTER_BODY } from "./adviceLetter";
 
-/** Subject codes. MIRROR of envelope `subject`. */
-export const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS"] as const;
+/** Content subject codes. MIRROR of envelope `subject`. D-#1310 (2027 content): ISLAM (Classes
+ *  1–5), and for Class 6 ICT, BAN2 (Bangla 2nd paper), ENG2 (English 2nd paper). BAN / ENG keep
+ *  meaning the only paper, or the 1st paper in Class 6. A CONTENT axis only — routine, homework
+ *  and class tests keep their own lists (HW_SUBJECTS / ROUTINE_SUBJECTS). */
+export const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"] as const;
 export type Subject = (typeof SUBJECTS)[number];
+
+/** The five NCTB general subjects (the pre-2027 content list). Anything exam- or scholarship-
+ *  specific that means "the five general subjects" reads this, not `SUBJECTS` (D-#1310). */
+export const NCTB_GENERAL_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS"] as const;
+export type NctbGeneralSubject = (typeof NCTB_GENERAL_SUBJECTS)[number];
+
+/** Content subjects WITHOUT REF-19 topic slugs: a question's `ref19_topic_id` is optional for
+ *  them and, when present, is not checked against the registry (D-#1311). BAN2 / ENG2 use the
+ *  BAN- / ENG- slugs and stay required. Mirrors validate_import.py `REF19_OPTIONAL_SUBJECTS`. */
+export const REF19_OPTIONAL_SUBJECTS: readonly Subject[] = ["ISLAM", "ICT"];
 
 /** Foundation-only subject codes. These live on the operational plane (Subject
  *  collection) and may exceed the locked content-envelope subject enum. */
-type FoundationSubjectCode = Subject | "ISLAM";
+type FoundationSubjectCode = Subject;
 
-/** Class levels C1–C5 (one evolving plan schema spans all, R-IMP2). Range, not enum.
- *  CONTENT axis: curriculum content is authored for C1–C5 only. MIRROR of the LOCKED
- *  envelope `class_level` (1..5) — do NOT widen these to fit roster pre-primary classes
- *  (Nursery/KG); the roster uses its own range below (ROSTER_CLASS_LEVELS). */
-export const CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
+/** Class levels C1–C6 (one evolving plan schema spans all, R-IMP2). Range, not enum.
+ *  CONTENT axis: curriculum content is authored for C1–C6 (Class 6 added for 2027, D-#1310).
+ *  MIRROR of the LOCKED envelope `class_level` (1..6) — do NOT widen these to fit roster
+ *  pre-primary classes (Nursery/KG); the roster uses its own range below (ROSTER_CLASS_LEVELS). */
+export const CLASS_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 export type ClassLevel = (typeof CLASS_LEVELS)[number];
 export const CLASS_LEVEL_MIN = 1;
-export const CLASS_LEVEL_MAX = 5;
+export const CLASS_LEVEL_MAX = 6;
 
 /** ROSTER axis: the school enrolls pre-primary classes (Nursery, KG) that carry NO
  *  curriculum content. A SUPERSET of the content range — One..Five keep 1..5 so content
@@ -254,6 +267,11 @@ export const QUESTION_TIME_RATES: Record<Subject, Record<QuestionType, number>> 
   MATH: { mcq: 1.3, short_answer: 2.0, true_false: 1.0, fill_blank: 1.2, matching: 1.0, descriptive: 1.25 },
   SCI:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
   BGS:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  // D-#1310: the 2027 subjects borrow the nearest seeded row until real timings exist.
+  ISLAM: { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  ICT:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  BAN2: { mcq: 1.0, short_answer: 1.5, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 2.0 },
+  ENG2: { mcq: 1.0, short_answer: 1.2, true_false: 0.8, fill_blank: 0.8, matching: 0.8, descriptive: 2.0 },
 };
 
 /** Fallback when a question carries a subject or type the grid does not know. */
@@ -361,6 +379,9 @@ export const SUBJECT_LABELS_BN: Record<FoundationSubjectCode, string> = {
   SCI: "বিজ্ঞান",
   BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
   ISLAM: "ইসলাম শিক্ষা",
+  ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
+  BAN2: "বাংলা ২য় পত্র",
+  ENG2: "ইংরেজি ২য় পত্র",
 };
 
 export const DOC_TYPE_LABELS_BN: Record<DocType, string> = {
@@ -1061,6 +1082,9 @@ export const SUBJECT_LABELS_EN: Record<FoundationSubjectCode, string> = {
   SCI: "Science",
   BGS: "Bangladesh & Global Studies",
   ISLAM: "Islamic Studies",
+  ICT: "Information & Communication Technology",
+  BAN2: "Bangla 2nd paper",
+  ENG2: "English 2nd paper",
 };
 
 export const DOC_TYPE_LABELS_EN: Record<DocType, string> = {
@@ -1526,9 +1550,11 @@ export const NOTIFICATION_KINDS = [
   //   PROPOSAL        → every holder of mastery:approve when a section crosses the line
   //   EXTRA_CLASS     → the routine teacher, and each planned student's guardians, when planned
   //   ASSIGNMENT_SENT → each student's guardians when the weekly assignment is sent
+  //   EXTRA_HOMEWORK  → each child's guardians when an extra tailored homework is given (PR-D, D-#1325)
   "MASTERY_PROPOSAL",
   "MASTERY_EXTRA_CLASS",
   "MASTERY_ASSIGNMENT_SENT",
+  "MASTERY_EXTRA_HOMEWORK",
   // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md; app-native, NO wire twin):
   //   SUBMISSION_ESCALATION → holders of mark_submission:alerts at 09:30 (unmarked assignments)
   //   CORRECTION            → the same holders when a teacher flips a same-day chase
@@ -1567,6 +1593,15 @@ export const NOTIFICATION_KINDS = [
   // AI Workspace batch job finished (W-4, D-#1213; app-native, NO wire twin): to the person who
   // started the job, once, when every item is done / failed / cancelled. Opens the AI workspace.
   "AI_JOB_FINISHED",
+  // Exam custody (EX-8, D-#382). App-native, no wire twin. HANDOVER goes to the named
+  // RECEIVER ("you have scripts to acknowledge"); DISPUTED goes to exam:manage holders,
+  // because a count mismatch is an Office problem, not the two signatories' to settle.
+  "EXAM_CUSTODY_HANDOVER",
+  "EXAM_CUSTODY_DISPUTED",
+  // EX-9 publish loop: SUBMITTED → Principal/Office (a card set awaits approval);
+  // PUBLISHED → the exam's guardians via the guardian portal path.
+  "EXAM_RESULT_SUBMITTED",
+  "EXAM_RESULT_PUBLISHED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1639,6 +1674,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "অতিরিক্ত ক্লাসের প্রস্তাব",
   MASTERY_EXTRA_CLASS: "অতিরিক্ত ক্লাস",
   MASTERY_ASSIGNMENT_SENT: "সাপ্তাহিক অ্যাসাইনমেন্ট",
+  MASTERY_EXTRA_HOMEWORK: "বাড়তি বাড়ির কাজ",
   MARK_SUBMISSION_ESCALATION: "অ্যাসাইনমেন্টের জমার হিসাব বাকি",
   MARK_CORRECTION: "জমার হিসাবে ভুল",
   WORK_MARK_CORRECTED: "জমার বার্তা সংশোধন",
@@ -1654,6 +1690,10 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   SCHOOL_NOTICE: "স্কুলের বার্তা",
   AI_BUDGET_ALERT: "এআই খরচের সতর্কবার্তা",
   AI_JOB_FINISHED: "এআই ব্যাচ কাজ শেষ",
+  EXAM_CUSTODY_HANDOVER: "গ্রহণ স্বীকার করুন",
+  EXAM_CUSTODY_DISPUTED: "হস্তান্তরে সংখ্যার গরমিল",
+  EXAM_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
+  EXAM_RESULT_PUBLISHED: "পরীক্ষার ফলাফল প্রকাশিত",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1724,6 +1764,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "Extra-class proposal",
   MASTERY_EXTRA_CLASS: "Extra class",
   MASTERY_ASSIGNMENT_SENT: "Weekly assignment",
+  MASTERY_EXTRA_HOMEWORK: "Extra homework",
   MARK_SUBMISSION_ESCALATION: "Assignments not marked",
   MARK_CORRECTION: "Submission marks corrected",
   WORK_MARK_CORRECTED: "Correction: work was submitted",
@@ -1739,6 +1780,10 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   SCHOOL_NOTICE: "School notice",
   AI_BUDGET_ALERT: "AI spending alert",
   AI_JOB_FINISHED: "AI batch job finished",
+  EXAM_CUSTODY_HANDOVER: "Acknowledge a handover",
+  EXAM_CUSTODY_DISPUTED: "Custody count disputed",
+  EXAM_RESULT_SUBMITTED: "Report cards await approval",
+  EXAM_RESULT_PUBLISHED: "Exam results published",
 };
 
 /**
@@ -3796,6 +3841,7 @@ export const BUDGET_LINE_KIND_LABELS_EN: Record<BudgetLineKind, string> = {
 };
 
 
+
 // --- A.18 BOOK PRODUCTION (SB-1, prd-support-book.md §4, D-#403–#427) ----------
 // App-native, NO wire twin, NO harness sync (D-#405): a book's subject rides
 // ROUTINE_SUBJECTS and its class rides ROSTER_CLASS_LEVELS, so ISLAM and Nursery are
@@ -5325,9 +5371,37 @@ export const SCHOLARSHIP_CLASS_LEVELS: readonly number[] = [5];
 export const MASTERY_CLASS_TOKENS = ["NUR", "KG", "C1", "C2", "C3", "C4", "C5", "C6"] as const;
 export type MasteryClassToken = (typeof MASTERY_CLASS_TOKENS)[number];
 
-/** Subjects the module covers: every homework subject — Quran is not one (D-#784). */
-export const MASTERY_SUBJECTS = HW_SUBJECTS;
-export type MasterySubject = HwSubject;
+/** Subjects the module covers: every homework subject — Quran is not one (D-#784) — plus the
+ *  Class 6 content subjects ICT, BAN2, ENG2 so their objective trees can be imported (D-#1312).
+ *  Those three are not routine / homework / class-test subjects yet (Class 6 onboarding). */
+export const MASTERY_SUBJECTS = [...HW_SUBJECTS, "ICT", "BAN2", "ENG2"] as const;
+export type MasterySubject = (typeof MASTERY_SUBJECTS)[number];
+
+/** Bangla label of a mastery subject (homework subjects + the Class 6 content subjects). */
+export const MASTERY_SUBJECT_LABELS_BN: Record<MasterySubject, string> = {
+  BAN: "বাংলা",
+  ENG: "ইংরেজি",
+  MATH: "গণিত",
+  SCI: "বিজ্ঞান",
+  BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
+  ARABIC: "আরবি",
+  ISLAM: "ইসলাম শিক্ষা",
+  ICT: "তথ্য ও যোগাযোগ প্রযুক্তি",
+  BAN2: "বাংলা ২য় পত্র",
+  ENG2: "ইংরেজি ২য় পত্র",
+};
+export const MASTERY_SUBJECT_LABELS_EN: Record<MasterySubject, string> = {
+  BAN: "Bangla",
+  ENG: "English",
+  MATH: "Mathematics",
+  SCI: "Science",
+  BGS: "Bangladesh & Global Studies",
+  ARABIC: "Arabic",
+  ISLAM: "Islamic Studies",
+  ICT: "Information & Communication Technology",
+  BAN2: "Bangla 2nd paper",
+  ENG2: "English 2nd paper",
+};
 
 /** How an LO is assessed: a written question, or the 4-step rubric (D-#778). */
 export const MASTERY_ASSESS = ["QUESTION", "RUBRIC"] as const;
@@ -5366,8 +5440,9 @@ export const MASTERY_TAG_EFFECTS = ["WEAK", "LIGHT", "NO_EVIDENCE", "VOID_BEHAVI
 export type MasteryTagEffect = (typeof MASTERY_TAG_EFFECTS)[number];
 
 /** What the school does about an outcome (D-#781, M-5). A SECTION trigger proposes EXTRA_CLASS;
- *  the approver may turn it into RETEACH (in the normal period, no extra slot). */
-export const MASTERY_ACTION_KINDS = ["TAILORED_ASSIGNMENT", "EXTRA_CLASS", "RETEACH", "REVISION_SHEET", "GUARDIAN_NOTE"] as const;
+ *  the approver may turn it into RETEACH (in the normal period, no extra slot). EXTRA_HOMEWORK
+ *  (PR-D, D-#1324): one row per child given an extra tailored homework — appended, never reordered. */
+export const MASTERY_ACTION_KINDS = ["TAILORED_ASSIGNMENT", "EXTRA_CLASS", "RETEACH", "REVISION_SHEET", "GUARDIAN_NOTE", "EXTRA_HOMEWORK"] as const;
 export type MasteryActionKind = (typeof MASTERY_ACTION_KINDS)[number];
 /** PROPOSED (app) → APPROVED (scheduled) → IN_PROGRESS (class held) → CHECKING (re-test built) → CLOSED; or REJECTED. */
 export const MASTERY_ACTION_STATUSES = ["PROPOSED", "APPROVED", "IN_PROGRESS", "CHECKING", "CLOSED", "REJECTED"] as const;
@@ -5407,10 +5482,10 @@ export const MASTERY_RUBRIC_LABELS_BN: Record<1 | 2 | 3 | 4, string> = {
  *  `LO-<class>-<subject>-SK-<STRAND>-<NN>` for a skill that spans chapters. Either may take a
  *  sub-objective suffix `.N` (N = 1..99): `LO-C1-MATH-07-03.2` (objective tree, D-#921). */
 export const MASTERY_LO_CODE_RE =
-  /^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\d{2}|SK-[A-Z]{2,8})-\d{2}(\.\d{1,2})?$/;
+  /^LO-(NUR|KG|C[1-6])-(BAN2|ENG2|BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM|ICT)-(\d{2}|SK-[A-Z]{2,8})-\d{2}(\.\d{1,2})?$/;
 
 /** A school-wide domain code of the objective tree (D-#921): `DOM-<SUBJ>-<SLUG>`. */
-export const MASTERY_DOMAIN_CODE_RE = /^DOM-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-[A-Z0-9]{2,12}$/;
+export const MASTERY_DOMAIN_CODE_RE = /^DOM-(BAN2|ENG2|BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM|ICT)-[A-Z0-9]{2,12}$/;
 
 /** Objective-tree levels (D-#921). A domain is not a MasteryOutcome row (MasteryDomain). */
 export const MASTERY_OUTCOME_LEVELS = ["OBJECTIVE", "SUB"] as const;
@@ -5483,6 +5558,12 @@ export const MASTERY_POLICY_DEFAULTS = {
   assignmentMixWeak: 60,
   assignmentMixImproving: 25,
   assignmentMixRevision: 15,
+  // PR-D (D-#1321/#1323): the class homework drafted from the lesson taught, and the extra homework
+  // for weak children. Flat keys like every other policy value (the brief's nested shape, flattened).
+  homeworkDraftQuestionsPerObjective: 1,
+  homeworkDraftMaxItems: 6,
+  extraHomeworkMaxQuestions: 3,
+  extraHomeworkIncludeImproving: false,
 } as const;
 export type MasteryPolicyValues = { -readonly [K in keyof typeof MASTERY_POLICY_DEFAULTS]: (typeof MASTERY_POLICY_DEFAULTS)[K] extends boolean ? boolean : number };
 
@@ -5929,3 +6010,204 @@ export const LESSON_NONE_REASON_LABELS_BN: Record<LessonNoneReason, string> = {
   TEST: "পরীক্ষা বা ক্লাস টেস্ট",
   OTHER: "পরিকল্পনার বাইরে অন্য কাজ",
 };
+
+// --- EXAMS / REPORT CARDS (EX-1..EX-9, docs/prd-exams.md, D-#375–#382) -------
+// Ported onto dev 2026-11-11. EXAM_TERMS and EXAM_COMPONENTS are NOT redeclared here:
+// they live in the exam-syllabus block above (SY-1) and EX-1 reuses them.
+// App-native only; NO envelope twin, NO harness enum sync (the D-#46/#52 pattern).
+// The custody-chain enums land with EX-6, not here.
+
+/** Exam lifecycle. MARKING→TABULATED is gated on custody reconciliation (EX-7);
+ *  APPROVED→PUBLISHED is the guardian-visible flip (EX-9, the CT-8/CO-8 pattern). */
+export const EXAM_STATUSES = [
+  "PLANNED", "IN_PROGRESS", "MARKING", "TABULATED", "APPROVED", "PUBLISHED", "ARCHIVED",
+] as const;
+export type ExamStatus = (typeof EXAM_STATUSES)[number];
+export const EXAM_STATUS_LABELS_BN: Record<ExamStatus, string> = {
+  PLANNED: "পরিকল্পিত",
+  IN_PROGRESS: "চলমান",
+  MARKING: "খাতা মূল্যায়ন",
+  TABULATED: "নম্বর সংকলিত",
+  APPROVED: "অনুমোদিত",
+  PUBLISHED: "প্রকাশিত",
+  ARCHIVED: "সংরক্ষিত",
+};
+export const EXAM_STATUS_LABELS_EN: Record<ExamStatus, string> = {
+  PLANNED: "Planned",
+  IN_PROGRESS: "In progress",
+  MARKING: "Marking",
+  TABULATED: "Tabulated",
+  APPROVED: "Approved",
+  PUBLISHED: "Published",
+  ARCHIVED: "Archived",
+};
+
+/** Per-COMPONENT attendance (D-#377f): `Ab` appears in a lone Semester-Final cell while
+ *  CT/Adab still carry marks. An absent component contributes 0 and prints "Ab", and does
+ *  NOT drop the student from cohort denominators. */
+export const MARK_ENTRY_STATUSES = ["PRESENT", "ABSENT"] as const;
+export type MarkEntryStatus = (typeof MARK_ENTRY_STATUSES)[number];
+export const MARK_ENTRY_STATUS_LABELS_BN: Record<MarkEntryStatus, string> = {
+  PRESENT: "উপস্থিত",
+  ABSENT: "অনুপস্থিত",
+};
+export const MARK_ENTRY_STATUS_LABELS_EN: Record<MarkEntryStatus, string> = {
+  PRESENT: "Present",
+  ABSENT: "Ab",
+};
+
+/** Grade letters. Codes are identifier-safe; DISPLAY carries the printed glyph. The
+ *  point/percent BANDS are NOT here — they are stored per `Exam` so a future year can
+ *  re-band without a code change (D-#377). */
+export const GRADE_LETTERS = ["A_PLUS", "A", "A_MINUS", "B", "C", "F"] as const;
+export type GradeLetter = (typeof GRADE_LETTERS)[number];
+export const GRADE_LETTER_DISPLAY: Record<GradeLetter, string> = {
+  A_PLUS: "A+", A: "A", A_MINUS: "A-", B: "B", C: "C", F: "F",
+};
+
+/** The default scale printed on every 2026 card. Seeded onto a new `Exam`; editable
+ *  per exam thereafter. `maxPercent` is inclusive. */
+export const DEFAULT_GRADE_SCALE = [
+  { letter: "A_PLUS",  point: 5,   minPercent: 80, maxPercent: 100 },
+  { letter: "A",       point: 4,   minPercent: 70, maxPercent: 79.99 },
+  { letter: "A_MINUS", point: 3.5, minPercent: 60, maxPercent: 69.99 },
+  { letter: "B",       point: 3,   minPercent: 50, maxPercent: 59.99 },
+  { letter: "C",       point: 2,   minPercent: 40, maxPercent: 49.99 },
+  { letter: "F",       point: 0,   minPercent: 0,  maxPercent: 39.99 },
+] as const satisfies readonly { letter: GradeLetter; point: number; minPercent: number; maxPercent: number }[];
+
+/** How the CT component is pulled from the class-test tracker. BOTH ship (D-#378) —
+ *  set on the Exam, overridable per paper. */
+export const CT_AGGREGATION_MODES = ["MEAN", "BEST_N"] as const;
+export type CtAggregationMode = (typeof CT_AGGREGATION_MODES)[number];
+export const CT_AGGREGATION_MODE_LABELS_BN: Record<CtAggregationMode, string> = {
+  MEAN: "গড়",
+  BEST_N: "সেরা কয়টি",
+};
+export const CT_AGGREGATION_MODE_LABELS_EN: Record<CtAggregationMode, string> = {
+  MEAN: "Mean of all tests",
+  BEST_N: "Best N tests",
+};
+export const CT_AGGREGATION_DEFAULT_BEST_N = 3;
+
+/** Exam duty assignments (EX-2). These are ASSIGNMENT ROWS, not `ROLES` entries — the
+ *  single TEACHER role is never widened (the CO-1 / D-#42 pattern). */
+export const EXAM_DUTY_ROLES = [
+  "INVIGILATOR", "CHECKER", "RECHECKER", "TABULATOR", "MARK_RECHECKER",
+] as const;
+export type ExamDutyRole = (typeof EXAM_DUTY_ROLES)[number];
+export const EXAM_DUTY_ROLE_LABELS_BN: Record<ExamDutyRole, string> = {
+  INVIGILATOR: "পরীক্ষার দায়িত্বে",
+  CHECKER: "খাতা চেককারী",
+  RECHECKER: "খাতা রিচেককারী",
+  TABULATOR: "নম্বর সংকলনকারী",
+  MARK_RECHECKER: "নম্বর রিচেককারী",
+};
+export const EXAM_DUTY_ROLE_LABELS_EN: Record<ExamDutyRole, string> = {
+  INVIGILATOR: "Invigilator",
+  CHECKER: "Checker",
+  RECHECKER: "Rechecker",
+  TABULATOR: "Tabulator",
+  MARK_RECHECKER: "Mark rechecker",
+};
+
+// --- A.20b EXAM CUSTODY CHAIN (EX-6/EX-7, D-#382) ----------------------------
+// The owner's core ask. The paper mark sheets carry names and signatures but NO counts and
+// no issue/return record, so "how many scripts went out, how many came back" was
+// unanswerable. Every physical handover is now a two-signature event carrying a count.
+
+/** The 13 real-world steps, in order, from printing the papers to filing the scripts. */
+export const CUSTODY_STAGES = [
+  "QUESTION_ISSUE",         // Office → invigilator: printed papers + blank scripts
+  "QUESTION_RETURN_UNUSED", // invigilator → Office: papers NOT used
+  "SCRIPT_RETURN",          // invigilator → Office: the used answer scripts
+  "CHECK_ISSUE",            // Office → checker
+  "CHECK_RETURN",           // checker → Office
+  "RECHECK_ISSUE",          // Office → rechecker
+  "RECHECK_RETURN",         // rechecker → Office
+  "TABULATION_ISSUE",       // Office → tabulator (mark sheet)
+  "TABULATION_RETURN",      // tabulator → Office
+  "MARK_RECHECK_ISSUE",     // Office → mark-rechecker
+  "MARK_RECHECK_RETURN",    // mark-rechecker → Office
+  "ARCHIVE",                // Office → store
+] as const;
+export type CustodyStage = (typeof CUSTODY_STAGES)[number];
+export const CUSTODY_STAGE_LABELS_BN: Record<CustodyStage, string> = {
+  QUESTION_ISSUE: "প্রশ্ন সরবরাহ",
+  QUESTION_RETURN_UNUSED: "অব্যবহৃত প্রশ্ন ফেরত",
+  SCRIPT_RETURN: "উত্তরপত্র ফেরত",
+  CHECK_ISSUE: "চেকের জন্য প্রদান",
+  CHECK_RETURN: "চেক শেষে ফেরত",
+  RECHECK_ISSUE: "রিচেকের জন্য প্রদান",
+  RECHECK_RETURN: "রিচেক শেষে ফেরত",
+  TABULATION_ISSUE: "সংকলনের জন্য প্রদান",
+  TABULATION_RETURN: "সংকলন শেষে ফেরত",
+  MARK_RECHECK_ISSUE: "নম্বর রিচেকের জন্য প্রদান",
+  MARK_RECHECK_RETURN: "নম্বর রিচেক শেষে ফেরত",
+  ARCHIVE: "সংরক্ষণাগারে জমা",
+};
+export const CUSTODY_STAGE_LABELS_EN: Record<CustodyStage, string> = {
+  QUESTION_ISSUE: "Question issue",
+  QUESTION_RETURN_UNUSED: "Unused questions returned",
+  SCRIPT_RETURN: "Answer scripts returned",
+  CHECK_ISSUE: "Issued for checking",
+  CHECK_RETURN: "Returned from checking",
+  RECHECK_ISSUE: "Issued for rechecking",
+  RECHECK_RETURN: "Returned from rechecking",
+  TABULATION_ISSUE: "Issued for tabulation",
+  TABULATION_RETURN: "Returned from tabulation",
+  MARK_RECHECK_ISSUE: "Issued for mark recheck",
+  MARK_RECHECK_RETURN: "Returned from mark recheck",
+  ARCHIVE: "Archived",
+};
+
+/** What physically moved. */
+export const CUSTODY_ITEM_KINDS = ["QUESTION_PAPER", "BLANK_SCRIPT", "ANSWER_SCRIPT", "MARK_SHEET"] as const;
+export type CustodyItemKind = (typeof CUSTODY_ITEM_KINDS)[number];
+export const CUSTODY_ITEM_KIND_LABELS_BN: Record<CustodyItemKind, string> = {
+  QUESTION_PAPER: "প্রশ্নপত্র",
+  BLANK_SCRIPT: "খালি খাতা",
+  ANSWER_SCRIPT: "উত্তরপত্র",
+  MARK_SHEET: "মার্কশিট",
+};
+export const CUSTODY_ITEM_KIND_LABELS_EN: Record<CustodyItemKind, string> = {
+  QUESTION_PAPER: "Question paper",
+  BLANK_SCRIPT: "Blank script",
+  ANSWER_SCRIPT: "Answer script",
+  MARK_SHEET: "Mark sheet",
+};
+
+/** DISPUTED is a valid TERMINAL state, not an error: it carries BOTH counts plus a note.
+ *  The app never overwrites one person's count with the other's — that is the entire point
+ *  of recording a chain (D-#382). */
+export const CUSTODY_EVENT_STATUSES = ["PENDING_ACK", "ACKNOWLEDGED", "DISPUTED", "CANCELLED"] as const;
+export type CustodyEventStatus = (typeof CUSTODY_EVENT_STATUSES)[number];
+export const CUSTODY_EVENT_STATUS_LABELS_BN: Record<CustodyEventStatus, string> = {
+  PENDING_ACK: "গ্রহণের অপেক্ষায়",
+  ACKNOWLEDGED: "গৃহীত",
+  DISPUTED: "সংখ্যায় গরমিল",
+  CANCELLED: "বাতিল",
+};
+export const CUSTODY_EVENT_STATUS_LABELS_EN: Record<CustodyEventStatus, string> = {
+  PENDING_ACK: "Awaiting acknowledgement",
+  ACKNOWLEDGED: "Acknowledged",
+  DISPUTED: "Count disputed",
+  CANCELLED: "Cancelled",
+};
+
+/** Every paper's components must sum to this (D-#376): the only composition guard. */
+export const EXAM_PAPER_COMPONENT_TOTAL = 100;
+
+/** Paper-scale conversion rounds to NEAREST 0.5 (D-#377a). THE single implementation —
+ *  the marking screen's live preview and the report-card renderer BOTH call this. Two
+ *  rounding sites is exactly how the printed card and the on-screen figure drift apart. */
+export function roundToHalf(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+/** Convert a raw mark against its paper's own full marks onto a component's scale.
+ *  Derived on read, NEVER stored (D-#85). */
+export function convertMark(rawMark: number, paperFullMarks: number, componentMax: number): number {
+  if (paperFullMarks <= 0) throw new Error("paperFullMarks must be > 0");
+  return roundToHalf((rawMark / paperFullMarks) * componentMax);
+}

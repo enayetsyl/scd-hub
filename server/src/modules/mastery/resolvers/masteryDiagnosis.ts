@@ -16,6 +16,7 @@ import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import type { MasterySubject } from "@scd/shared";
 import {
+  earlierClassSummary,
   excludeItem,
   outcomeTrail,
   paperQualityDetail,
@@ -23,6 +24,7 @@ import {
   revokeExclusion,
   sectionHeatmap,
   studentDiagnosis,
+  type EarlierClassRow,
   type DomainRollupView,
   type EarlierStep,
   type ExclusionView,
@@ -406,6 +408,29 @@ PaperQualityRef.implement({
 // Queries
 // ---------------------------------------------------------------------------
 
+const EarlierWeakStudentRef = builder.objectRef<EarlierClassRow["weakStudents"][number]>("MasteryEarlierWeakStudent");
+EarlierWeakStudentRef.implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
+    rollNumber: t.string({ nullable: true, resolve: (s) => s.rollNumber }),
+  }),
+});
+
+const EarlierClassRowRef = builder.objectRef<EarlierClassRow>("MasteryEarlierClassRow");
+EarlierClassRowRef.implement({
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    classToken: t.exposeString("classToken"),
+    assessed: t.exposeInt("assessed"),
+    weak: t.exposeInt("weak"),
+    weakStudents: t.field({ type: [EarlierWeakStudentRef], resolve: (r) => r.weakStudents }),
+  }),
+});
+
+const EarlierClassPageRef = pageRef("MasteryEarlierClassPage", EarlierClassRowRef);
+
 builder.queryFields((t) => ({
   masteryStudentDiagnosis: t.field({
     type: StudentDiagnosisRef,
@@ -429,6 +454,21 @@ builder.queryFields((t) => ({
     authScopes: { hasPermission: "mastery:view" },
     args: { sectionId: t.arg.string({ required: true }), subject: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => sectionHeatmap(args.sectionId, args.subject as MasterySubject, authOf(ctx)),
+  }),
+
+  masteryEarlierClassSummary: t.field({
+    type: EarlierClassPageRef,
+    description:
+      "PR-B (D-#1315): the EARLIER-class codes this section has evidence on (a baseline sheet) — label, class, students " +
+      "assessed, weak count and the weak students, each judged by its own class's policy. Paged; empty when none.",
+    authScopes: { hasPermission: "mastery:view" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => earlierClassSummary(args.sectionId, args.subject as MasterySubject, args, authOf(ctx)),
   }),
 
   masterySchoolRollup: t.field({

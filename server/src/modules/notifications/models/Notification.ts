@@ -99,6 +99,7 @@ export interface NotificationRefs {
    *  screen is their own child's class — but they ride along for both recipients so
    *  the row explains itself in the inbox. */
   syllabusId?: string;
+  /** Also the exam on an EX-8/EX-9 notice (custody handover/dispute, results submitted/published). */
   examId?: string;
   classId?: string;
   subject?: string;

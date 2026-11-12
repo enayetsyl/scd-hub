@@ -63,7 +63,7 @@ export function roundStateTone(s: string): Tone {
 }
 
 /** "LO-C1-MATH-07-03.2" → "07-03.2"; "LO-C1-MATH-SK-COL-01" → "COL-01". */
-export const codeTail = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-Z]+-(SK-)?/, "");
+export const codeTail = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-Z][A-Z0-9]*-(SK-)?/, "");
 
 /**
  * The exercises box → refs, ONE PER LINE only (D-#1284). A lesson name may hold a comma

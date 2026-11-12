@@ -452,6 +452,18 @@ export type VocabStackParamList = {
 };
 
 /** Class Test tracker (CT-5) — staff stack (tracker:read || roster:manage tab). */
+/** Exams (EX-1..EX-9, docs/prd-exams.md). `ExamHome` takes NO params and MUST stay the
+ *  first screen registered in the stack — a param-requiring screen in that position
+ *  becomes the initial route and crashes the tab on mount, which neither tsc nor the
+ *  web export catches. */
+export type ExamsStackParamList = {
+  ExamHome: undefined;
+  ExamMarkGrid: { paperId: string; title?: string };
+  ExamRecheck: { paperId: string; title?: string };
+  ExamCustody: { examId: string; paperId?: string; title?: string };
+  ExamReportCard: { examId: string; studentId: string; title?: string };
+};
+
 export type ClassTestStackParamList = {
   StudentProfile: StudentProfileParams;
   ClassTestHome: undefined;
@@ -615,7 +627,10 @@ export type MasteryStackParamList = {
   MasteryPolicy: undefined;
   /** M-2: param-free — the drawer leaf; the screen picks its own section and subject. */
   MasteryWork: undefined;
-  MasteryNewPaper: { sectionId: string; subject: string; classLevel: number };
+  /** PR-C: `classTestId` pre-picks the class test the CT sheet will own (opened from the class test). */
+  MasteryNewPaper: { sectionId: string; subject: string; classLevel: number; classTestId?: string; date?: string };
+  /** PR-D: extra homework for weak children of one শাখা × subject. */
+  MasteryExtraHomework: { sectionId: string; subject: string };
   MasteryEntry: { paperId: string };
   /** M-3: diagnosis views + quality report (all param-requiring — never register one first). */
   MasteryHeatmap: { sectionId: string; subject: string };
@@ -855,6 +870,8 @@ export type TabParamList = {
   PopupNoticesTab: NavigatorScreenParams<PopupStackParamList>;
   VocabTab: NavigatorScreenParams<VocabStackParamList>;
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
+  /** Exams / report cards / script custody (EX-1..EX-9, D-#375–#382). */
+  ExamsTab: NavigatorScreenParams<ExamsStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
   FreeMixingTab: NavigatorScreenParams<FreeMixingStackParamList>;

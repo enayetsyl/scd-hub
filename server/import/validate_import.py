@@ -27,6 +27,12 @@ v0.2 diff vs v0.1 (Project-04 ratification, R-IMP5):
   - The REF-21 advisory scan stays PLAN-SURFACE-ONLY: questions deliberately get NO import
     curation scan (Project-04 decision 5-B; the build-side REF-01+REF-21 self-scan is the gate).
 
+v1.2 diff vs v1.1 (2026-11-11, D-#1310/#1311 — 2027 content subjects + Class 6):
+  - subject += ISLAM, ICT, BAN2, ENG2; class_level 1..6 (schemas). A plan's "ISL" (the P09
+    plan tools' spelling) equals the envelope's "ISLAM" at L3.
+  - ref19_topic_id leaves the payload schema's `required`: L4 requires it for every subject
+    except ISLAM / ICT (no REF-19 slugs), where it is optional and unchecked.
+
 v1.1 diff vs v1.0 (2026-08-15, Principal ruling — batch import):
   - doc_type += 'question_batch', a WRAPPER carrying N standard question envelopes.
   - New L1b pass (layer1_batch): batch.item_count MUST equal len(items) and the batch must
@@ -60,7 +66,18 @@ def advise(code, msg): ADVISORIES.append((code, msg))
 PLAN_DOC_TYPES = {"chapter_plan", "session_plan"}
 BATCH_DOC_TYPE = "question_batch"   # contract v1.1 — wrapper; L1 only (see layer1_batch)
 BATCH_MAX_ITEMS = 500               # size guard; mirrors shared/vocab.ts BATCH_MAX_ITEMS
-STIM_ID_RE = re.compile(r"^STIM-[A-Z]+-C[1-5]-U\d+(-L\d+)?-\d{2,}$")
+STIM_ID_RE = re.compile(r"^STIM-[A-Z][A-Z0-9]*-C[1-6]-U\d+(-L\d+)?-\d{2,}$")
+
+# v1.2 (D-#1310/#1311): content subjects without REF-19 slugs. For these a question's
+# ref19_topic_id is optional and, when present, is not checked against the registry. Every
+# other subject (BAN ENG MATH SCI BGS BAN2 ENG2 — the 2nd papers use the BAN- / ENG- slugs)
+# must carry one. Mirrors shared/vocab.ts REF19_OPTIONAL_SUBJECTS.
+REF19_OPTIONAL_SUBJECTS = {"ISLAM", "ICT"}
+
+# The Project 09 plan tools (plan-tools/LOCKED_SCD_PlanSchema_v2.json) spell Islamic Studies
+# "ISL"; the app's content code is "ISLAM". The two name one subject (D-#1310).
+SUBJECT_ALIASES = {"ISL": "ISLAM"}
+def _canon_subject(s): return SUBJECT_ALIASES.get(s, s)
 
 # REF-19 canonical topic slugs (auto-extracted from LOCKED_REF-19 v1.10, 2026-06-09; the
 # doc-reference artifact 'BGS-REF19' excluded). This is the DEFAULT registry for the hard
@@ -148,7 +165,10 @@ def consistency(env):
     p = env.get("payload", {})
     if dt in PLAN_DOC_TYPES:
         for field in ("subject", "class_level", "curation_tag"):
-            if field in env and field in p and env[field] != p[field]:
+            ev, pv = env.get(field), p.get(field)
+            if field == "subject":
+                ev, pv = _canon_subject(ev), _canon_subject(pv)
+            if field in env and field in p and ev != pv:
                 fail("XF", f"envelope.{field}={env[field]!r} != payload.{field}={p[field]!r}")
         addr, div = env.get("address"), p.get("division")
         if addr and div:
@@ -177,7 +197,7 @@ def consistency(env):
 # ---- L4: question semantics (not expressible in JSON Schema) ------------
 def _sum_eq(a, b): return abs(a - b) < 1e-9
 
-_LO_SUBJECTS = {"BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM"}
+_LO_SUBJECTS = {"BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM", "ICT", "BAN2", "ENG2"}
 
 
 def lo_code_semantics(env, p):
@@ -272,8 +292,14 @@ def question_semantics(env, ref19_slugs):
                  "'model_answer' (exam-bank বড় প্রশ্ন), or both — neither is present")
 
     slug = p.get("ref19_topic_id")
-    if slug and slug not in ref19_slugs:
+    subj = env.get("subject")
+    if subj in REF19_OPTIONAL_SUBJECTS:
+        pass  # D-#1311: no REF-19 slugs exist for ISLAM / ICT — optional and unchecked.
+    elif not slug:
+        fail("REF19", f"ref19_topic_id is required for subject {subj!r} (only {sorted(REF19_OPTIONAL_SUBJECTS)} may omit it)")
+    elif slug not in ref19_slugs:
         fail("REF19", f"ref19_topic_id '{slug}' not in the REF-19 registry ({len(ref19_slugs)} slugs)")
+
 
     sref = p.get("stimulus_ref")
     if sref and not STIM_ID_RE.match(sref):

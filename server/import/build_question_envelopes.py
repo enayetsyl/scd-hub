@@ -66,8 +66,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_ENV_SCHEMA = os.path.normpath(os.path.join(HERE, "..", "..", "docs", "import-contract.schema.json"))
 
 # Identity parsers (the qid/stimulus_id schemes the LOCKED payloads pin down).
-QID_RE = re.compile(r"^QP-([A-Z]+)-C([1-5])-U(\d+)(?:-L\d+)?-Q\d{2,}$")
-STIM_RE = re.compile(r"^STIM-([A-Z]+)-C([1-5])-U(\d+)(?:-L\d+)?-\d{2,}$")
+QID_RE = re.compile(r"^QP-([A-Z][A-Z0-9]*)-C([1-6])-U(\d+)(?:-L\d+)?-Q\d{2,}$")  # C6 + BAN2 (D-#1310)
+STIM_RE = re.compile(r"^STIM-([A-Z][A-Z0-9]*)-C([1-6])-U(\d+)(?:-L\d+)?-\d{2,}$")
 
 
 def die(msg, code=2):

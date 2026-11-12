@@ -5,6 +5,11 @@
  * (D-#85). Prior results prefill the form. enterClassTestResult rides tracker:write +
  * the server section verify (only on/after the exam date) — the Bangla deny surfaces
  * inline. → Publish for the same exam.
+ *
+ * PR-C (D-#1319/#1320): where mastery is on for the class × subject × year, a "প্রশ্নভিত্তিক শিট" row
+ * opens the linked question sheet or creates one. While a sheet owns the test, marks and absence are
+ * read-only here (they come from the sheet) — only the three comments are typed; before the sheet is
+ * confirmed nothing can be entered. The server refuses a different mark too.
  */
 import React, { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -32,9 +37,12 @@ import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 import { AiCheckPanel, gateMessage, useAiCommentCheck } from "../../components/AiCommentCheck";
+import { CtWeakObjectivePicker, CtWeakObjectivesShown, useCtWeakLoAvailable } from "../../components/CtWeakObjectivePicker";
+import { MASTERY_CLASS_TEST_SHEET_QUERY, type MasteryClassTestSheetLink } from "../../graphql/mastery";
 
 type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestResults">;
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
+type CrossNav = { navigate: (name: string, params?: object) => void };
 
 export default function ClassTestResultsScreen({ route }: Props): React.ReactElement {
   const { testId, title } = route.params;
@@ -53,6 +61,16 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
 
   const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
+  // PR-C: the question sheet that owns this test's totals (only where mastery is switched on).
+  const [sheetQ] = useQuery({
+    query: MASTERY_CLASS_TEST_SHEET_QUERY,
+    variables: { classTestId: testId },
+    pause: !can("mastery:view"),
+    requestPolicy: "cache-and-network",
+  });
+  const sheetLink = (sheetQ.data?.masteryClassTestSheet ?? null) as MasteryClassTestSheetLink | null;
+  const sheetOwns = !!sheetLink?.paperId;
+  const sheetConfirmed = sheetLink?.entryState === "CONFIRMED";
   // D-#507: the exam's OWN roster — the section's students, or the Arabic group's
   // members. `studentsInSection` cannot answer for a group exam: its students come
   // from several sections, so the server resolves the roster per anchor instead.
@@ -152,6 +170,9 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const [weakness, setWeakness] = useState("");
   const [teacherAction, setTeacherAction] = useState("");
   const [guardianAction, setGuardianAction] = useState("");
+  // D-#1360: weak objectives — only where the class × subject has a LOCKED catalogue.
+  const [weakLoCodes, setWeakLoCodes] = useState<string[]>([]);
+  const weakLoOn = useCtWeakLoAvailable(testId, !test || !!test.subjectGroupId);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // AI-5 (D-#1095): the class-test comment check (weakness / teacher / guardian action).
@@ -167,6 +188,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     setWeakness(existing?.weakness ?? "");
     setTeacherAction(existing?.teacherAction ?? "");
     setGuardianAction(existing?.guardianAction ?? "");
+    setWeakLoCodes(existing?.weakLoCodes ?? []);
     // D-#1175: comments loaded from an earlier save may be re-saved unchanged without a check.
     ai.settle([
       { field: "weakness", text: existing?.weakness ?? "" },
@@ -206,6 +228,8 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       weakness: status === "PRESENT" ? weakness.trim() || null : null,
       teacherAction: status === "PRESENT" ? teacherAction.trim() || null : null,
       guardianAction: status === "PRESENT" ? guardianAction.trim() || null : null,
+      // D-#1360: sent only where the picker shows; null keeps what is stored.
+      weakLoCodes: status === "PRESENT" && weakLoOn ? weakLoCodes : null,
     });
     setBusy(false);
     if (res.error) {
@@ -282,10 +306,43 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       </Screen>
     );
   }
+  // PR-C: open or create the question sheet (cross-tab: the sheet lives in the mastery stack).
+  const sheetRow =
+    sheetLink?.enabled && sheetLink.sectionId && sheetLink.classLevel !== null ? (
+      <Card>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>
+          <Body style={{ fontWeight: "700" }}>{STR.ctSheetRow}</Body>
+          {sheetLink.paperId ? (
+            <Button
+              title={STR.ctSheetOpen}
+              variant="secondary"
+              onPress={() =>
+                (nav as unknown as CrossNav).navigate("MasteryTab", { screen: "MasteryEntry", params: { paperId: sheetLink.paperId }, initial: false })
+              }
+            />
+          ) : can("mastery:create") ? (
+            <Button
+              title={STR.ctSheetCreate}
+              variant="secondary"
+              onPress={() =>
+                (nav as unknown as CrossNav).navigate("MasteryTab", {
+                  screen: "MasteryNewPaper",
+                  params: { sectionId: sheetLink.sectionId, subject: test.subject, classLevel: sheetLink.classLevel, classTestId: testId },
+                  initial: false,
+                })
+              }
+            />
+          ) : null}
+        </View>
+        {sheetLink.paperId ? <Muted>{sheetConfirmed ? STR.ctSheetOwnsMarks : STR.ctSheetConfirmFirst}</Muted> : null}
+      </Card>
+    ) : null;
+
   if (test.status !== "PRINTED") {
     return (
       <Screen>
         <Notice message={STR.ctNotPrinted} tone="warn" />
+        {sheetRow}
       </Screen>
     );
   }
@@ -293,6 +350,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
+        {sheetRow}
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
           {/* Class FIRST: the title carries only subject + test number, so an admin
@@ -459,7 +517,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                   ) : null}
                 </View>
 
-                {isAdmin && !isOpen && existing && existing.status !== "ABSENT" && (existing.weakness || existing.teacherAction || existing.guardianAction) ? (
+                {isAdmin && !isOpen && existing && existing.status !== "ABSENT" && (existing.weakness || existing.teacherAction || existing.guardianAction || existing.weakObjectives?.length) ? (
                   // Admin read-only view of the teacher's comments (owner ask 2026-07-21).
                   // Teacher entry behavior below is unchanged — this block is display-only.
                   <View style={{ marginTop: space(2) }}>
@@ -467,6 +525,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                     {existing.weakness ? (
                       <Muted>{`${STR.ctWeakness}: ${existing.weakness}`}</Muted>
                     ) : null}
+                    <CtWeakObjectivesShown items={existing.weakObjectives} />
                     {existing.teacherAction ? (
                       <Muted>{`${STR.ctTeacherAction}: ${existing.teacherAction}`}</Muted>
                     ) : null}
@@ -488,20 +547,34 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                   <View style={{ marginTop: space(2) }}>
                     <Muted>{STR.ctSubmittedLocked}</Muted>
                   </View>
+                ) : sheetOwns && !sheetConfirmed ? (
+                  // PR-C: the sheet writes the marks — nothing is typed until it is confirmed.
+                  <View style={{ marginTop: space(2) }}>
+                    <Muted>{STR.ctSheetConfirmFirst}</Muted>
+                  </View>
                 ) : !isOpen ? (
                   <View style={{ marginTop: space(2) }}>
                     <Button title={STR.ctMark} variant="secondary" onPress={() => openStudent(s.id)} />
                   </View>
                 ) : (
                   <View style={{ marginTop: space(2) }}>
+                    {/* PR-C: on a sheet-owned test the status and mark are shown, not typed. */}
+                    {sheetOwns ? <Muted>{STR.ctSheetOwnsMarks}</Muted> : null}
                     <View style={{ flexDirection: "row", gap: space(2) }}>
-                      <Chip label={STR.ctPresent} selected={status === "PRESENT"} onPress={() => setStatus("PRESENT")} />
-                      <Chip label={STR.ctAbsent} selected={status === "ABSENT"} onPress={() => setStatus("ABSENT")} />
+                      <Chip label={STR.ctPresent} selected={status === "PRESENT"} onPress={() => (sheetOwns ? undefined : setStatus("PRESENT"))} />
+                      <Chip label={STR.ctAbsent} selected={status === "ABSENT"} onPress={() => (sheetOwns ? undefined : setStatus("ABSENT"))} />
                     </View>
                     {status === "PRESENT" ? (
                       <>
-                        <Field label={`${STR.ctMarks} (0–${bnNum(test.totalMarks)})`} value={marks} onChangeText={setMarks} keyboardType="number-pad" />
+                        <Field
+                          label={`${STR.ctMarks} (0–${bnNum(test.totalMarks)})`}
+                          value={marks}
+                          onChangeText={setMarks}
+                          keyboardType="number-pad"
+                          editable={!sheetOwns}
+                        />
                         <Field label={STR.ctWeakness} value={weakness} onChangeText={setWeakness} />
+                        {weakLoOn ? <CtWeakObjectivePicker testId={testId} value={weakLoCodes} onChange={setWeakLoCodes} disabled={busy} /> : null}
                         <Field label={STR.ctTeacherAction} value={teacherAction} onChangeText={setTeacherAction} helper={STR.ctTeacherActionHint} />
                         <Field label={STR.ctGuardianAction} value={guardianAction} onChangeText={setGuardianAction} />
                         <AiCheckPanel

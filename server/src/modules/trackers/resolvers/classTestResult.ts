@@ -17,6 +17,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import {
+  ClassTestResultError,
   enterResult,
   studentResult,
   testResults,
@@ -24,6 +25,7 @@ import {
   type ClassTestResultShape,
   type ExamReportStatus,
 } from "../services/ClassTestResultService";
+import { weakLoLabels } from "../services/ClassTestWeakObjectiveService";
 import { getClassTest } from "../services/ClassTestService";
 import {
   publishResult,
@@ -72,6 +74,11 @@ async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
 // GraphQL shapes
 // ---------------------------------------------------------------------------
 
+const WeakObjectiveLabelRef = builder.objectRef<{ code: string; labelBn: string }>("ClassTestWeakObjectiveLabel").implement({
+  description: "A picked weak objective on a class-test result: its code and catalogue label (D-#1360, staff only).",
+  fields: (t) => ({ code: t.exposeString("code"), labelBn: t.exposeString("labelBn") }),
+});
+
 const ClassTestResultRef = builder.objectRef<ClassTestResultShape>("ClassTestResult");
 ClassTestResultRef.implement({
   description:
@@ -89,6 +96,14 @@ ClassTestResultRef.implement({
     weakness: t.string({ nullable: true, resolve: (r) => r.weakness }),
     teacherAction: t.string({ nullable: true, resolve: (r) => r.teacherAction }),
     guardianAction: t.string({ nullable: true, resolve: (r) => r.guardianAction }),
+    weakLoCodes: t.exposeStringList("weakLoCodes", {
+      description: "D-#1360: the weak objective codes the teacher picked (≤ 5; [] when none).",
+    }),
+    weakObjectives: t.field({
+      type: [WeakObjectiveLabelRef],
+      description: "D-#1360: each picked code with its catalogue label (staff read).",
+      resolve: (r) => weakLoLabels(r.weakLoCodes),
+    }),
     submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
     sendBackReason: t.string({ nullable: true, resolve: (r) => r.sendBackReason }),
     publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
@@ -150,6 +165,8 @@ builder.mutationField("enterClassTestResult", (t) =>
       weakness: t.arg.string({ required: false }),
       teacherAction: t.arg.string({ required: false }),
       guardianAction: t.arg.string({ required: false }),
+      // D-#1360: weak objective codes. Omitted keeps the stored ones; [] clears.
+      weakLoCodes: t.arg.stringList({ required: false }),
       // AI-5 (D-#1095): the comment-check claim — a token from checkComment + the writer's choices.
       aiCheckToken: t.arg.string({ required: false }),
       aiIssuesAccepted: t.arg.int({ required: false }),
@@ -166,6 +183,11 @@ builder.mutationField("enterClassTestResult", (t) =>
         "enter_classtest_result",
         CLASS_TEST_REACH,
       );
+      // PR-C (D-#1319): while a question sheet owns this test's totals, a mark or status that differs
+      // from the sheet's is refused here (comments still save). Lazy import: mastery imports trackers.
+      const { classTestEntryGuard } = await import("../../mastery/classTestLink");
+      const sheetRefusal = await classTestEntryGuard(args.testId, args.studentId, args.status, args.marks);
+      if (sheetRefusal) throw new ClassTestResultError(sheetRefusal);
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,
@@ -174,6 +196,7 @@ builder.mutationField("enterClassTestResult", (t) =>
         weakness: args.weakness ?? undefined,
         teacherAction: args.teacherAction ?? undefined,
         guardianAction: args.guardianAction ?? undefined,
+        weakLoCodes: args.weakLoCodes ?? undefined,
         actorId: ctx.auth.userId as string,
         // AI-5 (D-#1095): stamp only a PRESENT row that has comment text.
         aiCheck:

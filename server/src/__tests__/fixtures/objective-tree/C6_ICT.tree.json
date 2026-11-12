@@ -1,0 +1,125 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C6",
+ "subject": "ICT",
+ "status": "DRAFT",
+ "source": {
+  "book": "TEST FIXTURE — C6 ICT (D-#1312)",
+  "files": [],
+  "readOn": "2026-11-11"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "তথ্য ও যোগাযোগ প্রযুক্তি পরিচিতি"
+  },
+  {
+   "number": 2,
+   "titleBn": "নিরাপদ ব্যবহার"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-MCQ",
+   "labelBn": "সঠিক উত্তর নির্বাচন (MCQ)",
+   "marksBn": "১",
+   "examUse": null
+  },
+  {
+   "code": "QT-SHORT",
+   "labelBn": "সংক্ষিপ্ত উত্তর",
+   "marksBn": "২",
+   "examUse": null
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 4,
+  "mapped": 4,
+  "unmapped": [],
+  "note": "test fixture"
+ },
+ "nodes": [
+  {
+   "code": "LO-C6-ICT-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ICT-DEVICE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "কম্পিউটারের প্রধান অংশগুলোর নাম ও কাজ বলা",
+   "sourceText": "কম্পিউটারের প্রধান অংশগুলোর নাম ও কাজ বলা",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/1",
+     "1/অনুশীলনী/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ"
+   ],
+   "homeTipBn": "বাড়িতে যে যন্ত্র আছে তা দেখিয়ে কাজটি মুখে বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ICT-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ICT-DEVICE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "ইনপুট ও আউটপুট যন্ত্র আলাদা করা",
+   "sourceText": "ইনপুট ও আউটপুট যন্ত্র আলাদা করা",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "বাড়িতে যে যন্ত্র আছে তা দেখিয়ে কাজটি মুখে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C6-ICT-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ICT-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ICT-SAFE",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "পাসওয়ার্ড গোপন রাখার কারণ ব্যাখ্যা করা",
+   "sourceText": "পাসওয়ার্ড গোপন রাখার কারণ ব্যাখ্যা করা",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "বাড়িতে যে যন্ত্র আছে তা দেখিয়ে কাজটি মুখে বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  }
+ ],
+ "flags": []
+}
