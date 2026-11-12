@@ -46,18 +46,29 @@ export interface ProfileHeaderT {
   guardians: ProfileGuardianT[];
   academicYear: ProfileAcademicYearT | null;
   fullView: boolean;
+  /** YC-2: the years the child was enrolled in (newest first) — the year picker. */
+  enrolledYears: ProfileYearOptionT[];
+  /** YC-2: the header shows a past year (view only). */
+  pastYear: boolean;
+}
+
+export interface ProfileYearOptionT {
+  academicYearId: string;
+  label: string;
+  current: boolean;
 }
 
 export const STUDENT_PROFILE_HEADER_QUERY = gql<
   { studentProfileHeader: ProfileHeaderT },
-  { studentId: string }
+  { studentId: string; academicYearId?: string | null }
 >`
-  query StudentProfileHeader($studentId: String!) {
-    studentProfileHeader(studentId: $studentId) {
+  query StudentProfileHeader($studentId: String!, $academicYearId: String) {
+    studentProfileHeader(studentId: $studentId, academicYearId: $academicYearId) {
       studentId schoolId name nameBn rollNumber gender dob bloodGroup phone address
-      classLevel sectionId sectionNameBn classTeacherName fullView
+      classLevel sectionId sectionNameBn classTeacherName fullView pastYear
       guardians { guardianId name relation phone primary }
       academicYear { academicYearId label fromKey toKey }
+      enrolledYears { academicYearId label current }
     }
   }
 `;

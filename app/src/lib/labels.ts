@@ -6702,6 +6702,8 @@ const STR_BN = {
   spPrintSheet: "প্রোফাইল প্রিন্ট (PDF)",
   spPrintFailed: "PDF তৈরি করা যায়নি",
   spNoStudent: "কোনো শিক্ষার্থী নির্বাচন করা হয়নি",
+  spAcademicYear: "শিক্ষাবর্ষ",
+  spPastYearReadOnly: "আগের শিক্ষাবর্ষ — শ্রেণি, শাখা ও তথ্য সেই বছরের; শুধু দেখা যাবে।",
   // Tabbed profile (2026-09-30)
   spTabDashboard: "ড্যাশবোর্ড",
   spTabProfile: "প্রোফাইল",
@@ -14922,6 +14924,8 @@ const STR_EN: StrTable = {
   spPrintSheet: "Print profile (PDF)",
   spPrintFailed: "Could not generate the PDF",
   spNoStudent: "No student selected",
+  spAcademicYear: "Academic year",
+  spPastYearReadOnly: "A past academic year — that year's class, section and records; view only.",
   // Tabbed profile (2026-09-30)
   spTabDashboard: "Dashboard",
   spTabProfile: "Profile",

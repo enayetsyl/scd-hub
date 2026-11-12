@@ -12,6 +12,12 @@
  * academic year to date (the calendar moves month by month locally, and the second
  * pie is the year); homework / assignment / complaints follow the range chips.
  *
+ * YEAR PICKER (YC-2, D-#1473): a child enrolled in more than one academic year gets a
+ * year row above the tabs (default: the current year). A past year re-reads the header
+ * (that year's class, section and class teacher) and windows every dated tab to that
+ * year; it is view only. Class test, lessons and the dashboard's whole picture are not
+ * year-bound yet (YC-7).
+ *
  * NARROWING (§4/D-#357): a subject teacher sees only their own subjects on the
  * homework / assignment / class-test tabs; the screen says so explicitly, because a
  * partial panel that looks complete is worse than no panel.
@@ -85,12 +91,16 @@ export default function StudentProfileScreen(): React.ReactElement {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const todayKey = dateKey();
 
+  // YC-2: null = the current year (the server's default window).
+  const [yearId, setYearId] = useState<string | null>(null);
   const [headerQ] = useQuery({
     query: STUDENT_PROFILE_HEADER_QUERY,
-    variables: { studentId },
+    variables: { studentId, academicYearId: yearId },
     pause: !studentId,
   });
   const header = headerQ.data?.studentProfileHeader ?? null;
+  const pastYear = !!header?.pastYear;
+  const yearOptions = header?.enrolledYears ?? [];
 
   // The range chips (homework / assignment / complaints) default to the academic year
   // to date (D-#358); the header supplies it. A local control rather than
@@ -100,12 +110,14 @@ export default function StudentProfileScreen(): React.ReactElement {
   const [mode, setMode] = useState<"year" | "d30" | "d90" | "custom">("year");
   const [customFrom, setCustomFrom] = useState(keyDaysAgo(30));
   const [customTo, setCustomTo] = useState(dateKey());
+  // A past year has no "last 30/90 days": those chips are hidden and fall back to the year.
+  const effMode = pastYear && (mode === "d30" || mode === "d90") ? "year" : mode;
   const fromKey =
-    mode === "custom" ? customFrom
-    : mode === "d30" ? keyDaysAgo(30)
-    : mode === "d90" ? keyDaysAgo(90)
+    effMode === "custom" ? customFrom
+    : effMode === "d30" ? keyDaysAgo(30)
+    : effMode === "d90" ? keyDaysAgo(90)
     : (year?.fromKey ?? keyDaysAgo(90));
-  const toKey = mode === "custom" ? customTo : (mode === "year" ? (year?.toKey ?? dateKey()) : dateKey());
+  const toKey = effMode === "custom" ? customTo : (effMode === "year" ? (year?.toKey ?? dateKey()) : dateKey());
   const rangeVars = { studentId, fromKey, toKey };
   // The fixed year-to-date window: attendance's calendar + year pie, and the
   // dashboard's concern count.
@@ -114,7 +126,7 @@ export default function StudentProfileScreen(): React.ReactElement {
   // Each tab waits until it is opened — and until the header has supplied the
   // year, so the default window never fires a throwaway request with fallback bounds.
   const headerReady = !!studentId && !!headerQ.data;
-  const rangeReady = !!studentId && (mode !== "year" || headerReady);
+  const rangeReady = !!studentId && (effMode !== "year" || headerReady);
   const onTab = (...keys: ProfileTabKey[]) => keys.includes(tab);
 
   const [wpQ] = useQuery({
@@ -176,14 +188,18 @@ export default function StudentProfileScreen(): React.ReactElement {
       <ChipRow>
         <Chip
           label={year ? `${STR.spYearToDate} (${year.label})` : STR.spYearToDate}
-          selected={mode === "year"}
+          selected={effMode === "year"}
           onPress={() => setMode("year")}
         />
-        <Chip label={STR.spLast30} selected={mode === "d30"} onPress={() => setMode("d30")} />
-        <Chip label={STR.spLast90} selected={mode === "d90"} onPress={() => setMode("d90")} />
-        <Chip label={STR.spCustom} selected={mode === "custom"} onPress={() => setMode("custom")} />
+        {pastYear ? null : (
+          <>
+            <Chip label={STR.spLast30} selected={effMode === "d30"} onPress={() => setMode("d30")} />
+            <Chip label={STR.spLast90} selected={effMode === "d90"} onPress={() => setMode("d90")} />
+          </>
+        )}
+        <Chip label={STR.spCustom} selected={effMode === "custom"} onPress={() => setMode("custom")} />
       </ChipRow>
-      {mode === "custom" ? (
+      {effMode === "custom" ? (
         <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
           <View style={{ flex: 1 }}>
             <DateField label={STR.rptFrom} value={customFrom} onChange={setCustomFrom} />
@@ -228,6 +244,29 @@ export default function StudentProfileScreen(): React.ReactElement {
   ) : (
     <IdentityCard header={header} fallbackName={studentName} narrowed={narrowed} footer={printButton} />
   );
+
+  // YC-2: the year picker — only when the child was enrolled in more than one year.
+  const yearPicker =
+    yearOptions.length > 1 ? (
+      <Card>
+        <Text style={{ color: colors.textSecondary, fontWeight: "600", marginBottom: space(2) }}>{STR.spAcademicYear}</Text>
+        <ChipRow>
+          {yearOptions.map((y) => (
+            <Chip
+              key={y.academicYearId}
+              label={y.label}
+              selected={(yearId ?? yearOptions.find((o) => o.current)?.academicYearId) === y.academicYearId}
+              onPress={() => setYearId(y.current ? null : y.academicYearId)}
+            />
+          ))}
+        </ChipRow>
+        {pastYear ? (
+          <View style={{ marginTop: space(2) }}>
+            <Notice message={STR.spPastYearReadOnly} tone="info" />
+          </View>
+        ) : null}
+      </Card>
+    ) : null;
 
   const tabBar = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -345,6 +384,7 @@ export default function StudentProfileScreen(): React.ReactElement {
       >
         <View style={{ width: sideBySide ? 300 : "100%" }}>{card}</View>
         <View style={{ flex: sideBySide ? 1 : undefined, width: sideBySide ? undefined : "100%", gap: space(3) }}>
+          {yearPicker}
           {tabBar}
           {content}
         </View>
