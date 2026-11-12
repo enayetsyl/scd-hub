@@ -343,7 +343,8 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     studentsByQid.set(r.qid, s);
   }
   for (const [q, s] of studentsByQid) exposure.set(q, s.size);
-  const bctx: BuilderContext = { outcomes: outcomeInfo, taught: new Set(sec.states.keys()), bank, marksOf: marks, exposure, layout };
+  const unmarkedTypes = new Set((await MasteryQuestionType.find({ classToken: ctx.classToken, subject: input.subject, active: true, marks: null }).select("code").lean()).map((t) => t.code));
+  const bctx: BuilderContext = { outcomes: outcomeInfo, taught: new Set(sec.states.keys()), bank, marksOf: marks, unmarkedTypes, exposure, layout };
 
   const sectionWeak = [...sec.states.entries()].map(([loCode, per]) => ({
     loCode,

@@ -180,7 +180,7 @@ async function lockedCheck(
     out.warnings.push(`[MASTERY-LO] ${code} is still DRAFT in the catalogue — imported, used once the catalogue is locked`);
   }
   for (const f of await questionTypeFindings(pair, code, payload)) {
-    out.refusals.push(`[MASTERY-QT] ${f} — set lesson_ref to a type ${code} allows, with the table's marks (the ${where} objective list is locked)`);
+    out.refusals.push(`[MASTERY-QT] ${f} — set lesson_ref to an active type of ${where}, with the table's marks (the ${where} objective list is locked)`);
   }
   out.warnings.push(...(await questionTypeNoMarksNotes(pair, payload)));
   return out;

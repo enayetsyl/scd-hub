@@ -124,7 +124,17 @@ describe("typed pickers (pure)", () => {
     // The layout still gates it, and so do the table's marks.
     expect(typeOfQuestion({ qtCode: "QT-MCQ" }, LO, { marksOf, layout: layout({ questionTypeCodes: ["QT-FILL"] }) })).toBeNull();
     expect(typeOfQuestion({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), layout: layout() })).toBeNull();
-    expect(hasNoMarksType({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), layout: layout() })).toBe(true);
+    // "No marks" is only for an ACTIVE table type whose marks are null; unknown / deactivated types are not.
+    expect(hasNoMarksType({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), layout: layout() })).toBe(false);
+    expect(hasNoMarksType({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), unmarkedTypes: new Set(["QT-MCQ"]), layout: layout() })).toBe(true);
+  });
+
+  it("PR-K: Part A offers a typed question outside the objective's suggestion, as Part B does", () => {
+    const bare: OutcomeInfo = { code: "LO-1", chapterNumber: 1, questionTypeCodes: [] };
+    const l = layout({ partAOn: true, partAMarks: 1, partALoCodes: ["LO-1"], partBMarks: 0 });
+    const c: BuilderContext = { ...ctx([q("Q-FILL", "QT-FILL")], l), outcomes: new Map([["LO-1", bare]]) };
+    expect(buildPartA([], 30, new Set(), c).map((i) => [i.qid, i.questionTypeCode, i.marks])).toEqual([["Q-FILL", "QT-FILL", 1]]);
+    expect(buildPartB(weak, { ...c, layout: layout({ partBMarks: 1 }) }).items.map((i) => i.qid)).toEqual(["Q-FILL"]);
   });
 
   it("PR-K: an untyped practice-only question is never picked by type or marks when the objective suggests no type", () => {
@@ -185,7 +195,7 @@ describe("typed pickers (pure)", () => {
   it("a typed question whose type has no marks is skipped with TYPE_HAS_NO_MARKS, not dropped silently", () => {
     const lo: OutcomeInfo = { code: "LO-1", chapterNumber: 1, questionTypeCodes: ["QT-FILL", "QT-WORD"] };
     const base = (bank: BankQuestion[], partBMarks = 1): BuilderContext => ({
-      outcomes: new Map([["LO-1", lo]]), taught: new Set(["LO-1"]), bank, marksOf: new Map([["QT-FILL", 1]]), exposure: new Map(),
+      outcomes: new Map([["LO-1", lo]]), taught: new Set(["LO-1"]), bank, marksOf: new Map([["QT-FILL", 1]]), unmarkedTypes: new Set(["QT-WORD"]), exposure: new Map(),
       layout: layout({ partBMarks }),
     });
     const mixed = buildPartB(weak, base([q("A-WORD", "QT-WORD"), q("B-FILL", "QT-FILL")]));
@@ -197,6 +207,7 @@ describe("typed pickers (pure)", () => {
     expect(hasNoMarksType({ qtCode: "QT-WORD" }, lo, base([]))).toBe(true);
     expect(hasNoMarksType({ qtCode: "QT-FILL" }, lo, base([]))).toBe(false);
     expect(hasNoMarksType({ qtCode: null }, lo, base([]))).toBe(false);
+    expect(hasNoMarksType({ qtCode: "QT-GONE" }, lo, base([]))).toBe(false); // unknown / deactivated: not "no marks"
   });
 
   it("pickTyped skips a candidate that cannot be offered and takes the next", () => {

@@ -31,7 +31,7 @@ import { getPolicy, isMasteryEnabled } from "./MasteryCatalogueService";
 import { MasteryWorkError, assertMayWork, dayOf, nextPaperId, rosterOf, sectionContext, type Auth } from "./MasteryWorkService";
 import { computeSection, liveSectionRows, sectionLabel } from "./MasteryDiagnosisService";
 import { goldBank, marksTable } from "./MasteryAssignmentService";
-import { pickTyped, typeFor } from "../assignmentBuilder";
+import { pickTyped } from "../assignmentBuilder";
 import { sectionOutcomeSummary, type DiagnosisPolicy } from "../diagnosis";
 import { notifyExtraClass, notifyProposal, outcomeNaming } from "../notify";
 
@@ -275,8 +275,6 @@ export async function buildRetest(id: string, auth: Auth): Promise<ActionDetail>
   ]);
   if (!outcome) throw new MasteryWorkError("শিখনফল পাওয়া যায়নি।");
   const info = { code: outcome.code, chapterNumber: outcome.chapterNumber ?? null, questionTypeCodes: outcome.questionTypeCodes ?? [] };
-  const qt = typeFor(info, { marksOf: marks, layout: { questionTypeCodes: [] } as never });
-  if (!qt) throw new MasteryWorkError("এই শিখনফলের প্রশ্নের ধরনের নম্বর ঠিক করা নেই।");
   const bank = await goldBank([a.loCode]);
   const exposure = new Map<string, number>();
   for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
