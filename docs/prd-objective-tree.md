@@ -104,7 +104,7 @@ locks. A domain may be added later (book of a new class); never deleted once loc
 
 **`MasteryOutcome`** gains:
 `level: OBJECTIVE|SUB`, `parentCode: string|null` (SUB ⇒ the OBJECTIVE's code), `domainCode`,
-`tagged: boolean`, `prereqCodes: string[]` (same subject, same or earlier class), `bookRef: {version, chapter,
+`tagged: boolean`, `prereqCodes: string[]` (same subject, same or earlier class; a `BAN2`/`ENG2` row may also name a live `BAN`/`ENG` row of the same or an earlier class — PR-P, one direction only), `bookRef: {version, chapter,
 lesson?, exercises: string[]}` (structured; replaces the free string), `claudeNote?`, `legacyCodes: string[]`,
 `reviewState: PROPOSED|ACCEPTED|EDITED|REJECTED|ADDED` (meaningful while DRAFT), `mergedInto?`.
 Invariants (enforced on import and on every review write): a SUB's parent exists, is an OBJECTIVE and has

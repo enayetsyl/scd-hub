@@ -221,7 +221,13 @@ export async function resolveEarlierSteps(
   };
 
   // Earlier-class prerequisites: the student's own live evidence on their tagged rows.
-  const cross = codes.filter((c) => (parseMasteryLoCode(c)?.classToken ?? classToken) !== classToken);
+  // A partner-subject code (BAN2 -> BAN, PR-P) is read like an earlier class: from the student's own evidence
+  // on that subject, never from this row's subject section states.
+  const isOther = (c: string): boolean => {
+    const p = parseMasteryLoCode(c);
+    return !!p && (p.classToken !== classToken || p.subject !== subject);
+  };
+  const cross = codes.filter(isOther);
   const crossLeaves = [...new Set(cross.flatMap(leavesOf))];
   const crossState = new Map<string, MasteryState>();
   if (crossLeaves.length > 0 && Types.ObjectId.isValid(studentId)) {
@@ -241,7 +247,7 @@ export async function resolveEarlierSteps(
 
   for (const code of codes) {
     const parsed = parseMasteryLoCode(code);
-    const isCross = (parsed?.classToken ?? classToken) !== classToken;
+    const isCross = isOther(code);
     const leaves = leavesOf(code);
     let state: MasteryState | null;
     let noData = false;
@@ -258,7 +264,9 @@ export async function resolveEarlierSteps(
       code,
       labelBn: rowBy.get(code)?.labelBn ?? code,
       classToken: parsed?.classToken ?? classToken,
-      crossClass: isCross,
+      // "Earlier class" tag only when the class really differs: a BAN2 row's same-class BAN step (PR-P)
+      // is looked up as external (other subject) but is not from an earlier class.
+      crossClass: (parsed?.classToken ?? classToken) !== classToken,
       state,
       noData,
     });

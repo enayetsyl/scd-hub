@@ -27,6 +27,7 @@ import {
   checkTreeInvariants,
   formatTreeViolation,
   isObjectiveTreeFile,
+  masteryPartnerSubject,
   readDomainsFile,
   readTreeFile,
   type DomainsFile,
@@ -544,9 +545,19 @@ async function importTree(raw: unknown, domainsJson: string | null, apply: boole
   // Prerequisites may name live codes of the same subject in an EARLIER class.
   const myIdx = (MASTERY_CLASS_TOKENS as readonly string[]).indexOf(classToken);
   const earlier = (MASTERY_CLASS_TOKENS as readonly string[]).slice(0, Math.max(0, myIdx));
-  const externalCodes = earlier.length
-    ? (await MasteryOutcome.find({ subject, classToken: { $in: earlier }, status: { $ne: "RETIRED" } }).select("code").lean()).map((o) => o.code)
-    : [];
+  // A 2nd-paper tree (BAN2 / ENG2) may also name live partner-subject codes (BAN / ENG) of the SAME class or earlier (PR-P).
+  const partner = masteryPartnerSubject(subject);
+  const externalCodes = (
+    await MasteryOutcome.find({
+      status: { $ne: "RETIRED" },
+      $or: [
+        ...(earlier.length ? [{ subject, classToken: { $in: earlier } }] : []),
+        ...(partner ? [{ subject: partner, classToken: { $in: [...earlier, classToken] } }] : []),
+      ],
+    })
+      .select("code")
+      .lean()
+  ).map((o) => o.code);
 
   const fileViolations = checkTreeInvariants({
     classToken,

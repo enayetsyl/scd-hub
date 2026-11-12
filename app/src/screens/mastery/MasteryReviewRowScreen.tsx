@@ -128,6 +128,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
     return <Screen scroll>{error ? <Notice message={error} tone="danger" /> : fetching ? <Loader /> : null}</Screen>;
   }
   const byCode = new Map(q.rows.map((x) => [x.code, x]));
+  const extLabel = new Map((q.externalLabels ?? []).map((x) => [x.code, x.labelBn]));
   const parent = r.parentCode ? byCode.get(r.parentCode) : undefined;
   const domain = q.domains.find((d) => d.code === r.domainCode);
   const kids = q.rows.filter((x) => x.parentCode === r.code && !isOut(x));
@@ -186,7 +187,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
         />
         {r.sourceText ? <Row label={STR.msRvBookWording} value={r.sourceText} /> : null}
         {r.prereqCodes.length ? (
-          <Row label={STR.msRvPrereq} value={r.prereqCodes.map((c) => `${byCode.get(c)?.labelBn ?? ""} (${codeTail(c)})`).join("\n")} />
+          <Row label={STR.msRvPrereq} value={r.prereqCodes.map((c) => `${byCode.get(c)?.labelBn ?? extLabel.get(c) ?? ""} (${codeTail(c)})`).join("\n")} />
         ) : null}
         {r.homeTipBn ? <Row label={STR.msRvHomeTip} value={r.homeTipBn} /> : null}
         {r.legacyCodes.length ? <Row label={STR.msRvLegacy} value={r.legacyCodes.join(", ")} /> : null}
