@@ -3,9 +3,9 @@
 > Generated from `C4_SCI.tree.json` (the source of truth) — edit the JSON, not this file. Contract: `docs/prd-objective-tree.md`.
 
 - **Status:** DRAFT — Claude draft for review by Mahzabin; the Principal locks. Codes become permanent at lock.
-- **Book:** C4_SCI_Book_v3_Writer-Reviewer — not yet printed (the latest Writer-Reviewer copy is the source) · read 2026-11-12
-  - `Book Review Material/Class 4 Sci/C4_SCI_Book_v3_Writer-Reviewer.md (+ .docx — the source: শিক্ষার্থীর পাতা, শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ ১–৬০)`
-  - `Book Review Material/Class 4 Sci/C4_SCI_Memo_v3.docx (সংস্করণ ৩-এর বদল: অধ্যায় ১০ বাদ, নক্ষত্রমণ্ডলের সংজ্ঞা; D-০৯ খোলা)`
+- **Book:** C4_SCI_Book_v3_Writer-Reviewer — FINAL (সংস্করণ ৩ চূড়ান্ত, ১২ নভেম্বর ২০২৬; পর্যালোচকের অনুমোদন সিদ্ধান্ত ৬১) — not yet printed · read 2026-11-12
+  - `Book Review Material/Class 4 Sci/C4_SCI_Book_v3_Writer-Reviewer.md (সংস্করণ ৩ চূড়ান্ত, ১২ নভেম্বর ২০২৬; + Student ও Teacher v3 — অনুশীলনী হুবহু একই; + .docx — the source: শিক্ষার্থীর পাতা, শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ ১–৬১)`
+  - `Book Review Material/Class 4 Sci/C4_SCI_Memo_v3.docx (সংস্করণ ৩-এর বদল: অধ্যায় ১০ বাদ, নক্ষত্রমণ্ডলের সংজ্ঞা; D-০৯ পরে অনুমোদিত — সিদ্ধান্ত ৬১)`
   - `Book Review Material/Feedback_C4_Science_Memo_Science_v2.pdf (পর্যালোচকের রাউন্ড ২-এর উত্তর — স্মারক v৩-এ সারসংক্ষেপ করা)`
   - `docs/mastery/objective-tree/C3_SCI.tree.json (আগের ধাপের কোড)`
 - **Counts:** 9 domains used · 37 objectives · 28 sub-objectives · 1 skill strands · **52 tagged rows**
@@ -416,7 +416,7 @@ Every one of the 270 numbered exercises maps to at least one tagged row.
 
 | Row | Kind | Flag |
 |---|---|---|
-| — | VERSION_DIFF | বইটি এখনো ছাপা হয়নি। উৎস: লেখক-পর্যালোচক কপি C4_SCI_Book_v3_Writer-Reviewer (১০ নভেম্বর ২০২৬; স্মারক v৩-এর D-০৯ — সংস্করণ ৩ অনুমোদন — পর্যালোচকের কাছে খোলা)। ছাপার সময় অনুশীলনীর নম্বর বা ক্রম সরতে পারে; ছাপা ফাইল এলে ২৭০টি নম্বরযুক্ত প্রশ্ন আবার মিলিয়ে দেখতে হবে, তারপরই লক। |
+| — | VERSION_DIFF | বইটি এখনো ছাপা হয়নি (ছাপা ফাইল নেই)। উৎস: লেখক-পর্যালোচক কপি C4_SCI_Book_v3_Writer-Reviewer — সংস্করণ ৩ চূড়ান্ত (১২ নভেম্বর ২০২৬; স্মারক v৩-এর D-০৯ পর্যালোচক অনুমোদন করেছেন, সিদ্ধান্ত ৬১)। চূড়ান্ত বইয়ের সাথে ১০ নভেম্বরের খসড়া-উৎস মিলিয়ে দেখা হয়েছে: অনুশীলনী, শিখনফল ও নম্বর বণ্টনে কোনো বদল নেই (গাছ অপরিবর্তিত)। ছাপার সময় অনুশীলনীর নম্বর বা ক্রম সরতে পারে; ছাপা ফাইল এলে ২৭০টি নম্বরযুক্ত প্রশ্ন আবার মিলিয়ে দেখতে হবে, তারপরই লক। |
 | — | WORDING_RULE_CONFLICT | অনুশীলনীর নির্দেশের ভাষা অধ্যায়ভেদে দুই রকম: অধ্যায় ১–৩ ও ৭–৯-এ "লেখো / ব্যাখ্যা করো / বর্ণনা করো" (যেমন ১/সংক্ষিপ্ত/৪, ৭/বিস্তৃত/১, ৯/বিস্তৃত/৪), অধ্যায় ৪–৬-এ "লিখি / দিই / ব্যাখ্যা করি" (যেমন ৪/সংক্ষিপ্ত/১, ৫/বিস্তৃত/১, ৬/বিস্তৃত/২)। শিরোনামগুলো সব "…করি / দিই / লিখি" রূপে। বই-দল এক রূপ বেছে নিলে ভালো। |
 | 01-01 | WORDING_RULE_CONFLICT | ১/টিক/৪-এর চতুর্থ বিকল্প "কোনোটিই নয়" — পরিশিষ্ট ৮-এর নিয়ম: বহুনির্বাচনিতে "উপরের সবগুলো" ধরনের বিকল্প নয়। "কোনোটিই নয়" একই ধরনের ফাঁকা বিকল্প; একটি সত্যিকারের ভুল উত্তর বসালে নিয়মের সাথে মেলে। |
 | 06-02 | WORDING_RULE_CONFLICT | ৬/শূন্যস্থান/১ ("চাপের সাহায্যে বল প্রয়োগে বস্তুর ------------ পরিবর্তন হয়।") — শিক্ষক-নোটে দুটি উত্তর গ্রহণযোগ্য ("আকৃতি"; "আয়তন লিখলেও সঠিক")। পরীক্ষার শূন্যস্থানে একটিই পূর্ণ শব্দ হওয়ার কথা (পরিশিষ্ট ৮); বাক্যটি একটি উত্তরে বাঁধলে ভালো। |
@@ -433,7 +433,7 @@ Every one of the 270 numbered exercises maps to at least one tagged row.
 
 **কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম ও বাড়ির টিপস দেখবেন। আগের ধাপ (prerequisite) তৃতীয় শ্রেণির বিজ্ঞানের সারি দেখায় (যেমন C3·04-03)।
 
-**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৩ (১০ নভেম্বর ২০২৬)। ছাপার পরে অনুশীলনীর নম্বর আবার মিলিয়ে তবেই লক করা উচিত।
+**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৩ — চূড়ান্ত (১২ নভেম্বর ২০২৬; পর্যালোচক অনুমোদন করেছেন)। ১০ নভেম্বরের খসড়ার সাথে চূড়ান্ত বইয়ের অনুশীলনী ও নম্বর বণ্টন হুবহু একই — গাছে কোনো সারি বদলায়নি। ছাপার পরে অনুশীলনীর নম্বর আবার মিলিয়ে তবেই লক করা উচিত।
 
 **আগে এগুলো দেখুন (Claude-এর বিচার):**
 1. **ভাগের নিয়ম:** শিখনফল তখনই ভাগ হয়েছে যখন দুই অংশ আলাদাভাবে ভুল হতে পারে *এবং* প্রতিটি অংশের অন্তত দুটি নম্বরযুক্ত অনুশীলনী আছে। তাই পরাগায়ন (একটি প্রশ্ন) ফুলের সারিতে (০১-০৩), আর সংজ্ঞা ("পদার্থ কী", "শক্তি কী", "গতি ও বল কী", "প্রাকৃতিক সম্পদ কী") নিকটতম সারির সাথে — আলাদা সারি নয়।
@@ -448,3 +448,32 @@ Every one of the 270 numbered exercises maps to at least one tagged row.
 **প্রশ্নের ধরন ও নম্বর** বইয়ের পরিশিষ্ট ২ থেকে হুবহু (বৃত্তি পরীক্ষা ২০২৬-এর কাঠামো দ্বিগুণ): টিক ১০×১, শূন্যস্থান ৫ + সত্য-মিথ্যা ৫, মিলকরণ ৮, সংক্ষিপ্ত ১২×২, বিস্তৃত ৮×৬ — কোনো ধরন যোগ হয়নি। QT-OBS শুধু শ্রেণির কাজের রুব্রিক।
 
 **বইয়ের সমস্যা বই-দলের জন্য:** নির্দেশের ভাষা দুই রকম ("লেখো" বনাম "লিখি"); ১/টিক/৪-এ "কোনোটিই নয়" বিকল্প; ৬/শূন্যস্থান/১-এ দুটি গ্রহণযোগ্য উত্তর; অনুশীলনী ছাড়া পাঁচটি শিখনফল-অংশ।
+
+## Final book — changes
+
+**Compared:** this tree (drafted 2026-11-12 from the Writer-Reviewer copy dated ১০ নভেম্বর ২০২৬) against the final `C4_SCI_Book_v3_Writer-Reviewer` (সংস্করণ ৩ — চূড়ান্ত, ১২ নভেম্বর ২০২৬) and the `Student` / `Teacher` v3 copies of the same date. The earlier markdown was overwritten, so the old copy was recovered from the drafting session and diffed line by line against the final book.
+
+**Result: the book's content did not change; the tree needs no row change.**
+
+| Check | Result |
+|---|---|
+| Numbered exercises | 270 in all three copies (9 chapters × 30: টিক 6 · শূন্যস্থান 5 · সত্য-মিথ্যা 5 · মিল 5 · সংক্ষিপ্ত 5 · বিস্তৃত 4); every exercise line of the Student and Teacher copies is identical to the Writer-Reviewer copy |
+| Exercise text, order, numbering | identical to the text the tree was drafted from (only blockquote/escaping formatting differs) |
+| শিখনফল (learning outcomes) per lesson | identical |
+| নম্বর বণ্টন / question types (পরিশিষ্ট ২) | identical — the 8 question types, marks and deductions are unchanged, so `questionTypes` is unchanged |
+| Chapters | still nine; chapter 10 (dropped in v3) stays out |
+| What did change in the book | version stamp (সংস্করণ ৩ — চূড়ান্ত, ১২ নভেম্বর), a new decision-log entry ৬১ ("সংস্করণ ৩ অনুমোদিত ও চূড়ান্ত", reviewer ticked memo D-০৯), a round-3 row in the feedback table, the open-questions list (none left; the আলেম-পর্যালোচনা of the nine chapter-intro sentences is still pending, decision ১৫), and table styling in the Word export |
+
+**Tree changes (metadata only):** `source.book`, `source.version` and the two `source.files` lines now name the final copy (decision-log ১–৬১; memo D-০৯ approved); the VERSION_DIFF flag and the "read first" note say the draft was checked against the final book and found unchanged; this section.
+
+| Counts | |
+|---|---|
+| Objectives added | 0 |
+| Labels changed | 0 |
+| Outcomes retired | 0 |
+| Exercises remapped | 0 |
+| Question types / marks changed | 0 |
+| Codes touched | none (code stability held) |
+| Coverage | 270 / 270 before → 270 / 270 after |
+
+**Still open:** the book is not printed (no `Print File/C4_SCI_Print_*` yet). When the print arrives, re-check the 270 numbers against it before the lock, as the VERSION_DIFF flag says.

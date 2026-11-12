@@ -3,13 +3,14 @@
 > Generated from `C5_SCI.tree.json` (the source of truth) — edit the JSON, not this file. Contract: `docs/prd-objective-tree.md`.
 
 - **Status:** DRAFT — Claude draft for review by Mahzabin; the Principal locks. Codes become permanent at lock.
-- **Book:** C5_SCI_Book_v4_Writer-Reviewer — not yet printed (the latest Writer-Reviewer copy is the source) · read 2026-11-12
-  - `Book Review Material/Class 5 Sci/C5_SCI_Book_v4_Writer-Reviewer.md (+ .docx — the source: শিক্ষার্থীর পাতা, শিক্ষক-নোট: শিখনফল, অনুশীলনীর উত্তর ও দক্ষতা-স্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ; মডেল টেস্ট ১–৩)`
-  - `Book Review Material/Class 5 Sci/C5_SCI_Memo_v4.docx (সংস্করণ ৪-এর বদল ও খোলা সিদ্ধান্ত)`
+- **Book:** C5_SCI_Book_v5_Writer-Reviewer — not yet printed (the latest Writer-Reviewer copy is the source) · read 2026-11-12
+  - `Book Review Material/Class 5 Sci/C5_SCI_Book_v5_Writer-Reviewer.md (+ .docx — the source: শিক্ষার্থীর পাতা, শিক্ষক-নোট: শিখনফল, অনুশীলনীর উত্তর ও দক্ষতা-স্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ; মডেল টেস্ট ১–৩)`
+  - `Book Review Material/Class 5 Sci/C5_SCI_Book_v5_Teacher.md, C5_SCI_Book_v5_Student.md (একই মাস্টার থেকে চূড়ান্ত শিক্ষক ও শিক্ষার্থী কপি; Writer-Reviewer কপির সাথে বিষয়বস্তু অভিন্ন ধরা হয়েছে)`
+  - `Book Review Material/Class 5 Sci/C5_SCI_Memo_v4.docx (সংস্করণ ৪-এর বদল ও সিদ্ধান্ত — সবই মীমাংসিত)`
   - `Downloads/Class_5_Science_Short_Long_Question_Structure.md + scholarship/ (বৃত্তি পরীক্ষা ২০২৬-এর কাঠামো — তুলনার জন্য, শুধু পড়া)`
   - `docs/mastery/objective-tree/C4_SCI.tree.json, C3_SCI.tree.json (আগের ধাপের কোড)`
 - **Counts:** 9 domains used · 54 objectives · 25 sub-objectives · 2 skill strands · **69 tagged rows**
-- **Coverage:** 534 / 534 numbered exercises mapped to a tagged row (0 unmapped). exercisesTotal = every numbered item of the Writer-Reviewer copy v4 (534): the twelve chapters' অনুশীলনী (462) — parts ১ বহুনির্বাচনি, ২ শূন্যস্থান, ৩ সত্য-মিথ্যা, ৫ সংক্ষিপ্ত, ৬ বিস্তৃত ((ক)… — the letter is the item number: ক=1, খ=2 …; a long question's "ক. … (৩)" lines are its marked halves, not separate items) and ৪ মিলকরণ (left-hand rows (ক)–(ঘ); chapters ৫, ৬, ১১ have two sets = 8 rows; the extra fifth right-hand option is not an item) — plus the three model tests at the end of the book (72; listed as chapter 13, part "টেস্ট N <ভাগ>"). Unnumbered "কাজ" blocks are activities ('<ch>/কাজ N/—', N = order in the chapter). The book is NOT printed yet — letters/numbers may move in the print.
+- **Coverage:** 534 / 534 numbered exercises mapped to a tagged row (0 unmapped). exercisesTotal = every numbered item of the Writer-Reviewer copy v5 (final; the text is identical to v4 — only the cover and the decision log changed) (534): the twelve chapters' অনুশীলনী (462) — parts ১ বহুনির্বাচনি, ২ শূন্যস্থান, ৩ সত্য-মিথ্যা, ৫ সংক্ষিপ্ত, ৬ বিস্তৃত ((ক)… — the letter is the item number: ক=1, খ=2 …; a long question's "ক. … (৩)" lines are its marked halves, not separate items) and ৪ মিলকরণ (left-hand rows (ক)–(ঘ); chapters ৫, ৬, ১১ have two sets = 8 rows; the extra fifth right-hand option is not an item) — plus the three model tests at the end of the book (72; listed as chapter 13, part "টেস্ট N <ভাগ>"). Unnumbered "কাজ" blocks are activities ('<ch>/কাজ N/—', N = order in the chapter). The book is NOT printed yet — letters/numbers may move in the print.
 
 Exercise refs read `অধ্যায়/অংশ/নম্বর` — অংশ = an অনুশীলনী part (বহুনির্বাচনি · শূন্যস্থান · সত্য-মিথ্যা · মিল · সংক্ষিপ্ত · বিস্তৃত; the item letter is the number, ক=১); chapter ১৩ = the three model tests at the end of the book (`১৩/টেস্ট ২ সংক্ষিপ্ত/৩`); "নম্বরহীন কাজ" = a lesson activity (কাজ) block. Codes are written without the `LO-C5-SCI-` prefix; an earlier class's code reads `C4·05-01.2`.
 
@@ -567,7 +568,7 @@ Every one of the 534 numbered exercises maps to at least one tagged row.
 
 | Row | Kind | Flag |
 |---|---|---|
-| — | VERSION_DIFF | বইটি এখনো ছাপা হয়নি। উৎস: লেখক-পর্যালোচক কপি C5_SCI_Book_v4_Writer-Reviewer (৯ নভেম্বর ২০২৬; স্মারক v৪-এর D-১৯ ইত্যাদি পর্যালোচকের কাছে খোলা)। ছাপার সময় অনুশীলনীর অক্ষর/নম্বর বা ক্রম সরতে পারে (সংস্করণ ৪-এই অধ্যায় ১২-এর প্রশ্নের অক্ষর নতুন ক্রমে বসেছে — সিদ্ধান্ত ৬৬); ছাপা ফাইল এলে ৫৩৪টি প্রশ্ন আবার মিলিয়ে তবেই লক। |
+| — | VERSION_DIFF | বইটি এখনো ছাপা হয়নি। উৎস: লেখক-পর্যালোচক কপি C5_SCI_Book_v5_Writer-Reviewer (সংস্করণ ৫ — চূড়ান্ত, ১২ নভেম্বর ২০২৬; স্মারক v৪-এর D-১৯–D-২১ পর্যালোচক অনুমোদন করেছেন — সিদ্ধান্ত ৭১–৭৩; বই সংস্করণ ৫-এ চূড়ান্ত, বিষয়বস্তু বদলায়নি)। ছাপার সময় অনুশীলনীর অক্ষর/নম্বর বা ক্রম সরতে পারে (সংস্করণ ৪-এই অধ্যায় ১২-এর প্রশ্নের অক্ষর নতুন ক্রমে বসেছে — সিদ্ধান্ত ৬৬); ছাপা ফাইল এলে ৫৩৪টি প্রশ্ন আবার মিলিয়ে তবেই লক। |
 | — | OTHER | বইয়ের শেষের তিনটি মডেল টেস্ট (বৃত্তি পরীক্ষার হুবহু কাঠামো, প্রতিটি ৫০ নম্বর — ২৪টি প্রশ্ন, মোট ৭২) এই গাছে "অধ্যায় ১৩" হিসেবে তালিকাভুক্ত (বইয়ে এর অধ্যায় নম্বর নেই)। এদের নিজস্ব শিখনফল নেই — প্রতিটি প্রশ্ন যে অধ্যায়ের, সেই অধ্যায়ের সারিতে উদ্ধৃত (প্রথম শ্রেণির গণিতের পুনরালোচনা-অধ্যায়ের রীতি); বৃত্তি-অনুশীলন এই গাছে মেশানোর জন্য এটি করা। |
 | 02-05 | DUPLICATE | ২/বহুনির্বাচনি/৯ আর ৬/বহুনির্বাচনি/১ হুবহু একই প্রশ্ন ("উদ্ভিদের খাদ্য তৈরির সময় কীভাবে শক্তির রূপান্তর ঘটে?" — উত্তর: সৌরশক্তি → রাসায়নিক শক্তি)। দুটিই অর্ধ-বার্ষিকের অধ্যায়। বই-দল একটি বদলালে ভালো; গাছে প্রথমটি শক্তি প্রবাহে (০২-০৫), দ্বিতীয়টি শক্তির রূপান্তরে (০৬-০১.২)। |
 | 06-05 | WORDING_RULE_CONFLICT | ৬/বিস্তৃত/৩ ("বাড়িতে আমরা কোন কাজে কোন শক্তি ব্যবহার করে থাকি, তা ছকে উপস্থাপন কর") ছক বানাতে বলে — অথচ পরিশিষ্ট ৮: "যা আসবে না: … ছক পূরণ"; সিদ্ধান্ত ৫: ছক পূরণ শ্রেণির কাজ। একইভাবে ২/সংক্ষিপ্ত/৩ ("খাদ্যশৃঙ্খলের প্রবাহচিত্র তৈরি কর") — ধারণাচিত্র পরীক্ষায় নয় বলা হয়েছে; তির-চিহ্নের শৃঙ্খল লেখা ধরলে চলে, তবে শব্দটি "লেখ" করলে নিয়মের সাথে মেলে। |
@@ -585,7 +586,7 @@ Every one of the 534 numbered exercises maps to at least one tagged row.
 
 **কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম ও বাড়ির টিপস দেখবেন। আগের ধাপ চতুর্থ শ্রেণির বিজ্ঞানের সারি দেখায় (যেমন C4·05-01), কোথাও তৃতীয় শ্রেণির।
 
-**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৪ (৯ নভেম্বর ২০২৬)। ছাপার পরে অনুশীলনীর অক্ষর-নম্বর মিলিয়ে তবেই লক।
+**বইটি এখনো ছাপা হয়নি।** উৎস লেখক-পর্যালোচক কপি সংস্করণ ৫ — চূড়ান্ত (১২ নভেম্বর ২০২৬)। ছাপার পরে অনুশীলনীর অক্ষর-নম্বর মিলিয়ে তবেই লক।
 
 **আগে এগুলো দেখুন (Claude-এর বিচার):**
 1. **মডেল টেস্ট ১–৩ "অধ্যায় ১৩" হিসেবে ধরা** — ৭২টি প্রশ্নের প্রতিটি তার নিজের অধ্যায়ের সারিতে বসানো (শিক্ষক-নোটের উৎস-অধ্যায় ধরে)। বৃত্তি-অনুশীলন এভাবেই এই গাছে মেশে; আলাদা "বৃত্তি" সারি নেই।
@@ -600,3 +601,13 @@ Every one of the 534 numbered exercises maps to at least one tagged row.
 **বৃত্তি পরীক্ষার সাথে মিল-অমিল।** প্রশ্নের ধরন বইয়ের নম্বর বণ্টন (পরিশিষ্ট ২, ৩) থেকে হুবহু — বৃত্তি ২০২৬-এর বিজ্ঞান অংশের পাঁচ ধরন, শুধু প্রশ্নসংখ্যা দ্বিগুণ (৫০ → ১০০)। পার্থক্য: (ক) বৃত্তিতে শূন্যস্থান ও সত্য-মিথ্যা এক প্রশ্ন (৫টি, যেকোনোটি আসতে পারে), বইয়ে দুটি আলাদা প্রশ্ন (৫ + ৫); (খ) বৃত্তিতে মিলকরণ ৪টি, বইয়ে ২ সেট × ৪; (গ) বৃত্তি পরীক্ষা NCTB-র পুরো বই (১৩ অধ্যায়) থেকে — এই বইয়ে NCTB অধ্যায় ১৩-এর কম্পিউটার-ল্যাবের অংশ এবং অনলাইন সেবা ও নিরাপদ ব্যবহারের অংশ নেই (সিদ্ধান্ত ৪২, ৬৫), বাকি অংশ অধ্যায় ১২-এ; বৃত্তির প্রস্তুতিতে ওই বাদ পড়া অংশ আলাদা করে দেখতে হবে; (ঘ) বার্ষিকে অর্ধ-বার্ষিকের অধ্যায় থেকে প্রশ্ন নয়, কিন্তু বৃত্তি ও মডেল টেস্ট পুরো বই থেকে।
 
 **বইয়ের সমস্যা বই-দলের জন্য:** একই প্রশ্ন দুই অধ্যায়ে (২/বহু/৯ = ৬/বহু/১); ছক ও প্রবাহচিত্র চাওয়া দুটি প্রশ্ন (নিয়মে ছক পূরণ পরীক্ষায় নয়); ঋতুর মাসের প্রশ্ন (D-০৫); চারটি শূন্যস্থানে একাধিক উত্তর; অনুশীলনী ছাড়া বা এক অনুশীলনীর চারটি শিখনফল-অংশ।
+
+## Final book v5 — changes
+
+Checked 2026-11-12 against `C5_SCI_Book_v5_Writer-Reviewer.md` (final, 12 Nov 2026). Method: v4 and v5 were normalised (image tags, table markup, escapes) and diffed line by line.
+
+- **Book content: no change.** The decision log (সিদ্ধান্ত ৭৪) says "বইয়ের বিষয়বস্তুতে সংস্করণ ৪ থেকে কোনো বদল নেই". All twelve chapters, শিখনফল lists, the 462 chapter অনুশীলনী items, the three model tests (72 items) and the পরিশিষ্ট নম্বর বণ্টন (marks table) are identical to v4.
+- **What did change in the book (logs only):** cover → "সংস্করণ ৫ — চূড়ান্ত", 12 Nov 2026; new log section ঝ (সিদ্ধান্ত ৭১–৭৩): the reviewer ticked D-১৯, D-২০, D-২১ in memo v4 — the three questions the tree already carried stay: model test 1 নতুন শূন্যস্থান (ঙ) "চাকা"; model test 2 নতুন বহুনির্বাচনি (ঘ) "মোবাইল ফোন"; model test 2 বিস্তৃত (ঘ) with its second part (৩ নম্বর). ৭৪: no open item is left.
+- **Tree changes:** `source.book` / `source.version` / `source.files`, the VERSION_DIFF flag ("D-১৯ ইত্যাদি … খোলা" → approved) and the coverage note point to v5. **Objectives added 0, label changed 0, retired 0; exercise refs remapped 0; question types / marks changed 0.** No code was touched.
+- **Coverage:** 534 / 534 before and after.
+- **Still open:** the tree is still "not yet printed": re-match the 534 exercise letters against the printed book before lock.
