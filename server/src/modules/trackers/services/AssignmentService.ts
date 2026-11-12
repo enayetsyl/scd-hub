@@ -35,6 +35,7 @@ import {
   type IAssignmentStudentRecord,
 } from "../models/AssignmentStudentRecord";
 import { AssignmentSequence } from "../models/AssignmentSequence";
+import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { Student } from "../../foundation/models/Student";
 import { resolveScheduleWeek } from "./AssignmentScheduleService";
@@ -55,12 +56,8 @@ export async function generateAsId(
   classLevel: number,
   subject: HwSubject,
 ): Promise<string> {
-  const counter = await AssignmentSequence.findOneAndUpdate(
-    { academicYearId, classLevel, subject },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(AssignmentSequence, academicYearId, { classLevel, subject });
+  const n = String(seq).padStart(4, "0");
   return `AS-${classToken(classLevel)}-${subject}-${n}`;
 }
 
@@ -254,7 +251,7 @@ export async function deliverAssignmentItem(
     deliveredBy: input.actorId,
     deliveredAt: at,
     attachmentIds,
-  });
+  }).catch(translateDuplicateId("asId"));
   await AssignmentNilDeclaration.deleteOne({
     academicYearId: input.academicYearId,
     weekNumber: input.weekNumber,

@@ -23,6 +23,7 @@ import {
 import { ScholarshipPaper, type IScholarshipPaper } from "../models/ScholarshipPaper";
 import { ScholarshipScore } from "../models/ScholarshipScore";
 import { ScholarshipSequence } from "../models/ScholarshipSequence";
+import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
 import { ScholarshipTopic } from "../models/ScholarshipTopic";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -49,12 +50,8 @@ export async function generatePaperId(
   subjects: readonly HwSubject[],
 ): Promise<string> {
   const subjectKey = subjectKeyOf(subjects);
-  const counter = await ScholarshipSequence.findOneAndUpdate(
-    { academicYearId, classLevel, subjectKey },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(ScholarshipSequence, academicYearId, { classLevel, subjectKey });
+  const n = String(seq).padStart(4, "0");
   return `SP-C${classLevel}-${subjectKey}-${n}`;
 }
 
@@ -304,7 +301,7 @@ export async function declarePaper(
     })),
     declaredBy: new Types.ObjectId(actor.userId),
     declaredAt: new Date(),
-  });
+  }).catch(translateDuplicateId("paperId"));
 
   await writeAudit({
     eventKind: "SCHOLARSHIP_PAPER_DECLARED",

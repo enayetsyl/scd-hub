@@ -243,7 +243,7 @@ describe("generateCtId / suggestTestNumber / defaultPassMark", () => {
     expect(mockSeqUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ classLevel: 1, subject: "ENG" }),
       { $inc: { seq: 1 } },
-      { new: true, upsert: true },
+      { new: true },
     );
   });
 

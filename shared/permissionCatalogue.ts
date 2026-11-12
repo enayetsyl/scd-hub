@@ -969,7 +969,7 @@ export const FEATURE_CATALOGUE = {
     actions: {
       create: { en: "Open a class", bn: "নতুন শ্রেণি খোলা", desc: "Create a class (+ default section)", teacher: false, office: true, flags: [] },
       merge_split: { en: "Merge / split section", bn: "শাখা একত্র করা / আলাদা করা", desc: "Combine or reverse; active merges", teacher: false, office: true, flags: [] },
-      settings: { en: "Academic years", bn: "শিক্ষাবর্ষ যোগ ও চালু বছর বদলানো", desc: "Add a year; set the current year", teacher: false, office: true, flags: [] },
+      settings: { en: "Academic years", bn: "শিক্ষাবর্ষ যোগ করা", desc: "Add a year (switching the current year is year_change:cut_over, Principal only)", teacher: false, office: true, flags: [] },
     },
   },
   year_change: {

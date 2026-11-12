@@ -28,6 +28,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
+import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
 import { HomeworkTopic } from "../models/HomeworkTopic";
 import {
   HomeworkNilDeclaration,
@@ -82,12 +83,8 @@ export async function generateHwId(
   classLevel: number,
   subject: HwSubject,
 ): Promise<string> {
-  const counter = await HomeworkSequence.findOneAndUpdate(
-    { academicYearId, classLevel, subject },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(HomeworkSequence, academicYearId, { classLevel, subject });
+  const n = String(seq).padStart(4, "0");
   return `HW-${classToken(classLevel)}-${subject}-${n}`;
 }
 
@@ -305,7 +302,7 @@ export async function declareHomeworkItem(
         `এই শ্রেণি-বিষয়ের জন্য এই দিনের বাড়ির কাজ আগেই ঘোষণা করা হয়েছে — প্রয়োজনে সেটি সম্পাদনা বা মুছে ফেলুন`,
       );
     }
-    throw err;
+    return translateDuplicateId("hwId")(err);
   });
 
   // D-#299: a real declaration supersedes a "no homework today" marker for the

@@ -29,6 +29,7 @@ import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestSequence } from "../models/ClassTestSequence";
 import { ClassTestGroupSequence } from "../models/ClassTestGroupSequence";
+import { nextYearSeq, translateDuplicateId } from "../../../lib/yearSequence";
 import { ClassTestResult } from "../models/ClassTestResult";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -56,12 +57,8 @@ export async function generateCtId(
   classLevel: number,
   subject: HwSubject,
 ): Promise<string> {
-  const counter = await ClassTestSequence.findOneAndUpdate(
-    { academicYearId, classLevel, subject },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(ClassTestSequence, academicYearId, { classLevel, subject });
+  const n = String(seq).padStart(4, "0");
   return `CT-${classToken(classLevel)}-${subject}-${n}`;
 }
 
@@ -77,12 +74,8 @@ export async function generateGroupCtId(
   subjectGroupId: string,
   groupCode: string,
 ): Promise<string> {
-  const counter = await ClassTestGroupSequence.findOneAndUpdate(
-    { academicYearId, subjectGroupId },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(ClassTestGroupSequence, academicYearId, { subjectGroupId });
+  const n = String(seq).padStart(4, "0");
   const code = groupCode.trim().toUpperCase().replace(/\s+/g, "_");
   return `CT-G-${code}-${n}`;
 }
@@ -502,7 +495,7 @@ export async function createRequest(
     printedBy: input.skipPrint ? new Types.ObjectId(input.actorId) : undefined,
     printedAt: input.skipPrint ? now : undefined,
     notes: input.notes,
-  });
+  }).catch(translateDuplicateId("ctId"));
 
   await writeAudit({
     eventKind: input.skipPrint ? "CLASS_TEST_PRINTED" : "CLASS_TEST_REQUESTED",
