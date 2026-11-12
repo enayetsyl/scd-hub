@@ -32,6 +32,10 @@ export interface IYearChangeRun extends Document {
   /** Pre-existing next-year sections whose class teacher this run set (previous = null when none). */
   teacherSets: Array<{ sectionId: string; previous: string | null }>;
   before?: StudentBefore[];
+  /** YC-6: 2026 routine slots whose effectiveTo this run set (previous = ISO time or null). Undo restores them. */
+  routineEnds: Array<{ slotId: string; previous: string | null }>;
+  /** YC-6: grants whose expiresAt this run stamped (previous = ISO time or null). Undo restores them. */
+  grantExpiries: Array<{ grantId: string; previous: string | null }>;
   improvementEndedIds: string[];
   preparedBy?: Types.ObjectId;
   cutOverBy?: Types.ObjectId;
@@ -49,6 +53,8 @@ const YearChangeRunSchema = new Schema<IYearChangeRun>(
     leaverIds: { type: [String], default: [] },
     teacherSets: { type: Schema.Types.Mixed, default: [] },
     before: { type: Schema.Types.Mixed },
+    routineEnds: { type: Schema.Types.Mixed, default: [] },
+    grantExpiries: { type: Schema.Types.Mixed, default: [] },
     improvementEndedIds: { type: [String], default: [] },
     preparedBy: { type: Schema.Types.ObjectId, ref: "User" },
     cutOverBy: { type: Schema.Types.ObjectId, ref: "User" },

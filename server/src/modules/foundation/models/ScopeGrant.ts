@@ -27,6 +27,10 @@ interface BaseGrant {
   active: boolean;
   /** Provenance for idempotent routine sync (D-#49); absent = manual. */
   source?: GrantSource;
+  /** Year-change run that created this grant (YC-6); absent on every other grant. */
+  runId?: string;
+  /** YC-6: the 2026 grant this one was re-pointed from. */
+  repointedFrom?: Types.ObjectId;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +58,8 @@ interface SupervisoryGrant extends BaseGrant {
   subjectId?: Types.ObjectId;
   /** Relevant when extent = explicit_set */
   explicitSet?: Array<{ classId: Types.ObjectId; subjectId: Types.ObjectId }>;
+  /** YC-6: a 2026 grant lapses at the cut-over, at request time (absent = open-ended). */
+  expiresAt?: Date;
 }
 
 /** Proxy/cover grant — duration-bounded write overlay (D-#18/#20). */
@@ -108,6 +114,8 @@ const ScopeGrantSchema = new Schema<IScopeGrant>(
     kind: { type: String, enum: ["teaching", "supervisory", "proxy", "delegation"], required: true },
     active: { type: Boolean, default: true },
     source: { type: String, enum: ["manual", "routine"], default: "manual" },
+    runId: { type: String },
+    repointedFrom: { type: Schema.Types.ObjectId },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
     // teaching + proxy

@@ -21,6 +21,7 @@ import { GuardianLink } from "../foundation/models/GuardianLink";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import { dayBefore } from "../foundation/services/EnrolmentService";
 import { normalizePhone } from "../foundation/services/credentials";
+import { emptyScheduleCopy, planScheduleCopy } from "./copy";
 import {
   LEVEL_NAME_BN,
   SECTION_CODES,
@@ -78,6 +79,7 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
     leavers: [],
     admissions: [],
     classTeachers: [],
+    scheduleCopy: emptyScheduleCopy(input.copy),
     runId: null,
     reconcile: { removeEnrolments: [], removeAdmissions: [] },
     counts: {
@@ -412,5 +414,8 @@ export async function planYearChange(input: PlanInput): Promise<YearChangePlan> 
     admissionsToUpdate: admissions.filter((a) => a.changed).length,
     admissionsToRemove: reconcile.removeAdmissions.length,
   };
+  // --- 11. YC-6: routine + schedule copy ------------------------------------------------------
+  plan.scheduleCopy = await planScheduleCopy(plan, input.copy, fromYear, toYear);
+  refusals.push(...plan.scheduleCopy.routine.conflicts.map((c) => `রুটিন কপি: ${c}`));
   return plan;
 }

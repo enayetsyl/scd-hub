@@ -40,9 +40,19 @@ export interface ClassTeacherInput {
   teacherId: string | null;
 }
 
+/** YC-6: each copy is on by default; the Principal unticks one to opt out. */
+export interface CopyOptions {
+  routine?: boolean;
+  bellWindows?: boolean;
+  assignmentSchedule?: boolean;
+  grants?: boolean;
+  mastery?: boolean;
+}
+
 export interface PlanInput {
   fromYearId: string;
   toYearId: string;
+  copy?: CopyOptions;
   classPlan?: ClassPlanInput[];
   promotions?: PromotionInput[];
   admissions?: AdmissionInput[];
@@ -112,6 +122,38 @@ export interface PlanClassTeacherRow {
   alreadySet: boolean;
 }
 
+/** The YC-6 part of the dry run: what the routine + schedule copy would write. */
+export interface ScheduleCopyPlan {
+  options: Required<CopyOptions>;
+  /** First day of the new routine / assignment term, and the last day of the old one. */
+  fromKey: string;
+  endKey: string;
+  routine: {
+    slotsToCreate: number;
+    slotsExisting: number;
+    slotsToUpdate: number;
+    slotsToRemove: number;
+    /** 2026 rows that get `effectiveTo` = endKey. */
+    pastToEnd: number;
+    sections: Array<{ level: number; code: SectionCode; slots: number }>;
+    /** 2026 sections with slots but no matching 2027 section (their slots are not copied). */
+    unmapped: string[];
+    /** Every clash the conflict engine found for the copied set (blocks the prepare). */
+    conflicts: string[];
+  };
+  bellWindows: { toCreate: number; existing: number; toRemove: number; skipped: string | null };
+  assignment: { entries: number; existing: boolean; skipped: string | null };
+  grants: {
+    routineTeachingToCreate: number;
+    routineTeachingExisting: number;
+    pastRoutineToExpire: number;
+    repointToCreate: number;
+    repointExisting: number;
+    pastRepointedToExpire: number;
+  };
+  mastery: { toCreate: number; existing: number; skippedUnlocked: string[] };
+}
+
 export interface YearChangePlan {
   fromYearId: string;
   toYearId: string;
@@ -125,6 +167,8 @@ export interface YearChangePlan {
   leavers: PlanLeaverRow[];
   admissions: PlanAdmissionRow[];
   classTeachers: PlanClassTeacherRow[];
+  /** YC-6 routine + schedule copy (nothing visible changes before the cut-over). */
+  scheduleCopy: ScheduleCopyPlan;
   /** The prepared run of this year pair being reconciled (null on a first prepare). */
   runId: string | null;
   /** Rows of THIS run the new plan no longer contains (deleted by the apply). */

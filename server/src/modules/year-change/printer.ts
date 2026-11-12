@@ -42,6 +42,7 @@ export function printPlan(p: YearChangePlan): string {
     for (const e of p.enrolments.filter((x) => x.update)) out.push(`  বদলাবে: ${e.schoolId} → ${levelBn(e.toLevel)} ${SECTION_LABEL_BN[e.toSectionCode]}`);
     for (const a of p.admissions.filter((x) => x.changed)) out.push(`  হালনাগাদ: ভর্তি ${a.schoolId} → ${levelBn(a.toLevel)} ${SECTION_LABEL_BN[a.toSectionCode]}`);
   }
+  out.push(...printScheduleCopy(p));
   const c = p.counts;
   out.push("");
   out.push(
@@ -54,6 +55,36 @@ export function printPlan(p: YearChangePlan): string {
     for (const r of p.refusals) out.push(`  - ${r}`);
   } else out.push("কোনো বাধা নেই।");
   return out.join("\n");
+}
+
+function printScheduleCopy(p: YearChangePlan): string[] {
+  const s = p.scheduleCopy;
+  if (!s) return [];
+  const out: string[] = ["", `রুটিন ও সূচি কপি (${s.fromKey || "—"} থেকে; পুরোনো রুটিন শেষ ${s.endKey || "—"})`];
+  const on = (b: boolean): string => (b ? "চালু" : "বন্ধ (বাছাই করা হয়নি)");
+  out.push(`  রুটিন: ${on(s.options.routine)}`);
+  if (s.options.routine) {
+    for (const r of s.routine.sections) out.push(`    ${levelBn(r.level)} ${SECTION_LABEL_BN[r.code]}: ${r.slots}টি পিরিয়ড`);
+    out.push(`    নতুন ${s.routine.slotsToCreate}, আগে থেকে ${s.routine.slotsExisting}, বদলাবে ${s.routine.slotsToUpdate}, মুছবে ${s.routine.slotsToRemove}; পুরোনো সারি শেষ হবে ${s.routine.pastToEnd}`);
+    for (const u of s.routine.unmapped) out.push(`    কপি হবে না (নতুন বছরে শাখা নেই): ${u}`);
+    for (const x of s.routine.conflicts) out.push(`    সংঘাত: ${x}`);
+  }
+  out.push(`  ঘণ্টার সময়সূচি: ${on(s.options.bellWindows)}`);
+  if (s.options.bellWindows) out.push(`    নতুন ${s.bellWindows.toCreate}, আগে থেকে ${s.bellWindows.existing}, মুছবে ${s.bellWindows.toRemove}${s.bellWindows.skipped ? ` — ${s.bellWindows.skipped}` : ""}`);
+  out.push(`  অ্যাসাইনমেন্ট সূচি: ${on(s.options.assignmentSchedule)}`);
+  if (s.options.assignmentSchedule) out.push(`    এন্ট্রি ${s.assignment.entries}${s.assignment.existing ? " (সূচি আছে)" : ""}${s.assignment.skipped ? ` — ${s.assignment.skipped}` : ""}`);
+  out.push(`  অনুমতি (গ্রান্ট): ${on(s.options.grants)}`);
+  if (s.options.grants) {
+    const g = s.grants;
+    out.push(`    ২০২৭ রুটিন-শিক্ষকতা: নতুন ${g.routineTeachingToCreate} (আগে থেকে ${g.routineTeachingExisting}); পুরোনো রুটিন-অনুমতি ${s.fromKey} এ শেষ: ${g.pastRoutineToExpire}`);
+    out.push(`    তত্ত্বাবধান/অর্পণ অনুমতি নতুন শ্রেণিতে: নতুন ${g.repointToCreate} (আগে থেকে ${g.repointExisting}); পুরোনোটি শেষ হবে ${g.pastRepointedToExpire}`);
+  }
+  out.push(`  দক্ষতা (মাস্টারি) সুইচ: ${on(s.options.mastery)}`);
+  if (s.options.mastery) {
+    out.push(`    নতুন ${s.mastery.toCreate}, আগে থেকে ${s.mastery.existing}`);
+    for (const k of s.mastery.skippedUnlocked) out.push(`    লক নেই — চালু হবে না: ${k}`);
+  }
+  return out;
 }
 
 export function printCutover(p: CutoverPlan): string {
@@ -83,6 +114,13 @@ const UNDO_LABELS_BN: Record<string, string> = {
   sections: "মুছবে: শাখা",
   classes: "মুছবে: শ্রেণি",
   classTeachersRestored: "ফিরবে: আগের শ্রেণি শিক্ষক",
+  routineSlots: "মুছবে: কপি করা রুটিন পিরিয়ড",
+  routineEndsCleared: "ফিরবে: পুরোনো রুটিন সারির শেষ তারিখ",
+  scheduleWindows: "মুছবে: ঘণ্টার সময়সূচি",
+  assignmentSchedules: "মুছবে: অ্যাসাইনমেন্ট সূচি",
+  masteryEnablements: "মুছবে: দক্ষতা সুইচ",
+  grantsCreated: "মুছবে: অনুমতি (গ্রান্ট)",
+  grantExpiriesCleared: "ফিরবে: পুরোনো অনুমতির শেষ তারিখ",
   studentsRestored: "ফিরবে: শিক্ষার্থীর আগের অবস্থা",
   pastEnrolmentsReopened: "আবার চালু হবে: পুরোনো বছরের তালিকাভুক্তি",
   newEnrolmentsToPlanned: "আবার প্ল্যান করা হবে: নতুন বছরের তালিকাভুক্তি",

@@ -24,6 +24,11 @@ import { Audit } from "../platform/models/Audit";
 import { HomeworkItem } from "../trackers/models/HomeworkItem";
 import { AssignmentItem } from "../trackers/models/AssignmentItem";
 import { StudentAttendanceDay } from "../attendance/models/StudentAttendanceDay";
+import { RoutineSlot } from "../routine/models/RoutineSlot";
+import { ScheduleWindow } from "../routine/models/ScheduleWindow";
+import { AssignmentSchedule } from "../trackers/models/AssignmentSchedule";
+import { MasteryEnablement } from "../mastery/models/MasteryEnablement";
+import { ScopeGrant } from "../foundation/models/ScopeGrant";
 import { ImprovementAction } from "../improvement/models/ImprovementAction";
 import { dayBefore } from "../foundation/services/EnrolmentService";
 import { dhakaDayKey } from "../../lib/dhakaDay";
@@ -73,12 +78,22 @@ async function planPrepareUndo(runId: string): Promise<{ plan: UndoPlan; section
   const admissionIds = admissions.map((a) => a._id);
   const links = admissionIds.length ? await GuardianLink.countDocuments({ studentId: { $in: admissionIds } }) : 0;
   const teacherRestores = new Set((run?.teacherSets ?? []).map((t) => t.sectionId)).size;
+  // YC-6: the routine + schedule copy
+  const copyCounts = {
+    routineSlots: await RoutineSlot.countDocuments({ runId }),
+    routineEndsCleared: run?.routineEnds?.length ?? 0,
+    scheduleWindows: await ScheduleWindow.countDocuments({ runId }),
+    assignmentSchedules: await AssignmentSchedule.countDocuments({ runId }),
+    masteryEnablements: await MasteryEnablement.countDocuments({ runId }),
+    grantsCreated: await ScopeGrant.countDocuments({ runId }),
+    grantExpiriesCleared: run?.grantExpiries?.length ?? 0,
+  };
   if (classes.length) notes.push("ক্লাস মুছবে শুধু যেগুলোতে অন্য শাখা নেই।");
   return {
     plan: {
       kind: "PREPARE",
       runId,
-      counts: { enrolments: enrolments.length, admissions: admissions.length, guardianLinks: links, sections: sections.length, classes: classes.length, classTeachersRestored: teacherRestores },
+      counts: { enrolments: enrolments.length, admissions: admissions.length, guardianLinks: links, sections: sections.length, classes: classes.length, classTeachersRestored: teacherRestores, ...copyCounts },
       notes,
       refusals,
     },
@@ -114,6 +129,20 @@ export async function undoPrepare(runId: string, actor: YearChangeActor, opts: {
     else await Section.updateOne({ _id: sec._id }, { $unset: { classTeacherId: 1 } });
     await ClassTeacherAssignment.create({ sectionId: sec._id, role: "class_teacher", teacherId: before ? oid(before) : undefined, op: before ? "assigned" : "cleared", actorId, at: new Date() });
     total++;
+  }
+  // YC-6: delete the copies, put the stamped ends back
+  total += (await RoutineSlot.deleteMany({ runId })).deletedCount ?? 0;
+  for (const e of run?.routineEnds ?? []) {
+    const r = await RoutineSlot.updateOne({ _id: oid(e.slotId) }, e.previous ? { $set: { effectiveTo: new Date(e.previous) } } : { $unset: { effectiveTo: 1 } });
+    total += r.modifiedCount;
+  }
+  total += (await ScheduleWindow.deleteMany({ runId })).deletedCount ?? 0;
+  total += (await AssignmentSchedule.deleteMany({ runId })).deletedCount ?? 0;
+  total += (await MasteryEnablement.deleteMany({ runId })).deletedCount ?? 0;
+  total += (await ScopeGrant.deleteMany({ runId })).deletedCount ?? 0;
+  for (const e of run?.grantExpiries ?? []) {
+    const r = await ScopeGrant.updateOne({ _id: oid(e.grantId) }, e.previous ? { $set: { expiresAt: new Date(e.previous) } } : { $unset: { expiresAt: 1 } });
+    total += r.modifiedCount;
   }
   total += (await Enrolment.deleteMany({ runId })).deletedCount ?? 0;
   if (admissionIds.length) {

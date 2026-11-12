@@ -50,6 +50,8 @@ export interface IAssignmentSchedule extends Document {
   /** Due anchor weekday, 0=Sun … 4=Thu (default SUN; D-#86). */
   dueDayOfWeek: number;
   entries: Types.DocumentArray<IAssignmentScheduleEntry>;
+  /** Year-change run that copied this schedule (YC-6). */
+  runId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +75,7 @@ const AssignmentScheduleSchema = new Schema<IAssignmentSchedule>(
     deliveryDayOfWeek: { type: Number, required: true, min: 0, max: 4, default: 4 },
     dueDayOfWeek: { type: Number, required: true, min: 0, max: 4, default: 0 },
     entries: { type: [AssignmentScheduleEntrySchema], default: [] },
+    runId: { type: String },
   },
   { timestamps: true },
 );
