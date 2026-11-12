@@ -124,7 +124,7 @@ async function childLinesByGuardian(guardianIds: Types.ObjectId[]): Promise<Map<
     .lean();
   if (links.length === 0) return out;
 
-  const students = await Student.find({ _id: { $in: links.map((l) => l.studentId) } })
+  const students = await Student.find({ _id: { $in: links.map((l) => l.studentId) }, active: { $ne: false } })
     .select("name nameBn sectionId")
     .lean();
   const studentById = new Map(students.map((s) => [s._id.toString(), s]));

@@ -77,7 +77,7 @@ async function picksOf(guardianIds: Types.ObjectId[] | string[]): Promise<Guardi
     GuardianLink.find({ guardianId: { $in: guardianIds } }).select("guardianId studentId active").lean(),
   ]);
   const live = links.filter((l) => l.active !== false);
-  const students = await Student.find({ _id: { $in: live.map((l) => l.studentId) } }).select("name nameBn classId sectionId").lean();
+  const students = await Student.find({ _id: { $in: live.map((l) => l.studentId) }, active: { $ne: false } }).select("name nameBn classId sectionId").lean();
   const [classes, sections] = await Promise.all([
     Class.find({ _id: { $in: students.map((s) => s.classId) } }).select("nameBn").lean(),
     Section.find({ _id: { $in: students.map((s) => s.sectionId) } }).select("nameBn").lean(),

@@ -20,6 +20,8 @@ export interface ISection extends Document {
    *  reconcile/confirm this section's daily homework (in addition to the class teacher
    *  and the Principal). Standing, additive; cleared by setting null. A TEACHER User. */
   homeworkConfirmerId?: Types.ObjectId;
+  /** Year-change run that created this row (YC-4); absent on every other row. */
+  runId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +35,7 @@ const SectionSchema = new Schema<ISection>(
     classTeacherId: { type: Schema.Types.ObjectId, ref: "User" },
     supportTeacherIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
     homeworkConfirmerId: { type: Schema.Types.ObjectId, ref: "User" },
+    runId: { type: String },
   },
   { timestamps: true },
 );

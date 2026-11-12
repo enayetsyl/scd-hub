@@ -9,6 +9,8 @@ export interface IClass extends Document {
   nameBn: string;
   academicYearId: Types.ObjectId;
   active: boolean;
+  /** Year-change run that created this row (YC-4); absent on every other row. */
+  runId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,7 @@ const ClassSchema = new Schema<IClass>(
     nameBn: { type: String, required: true, trim: true },
     academicYearId: { type: Schema.Types.ObjectId, ref: "AcademicYear", required: true },
     active: { type: Boolean, default: true },
+    runId: { type: String },
   },
   { timestamps: true },
 );
