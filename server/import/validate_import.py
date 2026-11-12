@@ -227,6 +227,50 @@ def lo_code_semantics(env, p):
             fail("LO", f"{code}: unknown subject {csubj}")
 
 
+def _footer_lo_codes(payload):
+    """The plan footer's `Objective codes` key as a de-duplicated list (same parse as
+    build_envelope.py footer_lo_codes); None when the key is absent/empty."""
+    footer = payload.get("footer") if isinstance(payload, dict) else None
+    if not isinstance(footer, dict):
+        return None
+    raw = None
+    for k, v in footer.items():
+        if isinstance(k, str) and k.strip().lower() == "objective codes":
+            raw = v
+            break
+    if isinstance(raw, list):
+        parts = [x for x in raw if isinstance(x, str)]
+    elif isinstance(raw, str):
+        parts = re.split(r"[,;\n]", raw)
+    else:
+        return None
+    out = []
+    for t in parts:
+        t = t.strip()
+        if t and t not in out:
+            out.append(t)
+    return out or None
+
+
+def plan_footer_lo_agreement(env):
+    """PR-O (D-#1445): on a SESSION plan the footer `Objective codes` and envelope
+    tags.lo_codes must name the same codes (a chapter plan carries none, the footer is ignored)."""
+    if env.get("doc_type") != "session_plan":
+        return
+    footer = _footer_lo_codes(env.get("payload"))
+    if footer is None:
+        return
+    tags = env.get("tags") or {}
+    tag_codes = tags.get("lo_codes") if isinstance(tags, dict) else None
+    if not isinstance(tag_codes, list):
+        fail("LO", f"footer 'Objective codes' names {footer} but envelope tags.lo_codes is missing")
+    elif sorted(tag_codes) != sorted(footer):
+        only_f = [c for c in footer if c not in tag_codes]
+        only_t = [c for c in tag_codes if c not in footer]
+        fail("LO", f"footer 'Objective codes' and tags.lo_codes disagree "
+                   f"(footer only: {only_f}; tags only: {only_t})")
+
+
 def plan_lo_semantics(env):
     """Session-plan objective codes (prd-objective-tree §8.3): a plan may carry many
     `tags.lo_codes` (a lesson teaches several steps). The envelope schema already checks
@@ -234,6 +278,7 @@ def plan_lo_semantics(env):
     subject. Whether a code exists in the catalogue is the APP's check (a warning)."""
     if env.get("doc_type") not in PLAN_DOC_TYPES:
         return
+    plan_footer_lo_agreement(env)
     codes = (env.get("tags") or {}).get("lo_codes")
     if not isinstance(codes, list):
         return
