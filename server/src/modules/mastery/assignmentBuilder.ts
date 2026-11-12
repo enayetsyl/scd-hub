@@ -83,6 +83,8 @@ export interface BuilderContext {
   bank: BankQuestion[];
   /** QT code → marks (the class × subject table; types without marks are unusable). */
   marksOf: Map<string, number>;
+  /** ACTIVE table types whose marks are not set (null) - only these earn the "type has no marks" warning. */
+  unmarkedTypes?: Set<string>;
   /** qid → how many students in the section have already seen it. */
   exposure: Map<string, number>;
   layout: BuilderLayout;
@@ -111,7 +113,7 @@ export function typeFor(
 
 /**
  * The type a bank question takes for `lo` (PR-G), or null when it cannot be offered. A question
- * with a `qtCode` takes only that type, and only if the objective allows it, the layout allows it,
+ * with a `qtCode` takes only that type, and only if the layout allows it,
  * the table has its marks and (with `room`) the marks fit — or `allowOver` for an empty sheet.
  * A question without one takes `typeFor`'s choice, exactly as before.
  */
@@ -126,7 +128,8 @@ export function typeOfQuestion(
 ): string | null {
   if (!q.qtCode) return untypedUsesRoom ? typeFor(lo, ctx, room, allowOver) : typeFor(lo, ctx);
   const t = q.qtCode;
-  if (!lo.questionTypeCodes.includes(t)) return null;
+  // PR-K: a typed question is not tied to the objective's list (that list only suggests the
+  // type for an untyped question); the table's marks and the layout decide.
   if (ctx.layout.questionTypeCodes.length > 0 && !ctx.layout.questionTypeCodes.includes(t)) return null;
   const m = ctx.marksOf.get(t) ?? 0;
   if (m <= 0) return null;
@@ -167,13 +170,14 @@ export function pickTyped(
  */
 export function hasNoMarksType(
   q: Pick<BankQuestion, "qtCode">,
-  lo: OutcomeInfo,
-  ctx: Pick<BuilderContext, "marksOf" | "layout">,
+  _lo: OutcomeInfo,
+  ctx: Pick<BuilderContext, "marksOf" | "layout" | "unmarkedTypes">,
 ): boolean {
   const t = q.qtCode;
-  if (!t || !lo.questionTypeCodes.includes(t)) return false;
+  if (!t) return false;
   if (ctx.layout.questionTypeCodes.length > 0 && !ctx.layout.questionTypeCodes.includes(t)) return false;
-  return (ctx.marksOf.get(t) ?? 0) <= 0;
+  // An unknown or deactivated type is not "no marks" - only an active table type with null marks is.
+  return (ctx.unmarkedTypes?.has(t) ?? false) && (ctx.marksOf.get(t) ?? 0) <= 0;
 }
 
 export type BuilderWarningCode = "NO_UNSEEN_QUESTION" | "NOTHING_TO_PRACTISE" | "TYPE_HAS_NO_MARKS";
@@ -326,7 +330,7 @@ export function buildPartA(
     for (const lo of los) {
       if (sum() >= layout.partAMarks) break;
       const info = ctx.outcomes.get(lo);
-      if (!info || !typeFor(info, ctx)) continue;
+      if (!info) continue;
       // PR-G: the room left decides which typed question fits; an empty Part A may take one over.
       const room = layout.partAMarks - sum();
       const over = items.length === 0;

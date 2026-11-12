@@ -127,8 +127,11 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
           />
           {loChoice ? (
             <ChipRow>
-              {loChoice.questionTypeCodes.map((t) => (
-                <Chip key={t} label={t} selected={qt === t} onPress={() => setQt(t)} />
+              {/* PR-K: every active type of the marks table; the objective's suggested ones first. */}
+              {[...s.typeChoices]
+                .sort((a, b) => Number(loChoice.questionTypeCodes.includes(b.code)) - Number(loChoice.questionTypeCodes.includes(a.code)))
+                .map(({ code: t, labelBn, marks }) => (
+                <Chip key={t} label={`${labelBn} · ${bnNum(marks)}`} selected={qt === t} onPress={() => setQt(t)} />
               ))}
             </ChipRow>
           ) : null}

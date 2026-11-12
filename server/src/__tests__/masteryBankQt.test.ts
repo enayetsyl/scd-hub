@@ -118,8 +118,32 @@ describe("typed pickers (pure)", () => {
     expect(buildPartA([], 30, new Set(), c2).every((i) => i.questionTypeCode === "QT-FILL")).toBe(true);
   });
 
-  it("an objective that does not allow the carried type never offers the question", () => {
-    expect(typeOfQuestion({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map([["QT-MCQ", 1]]), layout: layout() })).toBeNull();
+  it("PR-K: the objective's type list is a suggestion — a typed question outside it is offered as its own type, subject to marks and layout", () => {
+    const marksOf = new Map([["QT-MCQ", 1]]);
+    expect(typeOfQuestion({ qtCode: "QT-MCQ" }, LO, { marksOf, layout: layout() })).toBe("QT-MCQ");
+    // The layout still gates it, and so do the table's marks.
+    expect(typeOfQuestion({ qtCode: "QT-MCQ" }, LO, { marksOf, layout: layout({ questionTypeCodes: ["QT-FILL"] }) })).toBeNull();
+    expect(typeOfQuestion({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), layout: layout() })).toBeNull();
+    // "No marks" is only for an ACTIVE table type whose marks are null; unknown / deactivated types are not.
+    expect(hasNoMarksType({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), layout: layout() })).toBe(false);
+    expect(hasNoMarksType({ qtCode: "QT-MCQ" }, LO, { marksOf: new Map(), unmarkedTypes: new Set(["QT-MCQ"]), layout: layout() })).toBe(true);
+  });
+
+  it("PR-K: Part A offers a typed question outside the objective's suggestion, as Part B does", () => {
+    const bare: OutcomeInfo = { code: "LO-1", chapterNumber: 1, questionTypeCodes: [] };
+    const l = layout({ partAOn: true, partAMarks: 1, partALoCodes: ["LO-1"], partBMarks: 0 });
+    const c: BuilderContext = { ...ctx([q("Q-FILL", "QT-FILL")], l), outcomes: new Map([["LO-1", bare]]) };
+    expect(buildPartA([], 30, new Set(), c).map((i) => [i.qid, i.questionTypeCode, i.marks])).toEqual([["Q-FILL", "QT-FILL", 1]]);
+    expect(buildPartB(weak, { ...c, layout: layout({ partBMarks: 1 }) }).items.map((i) => i.qid)).toEqual(["Q-FILL"]);
+  });
+
+  it("PR-K: an untyped practice-only question is never picked by type or marks when the objective suggests no type", () => {
+    const bare: OutcomeInfo = { code: "LO-1", chapterNumber: 1, questionTypeCodes: [] };
+    const c = { marksOf: MARKS, layout: layout() };
+    expect(typeOfQuestion({ qtCode: null }, bare, c, 5)).toBeNull();
+    expect(pickTyped(bare, new Set(), { bank: [q("Q-TF", null)], exposure: new Map(), ...c }, 5)).toBeNull();
+    // A typed question of the table is still picked on the same objective.
+    expect(pickTyped(bare, new Set(), { bank: [q("Q-TF", null), q("Q-FILL", "QT-FILL")], exposure: new Map(), ...c }, 5)?.qt).toBe("QT-FILL");
   });
 
   it("Part A: the type travels with the question, and hardAvoid (open extra sheet) still wins", () => {
@@ -171,7 +195,7 @@ describe("typed pickers (pure)", () => {
   it("a typed question whose type has no marks is skipped with TYPE_HAS_NO_MARKS, not dropped silently", () => {
     const lo: OutcomeInfo = { code: "LO-1", chapterNumber: 1, questionTypeCodes: ["QT-FILL", "QT-WORD"] };
     const base = (bank: BankQuestion[], partBMarks = 1): BuilderContext => ({
-      outcomes: new Map([["LO-1", lo]]), taught: new Set(["LO-1"]), bank, marksOf: new Map([["QT-FILL", 1]]), exposure: new Map(),
+      outcomes: new Map([["LO-1", lo]]), taught: new Set(["LO-1"]), bank, marksOf: new Map([["QT-FILL", 1]]), unmarkedTypes: new Set(["QT-WORD"]), exposure: new Map(),
       layout: layout({ partBMarks }),
     });
     const mixed = buildPartB(weak, base([q("A-WORD", "QT-WORD"), q("B-FILL", "QT-FILL")]));
@@ -183,6 +207,7 @@ describe("typed pickers (pure)", () => {
     expect(hasNoMarksType({ qtCode: "QT-WORD" }, lo, base([]))).toBe(true);
     expect(hasNoMarksType({ qtCode: "QT-FILL" }, lo, base([]))).toBe(false);
     expect(hasNoMarksType({ qtCode: null }, lo, base([]))).toBe(false);
+    expect(hasNoMarksType({ qtCode: "QT-GONE" }, lo, base([]))).toBe(false); // unknown / deactivated: not "no marks"
   });
 
   it("pickTyped skips a candidate that cannot be offered and takes the next", () => {
@@ -262,9 +287,10 @@ describe("import check (acceptance 2)", () => {
     expect(clean.refusals).toEqual([]);
     expect([...qtLines(clean, "warnings"), ...qtLines(clean, "refusals")]).toEqual([]); // (the DRAFT-code LO warning is the old one)
 
-    const notAllowed = await masteryImportCheck(realWith({ qid: "QP-QT-2", lesson_ref: "QT-FILL" }));
-    expect(notAllowed.refusals).toEqual([]);
-    expect(qtLines(notAllowed, "warnings").join("\n")).toMatch(/QT-FILL is not one of the question types LO-C1-MATH-07-01\.2 allows \(QT-SOLVE\)/);
+    // PR-K: a type outside the objective's suggested list is fine when it is an active type of the class x subject.
+    const notListed = await masteryImportCheck(realWith({ qid: "QP-QT-2", lesson_ref: "QT-FILL" }));
+    expect(notListed.refusals).toEqual([]);
+    expect(qtLines(notListed, "warnings").join(" ")).not.toMatch(/allows/);
 
     const unknown = await masteryImportCheck(realWith({ qid: "QP-QT-3", lesson_ref: "QT-NOPE" }));
     expect(unknown.refusals).toEqual([]);
@@ -275,15 +301,17 @@ describe("import check (acceptance 2)", () => {
     expect(qtLines(marks, "warnings").join("\n")).toMatch(/marks \(4\) differ from QT-SOLVE's marks in the table \(1\)/);
   });
 
-  it("after lock a type the objective does not allow, an inactive type, an unknown type or different marks are refused", async () => {
+  it("after lock an inactive type, an unknown type or different marks are refused", async () => {
     await importTree();
     await simulateLock();
 
     const ok = await masteryImportCheck(realWith({ qid: "QP-QT-10", lesson_ref: "QT-SOLVE" }));
     expect(ok).toEqual({ warnings: [], refusals: [] });
 
-    const notAllowed = await masteryImportCheck(realWith({ qid: "QP-QT-11", lesson_ref: "QT-FILL" }));
-    expect(notAllowed.refusals.join("\n")).toMatch(/\[MASTERY-QT\] QT-FILL is not one of the question types LO-C1-MATH-07-01\.2 allows/);
+    // PR-K: a LOCKED objective + an active type of the class x subject outside its list imports (was refused).
+    const notListed = await masteryImportCheck(realWith({ qid: "QP-QT-11", lesson_ref: "QT-FILL" }));
+    expect(qtLines(notListed, "refusals")).toEqual([]);
+    expect(qtLines(notListed, "warnings")).toEqual([]);
 
     const unknown = await masteryImportCheck(realWith({ qid: "QP-QT-12", lesson_ref: "QT-NOPE" }));
     expect(unknown.refusals.join("\n")).toMatch(/QT-NOPE is not a question type of C1 MATH/);
@@ -294,6 +322,28 @@ describe("import check (acceptance 2)", () => {
     await MasteryQuestionType.updateOne({ classToken: "C1", subject: "MATH", code: "QT-SOLVE" }, { $set: { active: false } });
     const inactive = await masteryImportCheck(realWith({ qid: "QP-QT-14", lesson_ref: "QT-SOLVE" }));
     expect(inactive.refusals.join("\n")).toMatch(/QT-SOLVE is an inactive question type of C1 MATH/);
+  });
+
+  it("PR-K: after lock, a question whose active type is outside the objective's suggested list imports; marks, inactive and unknown findings still refuse", async () => {
+    await importTree();
+    await simulateLock();
+    const type = await MasteryQuestionType.findOne({ classToken: "C1", subject: "MATH", code: "QT-FILL" }).lean();
+    expect(type?.active).toBe(true);
+    const outcome = await MasteryOutcome.findOne({ code: REAL_SOLVE_A.topic_tag }).lean();
+    expect(outcome?.questionTypeCodes).not.toContain("QT-FILL");
+
+    const ok = await masteryImportCheck(realWith({ qid: "QP-QT-K1", lesson_ref: "QT-FILL", marks: type!.marks ?? undefined }));
+    expect(ok.refusals).toEqual([]);
+    expect(qtLines(ok, "warnings")).toEqual([]);
+    if (typeof type!.marks === "number") {
+      const bad = await masteryImportCheck(realWith({ qid: "QP-QT-K2", lesson_ref: "QT-FILL", marks: type!.marks + 3 }));
+      expect(bad.refusals.join(" ")).toMatch(/differ from QT-FILL's marks/);
+    }
+    const unknown = await masteryImportCheck(realWith({ qid: "QP-QT-K3", lesson_ref: "QT-NOPE" }));
+    expect(unknown.refusals.join(" ")).toMatch(/QT-NOPE is not a question type of C1 MATH/);
+    await MasteryQuestionType.updateOne({ classToken: "C1", subject: "MATH", code: "QT-FILL" }, { $set: { active: false } });
+    const inactive = await masteryImportCheck(realWith({ qid: "QP-QT-K4", lesson_ref: "QT-FILL" }));
+    expect(inactive.refusals.join(" ")).toMatch(/QT-FILL is an inactive question type of C1 MATH/);
   });
 
   it("a QCAT- value or no type at all is accepted exactly as today, before and after lock", async () => {

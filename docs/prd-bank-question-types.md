@@ -90,3 +90,7 @@ aside for the half-yearly and annual papers must never be given out before the e
 
 Tests: `server/src/__tests__/examPool.test.ts`, `questions.test.ts` (re-import), `masteryBankQt.test.ts`
 (CSV header).
+
+## PR-K: question types are not tied to objectives (D-#1526)
+
+Owner ruling 2026-11-13: the objective tree assesses the learning objective; the same objective can be assessed by many question types. A bank question's `QT-` code is therefore valid when it is an ACTIVE type of its class x subject (the book's marks table) and its marks equal the type's marks; it no longer has to be one of the objective's `questionTypeCodes`. That list stays on the objective as a SUGGESTION (the app labels it "proposed question types"; it is the default type for an untyped question and the first choice in pickers, never a gate). A question with no `QT-` code (a practice-only quick item) imports as before and is only offered where the objective suggests a type. Unknown/inactive codes behave as before (warning before lock, refusal after).
