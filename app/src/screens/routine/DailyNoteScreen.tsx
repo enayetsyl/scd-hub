@@ -14,6 +14,7 @@ import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
 import { LessonPlanBlock, deliverySummary, lessonPlanError } from "../../components/LessonPlanBlock";
+import { HomeworkFromLessonLink } from "../../components/HomeworkFromLessonLink";
 import type { LessonPlanIn } from "../../graphql/operations";
 import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, bnNum } from "../../lib/labels";
@@ -146,6 +147,13 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
                 <>
                   <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
                   {note.lessonDelivery ? <Muted style={{ marginTop: 2 }}>📘 {deliverySummary(note.lessonDelivery)}</Muted> : null}
+                  {/* PR-D: build this lesson's homework (mastery on only). */}
+                  <HomeworkFromLessonLink
+                    sectionId={groupType === "section" ? groupId : null}
+                    subject={s.subject}
+                    date={date}
+                    hasLesson={(note.lessonDelivery?.sessions.length ?? 0) > 0}
+                  />
                 </>
               ) : sel === s.id ? (
                 <View style={{ marginTop: space(2), gap: space(1) }}>

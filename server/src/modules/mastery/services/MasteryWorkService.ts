@@ -21,6 +21,7 @@ import { MasterySequence } from "../models/MasterySequence";
 import { MasteryOutcome } from "../models/MasteryOutcome";
 import { MasteryQuestionType } from "../models/MasteryQuestionType";
 import { MasteryTag } from "../models/MasteryTag";
+import { MasteryAction } from "../models/MasteryAction";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
@@ -328,6 +329,8 @@ export async function deletePaper(paperId: string, auth: Auth): Promise<boolean>
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("নিশ্চিত করা কাজ মুছে ফেলা যায় না।");
   if (await MasteryResult.exists({ paperId: paper._id })) throw new MasteryWorkError("নম্বর তোলা শুরু হয়েছে — মুছে ফেলা যায় না।");
   await MasteryPaper.deleteOne({ _id: paper._id, entryState: "OPEN" });
+  // PR-D: a deleted extra homework takes its per-child record rows with it (nothing was given).
+  if (paper.extra) await MasteryAction.deleteMany({ kind: "EXTRA_HOMEWORK", "plan.note": { $regex: `^${paper.paperId}:` } });
   void writeAudit({
     eventKind: "MASTERY_PAPER_DELETED",
     actorId: auth.userId,
@@ -354,6 +357,8 @@ export interface PaperView {
   hwItemId: string | null;
   /** PR-C: the class test this sheet owns the totals of (null when none). */
   classTestId: string | null;
+  /** PR-D: an extra homework for weak children (per-student items). */
+  extra: boolean;
   entryState: string;
   totalMarks: number;
   items: {
@@ -383,6 +388,7 @@ export function paperView(p: IMasteryPaper): PaperView {
     date: p.date.toISOString().slice(0, 10),
     hwItemId: p.links?.hwItemId ? String(p.links.hwItemId) : null,
     classTestId: p.links?.classTestId ? String(p.links.classTestId) : null,
+    extra: Boolean(p.extra),
     entryState: p.entryState,
     totalMarks: p.items.reduce((s, i) => s + i.marks, 0),
     items: p.items.map((i) => ({
@@ -441,9 +447,11 @@ export async function rosterOf(sectionId: Types.ObjectId) {
   >;
 }
 
-/** AS papers: studentId → the item numbers on that student's sheet; null on every other paper. */
-export function studentItemsOf(paper: Pick<IMasteryPaper, "source" | "perStudentItems">): Map<string, Set<number>> | null {
-  if (paper.source !== "AS" && paper.source !== "RETEST") return null;
+/** AS / RETEST / extra-homework papers: studentId → the item numbers on that student's sheet; null on
+ *  every other paper. PR-D: an `extra` sheet is read like an assignment sheet — a child answers only
+ *  the items on their own list, and an item not given is never counted as wrong. */
+export function studentItemsOf(paper: Pick<IMasteryPaper, "source" | "perStudentItems" | "extra">): Map<string, Set<number>> | null {
+  if (paper.source !== "AS" && paper.source !== "RETEST" && !paper.extra) return null;
   return new Map((paper.perStudentItems ?? []).map((x) => [String(x.studentId), new Set(x.itemNos)]));
 }
 

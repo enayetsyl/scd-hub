@@ -13,6 +13,21 @@ Environment notes (all slices):
 - One full-suite run had a jest worker killed by SIGTERM (machine pressure, not a test failure); that suite
   was re-run alone and passed. Noted where it happened.
 
+## Morning summary
+
+All four slices are built, gated and pushed. Commits in order (cut one PR per label, each against `dev`):
+
+| Slice | Commits | Full server suite | Web export |
+|---|---|---|---|
+| PR-A | `10affdb`, `fa46e2a` | 409/410 + the 1 SIGTERM'd suite re-run green | exit 0 |
+| PR-B | `320ccf6`, `936e44a` | 411/411 | exit 0 |
+| PR-C | `2402d65`, `99d0b84` | 412/412 | exit 0 |
+| PR-D | `f59dd95` + the PR-D handoff commit | 413/413 | exit 0 |
+
+Each slice builds on the earlier ones (PR-B's `liveSectionRows` filter is used by PR-D; PR-C and PR-D both
+edit `MasteryPaper` / `MasteryWorkService`), so merge them in order A → B → C → D. Decision numbers used:
+D-#1310–#1326 (none were taken on `origin/dev` at each push). Everything sits behind the mastery switch.
+
 ---
 
 ## PR-A — the content pipeline accepts the 2027 subjects and Class 6
@@ -142,7 +157,7 @@ D-#1315 (the summary read is paged from the start), D-#1316 (new-sheet switch, c
 
 ## PR-C — the class test and its question sheet are one entry
 
-**Commits:** first `2402d65` · last: the `[PR-C] docs: overnight handoff` commit right after it.
+**Commits:** first `2402d65` · last `99d0b84`.
 
 ### What was built
 - `createMasteryPaper(…, classTestId?)` (CT only): test exists, REQUESTED / PRINTED, section-anchored (group
@@ -194,3 +209,60 @@ warning only).
    "keep any comment text" — I kept that rule for ABSENT children. Confirm.
 2. A VOID (copied / behaviour) sheet row becomes PRESENT with the earned total on the class test. Should VOID
    instead block the class-test write for that child?
+
+---
+
+## PR-D — homework from the lesson, and extra homework for weak children
+
+**Commits:** first `f59dd95` · last: the `[PR-D] docs: overnight handoff` commit right after it.
+
+### What was built
+- Policy (flat keys — the live policy is a flat validated key map; the brief's nested objects flattened):
+  `homeworkDraftQuestionsPerObjective` 1, `homeworkDraftMaxItems` 6, `extraHomeworkMaxQuestions` 3,
+  `extraHomeworkIncludeImproving` false; editable on the policy screen (labels added).
+- `masteryHomeworkDraft(sectionId, subject, dateKey)` (no write): codes from that day's `LessonDelivery` via
+  `deliveredCodes`, plan order, groupings expanded, LOCKED tagged rows; per QUESTION code unseen gold questions
+  (`pickQuestion`, least-used first; `typeFor`), else a `fromBook` TEACHER item from `bookRef.exercises`, else a gap;
+  cap → `leftOut`; `rubricCodes`; `reason` NO_LESSON_MARKED / NO_CODES_ON_PLAN; that day's tracker homework id.
+- App: "আজকের পাঠ থেকে খসড়া" on the new HW sheet (fills items, pre-selects the tracker link, notes for gaps /
+  left out / rubric); "এই পাঠের বাড়ির কাজ তৈরি করুন" on both class-note screens (DailyNote + MyClassNotes) after
+  a note with a lesson marked, only where mastery is on (`masterySectionSwitch`).
+- `masteryExtraHomeworkPreview` / `createMasteryExtraHomework`: per weak child up to 3 unseen gold questions
+  (oldest weak row first, then round again) with reasons; `NOT_WEAK` / `NO_UNSEEN_QUESTION`. Create re-checks
+  everything and makes one OPEN `MasteryPaper` (HW, `extra`, "বাড়তি বাড়ির কাজ", `perStudentItems`; one per
+  section × subject × date). `studentItemsOf` reads it like an assignment sheet. No `HomeworkItem`.
+- `EXTRA_HOMEWORK` appended to `MASTERY_ACTION_KINDS`; one CLOSED action row per child so the child's record
+  (guardian "school did") shows it; kept off the leader dashboard. Guardian notice `MASTERY_EXTRA_HOMEWORK`
+  (new notification kind, dedupe key with the recipient). App screen `MasteryExtraHomework` (tick boxes → send),
+  "বাড়তি" badge in the sheet list. Reading guide `mastery-homework-from-lesson`; `notes-lesson-mark` intro updated.
+
+### Verified (executed; gate worktree at `f59dd95`)
+```
+verifiers (vocab — incl. the new notification kind, descriptive 11, lo-codes 13, subjects-2027 15,
+  catalogue 11, tree C1_MATH, help guides, example envelope) → all PASS / ALL CHECKS PASSED, exit 0
+shared build / typecheck shared / server / app → exit 0 ×4
+jest --runInBand touched (31 suites: every mastery* incl. masteryHomework [new], notifications*,
+  notificationNavCoverage, auditQuery, lessonDelivery, lessonProgress, objectiveLessons, graphqlDocuments,
+  permissionCatalogueGates, expectedErrorRegistry, helpGuides, popupNotify, syllabusNotify, viewAsAudit)
+                                  → Test Suites: 31 passed, 31 total · Tests: 412 passed, 412 total
+full server suite --maxWorkers=2  → Test Suites: 413 passed, 413 total · Tests: 6763 passed · JEST_EXIT=0
+expo export --platform web        → App exported … EXPO_EXIT=0
+```
+
+### Not done
+- (a) The per-child PDF of the extra homework — NOT built (D-#1326): the assignment PDF renderer is bound to
+  `MasteryAssignment`; reusing it needs a refactor of that renderer. (b) The guardian notification IS built.
+- "Seen" means a question in the child's live evidence (as the weekly builder uses it). A question handed out on
+  an extra sheet that is not yet confirmed does not count as seen, so a second day's extra homework could repeat it.
+- The draft is not offered from the class-note screen for a group (subject-group) note — only section notes.
+
+### Decisions made
+D-#1321 (draft + flat policy keys + class-note link), D-#1322 (preview), D-#1323 (one extra sheet, re-checks,
+per-child items, delete removes record rows), D-#1324 (EXTRA_HOMEWORK rows; the weekly assignment writes no
+TAILORED_ASSIGNMENT rows in the live code), D-#1325 (guardian notice), D-#1326 (PDF not built).
+
+### Questions for the owner
+1. Extra homework PDF: build it now (one page per child, same look as the weekly assignment)?
+2. Should an unconfirmed extra sheet's questions count as "seen" for the next extra homework?
+3. The class-wide draft is never saved by itself — the teacher still presses "কাজ তৈরি". Should the class note's
+   link also pre-fill the draft automatically on open (one tap less)?

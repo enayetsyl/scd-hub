@@ -10,17 +10,23 @@
  *
  * PR-C (D-#1317): a class-test sheet may name its class test (pre-picked when opened from the class
  * test); the sheet then writes that test's totals, so the required total is shown beside the running one.
+ *
+ * PR-D (D-#1321): on a homework sheet, "আজকের পাঠ থেকে খসড়া" fills the item list from the lesson
+ * marked taught that day (bank questions nobody has seen; the book's exercises when there are none);
+ * the teacher edits and saves as usual, with that day's tracker homework pre-selected as the link.
  */
 import React, { useMemo, useState } from "react";
 import { Switch, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMutation, useQuery } from "urql";
+import { useClient, useMutation, useQuery } from "urql";
 import {
   CREATE_MASTERY_PAPER,
   MASTERY_BANK_QUESTIONS_QUERY,
   MASTERY_CATALOGUE_QUERY,
   MASTERY_CLASS_TEST_OPTIONS_QUERY,
+  MASTERY_HOMEWORK_DRAFT_QUERY,
   MASTERY_HOMEWORK_OPTIONS_QUERY,
+  type MasteryHomeworkDraft,
   type MasteryClassTestOption,
   type MasteryOutcomeRow,
   type MasteryQuestionTypeRow,
@@ -69,7 +75,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   const toast = useToast();
   const [source, setSource] = useState<"HW" | "CT" | "RUBRIC">(route.params.classTestId ? "CT" : "HW");
   const [classTestId, setClassTestId] = useState<string | null>(route.params.classTestId ?? null);
-  const [date, setDate] = useState(todayDhaka());
+  const [date, setDate] = useState(route.params.date ?? todayDhaka());
   const [title, setTitle] = useState("");
   const [hwItemId, setHwItemId] = useState<string | null>(null);
   const [items, setItems] = useState<Draft[]>([]);
@@ -101,6 +107,46 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
     pause: !lo || source === "RUBRIC" || mode !== "BANK",
   });
   const [create, createPaper] = useMutation(CREATE_MASTERY_PAPER);
+  const client = useClient();
+  const [drafting, setDrafting] = useState(false);
+  const [draftNotes, setDraftNotes] = useState<string[]>([]);
+
+  /** PR-D: fill the items from the lesson marked taught on `date` (no write; the teacher still saves). */
+  async function draftFromLesson(): Promise<void> {
+    setError(null);
+    setDrafting(true);
+    const res = await client.query(MASTERY_HOMEWORK_DRAFT_QUERY, { sectionId, subject, dateKey: date }, { requestPolicy: "network-only" }).toPromise();
+    setDrafting(false);
+    if (res.error) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    const d = res.data?.masteryHomeworkDraft as MasteryHomeworkDraft | undefined;
+    if (!d) return;
+    if (d.reason) {
+      // Nothing to propose — the screen stays as it is.
+      setDraftNotes([d.reason === "NO_LESSON_MARKED" ? STR.msDraftNoLesson : levelFill(STR.msDraftNoCodes, lv)]);
+      return;
+    }
+    setItems(
+      d.items.map((i) => ({
+        origin: i.origin,
+        ...(i.artifactId ? { artifactId: i.artifactId } : {}),
+        ...(i.origin === "TEACHER" ? { textBn: i.textBn ?? "" } : {}),
+        loCode: i.loCode,
+        questionTypeCode: i.questionTypeCode,
+        label: `${i.fromBook ? `${STR.msDraftFromBook}: ` : ""}${i.textBn ?? i.qid ?? i.loCode}`,
+        marks: i.marks,
+      })),
+    );
+    if (d.hwItemId) setHwItemId(d.hwItemId);
+    const short = (codes: string[]) => codes.join(", ");
+    setDraftNotes([
+      ...(d.gaps.length ? [fill(STR.msDraftGaps, { codes: short(d.gaps) })] : []),
+      ...(d.leftOut.length ? [fill(STR.msDraftLeftOut, { codes: short(d.leftOut) })] : []),
+      ...(d.rubricCodes.length ? [fill(STR.msDraftRubric, { codes: short(d.rubricCodes) })] : []),
+    ]);
+  }
 
   const outcomes = ((catData?.masteryCatalogue?.outcomes ?? []) as MasteryOutcomeRow[]).filter((o) => o.status === "LOCKED");
   const qts = ((catData?.masteryCatalogue?.questionTypes ?? []) as MasteryQuestionTypeRow[]).filter((q) => q.active && q.marks !== null);
@@ -227,6 +273,10 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
           ) : null}
         </Card>
       ) : null}
+      {source === "HW" ? (
+        <Button title={STR.msDraftFromLesson} variant="secondary" onPress={() => void draftFromLesson()} loading={drafting} />
+      ) : null}
+      {source === "HW" ? draftNotes.map((n, i) => <Notice key={i} message={n} tone="info" />) : null}
       {source === "HW" && (hwData?.masteryHomeworkOptions ?? []).length > 0 ? (
         <>
           <Muted>{STR.msLinkHw}</Muted>

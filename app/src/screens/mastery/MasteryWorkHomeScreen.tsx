@@ -101,10 +101,14 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
       ) : null}
 
       {canCreate && active && activeLevel !== null ? (
-        <Button
-          title={STR.msNewSheet}
-          onPress={() => navigation.navigate("MasteryNewPaper", { sectionId: active, subject, classLevel: activeLevel })}
-        />
+        <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+          <Button
+            title={STR.msNewSheet}
+            onPress={() => navigation.navigate("MasteryNewPaper", { sectionId: active, subject, classLevel: activeLevel })}
+          />
+          {/* PR-D (D-#1322): an extra tailored homework for the weak children of this শাখা × subject. */}
+          <Button title={STR.msExtraButton} variant="secondary" onPress={() => navigation.navigate("MasteryExtraHomework", { sectionId: active, subject })} />
+        </View>
       ) : null}
 
       {error ? <Notice message={friendlyError(error)} tone="danger" /> : null}
@@ -118,7 +122,10 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
               {sourceLabel(p.source)} · {p.date}
               {p.title ? ` · ${p.title}` : ""}
             </Body>
-            <Badge text={p.entryState === "CONFIRMED" ? STR.msConfirmed : STR.msOpen} tone={p.entryState === "CONFIRMED" ? "ok" : "gold"} />
+            <View style={{ flexDirection: "row", gap: space(1) }}>
+              {p.extra ? <Badge text={STR.msExtraBadge} tone="info" /> : null}
+              <Badge text={p.entryState === "CONFIRMED" ? STR.msConfirmed : STR.msOpen} tone={p.entryState === "CONFIRMED" ? "ok" : "gold"} />
+            </View>
           </View>
           <Muted>
             {p.paperId} · {p.source === "RUBRIC" ? `${levelFill(STR.msRubricLos, lv)}: ${bnNum(p.rubricLoCodes.length)}` : `${STR.msItems}: ${bnNum(p.items.length)} · ${bnNum(p.totalMarks)}`}
