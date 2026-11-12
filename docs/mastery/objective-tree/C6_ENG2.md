@@ -3,12 +3,13 @@
 > Generated from `C6_ENG2.tree.json` (the source of truth) — edit the JSON, not this file. Contract: `docs/prd-objective-tree.md`.
 
 - **Status:** DRAFT — Claude draft for review by Mahzabin; the Principal locks. Codes become permanent at lock.
-- **Book:** C6_ENG2_Book_v1_Writer-Reviewer (English 2nd Paper) — not yet printed (first Writer-Reviewer copy; the reviewer has not answered yet) · read 2026-11-12
-  - `Book Review Material/Class 6 Eng/C6_ENG2_Book_v1_Writer-Reviewer.md (+ .docx — the source: units with Teacher note (Learning outcomes, In the exam, Answers), Exam Practice, two Revision papers, NCTB Model Question)`
-  - `Book Review Material/Class 6 Eng/C6_ENG2_Memo_v1.docx (D-01–D-10 — all awaiting the reviewer; Part 1 has the exam: Q1–Q8, 50 marks)`
+- **Book:** C6_ENG2_Book_v2_Writer-Reviewer (English 2nd Paper) — final (সংস্করণ v2 — চূড়ান্ত, November 2026); not yet printed · read 2026-11-12
+  - `Book Review Material/Class 6 Eng/C6_ENG2_Book_v2_Writer-Reviewer.md (+ .docx — the source: units with Teacher note (Learning outcomes, In the exam, Answers), Exam Practice, two Revision papers, NCTB Model Question)`
+  - `Book Review Material/Class 6 Eng/C6_ENG2_Book_v2_Teacher.md, C6_ENG2_Book_v2_Student.md (+ .docx/.pdf — the final teacher and student copies, made from the same master; content taken as identical to the Writer-Reviewer copy)`
+  - `Book Review Material/Class 6 Eng/C6_ENG2_Memo_v1.docx (D-01–D-10 — all approved by the reviewer, 12 November 2026; Part 1 has the exam: Q1–Q8, 50 marks)`
   - `docs/mastery/objective-tree/C5_ENG.tree.json and C6_ENG.tree.json (earlier steps — another subject, named in the notes)`
 - **Counts:** 13 domains used · 36 objectives · 23 sub-objectives · 0 skill strands · **51 tagged rows**
-- **Coverage:** 210 / 210 numbered exercises mapped to a tagged row (0 unmapped). exercisesTotal = every lettered section, activity, class-test practice and Exam Practice question of Units 1–17 (186) plus the eight questions of each of the two Revision and Exam Practice papers and of the NCTB Model Question (24) — 210 in all. Refs read "unit/L<lesson>/<letter>" or "unit/L<lesson>/Act<n>" (a unit without lessons: "unit/U/…"; Part A / Part B: "PA", "PB"), "unit/EP/Q<n>" (a second one in the unit: Q<n>b), "unit/CT/<n>", "18|19/Rev/Q<n>", "20/Model/Q<n>".
+- **Coverage:** 210 / 210 numbered exercises mapped to a tagged row (0 unmapped). exercisesTotal = every lettered section, activity, class-test practice and Exam Practice question of Units 1–17 (186) plus the eight questions of each of the two Revision and Exam Practice papers and of the NCTB Model Question (24) — 210 in all (book v2 is final; its refs, exercise headings and learning outcomes are identical to v1 — 210 / 210 before and after). Refs read "unit/L<lesson>/<letter>" or "unit/L<lesson>/Act<n>" (a unit without lessons: "unit/U/…"; Part A / Part B: "PA", "PB"), "unit/EP/Q<n>" (a second one in the unit: Q<n>b), "unit/CT/<n>", "18|19/Rev/Q<n>", "20/Model/Q<n>".
 
 Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit without lessons: `unit/U/…`; Part A / Part B: `PA`, `PB`), `unit/EP/Q<n>` (an Exam Practice question), `unit/CT/<n>` (class-test practice), `18|19/Rev/Q<n>` (Revision and Exam Practice 1 | 2) and `20/Model/Q<n>` (NCTB Model Question). Codes are written without the `LO-C6-ENG2-` prefix. An earlier step in the 1st Paper or Class Five English (another subject) is named in the Claude note, not in the Prereq column.
 
@@ -217,7 +218,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `03-01` | Make new words with prefixes and suffixes, with correct spelling (class test) | ✓ | 3/U/A; 3/U/B; 3/U/C; 3/U/D; 3/U/E; 3/CT/1; 3/CT/2 | প্রশ্ন | QT-CLASSTEST, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 13-01 "Make new words with prefixes and suffixes (Q7)". Not on the half-yearly or annual paper — class tests only (5 × 1). One row: the Class Five affixes, the new ones and the spelling rules are practised together in section E and the two class-test passages. Whether the unit stays is open (memo D-01). |
+| `03-01` | Make new words with prefixes and suffixes, with correct spelling (class test) | ✓ | 3/U/A; 3/U/B; 3/U/C; 3/U/D; 3/U/E; 3/CT/1; 3/CT/2 | প্রশ্ন | QT-CLASSTEST, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 13-01 "Make new words with prefixes and suffixes (Q7)". Not on the half-yearly or annual paper — class tests only (5 × 1). One row: the Class Five affixes, the new ones and the spelling rules are practised together in section E and the two class-test passages. The unit stays, for class tests (reviewer approved, memo D-01). |
 
 ## বাক্য — প্রকার, গঠন ও রূপান্তর `DOM-ENG2-SENT`
 
@@ -228,7 +229,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `06-01` | Make five meaningful sentences from a substitution table (Q3) | ✓ | 6/U/A; 6/U/B; 6/EP/Q3; 18/Rev/Q3; 19/Rev/Q3; 20/Model/Q3 | প্রশ্ন | QT-SUBST | 01-04 | New question type in Class Six. Whether the unit stays is open (memo D-02). |
+| `06-01` | Make five meaningful sentences from a substitution table (Q3) | ✓ | 6/U/A; 6/U/B; 6/EP/Q3; 18/Rev/Q3; 19/Rev/Q3; 20/Model/Q3 | প্রশ্ন | QT-SUBST | 01-04 | New question type in Class Six. The unit stays as written (reviewer approved, memo D-02). |
 
 ### `09-01` Name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative)
 
@@ -275,7 +276,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `09-05` | Exclamatory and optative sentences | ✓ | 9/L6/Act1; 9/L7/A | প্রশ্ন | QT-CHANGE, QT-CLASS | 09-01 | The optative lesson is SCD's addition (memo D-05, open). |
+| `09-05` | Exclamatory and optative sentences | ✓ | 9/L6/Act1; 9/L7/A | প্রশ্ন | QT-CHANGE, QT-CLASS | 09-01 | The optative lesson is SCD's addition and stays as written (reviewer approved, memo D-05). |
 
 ### `09-06` Change sentences from one type to another without changing the meaning (Q5)
 
@@ -284,7 +285,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `09-06` | Change sentences from one type to another without changing the meaning (Q5) | ✓ | 9/L7/B; 9/L7/Act1; 9/EP/Q5; 18/Rev/Q5; 19/Rev/Q5; 20/Model/Q5 | প্রশ্ন | QT-CHANGE | 09-03, 09-05 | The exam skill (five sentences, one mark each). Whether a small error loses only half a mark is open (memo D-09). |
+| `09-06` | Change sentences from one type to another without changing the meaning (Q5) | ✓ | 9/L7/B; 9/L7/Act1; 9/EP/Q5; 18/Rev/Q5; 19/Rev/Q5; 20/Model/Q5 | প্রশ্ন | QT-CHANGE | 09-03, 09-05 | The exam skill (five sentences, one mark each). A correct change with one small error (spelling, or a missing full stop or question mark) gets half a mark; a wrong change gets 0 (reviewer approved, memo D-09). |
 
 ### `14-01` Use introductory "there" and "it" correctly, and correct wrong uses
 
@@ -341,7 +342,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 | `11-02` | **Write a composition of about 200 words (Q8)** | — (adds up its sub-objectives) | | | | 11-01 |  |
 | `11-02.1` | Plan a composition: its parts and an outline | ✓ | 11/PB/Act8; 17/U/A; 17/U/ActB | প্রশ্ন | QT-COMPOSITION, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-03.1 "The four parts of a composition".  |
 | `11-02.2` | Join ideas and paragraphs with linking words (Firstly, Moreover, However, As a result, Finally, In conclusion) | ✓ | 17/U/B; 17/U/ActA | প্রশ্ন | QT-COMPOSITION, QT-CLASS | 02-03 |  |
-| `11-02.3` | Write and check a composition of about 200 words on a familiar topic | ✓ | 11/EP/Q8; 11/EP/Q8b; 17/U/C; 17/U/D; 17/EP/Q8; 17/EP/Q8b; 18/Rev/Q8; 19/Rev/Q8; 20/Model/Q8 | প্রশ্ন | QT-COMPOSITION | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-03.3 "Write a composition from the topic alone (annual form)". Marking of Q8 (12 marks) is open (memo D-08); whether composition is taught in Units 11 and 17 is open (D-04). Units 11 and 17 are one objective: the same skill, taught twice. |
+| `11-02.3` | Write and check a composition of about 200 words on a familiar topic | ✓ | 11/EP/Q8; 11/EP/Q8b; 17/U/C; 17/U/D; 17/EP/Q8; 17/EP/Q8b; 18/Rev/Q8; 19/Rev/Q8; 20/Model/Q8 | প্রশ্ন | QT-COMPOSITION | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-03.3 "Write a composition from the topic alone (annual form)". Marking of Q8 (12 marks) is approved: organisation 3 + content 6 + language 3 (memo D-08); composition is taught in Units 11 and 17 as written (D-04, approved). Units 11 and 17 are one objective: the same skill, taught twice. |
 
 ## চিঠি, দরখাস্ত ও ইমেইল লেখা `DOM-ENG2-LTR`
 
@@ -354,7 +355,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 |---|---|---|---|---|---|---|---|
 | `04-01` | **Write a formal letter or an application (Q7)** | — (adds up its sub-objectives) | | | | — |  |
 | `04-01.1` | The eight parts of a formal letter in full block layout, with a suitable salutation and closing | ✓ | 4/L1/A; 4/L1/B; 15/L1/A | প্রশ্ন | QT-LETTER, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.1 "The seven parts of an application, in order".  |
-| `04-01.2` | Write a formal letter or an application of about 150 words on a given topic | ✓ | 4/L1/C; 4/L1/D; 4/EP/Q7; 15/EP/Q7; 18/Rev/Q7; 20/Model/Q7 | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.2 "Write an application on a given topic". 4/EP/Q7 and 15/EP/Q7 offer "a letter or an application"; they are cited here (the formal form). Marking of Q7 is open (memo D-07); one layout for all — full block — is open (D-06). |
+| `04-01.2` | Write a formal letter or an application of about 150 words on a given topic | ✓ | 4/L1/C; 4/L1/D; 4/EP/Q7; 15/EP/Q7; 18/Rev/Q7; 20/Model/Q7 | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.2 "Write an application on a given topic". 4/EP/Q7 and 15/EP/Q7 offer "a letter or an application"; they are cited here (the formal form). Marking of Q7 is approved: format 2 + content 4 + language 2 (memo D-07); one layout for all — full block — is approved (D-06). |
 
 ### `04-02` Write an informal letter to a friend or a family member (Q7)
 
@@ -374,7 +375,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 |---|---|---|---|---|---|---|---|
 | `08-01` | **Write an email (Q7)** | — (adds up its sub-objectives) | | | | 04-01 |  |
 | `08-01.1` | The parts of an email and its layout (From, To, Cc, Subject, salutation, body, closing) | ✓ | 8/L1/A; 8/L1/B; 8/L1/E; 15/L1/C | প্রশ্ন | QT-LETTER, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.1 "The parts of an email, in order".  |
-| `08-01.2` | Write a formal or an informal email of about 150 words | ✓ | 8/L1/C; 8/L1/D; 8/EP/Q7; 15/EP/Q7b | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.2 "Write an email on a given topic". Whether the NCTB emails are shown in real email layout is open (memo D-03). |
+| `08-01.2` | Write a formal or an informal email of about 150 words | ✓ | 8/L1/C; 8/L1/D; 8/EP/Q7; 15/EP/Q7b | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.2 "Write an email on a given topic". The NCTB emails are shown in real email layout (reviewer approved, memo D-03). |
 
 ### `15-01` Choose the right layout for the task and correct common mistakes in letters, applications and emails
 
@@ -395,13 +396,13 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 | Code | Question type | Marks each | Where in the exams |
 |---|---|---|---|
 | QT-POS | Q1 Parts of speech: identify the underlined words | ০.৫ | Half-yearly and annual, the same paper (50 marks): 10 × ½ = 5. |
-| QT-GAP | Q2 Gap filling with clues (words from a box) | ০.৫ | 10 × ½ = 5; a box of 12 words for 10 gaps. |
+| QT-GAP | Q2 Gap filling with clues (words from a box) | ০.৫ | 10 × ½ = 5; a box of 12 words for 10 gaps (two extra; a word used in two gaps is listed twice; the box is never in answer order). |
 | QT-SUBST | Q3 Substitution table | ১ | 5 × 1 = 5. |
 | QT-VERBFORM | Q4 Right form of verbs | ১ | 5 × 1 = 5. |
-| QT-CHANGE | Q5 Changing sentences | ১ | 5 × 1 = 5 (half marks for a small error — proposal, memo D-09). |
+| QT-CHANGE | Q5 Changing sentences | ১ | 5 × 1 = 5 (½ for a correct change with one small error — approved, memo D-09). |
 | QT-PUNC | Q6 Punctuation and capitalisation | ০.৫ | 10 × ½ = 5. |
-| QT-LETTER | Q7 Letter, application or email (about 150 words) | ৮ | 8 (marking — memo D-07). |
-| QT-COMPOSITION | Q8 Composition (about 200 words) | ১২ | 12 (marking — memo D-08). |
+| QT-LETTER | Q7 Letter, application or email (about 150 words) | ৮ | 8: format 2 + content 4 + language 2 (approved, memo D-07). |
+| QT-COMPOSITION | Q8 Composition (about 200 words) | ১২ | 12: organisation 3 + content 6 + language 3 (approved, memo D-08). |
 | QT-CLASSTEST | Class test — prefixes and suffixes (5 × 1); conjugation | ১ | Not on the half-yearly or annual paper — class tests only (Unit 3; Unit 16 section A). |
 | QT-CLASS | Classwork — not on the paper | — | Teacher notes: free sentence writing, pair work and the lesson activities are classwork only. |
 
@@ -413,8 +414,8 @@ Every one of the 210 numbered exercises maps to at least one tagged row.
 
 | Row | Kind | Flag |
 |---|---|---|
-| — | VERSION_DIFF | The book is not yet printed and this is its first version. Source: C6_ENG2_Book_v1_Writer-Reviewer (4 November 2026); the reviewer has not answered the memo yet. Section letters and activity numbers may move in the next version and at print — re-check all 210 refs before the lock. |
-| — | OTHER | Open memo decisions (C6_ENG2_Memo_v1, D-01–D-10, all unanswered) that can change the tree: D-01 whether Unit 3 (Prefixes and Suffixes) stays — row 03-01 goes if not; D-02 whether Unit 6 (Substitution Table) stays — row 06-01 would lose its teaching unit (Q3 stays on the paper); D-04 whether composition is taught in Units 11 and 17 — the 11-02 rows; D-05 whether Unit 9 keeps the lesson on optative sentences and changing sentences — rows 09-05, 09-06; D-03 email layout; D-06 one layout (full block) for all letters; D-07, D-08, D-09 marking of Q7, Q8 and Q5; D-10 the new texts. |
+| — | VERSION_DIFF | The book is not yet printed. Source: C6_ENG2_Book_v2_Writer-Reviewer (সংস্করণ v2 — চূড়ান্ত, November 2026); the reviewer approved all ten decisions of C6_ENG2_Memo_v1 (12 November 2026) and the book is final. The exercise structure did not change from v1 (the same 210 refs). Exercise letters may still move at print — re-check all 210 refs against the print before the lock. |
+| — | OTHER | Memo decisions (C6_ENG2_Memo_v1, D-01–D-10) — all ten approved by the reviewer (SCD's proposal ticked each time), so nothing in the tree waits on them: D-01 Unit 3 stays for class tests (row 03-01); D-02 Unit 6 stays (row 06-01); D-03 email layout (Unit 8, 15); D-04 composition taught in Units 11 and 17 (the 11-02 rows); D-05 Unit 9 keeps the optative lesson (rows 09-05, 09-06); D-06 full block for all letters; D-07 Q7 marking 2 + 4 + 2; D-08 Q8 marking 3 + 6 + 3; D-09 half mark for a correct change with one small error (Q5); D-10 the new texts. |
 | — | OTHER | CROSS-SUBJECT PREREQUISITES: the grammar and writing rows of the 2nd Paper continue rows of the Class Five English tree (subject ENG) and of the Class Six 1st Paper tree (ENG), but the app accepts a prerequisite only in the same subject (rule PREREQ_RESOLVES: "another subject" is refused, also at import). So prereqCodes hold only codes inside this tree, and each row's earlier step in ENG is written at the start of its Claude note ("Earlier step …"), checked against C5_ENG and C6_ENG when the tree was built. If the owner wants these as real prerequisites, the rule must first allow ENG → ENG2 (and BAN → BAN2); then the codes can be moved from the notes into prereqCodes. |
 | — | OTHER | Question types are the eight questions of the book's exam (Q1–Q8, 50 marks) plus the class test (prefixes and suffixes; conjugation) and classwork. A grammar row carries the exam questions in which that grammar is examined (as its teacher note says) plus classwork; the six exam-skill rows (01-01, 01-06, 02-06, 05-03, 06-01, 09-06, 10-01.3) and the writing rows cite the Exam Practice questions themselves. |
 | — | OTHER | The two "Revision and Exam Practice" sections and the NCTB Model Question have no unit number in the book; they are inventoried as units 18, 19 and 20 so that their 24 questions can be cited. They have no learning outcomes of their own — each question is cited by the exam-skill row it practises. |
@@ -428,7 +429,7 @@ Every one of the 210 numbered exercises maps to at least one tagged row.
 
 **কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে; বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। সূত্র: "5/L2/C" = Unit 5, Lesson 2, section C; "9/L5/Act2" = Unit 9, Lesson 5, Activity 2; "7/U/D" = Unit 7 (পাঠ-ভাগ নেই), section D; "5/EP/Q4" = Unit 5-এর Exam Practice Q4; "3/CT/1" = Class-Test Practice 1; "18/Rev/Q3" = Revision and Exam Practice 1-এর Q3 (১৯ = Revision 2, ২০ = NCTB Model Question)।
 
-**বইটি ছাপা হয়নি এবং এটি প্রথম সংস্করণ** — স্মারকের ১০টি সিদ্ধান্তই খোলা; Unit 3 ও Unit 6 থাকবে কি না তা-ও (D-01, D-02)।
+**বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১০টি সিদ্ধান্তই অনুমোদন করেছেন — Unit 3 ও Unit 6 থাকছে (D-01, D-02)। অনুশীলনীর সূত্র v1-এর মতোই (২১০টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।
 
 **আগে এগুলো দেখুন (Claude-এর বিচার):**
 1. **"আগের ধাপ" এই গাছে নোটে লেখা, prereq-ঘরে নয়।** ২য় পত্রের ব্যাকরণ পঞ্চম শ্রেণির ইংরেজি (ENG) গাছের সারির পরের ধাপ, কিন্তু অ্যাপ অন্য বিষয়ের কোড prerequisite হিসেবে নেয় না। তাই প্রতিটি সারির Claude-নোটের শুরুতে "Earlier step …" লেখা আছে (পতাকা ৩) — মালিক নিয়ম বদলালে সেগুলো ঘরে তোলা যাবে।
@@ -441,3 +442,13 @@ Every one of the 210 numbered exercises maps to at least one tagged row.
 8. **Paragraph দুই পত্রেই** (এখানে 11-01 শ্রেণির কাজ; ১ম পত্রে Q12) — দুটি আলাদা সারি থাকল।
 
 **নতুন ডোমেইন-মই `domains/ENG2.json`** (১৩টি ক্ষেত্র): প্রতিটি ENG-এর কোন ক্ষেত্রের ধারাবাহিকতা তা note-এ লেখা; "Grammar in use" (gap filling ও cloze) একমাত্র নতুন ক্ষেত্র। সপ্তম–দশম শ্রেণিতে একই মই চলবে।
+
+## Final book v2 — changes
+
+Checked 2026-11-12 against `C6_ENG2_Book_v2_Writer-Reviewer.md` (সংস্করণ v2 — চূড়ান্ত, November 2026). Method: v1 and v2 were normalised (table markup, escapes, blockquote markers, underline tags, Islamic-phrase spellings) and diffed (87 change blocks); the exercise inventory (all 210 refs and their heading text) and every unit's Learning outcomes list were then compared one by one with the inventory script.
+
+- **Structure: no change.** Same 17 units, 210 exercise refs with identical headings; every Learning outcomes bullet identical; the eight question types and marks of the Appendix unchanged (Q1 10 × ½ … Q8 12 = 50).
+- **What did change in the book:** (1) cover → "সংস্করণ v2 — চূড়ান্ত"; (2) the reviewer's Memo v1 answer (12 Nov 2026): she ticked SCD's proposal in all ten decisions (decisions 25–35 of the log) — Q7 marking format 2 + content 4 + language 2, Q8 organisation 3 + content 6 + language 3, Q5 half mark for a correct change with one small error, Unit 3 stays for class tests, Unit 6 stays, email layout, composition in Units 11 and 17, Unit 9 Lesson 7, full-block letters, all new texts approved — so every "proposed" marking in the Appendix and the teacher notes is now plain marking; (3) decision 28: Q2 word boxes hold twelve words (ten answers + two extra, a repeated word listed twice) and are never in answer order — boxes, option lists and substitution-table columns were reordered throughout (answers unchanged); (4) decision 36: Islamic phrase spellings follow the house table (Jazakallahu Khairan / Jazakillahu Khairan / Jazakumullahu Khairan; InshaAllah, SubhanAllah); (5) small text edits: "Hi" → "Assalamu alaikum" in a Unit 12 conversation; NCTB error fixed in the Model Question Q2 ("spent great time" → "spent a great time", decision 17); decision 37 (Model Question Q7 application ends "Jazakallahu Khairan."); decision 38 closes the Mohammadpur 100-mark memo items (J-19, J-24).
+- **Tree changes:** `source.book` / `version` / `files` point to v2 (and the final Teacher/Student copies; the memo is marked approved); the VERSION_DIFF flag and the "open memo decisions" flag now say all ten are approved; Claude notes of rows 03-01, 04-01.2, 06-01, 08-01.2, 09-05, 09-06 and 11-02.3 changed from "open" to "approved" (with the approved marking split); `examUse` of QT-CHANGE, QT-LETTER, QT-COMPOSITION updated and QT-GAP now states the twelve-word box rule; the coverage note and the reviewer note state that the refs are unchanged. No source text in the tree used the old Islamic-phrase spellings or "Hi". **Objectives added 0, label changed 0, retired 0; exercise refs remapped 0; question types / marks changed 0.** No code was touched; `domains/ENG2.json` untouched.
+- **Coverage:** 210 / 210 before and after.
+- **Still open:** the book is not yet printed — re-match the 210 exercise letters against the printed book before the lock.

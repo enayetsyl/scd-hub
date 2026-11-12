@@ -4,11 +4,12 @@
  "subject": "ENG",
  "status": "DRAFT",
  "source": {
-  "book": "C6_ENG_Book_v1_Writer-Reviewer (English 1st Paper) — not yet printed (first Writer-Reviewer copy; the reviewer has not answered yet)",
-  "version": "C6_ENG_Book_v1_Writer-Reviewer (4 November 2026) — not yet printed",
+  "book": "C6_ENG_Book_v2_Writer-Reviewer (English 1st Paper) — final (সংস্করণ v2 — চূড়ান্ত, 12 November 2026); not yet printed",
+  "version": "C6_ENG_Book_v2_Writer-Reviewer (সংস্করণ v2 — চূড়ান্ত, 12 November 2026) — not yet printed",
   "files": [
-   "Book Review Material/Class 6 Eng/C6_ENG_Book_v1_Writer-Reviewer.md (+ .docx — the source: lessons with Teacher Note (Learning outcomes, In the exam, Answers), writing guides, Words to Know, Exam Practice, Appendix — marks and class tests)",
-   "Book Review Material/Class 6 Eng/C6_ENG_Memo_v1.docx (D-01–D-13 — all awaiting the reviewer)",
+   "Book Review Material/Class 6 Eng/C6_ENG_Book_v2_Writer-Reviewer.md (+ .docx — the source: lessons with Teacher Note (Learning outcomes, In the exam, Answers), writing guides, Words to Know, Exam Practice, Appendix — marks and class tests)",
+   "Book Review Material/Class 6 Eng/C6_ENG_Book_v2_Teacher.md, C6_ENG_Book_v2_Student.md (+ .docx/.pdf — the final teacher and student copies, made from the same master; content taken as identical to the Writer-Reviewer copy)",
+   "Book Review Material/Class 6 Eng/C6_ENG_Memo_v1.docx (D-01–D-13 — all approved by the reviewer, 12 November 2026)",
    "docs/mastery/objective-tree/C5_ENG.tree.json (earlier-class codes)"
   ],
   "readOn": "2026-11-12"
@@ -94,13 +95,13 @@
    "code": "QT-TF",
    "labelBn": "Q6 True / False — correct a false statement",
    "marksBn": "১",
-   "examUse": "1 × 5 = 5. Marking of the correction is open (memo D-13)."
+   "examUse": "1 × 5 = 5. ½ for True/False + ½ for the correction (reviewer approved, memo D-13)."
   },
   {
    "code": "QT-SUMMARY",
    "labelBn": "Q7 Writing a summary",
    "marksBn": "১০",
-   "examUse": "10 — main ideas 5 + own words and brevity 3 + language 2 (proposal, memo D-03)."
+   "examUse": "10 — main ideas 5 + own words and brevity 3 + language 2 (approved, memo D-03)."
   },
   {
    "code": "QT-MATCH",
@@ -124,13 +125,13 @@
    "code": "QT-STORY",
    "labelBn": "Q11 Completing a story",
    "marksBn": "১০",
-   "examUse": "10 — title 1 + story 5 + language 4 (proposal, memo D-04)."
+   "examUse": "10 — title 1 + story 5 + language 4 (approved, memo D-04)."
   },
   {
    "code": "QT-PARA",
    "labelBn": "Q12 Writing a paragraph (about 120 words)",
    "marksBn": "১০",
-   "examUse": "10 — content 5 + order 2 + language 3 (proposal, memo D-05)."
+   "examUse": "10 — content 5 + order 2 + language 3 (approved, memo D-05)."
   },
   {
    "code": "QT-DIALOGUE",
@@ -510,7 +511,7 @@
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "Six poems in the year (Let's Play, Holding Hands, Boats Sail on the Rivers, The Chaos, Stop Look and Listen, Andre). Whether the annual Q10 covers all six is open (memo D-02). 1/L1/C1 asks about the punctuation marks of a poem — kept here as a poem question."
+   "claudeNote": "Six poems in the year (Let's Play, Holding Hands, Boats Sail on the Rivers, The Chaos, Stop Look and Listen, Andre). The annual Q10 asks about all six poems of the year (reviewer approved, memo D-02). 1/L1/C1 asks about the punctuation marks of a poem — kept here as a poem question."
   },
   {
    "code": "LO-C6-ENG-01-06",
@@ -549,7 +550,7 @@
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "The marking split is SCD's proposal (memo D-04, open)."
+   "claudeNote": "The marking split is approved by the reviewer (memo D-04)."
   },
   {
    "code": "LO-C6-ENG-01-07",
@@ -600,7 +601,7 @@
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "The marking split is SCD's proposal (memo D-05, open). Lesson paragraphs are guided by questions; the paper gives the topic only."
+   "claudeNote": "The marking split is approved by the reviewer (memo D-05). Lesson paragraphs are guided by questions; the paper gives the topic only."
   },
   {
    "code": "LO-C6-ENG-01-08",
@@ -651,7 +652,7 @@
    "chapterNumber": 1,
    "strand": null,
    "labelBn": "Respond to good news and bad news with the right expressions",
-   "sourceText": "respond to good news with \"MashaAllah! Congratulations! Well done!\" and reply with \"JazakAllahu khairan\" · respond to bad news with \"I'm sorry to hear that\" and \"That's bad luck\"",
+   "sourceText": "respond to good news with \"MashaAllah! Congratulations! Well done!\" and reply with \"Jazakallahu Khairan\" · respond to bad news with \"I'm sorry to hear that\" and \"That's bad luck\"",
    "bookRef": {
     "chapter": 1,
     "lesson": null,
@@ -767,7 +768,7 @@
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "How Q6 is marked when a false statement must be corrected is open (memo D-13)."
+   "claudeNote": "½ for True/False + ½ for the correction of a false statement (reviewer approved, memo D-13)."
   },
   {
    "code": "LO-C6-ENG-02-04",
@@ -910,7 +911,7 @@
    "prereqCodes": [],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "New in Class Six. Always set on the unseen passage of Q5–Q8. The marking split is SCD's proposal (memo D-03, open). The guide comes in Unit 4, but the Exam Practice of Units 1–3 already asks for a summary."
+   "claudeNote": "New in Class Six. Always set on the unseen passage of Q5–Q8. The marking split is approved by the reviewer (memo D-03). The guide comes in Unit 4, but the Exam Practice of Units 1–3 already asks for a summary."
   },
   {
    "code": "LO-C6-ENG-04-02",
@@ -1190,23 +1191,23 @@
   "exercisesTotal": 339,
   "mapped": 339,
   "unmapped": [],
-  "note": "exercisesTotal = every lettered exercise or text of the 30 lessons (170: headings A, A1, B2 … inside each lesson), the four writing guides of Units 1–4 (one ref each), the meaning test and the spelling test of each unit's Words to Know (22) and the 13 questions of each unit's Exam Practice paper (143) — 339 in all. Refs read \"unit/L<lesson>/<letter>\" (3/L2/B2 = Lesson 3.2, exercise B2), \"unit/WK/1|2\", \"unit/EP/<question>\", \"unit/Guide/1\"."
+  "note": "exercisesTotal = every lettered exercise or text of the 30 lessons (170: headings A, A1, B2 … inside each lesson), the four writing guides of Units 1–4 (one ref each), the meaning test and the spelling test of each unit's Words to Know (22) and the 13 questions of each unit's Exam Practice paper (143) — 339 in all (book v2 is final; its refs, exercise headings and learning outcomes are identical to v1 — 339 / 339 before and after). Refs read \"unit/L<lesson>/<letter>\" (3/L2/B2 = Lesson 3.2, exercise B2), \"unit/WK/1|2\", \"unit/EP/<question>\", \"unit/Guide/1\"."
  },
  "flags": [
   {
    "code": null,
    "kind": "VERSION_DIFF",
-   "text": "The book is not yet printed and this is its first version. Source: C6_ENG_Book_v1_Writer-Reviewer (4 November 2026); the reviewer has not answered the memo yet. Exercise letters may move in the next version and at print — re-check all 339 refs before the lock. Three copyrighted poems (Holding Hands, The Chaos, Andre) are not printed in the copy: the school pastes them from English For Today."
+   "text": "The book is not yet printed. Source: C6_ENG_Book_v2_Writer-Reviewer (সংস্করণ v2 — চূড়ান্ত, 12 November 2026); the reviewer approved all thirteen decisions of C6_ENG_Memo_v1 and the book is final. The exercise structure did not change from v1 (the same 339 refs). Exercise letters may still move at print — re-check all 339 refs against the print before the lock. Two copyrighted poems (Holding Hands, Andre) are not printed in the copy and a third (The Chaos) is treated the same way: the school pastes them from English For Today."
   },
   {
    "code": null,
    "kind": "OTHER",
-   "text": "Open memo decisions (C6_ENG_Memo_v1, all 13 unanswered) that can change the tree: D-01 the mark distribution itself (the 13 question types and marks in questionTypes); D-02 whether the annual Q10 covers all six poems (row 01-05); D-03/D-04/D-05 the marking of summary, story and paragraph (rows 04-01, 01-06, 01-07 — examUse only); D-13 the marking of True/False (row 02-03); D-12 whether Units 1–4 keep a writing guide each (the four Guide refs); D-09/D-10 the eleven unseen passages and the Q11–Q13 topics of the Exam Practice (refs stay, texts may change); D-06/D-07/D-08 the edited or new texts of Lessons 5.1, 5.2 and 7.1 (their exercises may change)."
+   "text": "Memo decisions (C6_ENG_Memo_v1) — all thirteen approved by the reviewer on 12 November 2026, so nothing in the tree waits on them: D-01 the mark distribution (the 13 question types and marks in questionTypes); D-02 annual Q10 on all six poems (row 01-05); D-03/D-04/D-05 the marking of summary, story and paragraph (rows 04-01, 01-06, 01-07 — examUse only); D-13 True/False marking (row 02-03); D-12 a writing guide in each of Units 1–4 (the four Guide refs); D-09/D-10 the eleven unseen passages and the Q11–Q13 topics; D-06/D-07/D-08 the edited or new texts of Lessons 5.1, 5.2 and 7.1; D-11 the NCTB factual corrections."
   },
   {
    "code": null,
    "kind": "OTHER",
-   "text": "Question types are the thirteen questions of the book's Appendix (Mohammadpur 2026 pattern, proposal D-01) plus the Appendix's four class tests (spelling and dictation, word-meaning test, reading aloud, class performance). Nothing else is used. A row carries an exam type only if it cites that question of an Exam Practice."
+   "text": "Question types are the thirteen questions of the book's Appendix (Mohammadpur 2026 pattern, approved D-01) plus the Appendix's four class tests (spelling and dictation, word-meaning test, reading aloud, class performance). Nothing else is used. A row carries an exam type only if it cites that question of an Exam Practice."
   },
   {
    "code": null,
@@ -1244,5 +1245,5 @@
    "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): The reading texts themselves (38 passages, dialogues and poems headed \"Read the …\") are inventoried as exercises and cited by the reading-aloud strand SK-READ-01, as in the Class Five tree. If the reviewer wants silent reading comprehension as its own row, it is the group 01-01."
   }
  ],
- "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·01-01.3)। সূত্র: \"3/L2/B2\" = Unit 3, Lesson 3.2, exercise B2; \"5/EP/6\" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; \"5/WK/1\" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); \"2/Guide/1\" = Unit 2-এর writing guide।\n\n**বইটি ছাপা হয়নি এবং এটি প্রথম সংস্করণ** — স্মারকের ১৩টি সিদ্ধান্তই খোলা; নম্বর বণ্টন (D-01) নিজেই প্রস্তাব। পরের সংস্করণে সূত্র ও ধরন মিলিয়ে নিতে হবে।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **গাছটি দক্ষতা ধরে, পাঠ ধরে নয়** (পঞ্চম শ্রেণির মতো): প্রশ্নপত্রের ১৩টি প্রশ্নের প্রতিটি একটি সারি, যে ইউনিটে প্রথম শেখানো হয় সেখানে বসানো, আর ১১টি ইউনিটের অনুশীলনী ও Exam Practice উদ্ধৃত। তাই সারি মাত্র ২৫টি। ব্যাকরণ ও চিঠি-দরখাস্ত-রচনা ২য় পত্রের গাছে (C6_ENG2)।\n2. **Gap filling এক সারি (01-01.3)** — পাঠে শব্দ-বাক্স থাকে, প্রশ্নপত্রে (Q3) থাকে না। ভাগ করবেন কি?\n3. **শব্দের অর্থ মেলানো (01-03) আলাদা, synonym/antonym (01-02) আলাদা** — প্রথমটি শ্রেণি পরীক্ষার, দ্বিতীয়টি Q4।\n4. **কথোপকথনের ভাষার পাঁচটি ছোট সারি** (01-09, 02-01, 03-02, 10-01, 10-02) — শ্রেণির কাজ, প্রশ্নপত্রে নয়; প্রতিটিতে এক-দুটি অনুশীলনী। একটি দলে আনবেন, না এমনই রাখবেন?\n5. **উচ্চারণের তিন পাঠ (4.2, 6.2, 9.3) এক রুব্রিক-সারি (04-02)**; \"e যোগ করে নতুন শব্দ\" (04-03) আলাদা লিখিত সারি।\n6. **পড়ার অংশগুলো (passage, dialogue, poem) reading-aloud ধারায় (SK-READ-01)** উদ্ধৃত — পঞ্চম শ্রেণির মতো।\n7. **Summary (04-01), dialogue (01-08) ও MCQ (01-01.1) ষষ্ঠ শ্রেণিতে নতুন ধরন** — আগের ধাপ নেই বা দুর্বল; শুরুতে বেশি অনুশীলন লাগবে।\n\n**বই-দলের জন্য (পতাকা দেখুন):** MCQ, rearranging ও কয়েকটি ভাষা-সারির পাঠ-অনুশীলনী একটি-দুটি; gap filling-এ পাঠ ও প্রশ্নপত্রের রূপ আলাদা; তিনটি কবিতা কপিতে ছাপা নেই।\n"
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·01-01.3)। সূত্র: \"3/L2/B2\" = Unit 3, Lesson 3.2, exercise B2; \"5/EP/6\" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; \"5/WK/1\" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); \"2/Guide/1\" = Unit 2-এর writing guide।\n\n**বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (১২ নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১৩টি সিদ্ধান্তই অনুমোদন করেছেন — নম্বর বণ্টন (D-01) সহ। অনুশীলনীর সূত্র v1-এর মতোই (৩৩৯টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **গাছটি দক্ষতা ধরে, পাঠ ধরে নয়** (পঞ্চম শ্রেণির মতো): প্রশ্নপত্রের ১৩টি প্রশ্নের প্রতিটি একটি সারি, যে ইউনিটে প্রথম শেখানো হয় সেখানে বসানো, আর ১১টি ইউনিটের অনুশীলনী ও Exam Practice উদ্ধৃত। তাই সারি মাত্র ২৫টি। ব্যাকরণ ও চিঠি-দরখাস্ত-রচনা ২য় পত্রের গাছে (C6_ENG2)।\n2. **Gap filling এক সারি (01-01.3)** — পাঠে শব্দ-বাক্স থাকে, প্রশ্নপত্রে (Q3) থাকে না। ভাগ করবেন কি?\n3. **শব্দের অর্থ মেলানো (01-03) আলাদা, synonym/antonym (01-02) আলাদা** — প্রথমটি শ্রেণি পরীক্ষার, দ্বিতীয়টি Q4।\n4. **কথোপকথনের ভাষার পাঁচটি ছোট সারি** (01-09, 02-01, 03-02, 10-01, 10-02) — শ্রেণির কাজ, প্রশ্নপত্রে নয়; প্রতিটিতে এক-দুটি অনুশীলনী। একটি দলে আনবেন, না এমনই রাখবেন?\n5. **উচ্চারণের তিন পাঠ (4.2, 6.2, 9.3) এক রুব্রিক-সারি (04-02)**; \"e যোগ করে নতুন শব্দ\" (04-03) আলাদা লিখিত সারি।\n6. **পড়ার অংশগুলো (passage, dialogue, poem) reading-aloud ধারায় (SK-READ-01)** উদ্ধৃত — পঞ্চম শ্রেণির মতো।\n7. **Summary (04-01), dialogue (01-08) ও MCQ (01-01.1) ষষ্ঠ শ্রেণিতে নতুন ধরন** — আগের ধাপ নেই বা দুর্বল; শুরুতে বেশি অনুশীলন লাগবে।\n\n**বই-দলের জন্য (পতাকা দেখুন):** MCQ, rearranging ও কয়েকটি ভাষা-সারির পাঠ-অনুশীলনী একটি-দুটি; gap filling-এ পাঠ ও প্রশ্নপত্রের রূপ আলাদা; তিনটি কবিতা কপিতে ছাপা নেই।\n"
 }
