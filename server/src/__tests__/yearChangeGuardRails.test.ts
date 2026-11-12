@@ -215,6 +215,15 @@ describe("YC-0: import-students.ts guard", () => {
     expect(at).toBeLessThan(src.indexOf("findOneAndUpdate"));
     expect(src.slice(at, at + 500)).toContain("process.exit(1)");
   });
+
+  it("also refuses (exit 1) when any Enrolment row exists (YC-1), before the first write", () => {
+    const src = fs.readFileSync(path.resolve(__dirname, "../../scripts/import-students.ts"), "utf-8");
+    const at = src.indexOf("Enrolment.countDocuments({})");
+    expect(at).toBeGreaterThan(0);
+    expect(at).toBeLessThan(src.indexOf("findOneAndUpdate"));
+    const refused = src.indexOf("REFUSED:", at);
+    expect(src.slice(refused, refused + 400)).toContain("process.exit(1)");
+  });
 });
 
 describe("YC-0: delete-stray-year script", () => {
