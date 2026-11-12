@@ -488,6 +488,8 @@ export async function protectedYearIds(): Promise<Types.ObjectId[]> {
 
 export async function listDisposable(): Promise<ScriptBundleShape[]> {
   const protectedIds = await protectedYearIds();
+  // No current year → no protected window can be derived → nothing is disposable (YC-0).
+  if (protectedIds.length === 0) return [];
   const rows = await ScriptBundle.find({
     status: "FILED",
     academicYearId: { $nin: protectedIds },
@@ -498,9 +500,14 @@ export async function listDisposable(): Promise<ScriptBundleShape[]> {
 /** D-#761: listDisposable, one page at a time (oldest exam first, `_id` tie-break). */
 export async function listDisposablePage(args: PageArgs): Promise<Page<ScriptBundleShape>> {
   const protectedIds = await protectedYearIds();
+  // No current year → nothing is disposable (YC-0): an always-empty filter keeps the page shape.
+  const filter =
+    protectedIds.length === 0
+      ? { _id: { $in: [] } }
+      : { status: "FILED", academicYearId: { $nin: protectedIds } };
   return queryPage(
     ScriptBundle,
-    { status: "FILED", academicYearId: { $nin: protectedIds } },
+    filter,
     { examDate: 1, _id: 1 },
     args,
     (docs) => (docs as unknown as IScriptBundle[]).map(bundleShape),
@@ -520,6 +527,9 @@ export async function disposeBundle(input: {
   if (bundle.status !== "FILED") throw new Error("বান্ডিলটি সংরক্ষিত অবস্থায় নেই");
   if (!input.reason.trim()) throw new Error("কারণ লেখা আবশ্যক");
   const protectedIds = await protectedYearIds();
+  if (protectedIds.length === 0) {
+    throw new Error("চলতি শিক্ষাবর্ষ ঠিক করা নেই — কোনো খাতা নিষ্পত্তি করা যায় না");
+  }
   if (protectedIds.some((id) => id.equals(bundle.academicYearId))) {
     throw new Error("চলতি বা আগের শিক্ষাবর্ষের খাতা নিষ্পত্তি করা যায় না (D-#446)");
   }

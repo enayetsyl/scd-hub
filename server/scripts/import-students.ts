@@ -68,6 +68,24 @@ async function main(): Promise<void> {
 
   await connectDb();
 
+  // --- Guard (YC-0): refuse once a year other than the current one holds classes. ----
+  // This script upserts Class.level+year and moves students by schoolId; after the year
+  // change it would drag children back to the old year's classes (PRD docs/prd-year-change.md).
+  {
+    const currentYear = await AcademicYear.findOne({ current: true }, { _id: 1 }).lean();
+    const strayFilter = currentYear ? { academicYearId: { $ne: currentYear._id } } : {};
+    const stray = await Class.countDocuments(strayFilter);
+    if (stray > 0) {
+      console.error(
+        `REFUSED: ${stray} class(es) belong to an academic year other than the current one` +
+          (currentYear ? "" : " (no year is current)") +
+          ". import-students.ts is a first-load tool and must not run after the year change.",
+      );
+      await disconnectDb();
+      process.exit(1);
+    }
+  }
+
   // --- Academic year: use the current one, or create 2026 ------------------
   let year = await AcademicYear.findOne({ current: true });
   if (!year) {

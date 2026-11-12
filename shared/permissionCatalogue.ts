@@ -972,6 +972,14 @@ export const FEATURE_CATALOGUE = {
       settings: { en: "Academic years", bn: "শিক্ষাবর্ষ যোগ ও চালু বছর বদলানো", desc: "Add a year; set the current year", teacher: false, office: true, flags: [] },
     },
   },
+  year_change: {
+    group: "school_operations",
+    en: "Year change",
+    bn: "বছর পরিবর্তন",
+    actions: {
+      cut_over: { en: "Switch the current academic year", bn: "চালু শিক্ষাবর্ষ বদলানো", desc: "Flip the school's current year at the year-change cut-over (Principal only)", teacher: false, office: false, flags: ["LOCKED"] },
+    },
+  },
   teaching_assignments: {
     group: "school_operations",
     en: "Teaching assignments",

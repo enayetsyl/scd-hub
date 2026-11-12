@@ -16,7 +16,7 @@ import {
 } from "../services/ClassTeacherService";
 import { mergeSections, splitSections, activeSectionMerges } from "../services/SectionMergeService";
 import { writeAudit } from "../../platform/services/AuditService";
-import { DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN } from "@scd/shared";
+import { DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN, callerHasPermission } from "@scd/shared";
 
 type SubjectShape = Pick<ISubject, "code" | "nameBn"> & { _id: { toString(): string } };
 type SectionShape = Pick<ISection, "code" | "nameBn" | "active"> & {
@@ -107,12 +107,12 @@ AcademicYearRef.implement({
   }),
 });
 
-/** All academic years (newest label first) — for year pickers. */
+/** All academic years (newest start date first) — for year pickers. */
 builder.queryField("academicYears", (t) =>
   t.field({
     type: [AcademicYearRef],
     authScopes: { authenticated: true },
-    resolve: async () => AcademicYear.find({}).sort({ label: -1 }).lean(),
+    resolve: async () => AcademicYear.find({}).sort({ startDate: -1, label: -1 }).lean(),
   }),
 );
 
@@ -140,6 +140,11 @@ builder.mutationField("createAcademicYear", (t) =>
       const startDate = new Date(Date.UTC(y, 0, 1));
       const endDate = new Date(Date.UTC(y, 11, 31));
       const makeCurrent = args.makeCurrent === true;
+      if (makeCurrent) {
+        // Same gate as setCurrentAcademicYear — "add a year" must not be a back door to the flip.
+        const canFlip = callerHasPermission(ctx.auth, "year_change:cut_over");
+        if (!canFlip) throw new Error("Forbidden: only the Principal can switch the current academic year");
+      }
       if (makeCurrent) await AcademicYear.updateMany({}, { current: false });
       const year = await AcademicYear.create({ label, startDate, endDate, current: makeCurrent });
       await writeAudit({
@@ -154,11 +159,12 @@ builder.mutationField("createAcademicYear", (t) =>
   }),
 );
 
-/** Set THE active academic year (exactly one is current at a time). */
+/** Set THE active academic year (exactly one is current at a time). Principal only
+ *  (`year_change:cut_over`, D-#1451): the flip happens inside the year-change cut-over. */
 builder.mutationField("setCurrentAcademicYear", (t) =>
   t.field({
     type: AcademicYearRef,
-    authScopes: { hasPermission: "classes_sections:settings" },
+    authScopes: { hasPermission: "year_change:cut_over" },
     description: "Mark one academic year current (clears the flag on all others).",
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
