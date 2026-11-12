@@ -136,7 +136,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
             <Button title={STR.msEntry} variant="secondary" onPress={() => navigation.navigate("MasteryEntry", { paperId: p.paperId })} />
             {/* PR-J (D-#1420): the extra sheet as printed — one page per child. */}
-            {p.extra ? <Button title={STR.msPrint} variant="secondary" onPress={() => void openPdf(`/pdf/mastery-extra/${p.paperId}`).catch(() => setPrintMsg(STR.errGeneric))} /> : null}
+            {p.extra ? <Button title={STR.msPrint} variant="secondary" onPress={() => { setPrintMsg(null); void openPdf(`/pdf/mastery-extra/${p.paperId}`).catch(() => setPrintMsg(STR.errGeneric)); }} /> : null}
           </View>
         </Card>
       ))}

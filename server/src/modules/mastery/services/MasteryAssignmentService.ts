@@ -335,7 +335,10 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     loCode,
     weakPct: sectionOutcomeSummary([...per.values()].map((s) => s.state), sec.assessments.get(loCode) ?? 0, policy.resolved).weakPct,
   }));
-  const partA = buildPartA(sectionWeak, policy.resolved.sectionTriggerPct, new Set(studentsByQid.keys()), bctx);
+  // PR-J (D-#1420): a question on any child's open extra sheet is seen by that child, so Part A (class-wide) avoids it.
+  const extraSeen = await openExtraSeen(ctx.sectionId, input.subject);
+  const openExtraQids = new Set([...extraSeen.values()].flatMap((q) => [...q]));
+  const partA = buildPartA(sectionWeak, policy.resolved.sectionTriggerPct, new Set([...studentsByQid.keys(), ...openExtraQids]), bctx, openExtraQids);
   const partAQids = new Set(partA.map((q) => q.qid));
 
   const now = new Date();
@@ -361,7 +364,6 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   await a.save();
 
   const existing = new Map((await MasteryAssignmentSheet.find({ assignmentId: a._id }).lean()).map((s) => [String(s.studentId), s]));
-  const extraSeen = await openExtraSeen(ctx.sectionId, input.subject); // PR-J (D-#1420)
   for (const st of roster) {
     const sid = String(st._id);
     if (existing.get(sid)?.edited) continue; // the teacher's own changes survive a rebuild

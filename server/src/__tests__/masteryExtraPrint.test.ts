@@ -32,6 +32,11 @@ import { MasteryEvidence } from "../modules/mastery/models/MasteryEvidence";
 import { importCatalogue, savePolicy, setEnablement } from "../modules/mastery/services/MasteryCatalogueService";
 import { confirmPaper, createPaper, saveResults } from "../modules/mastery/services/MasteryWorkService";
 import { createExtraHomework, extraHomeworkPreview, homeworkDraft } from "../modules/mastery/services/MasteryHomeworkService";
+import { MasteryPaper } from "../modules/mastery/models/MasteryPaper";
+import { MasteryResult } from "../modules/mastery/models/MasteryResult";
+import { MasteryAssignment } from "../modules/mastery/models/MasteryAssignment";
+import { MasteryAssignmentSheet } from "../modules/mastery/models/MasteryAssignmentSheet";
+import { buildAssignment, editSheet, sheetDetail } from "../modules/mastery/services/MasteryAssignmentService";
 import { renderExtraHomeworkPdf } from "../modules/mastery/services/MasteryExtraPdf";
 
 jest.setTimeout(120_000);
@@ -43,6 +48,7 @@ const TEACHER = { userId: TEACHER_ID, role: "TEACHER" as const };
 let sectionId = "";
 const sids: string[] = [];
 const gold = new Map<string, string>();
+let fixturePaperId = "";
 
 const A = "LO-C3-MATH-07-01"; // bank questions
 const B = "LO-C3-MATH-07-02"; // only book exercises
@@ -106,6 +112,7 @@ beforeAll(async () => {
   }, TEACHER);
   await saveResults(hw.paperId, [0, 1].map((i) => ({ studentId: sids[i], items: [{ itemNo: 1, marks: 0 }, { itemNo: 2, marks: 0 }] })), TEACHER);
   await confirmPaper(hw.paperId, TEACHER);
+  fixturePaperId = hw.paperId;
 });
 
 afterAll(async () => {
@@ -120,16 +127,35 @@ beforeEach(() => {
 
 
 const pageCount = (pdf: Buffer) => (pdf.toString("latin1").match(/\/Type \/Page(?!s)/g) ?? []).length;
+const QID = (n: number) => `QP-MATH-C3-U07-Q9300${n}`;
 const q = (qid: string) => ({ artifactId: gold.get(qid)!, loCode: A });
+const LAYOUT = {
+  totalMarks: 6, minutes: 30, partAOn: true, partAMarks: 2, partALoCodes: [A], partBMarks: 4,
+  mixWeak: 100, mixImproving: 0, mixRevision: 0, questionTypeCodes: [] as string[],
+};
+const build = () => buildAssignment({ sectionId, subject: "MATH", dueDate: "2027-03-18", layout: LAYOUT, rememberLayout: false }, TEACHER);
 
-describe("the printed extra-homework sheet and unmarked sheets counting as seen", () => {
+// Every test makes its own sheets; whatever it created is removed afterwards (the fixture homework stays).
+afterEach(async () => {
+  const papers = await MasteryPaper.find({ paperId: { $ne: fixturePaperId } }).select("_id").lean();
+  const ids = papers.map((p) => p._id);
+  await MasteryEvidence.deleteMany({ paperId: { $in: ids } });
+  await MasteryResult.deleteMany({ paperId: { $in: ids } });
+  await MasteryPaper.deleteMany({ _id: { $in: ids } });
+  await MasteryAction.deleteMany({ kind: "EXTRA_HOMEWORK" });
+  await MasteryAssignment.deleteMany({});
+  await MasteryAssignmentSheet.deleteMany({});
+  await LessonDelivery.deleteMany({});
+});
+
+describe("the printed extra-homework sheet", () => {
   it("acceptance 1: one page per child on the sheet, none for a child not on it", async () => {
     const [s1, s2] = sids;
     const paper = await createExtraHomework({
       sectionId, subject: "MATH", date: "2027-03-11",
       sheets: [
-        { studentId: s1, items: [q("QP-MATH-C3-U07-Q93002"), q("QP-MATH-C3-U07-Q93003")] },
-        { studentId: s2, items: [q("QP-MATH-C3-U07-Q93004")] },
+        { studentId: s1, items: [q(QID(2)), q(QID(3))] },
+        { studentId: s2, items: [q(QID(4))] },
       ],
     }, TEACHER);
     const out = await renderExtraHomeworkPdf(paper.paperId, TEACHER);
@@ -143,22 +169,64 @@ describe("the printed extra-homework sheet and unmarked sheets counting as seen"
     mockTeacher.mockResolvedValue(new Types.ObjectId().toString());
     await expect(renderExtraHomeworkPdf(paper.paperId, TEACHER)).rejects.toThrow(/দায়িত্ব/);
   });
+});
 
-  it("acceptance 2: day two never repeats a question from day one's unmarked extra sheet", async () => {
+describe("unmarked (OPEN) extra sheets count as seen", () => {
+  it("acceptance 2: day two never repeats a question from day one's unmarked sheet; re-check and class draft too", async () => {
     const [s1, s2] = sids;
-    // Day one's sheet (still OPEN) holds Q93002–Q93004 for s1 and Q93004 for s2 (previous test).
+    await createExtraHomework({
+      sectionId, subject: "MATH", date: "2027-03-11",
+      sheets: [{ studentId: s1, items: [q(QID(2)), q(QID(3))] }, { studentId: s2, items: [q(QID(4))] }],
+    }, TEACHER);
     const day2 = await extraHomeworkPreview(sectionId, "MATH", TEACHER);
     const mine = day2.find((x) => x.studentId === s1)!;
-    for (const qid of ["QP-MATH-C3-U07-Q93002", "QP-MATH-C3-U07-Q93003"]) expect(mine.items.map((i) => i.qid)).not.toContain(qid);
-    expect(day2.find((x) => x.studentId === s2)!.items.map((i) => i.qid)).not.toContain("QP-MATH-C3-U07-Q93004");
-    // Day one gave s1 Q93002–03 and s2 Q93004: s1 is left with Q93004 and Q93005 (Q93001 was marked long ago).
-    expect(mine.items.map((i) => i.qid).sort()).toEqual(["QP-MATH-C3-U07-Q93004", "QP-MATH-C3-U07-Q93005"]);
-    // The create-time re-check refuses the repeat on a tampered request.
-    await expect(createExtraHomework({ sectionId, subject: "MATH", date: "2027-03-13", sheets: [{ studentId: s1, items: [q("QP-MATH-C3-U07-Q93002")] }] }, TEACHER))
+    // Q93001 was marked long ago; s1 is left with Q93004 and Q93005.
+    expect(mine.items.map((i) => i.qid).sort()).toEqual([QID(4), QID(5)]);
+    expect(day2.find((x) => x.studentId === s2)!.items.map((i) => i.qid)).not.toContain(QID(4));
+    await expect(createExtraHomework({ sectionId, subject: "MATH", date: "2027-03-13", sheets: [{ studentId: s1, items: [q(QID(2))] }] }, TEACHER))
       .rejects.toThrow(/আগেই দেখেছে/);
-    // The class homework draft skips them too.
     await lesson("2027-03-13", [A]);
     const d = await homeworkDraft(sectionId, "MATH", "2027-03-13", TEACHER);
-    expect(d.items.map((i) => i.qid)).toEqual(["QP-MATH-C3-U07-Q93005"]);
+    expect(d.items.map((i) => i.qid)).toEqual([QID(5)]);
+  });
+
+  it("the weekly builder: neither Part A nor a child's Part B uses a question on that child's open extra sheet", async () => {
+    const [s1, s2] = sids;
+    await createExtraHomework({
+      sectionId, subject: "MATH", date: "2027-03-11",
+      sheets: [{ studentId: s1, items: [q(QID(2))] }, { studentId: s2, items: [q(QID(3))] }],
+    }, TEACHER);
+    const a = await build();
+    expect(a.partA).toHaveLength(1);
+    expect([QID(2), QID(3)]).not.toContain(a.partA[0].qid); // class-wide: nobody's open-sheet question
+    const one = await sheetDetail(a.id, s1, TEACHER);
+    const two = await sheetDetail(a.id, s2, TEACHER);
+    expect(one.items.map((i) => i.qid)).not.toContain(QID(2));
+    expect(two.items.map((i) => i.qid)).not.toContain(QID(3));
+  });
+
+  it("the sheet SWAP never picks a question on that child's open extra sheet", async () => {
+    const [s1] = sids;
+    const a = await build();
+    const mine = await sheetDetail(a.id, s1, TEACHER);
+    const used = new Set([...a.partA, ...mine.items].map((x) => x.qid));
+    const left = [2, 3, 4, 5].map(QID).filter((x) => !used.has(x));
+    expect(left).toHaveLength(1); // 4 unseen questions − Part A (1) − the child's two
+    // Give the child the one remaining question on an open extra sheet, then swap: nothing is left.
+    await createExtraHomework({ sectionId, subject: "MATH", date: "2027-03-11", sheets: [{ studentId: s1, items: [q(left[0])] }] }, TEACHER);
+    const i = mine.items.findIndex((x) => x.origin === "BANK");
+    await expect(editSheet(a.id, s1, { op: "SWAP", index: i }, TEACHER)).rejects.toThrow(/নতুন গোল্ড প্রশ্ন নেই/);
+  });
+
+  it("a confirmed extra sheet is seen through its evidence rows, as before", async () => {
+    const [s1] = sids;
+    const paper = await createExtraHomework({ sectionId, subject: "MATH", date: "2027-03-11", sheets: [{ studentId: s1, items: [q(QID(2))] }] }, TEACHER);
+    await saveResults(paper.paperId, [{ studentId: s1, items: [{ itemNo: 1, marks: 0 }] }], TEACHER);
+    await confirmPaper(paper.paperId, TEACHER);
+    expect(await MasteryPaper.exists({ paperId: paper.paperId, entryState: "CONFIRMED" })).toBeTruthy();
+    const mine = (await extraHomeworkPreview(sectionId, "MATH", TEACHER)).find((x) => x.studentId === s1)!;
+    expect(mine.items.map((i) => i.qid)).not.toContain(QID(2));
+    await expect(createExtraHomework({ sectionId, subject: "MATH", date: "2027-03-13", sheets: [{ studentId: s1, items: [q(QID(2))] }] }, TEACHER))
+      .rejects.toThrow(/আগেই দেখেছে/);
   });
 });

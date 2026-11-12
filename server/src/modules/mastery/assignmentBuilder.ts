@@ -215,6 +215,8 @@ export function buildPartA(
   triggerPct: number,
   seenBySection: Set<string>,
   ctx: BuilderContext,
+  /** PR-J: qids never to use even as the fallback (a child's open extra-homework sheet). */
+  hardAvoid: Set<string> = new Set(),
 ): BuiltQuestion[] {
   const { layout } = ctx;
   if (!layout.partAOn || layout.partAMarks <= 0) return [];
@@ -234,7 +236,7 @@ export function buildPartA(
       const info = ctx.outcomes.get(lo);
       const qt = info ? typeFor(info, ctx) : null;
       if (!info || !qt) continue;
-      const q = pickQuestion(lo, new Set([...used, ...seenBySection]), ctx) ?? pickQuestion(lo, used, ctx);
+      const q = pickQuestion(lo, new Set([...used, ...seenBySection, ...hardAvoid]), ctx) ?? pickQuestion(lo, new Set([...used, ...hardAvoid]), ctx);
       if (!q) continue;
       used.add(q.qid);
       items.push({
