@@ -123,3 +123,29 @@ describe("ruling 2 — homework doubles, a class test does not", () => {
     expect(setDurationMinutes("SOMETHING", [q("BAN", "descriptive", 12)])).toBe(24);
   });
 });
+
+describe("D-#1440 — the 2027 subjects run at 1.8 minutes per mark", () => {
+  test("a set of ISLAM questions totals 1.8 × marks, whatever the types", () => {
+    const items = [
+      q("ISLAM", "mcq", 10),
+      q("ISLAM", "short_answer", 20),
+      q("ISLAM", "true_false", 5),
+      q("ISLAM", "fill_blank", 5),
+      q("ISLAM", "matching", 10),
+      q("ISLAM", "descriptive", 50),
+    ];
+    // 100 marks × 1.8 = 180 minutes (3 hours for 100 marks).
+    expect(setExamMinutes(items)).toBe(180);
+    expect(setDurationMinutes("CT", items)).toBe(180);
+    // Homework doubles it, as for every subject.
+    expect(setDurationMinutes("HW", items)).toBe(360);
+  });
+
+  test("ICT, BAN2 and ENG2 are 1.8 for every question type; the five older rows are untouched", () => {
+    for (const s of ["ISLAM", "ICT", "BAN2", "ENG2"] as const) {
+      for (const t of QUESTION_TYPES) expect(QUESTION_TIME_RATES[s][t]).toBe(1.8);
+    }
+    expect(QUESTION_TIME_RATES.BAN.descriptive).toBe(2.0);
+    expect(QUESTION_TIME_RATES.MATH.mcq).toBe(1.3);
+  });
+});

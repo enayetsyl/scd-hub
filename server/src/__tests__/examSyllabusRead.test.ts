@@ -30,6 +30,13 @@ const TEACHER_ID = oid().toString();
 
 const mockSyllabusFind = jest.fn();
 const mockSyllabusFindOne = jest.fn();
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/exams/models/ExamSyllabus", () => {
   const actual = jest.requireActual("../modules/exams/models/ExamSyllabus");
   return {
@@ -46,6 +53,11 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: {
     find: () => ({ select: () => ({ lean: async () => mockRoutineSlots() }) }),
   },
+}));
+
+// The board reads the exam's own year (YC-0 step 3); no exam row here => falls back to the current-year helper (mocked).
+jest.mock("../modules/exams/models/Exam", () => ({
+  Exam: { findById: () => ({ select: () => ({ lean: async () => null }) }) },
 }));
 
 jest.mock("../modules/exams/models/ExamClassNote", () => ({
@@ -578,5 +590,30 @@ describe("PM — syllabus read gates are actions", () => {
     expect(() => assertSyllabusReader(ctxFor("GUARDIAN"))).not.toThrow();
     setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view"] } });
     expect(() => assertSyllabusReader(ctxFor("TEACHER"))).toThrow(/অনুমতি নেই/);
+  });
+
+  test("exam picker (D-#1435): exam_results:view / exam_custody:view opens it without syllabus view; guardian unchanged", async () => {
+    const { assertExamPicker } = await import("../modules/exams/services/ExamSyllabusReadService");
+    // TEACHER holds exam_results:view + exam_custody:view by default, but no syllabus view here.
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view"] } });
+    expect(() => assertExamPicker(ctxFor("TEACHER"))).not.toThrow();
+    // Only custody view left -> still allowed.
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view", "exam_results:view"] } });
+    expect(() => assertExamPicker(ctxFor("TEACHER"))).not.toThrow();
+    // No exam access at all -> refused.
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view", "exam_results:view", "exam_custody:view"] } });
+    expect(() => assertExamPicker(ctxFor("TEACHER"))).toThrow(/অনুমতি নেই/);
+    // Guardian keeps the picker either way.
+    expect(() => assertExamPicker(ctxFor("GUARDIAN"))).not.toThrow();
+    setRoleTemplateOverrides({});
+  });
+
+  test("Office cannot approve/publish by default but works on any paper; Principal publishes (D-#1435)", async () => {
+    const { callerHasPermission } = await import("@scd/shared");
+    const o = ctxFor("OFFICE").auth!;
+    expect(callerHasPermission(o, "exam_results:publish")).toBe(false);
+    expect(callerHasPermission(o, "exam_results:edit_all")).toBe(true);
+    expect(callerHasPermission(o, "exam_results:submit")).toBe(true);
+    expect(callerHasPermission(ctxFor("PRINCIPAL").auth!, "exam_results:publish")).toBe(true);
   });
 });

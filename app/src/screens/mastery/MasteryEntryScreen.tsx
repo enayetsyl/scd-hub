@@ -25,6 +25,7 @@ import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, Notice
 import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { openPdf } from "../../lib/pdf";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -333,6 +334,7 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
 
       <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
         <Button title={`${STR.msSave}${dirty.size ? ` (${bnNum(dirty.size)})` : ""}`} variant="secondary" onPress={() => void onSave()} loading={save.fetching} disabled={dirty.size === 0} />
+        {paper.extra ? <Button title={STR.msPrint} variant="secondary" onPress={() => void openPdf(`/pdf/mastery-extra/${paper.paperId}`).catch(() => toast.show(STR.errGeneric))} /> : null}
         {!confirmed ? <Button title={STR.msConfirmAll} onPress={() => setAsking(true)} loading={confirm.fetching} /> : null}
       </View>
 

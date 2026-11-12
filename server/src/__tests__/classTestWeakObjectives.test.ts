@@ -22,6 +22,8 @@ import { MasteryChapter } from "../modules/mastery/models/MasteryChapter";
 import { Student } from "../modules/foundation/models/Student";
 import { Section } from "../modules/foundation/models/Section";
 import { ScopeGrant } from "../modules/foundation/models/ScopeGrant";
+import { MasteryEnablement } from "../modules/mastery/models/MasteryEnablement";
+import { buildClassTestResultMessage } from "../modules/trackers/services/ClassTestPublishService";
 import { enterResult, childTestResults } from "../modules/trackers/services/ClassTestResultService";
 import { weakLoOptions, classTestWeakObjectivesPage } from "../modules/trackers/services/ClassTestWeakObjectiveService";
 
@@ -40,7 +42,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all([ClassTest, ClassTestResult, MasteryOutcome, MasteryChapter, Student, Section, ScopeGrant].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})));
+  await Promise.all([ClassTest, ClassTestResult, MasteryOutcome, MasteryChapter, MasteryEnablement, Student, Section, ScopeGrant].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})));
 });
 
 const ACTOR = new Types.ObjectId().toString();
@@ -319,5 +321,73 @@ describe("6 · classTestWeakObjectivesPage", () => {
 
     const guardian = await run(ctxOf(new Types.ObjectId().toString(), "GUARDIAN"));
     expect(guardian.errors?.length).toBeGreaterThan(0);
+  });
+});
+
+describe("7 · guardian message (D-#1430: picks alone make it the feedback message)", () => {
+  beforeEach(lockedCatalogue);
+  const meta = { subject: "MATH", testNumber: 3, examDate: EXAM_DAY, totalMarks: 20 };
+
+  it("picks + empty text → feedback template with objective names, no codes, sub shown as its parent", async () => {
+    const m = await buildClassTestResultMessage(
+      { status: "PRESENT", marks: 12, weakness: "", weakLoCodes: ["LO-C1-MATH-01-02.1", "LO-C1-MATH-01-02.2", "LO-C1-MATH-01-01"] },
+      meta,
+      "করিম",
+    );
+    expect(m.kind).toBe("regular");
+    expect(m.messageBn).toContain("লক্ষণীয় দিক:");
+    expect(m.messageBn).toContain("দুর্বল শিখনফল: লেবেল 01-02، লেবেল 01-01");
+    expect(m.messageBn).not.toMatch(/LO-C1/);
+    expect(m.messageBn).not.toMatch(/লেবেল 01-02\.\d/);
+    expect(m.messageBn).not.toContain("আলহামদুলিল্লাহ");
+  });
+
+  it("text + picks → both appear; text alone → as before", async () => {
+    const both = await buildClassTestResultMessage(
+      { status: "PRESENT", marks: 12, weakness: "যোগে ভুল", weakLoCodes: ["LO-C1-MATH-01-01"] },
+      meta,
+      "করিম",
+    );
+    expect(both.kind).toBe("regular");
+    expect(both.messageBn).toContain("যোগে ভুল");
+    expect(both.messageBn).toContain("দুর্বল শিখনফল: লেবেল 01-01");
+    const textOnly = await buildClassTestResultMessage({ status: "PRESENT", marks: 12, weakness: "যোগে ভুল" }, meta, "করিম");
+    expect(textOnly.messageBn).not.toContain("দুর্বল শিখনফল");
+  });
+
+  it("no picks + empty text → the excellent template as today (also with an empty list)", async () => {
+    for (const weakLoCodes of [undefined, null, []]) {
+      const m = await buildClassTestResultMessage({ status: "PRESENT", marks: 20, weakness: "", weakLoCodes }, meta, "করিম");
+      expect(m.kind).toBe("excellent");
+      expect(m.messageBn).toContain("আলহামদুলিল্লাহ");
+    }
+  });
+
+  it("absent child → absent template, picks (even if stored) never reach the message", async () => {
+    const m = await buildClassTestResultMessage(
+      { status: "ABSENT", marks: null, weakLoCodes: ["LO-C1-MATH-01-01"] },
+      meta,
+      "করিম",
+    );
+    expect(m.kind).toBe("absent");
+    expect(m.messageBn).not.toContain("লেবেল");
+  });
+
+  it("the guardian card line shows with the mastery switch off, absent and on", async () => {
+    const check = async () => {
+      const t = await test();
+      const sid = new Types.ObjectId().toString();
+      await enter(t, sid, { weakLoCodes: ["LO-C1-MATH-01-01"] });
+      await ClassTestResult.updateOne({ testId: new Types.ObjectId(t) }, { $set: { publishedAt: new Date() } });
+      const [row] = await childTestResults(sid);
+      expect(row.weakObjectives).toEqual(["লেবেল 01-01"]);
+      expect(row.weakObjectivesWordBn).toBe("শিখনফল");
+    };
+    await check(); // no enablement row at all
+    await MasteryEnablement.collection.insertOne({ academicYearId: new Types.ObjectId(), classToken: "C1", subject: "MATH", enabled: false });
+    await check(); // explicitly off
+    await MasteryEnablement.deleteMany({});
+    await MasteryEnablement.collection.insertOne({ academicYearId: new Types.ObjectId(), classToken: "C1", subject: "MATH", enabled: true });
+    await check(); // on
   });
 });

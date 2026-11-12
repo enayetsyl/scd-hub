@@ -1,0 +1,613 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "NUR",
+ "subject": "ENG",
+ "status": "DRAFT",
+ "source": {
+  "book": "Nursery (English) 2026 — English (Nursery), Session 2026, Sabr Ver 1.0 (Mohammadpur branch printed workbook; printed pages 1–47)",
+  "files": [
+   "Mohammadpur Materials/Nursery Books (Session 2026)/Nursery (English) 2026/Nursery (English) 2026 Book (Indesign) Sabr Ver 1.0 (outlined).pdf (49-page PDF; the text is outlined, so every page was read as an image)",
+   "Annual Exam Syllabus-2026 (SCD Sylhet).md (নার্সারি — ইংরেজি: Written ও Oral-এর ধরন)",
+   "repo: server/assets/exam-papers/annual-2026/L-1-ENG.json (অ্যাপে প্রকাশিত ২০২৬ বার্ষিক মানবন্টন — ৯ সারি, নম্বরসহ)",
+   "repo: docs/prd-worksheets.md, docs/prd-viva.md (worksheet-এর প্রশ্নের ধরন ও মৌখিক পরীক্ষার সেট)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "Letters A–Z: name, trace, picture words, first letter"
+  },
+  {
+   "number": 2,
+   "titleBn": "The whole alphabet: order, missing letters, after and before, capital with small"
+  },
+  {
+   "number": 3,
+   "titleBn": "Alphabet chart"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-WRITESEQ",
+   "labelBn": "Write the capital letters A–Z",
+   "marksBn": "১৫ (পুরো প্রশ্ন)",
+   "examUse": "বার্ষিক প্র. ১ (১×১৫) · worksheet kind WRITE_SEQUENCE · syllabus: \"Writing both upper and lower case letters\""
+  },
+  {
+   "code": "QT-REARRANGE",
+   "labelBn": "Rearrange the jumbled letters (2 sets × 5)",
+   "marksBn": "৫ (প্রতি সেট)",
+   "examUse": "বার্ষিক প্র. ২ (২×৫) · worksheet kind REARRANGE"
+  },
+  {
+   "code": "QT-FILL",
+   "labelBn": "Fill in the missing letters (small letter)",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৩ (১০×১) · worksheet kind FILL_MISSING"
+  },
+  {
+   "code": "QT-AFTER",
+   "labelBn": "Write the letter after",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৪ (১০×১) · worksheet kind AFTER"
+  },
+  {
+   "code": "QT-BEFORE",
+   "labelBn": "Write the letter before",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৫ (১০×১) · worksheet kind BEFORE"
+  },
+  {
+   "code": "QT-PICLETTER",
+   "labelBn": "Look at the pictures and write the first letter",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৬ (১০×১) · worksheet kind PICTURE_FIRST_LETTER"
+  },
+  {
+   "code": "QT-CASE",
+   "labelBn": "Write the Capital letter with Small letter and the Small letter with Capital letter",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৭ (১০×১) · worksheet kind MATCH_CASE"
+  },
+  {
+   "code": "QT-MATCHLETTER",
+   "labelBn": "Match letters with pictures",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্র. ৮ (১০×১) · worksheet kind MATCH_PICTURE_LETTER"
+  },
+  {
+   "code": "QT-ORAL",
+   "labelBn": "Oral (rubric, 4 steps)",
+   "marksBn": "— (মৌখিক মোট ১৫)",
+   "examUse": "বার্ষিক প্র. ৯ Oral (১৫) — অ্যাপের মৌখিক পরীক্ষা (viva): \"2 words with each letter\" ৫ অক্ষর = ৫, বাকি নামের তালিকা (days, months, colours …)"
+  },
+  {
+   "code": "QT-RUBRIC",
+   "labelBn": "Seen in class (handwriting rubric) — outside the paper",
+   "marksBn": "— (লিখিত নম্বর নেই)",
+   "examUse": "শ্রেণির ভিতরেই; বার্ষিক মানবন্টনে নেই"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-NUR-ENG-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Name each letter when shown, capital and small",
+   "sourceText": "Pages 1–34: one big capital letter per page with its small letter; \"Alphabet Chart — CAPITAL LETTERS / small letters\" [বইয়ের নির্দেশনা] (page 47). No instruction is printed on the letter pages.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/A (ant, apple)/1",
+     "1/B (ball, banana)/2",
+     "1/C (cat, cow)/3",
+     "1/D (duck, deer)/4",
+     "1/E (ear, egg)/5",
+     "1/F (fan, flower)/8",
+     "1/G (goat, glass)/9",
+     "1/H (hen, hot)/10",
+     "1/I (iron, ice-cream)/11",
+     "1/J (jug, jelly)/12",
+     "1/K (key, kite)/15",
+     "1/L (lock, lotus)/16",
+     "1/M (mug, mango)/17",
+     "1/N (nest, net)/18",
+     "1/O (olive, orange)/19",
+     "1/P (pencil, potato)/22",
+     "1/Q (quran, quail)/23",
+     "1/R (rat, rabbit)/24",
+     "1/S (sun, ship)/25",
+     "1/T (tiger, toy)/26",
+     "1/U (umbrella, uniform)/29",
+     "1/V (veil, van)/30",
+     "1/W (water, wheel)/31",
+     "1/X (ox, six)/32",
+     "1/Y (yarn, year)/33",
+     "1/Z (zebra, zoo)/34",
+     "3/Alphabet Chart/47"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "A থেকে Z বড় হাতের ও ছোট হাতের অক্ষর আলাদা কাগজে লিখে এলোমেলো করে দেখান; শিক্ষার্থী নাম বলুক। b–d, p–q, m–n বারবার মিলিয়ে দেখান।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One row for capital and small: the book teaches them on the same page, and the written check of capital ↔ small is its own row (02-04). Ask each child alone, letters out of order — saying A to Z in a chorus is a teaching method, not the check."
+  },
+  {
+   "code": "LO-NUR-ENG-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Say two words for each letter (from the pictures)",
+   "sourceText": "Each letter page shows two pictures with their words (A — ant, apple; B — ball, banana …). No instruction is printed.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/A (ant, apple)/1",
+     "1/B (ball, banana)/2",
+     "1/C (cat, cow)/3",
+     "1/D (duck, deer)/4",
+     "1/E (ear, egg)/5",
+     "1/F (fan, flower)/8",
+     "1/G (goat, glass)/9",
+     "1/H (hen, hot)/10",
+     "1/I (iron, ice-cream)/11",
+     "1/J (jug, jelly)/12",
+     "1/K (key, kite)/15",
+     "1/L (lock, lotus)/16",
+     "1/M (mug, mango)/17",
+     "1/N (nest, net)/18",
+     "1/O (olive, orange)/19",
+     "1/P (pencil, potato)/22",
+     "1/Q (quran, quail)/23",
+     "1/R (rat, rabbit)/24",
+     "1/S (sun, ship)/25",
+     "1/T (tiger, toy)/26",
+     "1/U (umbrella, uniform)/29",
+     "1/V (veil, van)/30",
+     "1/W (water, wheel)/31",
+     "1/X (ox, six)/32",
+     "1/Y (yarn, year)/33",
+     "1/Z (zebra, zoo)/34"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "একটি অক্ষর বলুন, শিক্ষার্থী সেই অক্ষরের দুটি শব্দ বলুক (B — ball, banana) ও বাংলা অর্থ বলুক। বইয়ের ছবি দেখিয়ে শুরু করুন, পরে ছবি ছাড়া।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The oral exam's letter question (viva: \"2 words with each letter\", 5 letters × 2 words × ½) and the syllabus line \"Memorising 2 words with each letter, with meaning\". For X the book's words are ox and six (x is the last letter)."
+  },
+  {
+   "code": "LO-NUR-ENG-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Look at a picture and write the first letter of its word",
+   "sourceText": "\"Look at the pictures and write the first letter in capital\" / \"… in small\" [বইয়ের নির্দেশনা] — one pair of pages after every five letters (10 pages).",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/Look at the pictures and write the first letter in capital/6",
+     "1/Look at the pictures and write the first letter in capital/13",
+     "1/Look at the pictures and write the first letter in capital/20",
+     "1/Look at the pictures and write the first letter in capital/27",
+     "1/Look at the pictures and write the first letter in capital/35",
+     "1/Look at the pictures and write the first letter in small/7",
+     "1/Look at the pictures and write the first letter in small/14",
+     "1/Look at the pictures and write the first letter in small/21",
+     "1/Look at the pictures and write the first letter in small/28",
+     "1/Look at the pictures and write the first letter in small/36"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PICLETTER",
+    "QT-MATCHLETTER"
+   ],
+   "homeTipBn": "বাড়ির চেনা জিনিস দেখিয়ে ইংরেজি নাম বলুন (\"ball\") ও জিজ্ঞেস করুন কোন অক্ষর দিয়ে শুরু; শিক্ষার্থী অক্ষরটি বলে খাতায় লিখুক — একবার বড় হাতের, একবার ছোট হাতের।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kinds PICTURE_FIRST_LETTER (Q6) and MATCH_PICTURE_LETTER (Q8): both test the same step (first sound of the word → letter); the book only has the \"write\" form. Capital and small are not split here — which form the child cannot write shows in 02-01 and 02-04."
+  },
+  {
+   "code": "LO-NUR-ENG-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the alphabet in order, capital and small",
+   "sourceText": "\"Write letters from A - E\" … \"Write letters from u - z\"; \"Write from A to Z\"; \"Write from a to z\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITESEQ"
+   ],
+   "homeTipBn": "প্রথমে A থেকে E, তারপর F থেকে J — এভাবে পাঁচটি করে না দেখে লিখতে দিন; শেষে A থেকে Z পুরোটা। বড় হাতের শেষ হলে একই ভাবে ছোট হাতের।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Capital and small are separate rows: many children write A–Z from memory but stop or reverse letters (b, d, p, q) in a–z. The exam question is capital only; the syllabus asks for both."
+  },
+  {
+   "code": "LO-NUR-ENG-02-01.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-ENG-02-01",
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the capital letters A to Z in order",
+   "sourceText": "\"Write letters from A - E\" (and F - J, K - O, P - T, U - Z); \"Write from A to Z\" [বইয়ের নির্দেশনা] [ভাগ: capital]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "1/Write letters from A - E/6",
+     "1/Write letters from F - J/13",
+     "1/Write letters from K - O/20",
+     "1/Write letters from P - T/27",
+     "1/Write letters from U - Z/35",
+     "2/Write from A to Z/39"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITESEQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-ENG-SK-HW-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE (capital). Annual Q1, 15 marks."
+  },
+  {
+   "code": "LO-NUR-ENG-02-01.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-ENG-02-01",
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the small letters a to z in order",
+   "sourceText": "\"Write letters from a - e\" (and f - j, k - o, p - t, u - z); \"Write from a to z\" [বইয়ের নির্দেশনা] [ভাগ: small]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "1/Write letters from a - e/7",
+     "1/Write letters from f - j/14",
+     "1/Write letters from k - o/21",
+     "1/Write letters from p - t/28",
+     "1/Write letters from u - z/36",
+     "2/Write from a to z/40"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WRITESEQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-ENG-02-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind WRITE_SEQUENCE (small). Not a separate exam question in 2026 (Q1 is capital only); the syllabus line is \"Writing both upper and lower case letters\"."
+  },
+  {
+   "code": "LO-NUR-ENG-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Alphabet order: the missing letter, the letter after and the letter before",
+   "sourceText": "\"Fill in the gaps\"; \"AFTER\"; \"BEFORE\" [বইয়ের নির্দেশনা]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-AFTER",
+    "QT-BEFORE"
+   ],
+   "homeTipBn": "একটি অক্ষর বলে জিজ্ঞেস করুন \"g-এর পরে কোন অক্ষর? g-এর আগে কোন অক্ষর?\" প্রথমে বইয়ের Alphabet Chart সামনে রেখে, পরে না দেখে।",
+   "prereqCodes": [
+    "LO-NUR-ENG-02-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "Three separate exam questions that fail apart: \"before\" is the hardest (the child must think backwards), \"after\" the easiest."
+  },
+  {
+   "code": "LO-NUR-ENG-02-02.1",
+   "level": "SUB",
+   "parentCode": "LO-NUR-ENG-02-02",
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Fill in the missing letters of the alphabet",
+   "sourceText": "\"Fill in the gaps\" [বইয়ের নির্দেশনা] — page 38 (capital), page 42 (small)",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/Fill in the gaps/38",
+     "2/Fill in the gaps/42"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind FILL_MISSING. The exam question is small letters only; the book practises both."
+  },
+  {
+   "code": "LO-NUR-ENG-02-02.2",
+   "level": "SUB",
+   "parentCode": "LO-NUR-ENG-02-02",
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the letter that comes after",
+   "sourceText": "\"AFTER\" [বইয়ের নির্দেশনা] — page 44",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/AFTER/44"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-AFTER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind AFTER. The book practises small letters only."
+  },
+  {
+   "code": "LO-NUR-ENG-02-02.3",
+   "level": "SUB",
+   "parentCode": "LO-NUR-ENG-02-02",
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the letter that comes before",
+   "sourceText": "\"BEFORE\" [বইয়ের নির্দেশনা] — page 44",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/BEFORE/44"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-BEFORE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-NUR-ENG-02-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind BEFORE. The book practises small letters only."
+  },
+  {
+   "code": "LO-NUR-ENG-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Put jumbled letters in alphabet order",
+   "sourceText": "\"Rearrange\" [বইয়ের নির্দেশনা] — page 37 (capital, 8 sets), page 43 (small, 8 sets)",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/Rearrange/37",
+     "2/Rearrange/43"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-REARRANGE"
+   ],
+   "homeTipBn": "পাঁচটি অক্ষর এলোমেলো করে লিখে দিন (D F B E C); শিক্ষার্থী ক্রমে সাজিয়ে লিখুক (B C D E F)।",
+   "prereqCodes": [
+    "LO-NUR-ENG-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind REARRANGE (Q2, two sets of five). Capital and small in one row: the skill is the order, not the letter form."
+  },
+  {
+   "code": "LO-NUR-ENG-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the small letter for a capital letter and the capital for a small letter",
+   "sourceText": "\"বড় হাতের letter এর সাথে ছোট হাতের LETTER লিখি\" (page 45); \"ছোট হাতের letter এর সাথে বড় হাতের LETTER লিখি\" (page 46) [বইয়ের নির্দেশনা]; page 41 (Aa Bb … Zz, no heading).",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/Aa Bb … Zz (no heading)/41",
+     "2/বড় হাতের letter এর সাথে ছোট হাতের LETTER লিখি/45",
+     "2/ছোট হাতের letter এর সাথে বড় হাতের LETTER লিখি/46"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CASE"
+   ],
+   "homeTipBn": "একটি বড় হাতের অক্ষর লিখে দিন (G), শিক্ষার্থী পাশে ছোট হাতেরটি লিখুক (g); পরে উল্টো। যে জোড়া দেখতে আলাদা (A–a, B–b, D–d, G–g, Q–q, R–r) সেগুলো বেশি করান।",
+   "prereqCodes": [
+    "LO-NUR-ENG-01-01",
+    "LO-NUR-ENG-02-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "worksheet kind MATCH_CASE (Q7, 10×1) and the syllabus line \"Matching capital with small letters\". Both directions in one row: one question in the paper, and a child who knows the pair knows it both ways."
+  },
+  {
+   "code": "LO-NUR-ENG-SK-HW-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-HAND",
+   "chapterNumber": null,
+   "strand": "HW",
+   "labelBn": "Trace and form the capital and small letters on the four lines",
+   "sourceText": "Each letter page has three rows of dotted capital letters and three rows of dotted small letters (26 pages). No instruction is printed.",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/A (ant, apple)/1",
+     "1/B (ball, banana)/2",
+     "1/C (cat, cow)/3",
+     "1/D (duck, deer)/4",
+     "1/E (ear, egg)/5",
+     "1/F (fan, flower)/8",
+     "1/G (goat, glass)/9",
+     "1/H (hen, hot)/10",
+     "1/I (iron, ice-cream)/11",
+     "1/J (jug, jelly)/12",
+     "1/K (key, kite)/15",
+     "1/L (lock, lotus)/16",
+     "1/M (mug, mango)/17",
+     "1/N (nest, net)/18",
+     "1/O (olive, orange)/19",
+     "1/P (pencil, potato)/22",
+     "1/Q (quran, quail)/23",
+     "1/R (rat, rabbit)/24",
+     "1/S (sun, ship)/25",
+     "1/T (tiger, toy)/26",
+     "1/U (umbrella, uniform)/29",
+     "1/V (veil, van)/30",
+     "1/W (water, wheel)/31",
+     "1/X (ox, six)/32",
+     "1/Y (yarn, year)/33",
+     "1/Z (zebra, zoo)/34"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "বইয়ের বিন্দু-অক্ষরের উপর ধীরে পেনসিল বোলাতে দিন — উপর থেকে নিচে, বাম থেকে ডানে। ছোট হাতের অক্ষর চার লাইনের কোন লাইনে বসে (g, j, p, q, y নিচে নামে) দেখিয়ে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Handwriting is a class rubric, not an exam question. All 26 letter pages are one strand; naming the letter (01-01) and saying its two words (01-02) are the other two jobs of the same page."
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 58,
+  "mapped": 58,
+  "unmapped": [],
+  "note": "exercisesTotal = the book's activity blocks (58): the book numbers no exercises, so every headed activity on a page is one block — 26 letter pages, 10 review pages with two blocks each (first letter + write the letters), and 12 blocks on pages 37–47 (page 44 has two: AFTER, BEFORE). ref = section/page heading/printed page number."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "শিখনফলগুলো বইয়ের পৃষ্ঠা থেকে অনুমান করা — বইয়ে শিক্ষক-নোট, ছাপা শিখনফল বা নম্বর বণ্টনের পরিশিষ্ট নেই। তাই প্রতিটি সারির \"বইয়ের নির্দেশনা\" হলো পৃষ্ঠার শিরোনাম বা নির্দেশ ([বইয়ের নির্দেশনা] চিহ্নিত); অক্ষরের পৃষ্ঠাগুলোতে কোনো নির্দেশ ছাপা নেই।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "বইয়ে অধ্যায় নেই। পৃষ্ঠাগুলো বিষয় ধরে তিন অংশে ভাগ করা হয়েছে, বইয়ের ক্রমে: ১ Letters A–Z (পৃ. ১–৩৬) · ২ The whole alphabet (৩৭–৪৬) · ৩ Alphabet chart (৪৭)। কোডের \"অধ্যায়\" সংখ্যা এই অংশের নম্বর। কভারেজ গোনা হয়েছে পৃষ্ঠার কাজ ধরে: প্রতিটি পৃষ্ঠার প্রতিটি শিরোনাম-যুক্ত কাজ একটি ব্লক (৫৮টি) — ঝালাই পৃষ্ঠায় দুটি করে (first letter + Write letters from …), পৃ. ৪৪-এ দুটি (AFTER, BEFORE)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "প্রশ্নের ধরন ও নম্বর: সিলেট শাখার বার্ষিক সিলেবাস ২০২৬ (নার্সারি, ইংরেজি) শুধু ধরনগুলোর নাম দেয়, নম্বর দেয় না; নম্বর নেওয়া হয়েছে অ্যাপে প্রকাশিত একই সিলেবাসের মানবন্টন থেকে (repo: server/assets/exam-papers/annual-2026/L-1-ENG.json-এর syllabusRows — ৯ সারি, মোট ১০০)। মোহাম্মদপুরের \"Marks Distribution - Annual Exam 2026\" PDF প্রথম শ্রেণি থেকে শুরু — নার্সারি তাতে নেই।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "সিলেবাসের যে অংশ বইয়ে নেই, তার সারি করা হয়নি (বইয়ে চর্চা নেই): লিখিত \"Writing own name\"; মৌখিক Day's name, Month names, Colour names (৮), Body part names (৮), Family members (৪), ১০ fruits, ৬ flowers, ১০ animals, ৮ birds। মৌখিক ১৫ নম্বরের ১০-ই এই তালিকাগুলো থেকে। পর্যালোচক চাইলে \"নতুন যোগ\" দিয়ে নামের তালিকার একটি সারি (শব্দ ও অর্থ, রুব্রিক) যোগ করতে পারেন।"
+  },
+  {
+   "code": "LO-NUR-ENG-02-01.2",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "সিলেবাসে \"Writing both upper and lower case letters\", কিন্তু প্রকাশিত মানবন্টনের প্র. ১ শুধু \"Write the capital letters A–Z\" (১৫)। ছোট হাতের a–z ক্রমে লেখা বইয়ে চর্চা হয় (পৃ. ৭, ১৪, ২১, ২৮, ৩৬, ৪০), তাই সারি রাখা হয়েছে; পরীক্ষায় আসবে কি না ঠিক করা দরকার। একই ভাবে প্র. ৩ \"Fill in the missing letters (small letter)\" শুধু ছোট হাতের, আর প্র. ৪–৫ (after / before)-এর চর্চা বইয়ে শুধু ছোট হাতের অক্ষরে।"
+  },
+  {
+   "code": "LO-NUR-ENG-01-03",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: পৃ. ৩৬ \"Look at the pictures and write the first letter in small\" (u–z)-এর ছবিগুলো — সবজি (vegetables), পানি (water), মাঠ (yard?), বাক্স (box), টেবিলের নিচে বল (under?) — অক্ষরের পৃষ্ঠায় শেখানো শব্দ নয়, দুটি অস্পষ্ট, আর box-এ x প্রথম অক্ষর নয়। X-এর পৃষ্ঠার (পৃ. ৩২) শব্দ ox ও six-এও x শেষে। প্রশ্ন-ব্যাংকে X \"first letter\" প্রশ্নে নেওয়া যাবে না।"
+  },
+  {
+   "code": "LO-NUR-ENG-01-02",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: কয়েকটি ছবি-শব্দ ছোট শিশুর কাছে অস্পষ্ট বা বিমূর্ত — hot (পৃ. ১০, ধোঁয়া-ওঠা বাটি), year (পৃ. ৩৩, ক্যালেন্ডার), uniform (পৃ. ২৯), glass ও mug দুটি কাছাকাছি ছবি। সিলেবাসের মৌখিক অংশে শব্দের বাংলা অর্থও চাওয়া হয়, কিন্তু বইয়ে অর্থ ছাপা নেই।"
+  },
+  {
+   "code": "LO-NUR-ENG-02-04",
+   "kind": "OTHER",
+   "text": "বই-দলের জন্য: পৃ. ৪১-এ (Aa Bb … Zz) কোনো শিরোনাম বা নির্দেশনা নেই। পৃ. ৪৫–৪৬-এর শিরোনাম বাংলা-ইংরেজি মিশিয়ে ছাপা (\"বড় হাতের letter এর সাথে ছোট হাতের LETTER লিখি\"); বইয়ের বাকি সব নির্দেশনা ইংরেজিতে।"
+  },
+  {
+   "code": "LO-NUR-ENG-01-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): অক্ষর চেনা এক সারি (বড় ও ছোট হাতের একসাথে)। ছোট হাতের b–d–p–q-তে আলাদা ভাবে আটকানো শিশু আছে; আলাদা দেখতে চাইলে .১ capital / .২ small ভাগ করা যায় — বইয়ে ছোট হাতের অক্ষর চেনার আলাদা পৃষ্ঠা নেই বলে ভাগ করা হয়নি।"
+  },
+  {
+   "code": "LO-NUR-ENG-02-03",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): \"Rearrange\" এক সারি (capital পৃ. ৩৭ + small পৃ. ৪৩), কারণ প্রশ্নপত্রে একটিই প্রশ্ন (২ সেট × ৫)। \"Fill in the gaps\"-ও এক সারি (capital পৃ. ৩৮ + small পৃ. ৪২)।"
+  },
+  {
+   "code": "LO-NUR-ENG-SK-HW-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): অক্ষরের ২৬টি পৃষ্ঠার প্রতিটি তিন সারিতে উদ্ধৃত (চেনা ০১-০১, শব্দ বলা ০১-০২, হাত ঘোরানো SK-HW-01) — পৃষ্ঠায় তিনটি কাজই আছে, আলাদা শিরোনাম নেই। বইয়ে লেখার প্রস্তুতির (দাগ টানা) পৃষ্ঠা নেই — সেটি বাংলা বইয়ে (NUR·BAN ০১-০১)।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি দক্ষতা — worksheet-এর প্রশ্ন, মৌখিক পরীক্ষা ও রুব্রিক এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম (ইংরেজিতে) ও বাংলা টিপ দেখবেন। নার্সারির ইংরেজি বই মোহাম্মদপুর শাখার ছাপা কর্মপুস্তক — এতে শিক্ষক-নোট বা শিখনফল ছাপা নেই, তাই সব শিখনফল পৃষ্ঠার কাজ দেখে অনুমান করা। ক্ষেত্র নতুন বানানো হয়নি: `domains/ENG.json`-এর তিনটি ক্ষেত্র ব্যবহার হয়েছে (বর্ণ ও ধ্বনি · হাতের লেখা · শব্দ ও অর্থ); প্রথম শ্রেণির লক করা ক্ষেত্রে কোনো বদল নেই।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **অংশ ভাগ Claude-এর করা।** বইয়ে অধ্যায় নেই; ৪৭ পৃষ্ঠা তিন অংশে ভাগ (অক্ষর A–Z · পুরো বর্ণমালা · চার্ট)। ৫৮টি কাজের সবগুলো কোনো না কোনো সারিতে।\n2. **অক্ষরের পৃষ্ঠা তিন সারিতে:** চেনা (০১-০১, মৌখিক), দুটি শব্দ বলা (০১-০২, মৌখিক), বিন্দু-অক্ষরে হাত ঘোরানো (SK-HW-01)।\n3. **বড় হাতের ও ছোট হাতের ক্রমে লেখা আলাদা (০২-০১.১ / .২)।** পরীক্ষার প্র. ১ শুধু capital; ছোট হাতেরটি সিলেবাসে আছে, বইয়ে চর্চা আছে — সারি রাখা ঠিক আছে কি?\n4. **প্র. ৬ ও প্র. ৮ এক সারিতে (০১-০৩):** \"write the first letter\" ও \"Match letters with pictures\" একই দক্ষতা; বইয়ে শুধু প্রথমটির পৃষ্ঠা।\n5. **capital ↔ small দুই দিক এক সারি (০২-০৪)** — প্রশ্নপত্রে একটিই প্রশ্ন (প্র. ৭)।\n6. **সিলেবাসে আছে, বইয়ে নেই — সারি করা হয়নি:** নিজের নাম লেখা; মৌখিক নামের তালিকা (days, months, colours, body parts, family, fruits, flowers, animals, birds)। মৌখিক ১৫ নম্বরের ১০-ই এই তালিকা থেকে — সারি চাইলে \"নতুন যোগ\" করুন।\n7. **বইয়ের সমস্যা বই-দলের জন্য (ফ্ল্যাগ দেখুন):** X-এর শব্দে x প্রথম অক্ষর নয় (ox, six, box); পৃ. ৩৬-এর ছবিগুলো শেখানো শব্দ নয়; পৃ. ৪১-এ নির্দেশনা নেই; পৃ. ৪৫–৪৬-এর শিরোনাম মিশ্র ভাষায়; hot, year, uniform বিমূর্ত।\n\n**আরবি:** নার্সারির আরবি বই (রওদাতুল আতফাল ১ম ভাগ) এই খসড়ার বাইরে — আরবির বৃক্ষ হবে কি না মালিক ঠিক করবেন।\n"
+}

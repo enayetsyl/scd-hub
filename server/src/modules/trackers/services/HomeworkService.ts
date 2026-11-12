@@ -28,6 +28,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
+import { nextYearSeq, translateDuplicateId, createWithYearId } from "../../../lib/yearSequence";
 import { HomeworkTopic } from "../models/HomeworkTopic";
 import {
   HomeworkNilDeclaration,
@@ -82,12 +83,8 @@ export async function generateHwId(
   classLevel: number,
   subject: HwSubject,
 ): Promise<string> {
-  const counter = await HomeworkSequence.findOneAndUpdate(
-    { academicYearId, classLevel, subject },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(HomeworkSequence, academicYearId, { classLevel, subject });
+  const n = String(seq).padStart(4, "0");
   return `HW-${classToken(classLevel)}-${subject}-${n}`;
 }
 
@@ -279,8 +276,15 @@ export async function declareHomeworkItem(
   // it before either insert lands. The unique index on the model is the real
   // enforcement, so translate its duplicate-key error into the SAME message the
   // check gives — a racing teacher must not see a raw E11000.
-  const doc = await HomeworkItem.create({
-    hwId,
+  const doc = await createWithYearId({
+    idField: "hwId",
+    seqModel: HomeworkSequence,
+    academicYearId: input.academicYearId,
+    key: { classLevel: input.classLevel, subject },
+    firstId: hwId,
+    makeId: () => generateHwId(input.academicYearId, input.classLevel, subject),
+    create: (id) => HomeworkItem.create({
+    hwId: id,
     academicYearId: input.academicYearId,
     classId: input.classId,
     classLevel: input.classLevel,
@@ -298,6 +302,7 @@ export async function declareHomeworkItem(
     status: "declared",
     declaredBy: input.actorId,
     attachmentIds,
+  }),
   }).catch((err: unknown) => {
     const e = err as { code?: number; keyPattern?: Record<string, unknown> };
     if (e?.code === 11000 && e.keyPattern && "sectionId" in e.keyPattern && "subject" in e.keyPattern) {
@@ -305,7 +310,7 @@ export async function declareHomeworkItem(
         `এই শ্রেণি-বিষয়ের জন্য এই দিনের বাড়ির কাজ আগেই ঘোষণা করা হয়েছে — প্রয়োজনে সেটি সম্পাদনা বা মুছে ফেলুন`,
       );
     }
-    throw err;
+    return translateDuplicateId("hwId")(err);
   });
 
   // D-#299: a real declaration supersedes a "no homework today" marker for the

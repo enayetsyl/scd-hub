@@ -194,6 +194,9 @@ function sittingTotal(s: IQuranExamSitting, paper: IQuranExamPaper | undefined):
   return s.itemMarks.reduce((a, row) => a + row.reduce((b, v) => b + v, 0), 0);
 }
 
+/** Paper-map key across several exams: a level alone repeats every year (YC-0). */
+const paperKey = (examId: unknown, level: string): string => `${String(examId)}|${level}`;
+
 async function shapeSittings(
   rows: IQuranExamSitting[],
   papers?: Map<string, IQuranExamPaper>,
@@ -221,7 +224,7 @@ async function shapeSittings(
     sectionCounts: (r.sectionCounts ?? []).map((c) => ({ section: c.section, tanbih: c.tanbih, fath: c.fath })),
     comment: r.comment ?? null,
     absenceReason: r.absenceReason ?? null,
-    total: sittingTotal(r, papers?.get(r.level)),
+    total: sittingTotal(r, papers?.get(paperKey(r.examId, r.level)) ?? papers?.get(r.level)),
     enteredAt: r.enteredAt ? r.enteredAt.toISOString() : null,
     madeUp: (r.history ?? []).some((h) => h.kind === "MADE_UP"),
   }));
@@ -598,7 +601,7 @@ export async function myQuranExamSittings(ctx: AppContext, fromDateKey: string |
   const rows = await QuranExamSitting.find(filter);
   rows.sort(byTime);
   const papers = new Map<string, IQuranExamPaper>();
-  for (const p of await QuranExamPaper.find({ examId: { $in: published.map((x) => x.examId) } })) papers.set(p.level, p);
+  for (const p of await QuranExamPaper.find({ examId: { $in: published.map((x) => x.examId) } })) papers.set(paperKey(p.examId, p.level), p);
   return shapeSittings(rows, papers);
 }
 

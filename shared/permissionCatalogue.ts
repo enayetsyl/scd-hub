@@ -309,7 +309,7 @@ export const FEATURE_CATALOGUE = {
       reopen: { en: "Re-open a tabulated paper", bn: "সংকলিত বিষয়পত্র আবার খোলা", desc: "Unlock a tabulated paper with a reason", teacher: false, office: true, flags: [] },
       comment: { en: "Write the school comment", bn: "রিপোর্ট কার্ডে স্কুলের মন্তব্য লেখা", desc: "The Comment from School line on a student's card", teacher: false, office: true, flags: [] },
       submit: { en: "Send results for approval", bn: "ফলাফল অনুমোদনে পাঠানো", desc: "Submit the card set once every paper is tabulated", teacher: true, office: true, flags: [] },
-      publish: { en: "Approve & publish results", bn: "ফলাফল অনুমোদন ও প্রকাশ", desc: "Approve and publish, send back with a reason, unpublish", teacher: false, office: true, flags: [] },
+      publish: { en: "Approve & publish results", bn: "ফলাফল অনুমোদন ও প্রকাশ", desc: "Approve and publish, send back with a reason, unpublish", teacher: false, office: false, flags: [] },
     },
   },
   // The two-signature script custody chain (EX-6..EX-8, D-#382).
@@ -969,7 +969,15 @@ export const FEATURE_CATALOGUE = {
     actions: {
       create: { en: "Open a class", bn: "নতুন শ্রেণি খোলা", desc: "Create a class (+ default section)", teacher: false, office: true, flags: [] },
       merge_split: { en: "Merge / split section", bn: "শাখা একত্র করা / আলাদা করা", desc: "Combine or reverse; active merges", teacher: false, office: true, flags: [] },
-      settings: { en: "Academic years", bn: "শিক্ষাবর্ষ যোগ ও চালু বছর বদলানো", desc: "Add a year; set the current year", teacher: false, office: true, flags: [] },
+      settings: { en: "Academic years", bn: "শিক্ষাবর্ষ যোগ করা", desc: "Add a year (switching the current year is year_change:cut_over, Principal only)", teacher: false, office: true, flags: [] },
+    },
+  },
+  year_change: {
+    group: "school_operations",
+    en: "Year change",
+    bn: "বছর পরিবর্তন",
+    actions: {
+      cut_over: { en: "Switch the current academic year", bn: "চালু শিক্ষাবর্ষ বদলানো", desc: "Flip the school's current year at the year-change cut-over (Principal only)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   teaching_assignments: {

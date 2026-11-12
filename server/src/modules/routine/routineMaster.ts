@@ -13,6 +13,7 @@ import { ScheduleWindow } from "./models/ScheduleWindow";
 import { computePeriodTimes } from "./schedule";
 import { liveWindow } from "./liveWindow";
 import { enrichRoutineSlots, type SlotViewFields } from "./slotView";
+import { currentYearFilter } from "../foundation/services/currentYear";
 
 export interface MasterColumn { periodNumber: number; startTime: string | null; endTime: string | null; isBreak: boolean; }
 export interface MasterRow { groupType: string; groupId: string; label: string; sublabel: string | null; }
@@ -36,7 +37,7 @@ export async function routineMasterGrid(day: string, on: Date = new Date()): Pro
   // Columns: the class_1_5 grid is the superset (8 periods incl. the break); its times
   // cover nursery/KG too (P1–P6 share durations). Nursery/KG rows simply have no P7/P8.
   const grid = await PeriodGrid.findOne({ audienceKey: "class_1_5", season: "regular", active: true }).lean();
-  const win = await ScheduleWindow.findOne({ season: "regular", active: true }).sort({ fromDate: 1 }).lean();
+  const win = await ScheduleWindow.findOne({ season: "regular", active: true, ...(await currentYearFilter()) }).sort({ fromDate: 1 }).lean();
   const dayStart = win?.dayStartMinutes ?? 420;
   const columns: MasterColumn[] = grid
     ? computePeriodTimes(dayStart, grid.periods).map((p) => ({ periodNumber: p.number, startTime: p.startHHMM, endTime: p.endHHMM, isBreak: p.isBreak }))

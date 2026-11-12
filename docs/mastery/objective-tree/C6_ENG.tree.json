@@ -1,0 +1,1248 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C6",
+ "subject": "ENG",
+ "status": "DRAFT",
+ "source": {
+  "book": "C6_ENG_Book_v1_Writer-Reviewer (English 1st Paper) — not yet printed (first Writer-Reviewer copy; the reviewer has not answered yet)",
+  "version": "C6_ENG_Book_v1_Writer-Reviewer (4 November 2026) — not yet printed",
+  "files": [
+   "Book Review Material/Class 6 Eng/C6_ENG_Book_v1_Writer-Reviewer.md (+ .docx — the source: lessons with Teacher Note (Learning outcomes, In the exam, Answers), writing guides, Words to Know, Exam Practice, Appendix — marks and class tests)",
+   "Book Review Material/Class 6 Eng/C6_ENG_Memo_v1.docx (D-01–D-13 — all awaiting the reviewer)",
+   "docs/mastery/objective-tree/C5_ENG.tree.json (earlier-class codes)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "A New Start"
+  },
+  {
+   "number": 2,
+   "titleBn": "People and Their Work"
+  },
+  {
+   "number": 3,
+   "titleBn": "Shopping and Good Health"
+  },
+  {
+   "number": 4,
+   "titleBn": "Remedies and Places"
+  },
+  {
+   "number": 5,
+   "titleBn": "Our Pride and Our People"
+  },
+  {
+   "number": 6,
+   "titleBn": "Sounds, Rivers and Recipes"
+  },
+  {
+   "number": 7,
+   "titleBn": "Wonders of the World"
+  },
+  {
+   "number": 8,
+   "titleBn": "One World"
+  },
+  {
+   "number": 9,
+   "titleBn": "Clothes and Sounds"
+  },
+  {
+   "number": 10,
+   "titleBn": "Tests and Trips"
+  },
+  {
+   "number": 11,
+   "titleBn": "Water and Letters"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-MCQ",
+   "labelBn": "Q1 Multiple choice questions (seen passage)",
+   "marksBn": "১",
+   "examUse": "Half-yearly and annual, the same paper (100 marks, 13 questions, all compulsory, pass mark 33): 1 × 7 = 7."
+  },
+  {
+   "code": "QT-ANSWER",
+   "labelBn": "Q2 Answering questions (seen passage)",
+   "marksBn": "২",
+   "examUse": "2 × 5 = 10."
+  },
+  {
+   "code": "QT-GAP",
+   "labelBn": "Q3 Gap filling (no word box)",
+   "marksBn": "১",
+   "examUse": "1 × 5 = 5."
+  },
+  {
+   "code": "QT-SYNANT",
+   "labelBn": "Q4 Vocabulary: synonyms and antonyms",
+   "marksBn": "১",
+   "examUse": "1 × 5 = 5."
+  },
+  {
+   "code": "QT-INFO",
+   "labelBn": "Q5 Information transfer (unseen passage)",
+   "marksBn": "১",
+   "examUse": "1 × 5 = 5."
+  },
+  {
+   "code": "QT-TF",
+   "labelBn": "Q6 True / False — correct a false statement",
+   "marksBn": "১",
+   "examUse": "1 × 5 = 5. Marking of the correction is open (memo D-13)."
+  },
+  {
+   "code": "QT-SUMMARY",
+   "labelBn": "Q7 Writing a summary",
+   "marksBn": "১০",
+   "examUse": "10 — main ideas 5 + own words and brevity 3 + language 2 (proposal, memo D-03)."
+  },
+  {
+   "code": "QT-MATCH",
+   "labelBn": "Q8 Matching (parts of sentences)",
+   "marksBn": "১",
+   "examUse": "1 × 5 = 5."
+  },
+  {
+   "code": "QT-REARRANGE",
+   "labelBn": "Q9 Rearranging sentences",
+   "marksBn": "১",
+   "examUse": "1 × 8 = 8."
+  },
+  {
+   "code": "QT-POEM",
+   "labelBn": "Q10 Answering questions on the poems",
+   "marksBn": "২",
+   "examUse": "2 × 5 = 10, all compulsory."
+  },
+  {
+   "code": "QT-STORY",
+   "labelBn": "Q11 Completing a story",
+   "marksBn": "১০",
+   "examUse": "10 — title 1 + story 5 + language 4 (proposal, memo D-04)."
+  },
+  {
+   "code": "QT-PARA",
+   "labelBn": "Q12 Writing a paragraph (about 120 words)",
+   "marksBn": "১০",
+   "examUse": "10 — content 5 + order 2 + language 3 (proposal, memo D-05)."
+  },
+  {
+   "code": "QT-DIALOGUE",
+   "labelBn": "Q13 Writing a dialogue",
+   "marksBn": "১০",
+   "examUse": "10."
+  },
+  {
+   "code": "QT-MEANING",
+   "labelBn": "Class test — word-meaning test of the Words to Know",
+   "marksBn": "—",
+   "examUse": "Appendix: class tests only (not on the written paper)."
+  },
+  {
+   "code": "QT-SPELL",
+   "labelBn": "Class test — spelling and dictation of the Words to Know",
+   "marksBn": "—",
+   "examUse": "Appendix: class tests only (not on the written paper)."
+  },
+  {
+   "code": "QT-READING",
+   "labelBn": "Class test — reading aloud (4-step rubric)",
+   "marksBn": "—",
+   "examUse": "Appendix: class tests only — reading aloud, including the pronunciation lessons 4.2, 6.2 and 9.3."
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "Class performance — class work, not on the written paper",
+   "marksBn": "—",
+   "examUse": "Appendix: class tests only — class performance."
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C6-ENG-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Understand a seen passage (Q1–Q3)",
+   "sourceText": "read and understand a short form and a short passage about a new student · read and understand a descriptive passage about a busy place",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-ANSWER",
+    "QT-GAP"
+   ],
+   "homeTipBn": "সন্তান যে পাঠটি পড়ছে তা একবার জোরে পড়তে বলুন; তারপর ইংরেজিতে দুটি প্রশ্ন করুন (Who? Where? Why?) এবং পূর্ণ বাক্যে উত্তর দিতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-01-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "The seen-passage questions of the paper (Q1–Q3) are set on any lesson text of the term, so this objective lives in Unit 1 and cites every unit — as the Class Five tree does (C5·01-01)."
+  },
+  {
+   "code": "LO-C6-ENG-01-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Choose the best answer — multiple choice questions on a passage (Q1)",
+   "sourceText": "read and understand a short form and a short passage about a new student · Q1: Multiple choice questions, 1 × 7 = 7",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/B1",
+     "11/L2/B1",
+     "1/EP/1",
+     "2/EP/1",
+     "3/EP/1",
+     "4/EP/1",
+     "5/EP/1",
+     "6/EP/1",
+     "7/EP/1",
+     "8/EP/1",
+     "9/EP/1",
+     "10/EP/1",
+     "11/EP/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "New in Class Six (the Class Five paper had no MCQ). Only two lesson exercises practise it; the eleven Exam Practice papers carry the rest."
+  },
+  {
+   "code": "LO-C6-ENG-01-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Answer questions on a passage in full sentences (Q2)",
+   "sourceText": "answer questions on the passage in full sentences · Q2: Answering questions, 2 × 5 = 10",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L3/A1",
+     "2/L2/B1",
+     "3/L2/B1",
+     "3/L3/D1",
+     "4/L1/B2",
+     "4/L3/B2",
+     "5/L1/A2",
+     "5/L2/A2",
+     "5/L3/B1",
+     "7/L1/B1",
+     "7/L2/B1",
+     "7/L2/D1",
+     "8/L1/A2",
+     "9/L1/D2",
+     "11/L1/A1",
+     "11/L1/B1",
+     "11/L2/A1",
+     "1/EP/2",
+     "2/EP/2",
+     "3/EP/2",
+     "4/EP/2",
+     "5/EP/2",
+     "6/EP/2",
+     "7/EP/2",
+     "8/EP/2",
+     "9/EP/2",
+     "10/EP/2",
+     "11/EP/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ANSWER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-01-01.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-ENG-01-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C6-ENG-01-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Fill the gaps in a passage or dialogue with suitable words (Q3)",
+   "sourceText": "complete a conversation with words from a box · Q3: Gap filling (no word box), 1 × 5 = 5",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/L2/A1",
+     "2/L3/A3",
+     "3/L3/E",
+     "4/L3/B1",
+     "5/L1/B",
+     "6/L2/A3",
+     "6/L3/A1",
+     "6/L3/B",
+     "6/L3/C",
+     "7/L2/A",
+     "7/L3/B",
+     "8/L1/B",
+     "8/L2/D",
+     "9/L1/C1",
+     "9/L1/C2",
+     "9/L1/E",
+     "9/L3/A2",
+     "1/EP/3",
+     "2/EP/3",
+     "3/EP/3",
+     "4/EP/3",
+     "5/EP/3",
+     "6/EP/3",
+     "7/EP/3",
+     "8/EP/3",
+     "9/EP/3",
+     "10/EP/3",
+     "11/EP/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GAP"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-ENG-01-05.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "In the lessons the gaps are filled from a word box; in the paper (Q3) there is no box. Kept as one row because the book treats them as one type (\"the gap-filling type\") — see the flag on this row."
+  },
+  {
+   "code": "LO-C6-ENG-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Give the synonym or antonym of a word from the passage (Q4)",
+   "sourceText": "match words with similar meanings · match words with their opposites · Q4: Vocabulary: synonyms and antonyms, 1 × 5 = 5",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/B2",
+     "1/L3/A2",
+     "7/L3/A2",
+     "1/EP/4",
+     "2/EP/4",
+     "3/EP/4",
+     "4/EP/4",
+     "5/EP/4",
+     "6/EP/4",
+     "7/EP/4",
+     "8/EP/4",
+     "9/EP/4",
+     "10/EP/4",
+     "11/EP/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SYNANT"
+   ],
+   "homeTipBn": "পাঠের পাঁচটি শব্দ বেছে জিজ্ঞেস করুন — একই অর্থের শব্দ (synonym) কী, বিপরীত শব্দ (antonym) কী; যেমন big–large, long–short।",
+   "prereqCodes": [
+    "LO-C5-ENG-03-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Synonym and antonym are one row: Q4 mixes them in one five-mark question (\"as shown\"), and the lessons have only three exercises (one synonym, two antonym)."
+  },
+  {
+   "code": "LO-C6-ENG-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Match words and phrases from a text with their meanings",
+   "sourceText": "understand words such as generation, hit, proud and marvellous · match words with their meanings",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/A1",
+     "3/L1/A2",
+     "3/L3/A",
+     "4/L1/A",
+     "4/L3/C",
+     "5/L1/A1",
+     "5/L1/C",
+     "5/L2/A1",
+     "5/L3/A1",
+     "6/L3/B1",
+     "7/L3/A1",
+     "8/L1/A1",
+     "8/L2/A",
+     "9/L1/A",
+     "11/L2/B2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING"
+   ],
+   "homeTipBn": "পাঠের নতুন শব্দগুলোর অর্থ ইংরেজিতে সহজ কথায় বলতে বলুন; শব্দ ও অর্থ দুই কলামে লিখে মেলাতে দিন।",
+   "prereqCodes": [
+    "LO-C5-ENG-01-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "A lesson exercise type, not a question of the written paper (the book calls it \"like Q8 matching\", but Q8 matches parts of sentences). It prepares the meaning test and Q4, so it carries the class-test type."
+  },
+  {
+   "code": "LO-C6-ENG-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Complete a table with information from a text — information transfer (Q5)",
+   "sourceText": "find information in a text and put it in a table · Q5: Information transfer, 1 × 5 = 5",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/A1",
+     "3/L2/A1",
+     "3/L2/C1",
+     "4/L1/B1",
+     "7/L2/B2",
+     "8/L2/B1",
+     "10/L2/A1",
+     "1/EP/5",
+     "2/EP/5",
+     "3/EP/5",
+     "4/EP/5",
+     "5/EP/5",
+     "6/EP/5",
+     "7/EP/5",
+     "8/EP/5",
+     "9/EP/5",
+     "10/EP/5",
+     "11/EP/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-INFO"
+   ],
+   "homeTipBn": "একটি ছোট লেখা (যেমন ঔষধের মোড়ক বা বিজ্ঞপ্তি) দেখিয়ে সন্তানকে একটি ছকে তথ্য সাজাতে বলুন — নাম, তারিখ, স্থান, সংখ্যা।",
+   "prereqCodes": [
+    "LO-C5-ENG-01-01.4"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "In the paper Q5–Q8 are set on a new unseen passage; in the lessons the same skills are practised on seen texts."
+  },
+  {
+   "code": "LO-C6-ENG-01-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Answer questions on the poems of the book (Q10)",
+   "sourceText": "answer questions on a poem in full sentences · Q10: Answering questions on the poems (all compulsory), 2 × 5 = 10",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/C1",
+     "3/L1/A3",
+     "6/L1/A1",
+     "6/L1/A2",
+     "7/L1/A1",
+     "9/L2/A2",
+     "1/EP/10",
+     "2/EP/10",
+     "3/EP/10",
+     "4/EP/10",
+     "5/EP/10",
+     "6/EP/10",
+     "7/EP/10",
+     "8/EP/10",
+     "9/EP/10",
+     "10/EP/10",
+     "11/EP/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POEM"
+   ],
+   "homeTipBn": "বইয়ের কবিতাটি একসাথে পড়ুন; জিজ্ঞেস করুন — কবিতাটি কী নিয়ে, কবি কী বলতে চেয়েছেন; উত্তর ইংরেজিতে পূর্ণ বাক্যে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-10-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Six poems in the year (Let's Play, Holding Hands, Boats Sail on the Rivers, The Chaos, Stop Look and Listen, Andre). Whether the annual Q10 covers all six is open (memo D-02). 1/L1/C1 asks about the punctuation marks of a poem — kept here as a poem question."
+  },
+  {
+   "code": "LO-C6-ENG-01-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Complete a story from a given beginning and give it a title (Q11)",
+   "sourceText": "How to Complete a Story (writing guide, Unit 1) · Q11: Completing a story, 10 — suitable title 1 + follows the given beginning, with a clear middle and ending 5 + language 4; at least ten new sentences",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/Guide/1",
+     "1/EP/11",
+     "2/EP/11",
+     "3/EP/11",
+     "4/EP/11",
+     "5/EP/11",
+     "6/EP/11",
+     "7/EP/11",
+     "8/EP/11",
+     "9/EP/11",
+     "10/EP/11",
+     "11/EP/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-STORY"
+   ],
+   "homeTipBn": "একটি গল্পের শুরুর দুই-তিন বাক্য বলুন এবং সন্তানকে বাকিটা দশ বাক্যে ইংরেজিতে শেষ করতে বলুন; শেষে একটি মানানসই শিরোনাম দিতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-20-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The marking split is SCD's proposal (memo D-04, open)."
+  },
+  {
+   "code": "LO-C6-ENG-01-07",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write a paragraph of about 120 words (Q12)",
+   "sourceText": "write a short paragraph about their own first day at school · How to Write a Paragraph (writing guide, Unit 2) · Q12: Writing a paragraph (about 120 words), 10 — content 5 + order (opening sentence, ideas in order, closing sentence) 2 + language 3",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/B3",
+     "1/L3/A3",
+     "2/L2/B2",
+     "2/Guide/1",
+     "3/L3/E3",
+     "3/L3/F",
+     "4/L3/D",
+     "5/L1/D",
+     "5/L3/C",
+     "7/L3/C",
+     "11/L1/A3",
+     "11/L1/B2",
+     "1/EP/12",
+     "2/EP/12",
+     "3/EP/12",
+     "4/EP/12",
+     "5/EP/12",
+     "6/EP/12",
+     "7/EP/12",
+     "8/EP/12",
+     "9/EP/12",
+     "10/EP/12",
+     "11/EP/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": "পরিচিত একটি বিষয়ে (My Daily Routine, A Railway Station) আট-দশ বাক্যের অনুচ্ছেদ লিখতে দিন — শুরুর বাক্য, ধারাবাহিক ভাবনা, শেষ বাক্য আছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-17-01",
+    "LO-C5-ENG-04-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The marking split is SCD's proposal (memo D-05, open). Lesson paragraphs are guided by questions; the paper gives the topic only."
+  },
+  {
+   "code": "LO-C6-ENG-01-08",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write a dialogue on a given situation (Q13)",
+   "sourceText": "write short dialogues on everyday situations · How to Write a Dialogue (writing guide, Unit 3) · Q13: Writing a dialogue, 10",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/B3",
+     "2/L1/A1",
+     "3/Guide/1",
+     "4/L1/D1",
+     "8/L2/E",
+     "1/EP/13",
+     "2/EP/13",
+     "3/EP/13",
+     "4/EP/13",
+     "5/EP/13",
+     "6/EP/13",
+     "7/EP/13",
+     "8/EP/13",
+     "9/EP/13",
+     "10/EP/13",
+     "11/EP/13"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-DIALOGUE"
+   ],
+   "homeTipBn": "একটি পরিস্থিতি দিন (দোকানে কেনাকাটা, শিক্ষকের সঙ্গে শৃঙ্খলা নিয়ে কথা) এবং দুজনের কথোপকথন ইংরেজিতে লিখতে বলুন — সালাম দিয়ে শুরু, বিদায় দিয়ে শেষ।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "New in Class Six: the Class Five paper had letters, emails and applications (now in the 2nd Paper), not dialogues. Boys write with a boy friend, brother or father; girls with a girl friend, sister or mother (book rule)."
+  },
+  {
+   "code": "LO-C6-ENG-01-09",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Respond to good news and bad news with the right expressions",
+   "sourceText": "respond to good news with \"MashaAllah! Congratulations! Well done!\" and reply with \"JazakAllahu khairan\" · respond to bad news with \"I'm sorry to hear that\" and \"That's bad luck\"",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/B2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "খেলার ছলে একটি ভালো খবর ও একটি খারাপ খবর দিন — সন্তান ইংরেজিতে কী বলবে? (\"MashaAllah! Congratulations!\" / \"I'm sorry to hear that.\")",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One written exercise; assessed in class (class performance). The expressions come back in dialogue writing (Q13)."
+  },
+  {
+   "code": "LO-C6-ENG-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Introduce people and ask where someone is from, in different ways",
+   "sourceText": "introduce people and ask where someone is from · understand the difference between \"Where do you come from?\" and \"Where are you coming from now?\" · ask the same question in different ways",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L1/A2",
+     "2/L1/A3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: \"Where do you come from?\" আর \"Where are you coming from now?\" — দুটির পার্থক্য কী? একজন নতুন মানুষের সঙ্গে পরিচয় করিয়ে দেওয়ার অভিনয় করুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class work, not on the written paper."
+  },
+  {
+   "code": "LO-C6-ENG-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Answer questions about yourself in full sentences",
+   "sourceText": "talk and write about their favourite food",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L3/A1",
+     "3/L3/A1",
+     "4/L3/A",
+     "9/L1/B",
+     "10/L2/A2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "প্রতিদিন দুটি প্রশ্ন ইংরেজিতে করুন (What is your favourite food? What do you do to keep fit?) — সন্তান পূর্ণ বাক্যে উত্তর দেবে।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Five \"about yourself\" exercises across the book; they are warm-ups for the passage and for paragraph writing, assessed in class."
+  },
+  {
+   "code": "LO-C6-ENG-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "True or false — and correct a false statement (Q6)",
+   "sourceText": "read a short text and decide whether statements are true or false · Q6: True / False (correct a false statement), 1 × 5 = 5",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L3/A4",
+     "4/L1/E1",
+     "5/L3/A2",
+     "7/L1/B2",
+     "7/L2/C1",
+     "1/EP/6",
+     "2/EP/6",
+     "3/EP/6",
+     "4/EP/6",
+     "5/EP/6",
+     "6/EP/6",
+     "7/EP/6",
+     "8/EP/6",
+     "9/EP/6",
+     "10/EP/6",
+     "11/EP/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF"
+   ],
+   "homeTipBn": "একটি ছোট অনুচ্ছেদ পড়ে তিনটি বাক্য বলুন — কোনটি True, কোনটি False? False হলে সঠিক তথ্যটি বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-01-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "How Q6 is marked when a false statement must be corrected is open (memo D-13)."
+  },
+  {
+   "code": "LO-C6-ENG-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Match the parts of sentences to make complete sentences (Q8)",
+   "sourceText": "read a text and answer questions, write true/false and match sentence parts [ভাগ: match sentence parts] · Q8: Matching (parts of sentences), 1 × 5 = 5",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L2/A",
+     "3/L3/B",
+     "5/L2/A3",
+     "7/L1/B3",
+     "1/EP/8",
+     "2/EP/8",
+     "3/EP/8",
+     "4/EP/8",
+     "5/EP/8",
+     "6/EP/8",
+     "7/EP/8",
+     "8/EP/8",
+     "9/EP/8",
+     "10/EP/8",
+     "11/EP/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCH"
+   ],
+   "homeTipBn": "পাঁচটি বাক্যের প্রথম অর্ধেক ও শেষ অর্ধেক আলাদা করে লিখে দিন — সন্তান মিলিয়ে পূর্ণ বাক্য বানাবে।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "The lesson exercises match a word or a problem with a sentence-length description (occupations, advice, animals); only 7/L1/B3 and Q8 match true sentence halves."
+  },
+  {
+   "code": "LO-C6-ENG-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Put sentences in the correct order to make a story or a conversation (Q9)",
+   "sourceText": "put the lines of a short conversation in the right order · Q9: Rearranging sentences, 1 × 8 = 8",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2/B2",
+     "1/EP/9",
+     "2/EP/9",
+     "3/EP/9",
+     "4/EP/9",
+     "5/EP/9",
+     "6/EP/9",
+     "7/EP/9",
+     "8/EP/9",
+     "9/EP/9",
+     "10/EP/9",
+     "11/EP/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-REARRANGE"
+   ],
+   "homeTipBn": "পরিচিত গল্পের আটটি বাক্য এলোমেলো করে লিখে দিন — সন্তান ঠিক ক্রমে সাজাবে (শুধু অক্ষর লিখলেই হবে)।",
+   "prereqCodes": [
+    "LO-C5-ENG-07-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Only one lesson exercise; each Exam Practice re-tells a seen text for Q9."
+  },
+  {
+   "code": "LO-C6-ENG-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Use quantity and container phrases (a dozen eggs, a loaf of bread, a tube of ointment)",
+   "sourceText": "use quantity phrases: a dozen eggs, a loaf of bread, a tube of paint, half a kilo of … · use container words: a tube of ointment, a box of tissue …",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2/C",
+     "4/L1/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "বাজারের ফর্দ ইংরেজিতে বলতে বলুন: a dozen eggs, a loaf of bread, half a kilo of sugar, a tube of toothpaste, a box of tissues।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Two lessons (3.2, 4.1) teach the same pattern; class work, useful in the shopping dialogue."
+  },
+  {
+   "code": "LO-C6-ENG-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Write a summary of a passage in your own words (Q7)",
+   "sourceText": "How to Write a Summary (writing guide, Unit 4) · Q7: Writing a summary, 10 — main ideas 5 + own words and brevity (about one third of the passage) 3 + language 2",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/Guide/1",
+     "1/EP/7",
+     "2/EP/7",
+     "3/EP/7",
+     "4/EP/7",
+     "5/EP/7",
+     "6/EP/7",
+     "7/EP/7",
+     "8/EP/7",
+     "9/EP/7",
+     "10/EP/7",
+     "11/EP/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SUMMARY"
+   ],
+   "homeTipBn": "একটি ছোট অনুচ্ছেদ পড়ে সন্তানকে তিন-চার বাক্যে নিজের ভাষায় মূল কথা লিখতে বলুন — বই থেকে বাক্য হুবহু তোলা চলবে না।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "New in Class Six. Always set on the unseen passage of Q5–Q8. The marking split is SCD's proposal (memo D-03, open). The guide comes in Unit 4, but the Exam Practice of Units 1–3 already asks for a summary."
+  },
+  {
+   "code": "LO-C6-ENG-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Say short and long vowel sounds clearly (pen–pain, the sound in \"five\", hop–hope)",
+   "sourceText": "hear and say the difference between the short vowel in \"pen\" and the long vowel in \"pain\" · read aloud words with the vowel sound in \"five\" correctly · hear and say the difference between the short \"o\" (hop) and the long \"o\" (hope)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L2/A",
+     "4/L2/A1",
+     "4/L2/A2",
+     "4/L2/A3",
+     "6/L2/A",
+     "6/L2/A1",
+     "6/L2/A2",
+     "6/L2/A4",
+     "9/L3/A",
+     "9/L3/A1"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-READING"
+   ],
+   "homeTipBn": "জোড়া শব্দ জোরে পড়তে বলুন — pen/pain, hop/hope, sit/site — এবং দুই শব্দের স্বরধ্বনির পার্থক্য স্পষ্ট হচ্ছে কি না শুনুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Rubric row — the reading test (class test); lessons 4.2, 6.2 and 9.3 are \"not on the written paper\". The three lessons are one row: the skill (hearing and saying a vowel contrast) is the same."
+  },
+  {
+   "code": "LO-C6-ENG-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Make a new word by adding \"e\" (can → cane)",
+   "sourceText": "make a new word by adding \"e\" (can → cane)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L2/A4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "কয়েকটি শব্দ দিন — can, hop, pin, kit — শেষে e যোগ করলে কোন নতুন শব্দ হয় ও উচ্চারণ কীভাবে বদলায়, বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C6-ENG-04-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "One written exercise only; a spelling-and-sound rule that can be tested apart from saying the sounds."
+  },
+  {
+   "code": "LO-C6-ENG-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Write instructions with \"Do not\" and \"cannot\"; understand public signs",
+   "sourceText": "write clear instructions using \"Do not\" and \"cannot\" · understand common public signs and the instructions they give",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/L1/A1",
+     "10/L1/B1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "রাস্তা বা হাসপাতালের সাইনবোর্ড দেখিয়ে জিজ্ঞেস করুন — ইংরেজিতে নির্দেশটি কী হবে? (\"Do not litter.\" \"You cannot park here.\")",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Class work; 10/L1/B1 is a gap-filling exercise but its content is the instructions for the signs, so it is cited here, not in the gap-filling row."
+  },
+  {
+   "code": "LO-C6-ENG-10-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "Make and answer suggestions (What should we …? Why don't we …? How about …? Let's …)",
+   "sourceText": "make and answer suggestions with \"What should we…?\", \"Why don't we…?\", \"How about…?\" and \"Let's…\" · write a short dialogue to plan something with friends",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/L2/A3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "পরিবারের একটি পরিকল্পনা নিয়ে ইংরেজিতে প্রস্তাব দিতে বলুন: \"Why don't we visit Grandma?\" \"How about going on Friday?\" \"Let's take some fruit.\"",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "10/L2/A3 asks for short dialogues with these expressions — tagged here (the language), not in the dialogue row (01-08), so that the exercise has one code."
+  },
+  {
+   "code": "LO-C6-ENG-SK-READ-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "Read a text, dialogue or poem aloud with correct pronunciation, stress and pauses (reading test)",
+   "sourceText": "read a short poem aloud with correct stress and rhythm · read a short verse and a story aloud with proper pauses and pronunciation · Appendix: class tests only — reading aloud",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L1/A",
+     "1/L1/B",
+     "1/L1/C",
+     "1/L2/A",
+     "1/L2/A2",
+     "1/L2/B",
+     "1/L2/B1",
+     "1/L3/A",
+     "2/L1/A",
+     "2/L2/B",
+     "2/L3/A",
+     "2/L3/A2",
+     "3/L1/A",
+     "3/L1/A1",
+     "3/L2/A",
+     "3/L2/B",
+     "3/L3/C",
+     "3/L3/D",
+     "3/L3/E1",
+     "3/L3/E2",
+     "4/L1/B",
+     "4/L1/D",
+     "4/L1/E",
+     "4/L3/B",
+     "5/L1/A",
+     "5/L2/A",
+     "5/L3/A",
+     "5/L3/B",
+     "6/L1/A",
+     "6/L3/A",
+     "7/L1/A",
+     "7/L1/B",
+     "7/L1/C",
+     "7/L2/B",
+     "7/L2/C",
+     "7/L2/D",
+     "7/L3/A",
+     "8/L1/A",
+     "8/L2/B",
+     "8/L2/C",
+     "9/L1/C",
+     "9/L1/D",
+     "9/L1/D1",
+     "9/L2/A",
+     "9/L2/A1",
+     "9/L3/A3",
+     "10/L1/A",
+     "10/L1/B",
+     "10/L2/A",
+     "11/L1/A",
+     "11/L1/A2",
+     "11/L1/B",
+     "11/L2/A",
+     "11/L2/B"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-READING"
+   ],
+   "homeTipBn": "প্রতিদিন পাঁচ মিনিট সন্তানকে পাঠের একটি অংশ জোরে পড়তে বলুন — দাঁড়ি-কমায় থামছে কি না, শব্দ স্পষ্ট বলছে কি না শুনুন।",
+   "prereqCodes": [
+    "LO-C5-ENG-SK-READ-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Rubric row — the reading test (class test). Cites every reading text and every \"read aloud\" task of the book (54), so each seen text has a home in the tree."
+  },
+  {
+   "code": "LO-C6-ENG-SK-VOC-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": null,
+   "strand": "VOC",
+   "labelBn": "Give the Bangla meaning of the Words to Know (meaning test)",
+   "sourceText": "Words to Know — Unit N: Meaning test … (class tests) · Appendix: class tests only — the word-meaning test of the Words to Know",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/WK/1",
+     "2/WK/1",
+     "3/WK/1",
+     "4/WK/1",
+     "5/WK/1",
+     "6/WK/1",
+     "7/WK/1",
+     "8/WK/1",
+     "9/WK/1",
+     "10/WK/1",
+     "11/WK/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING"
+   ],
+   "homeTipBn": "প্রতি ইউনিটের শেষের দশটি Words to Know থেকে পাঁচটি শব্দ বলুন — সন্তান বাংলা অর্থ বলবে; পরে উল্টো করে বাংলা থেকে ইংরেজি।",
+   "prereqCodes": [
+    "LO-C5-ENG-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "Ten words a unit, 110 in the year; none repeats the Class Three–Five lists."
+  },
+  {
+   "code": "LO-C6-ENG-SK-SPELL-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPELL",
+   "chapterNumber": null,
+   "strand": "SPELL",
+   "labelBn": "Spell the Words to Know correctly (spelling test and dictation)",
+   "sourceText": "Words to Know — Unit N: … spelling test (class tests) · Appendix: class tests only — spelling and dictation of the Words to Know",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/WK/2",
+     "2/WK/2",
+     "3/WK/2",
+     "4/WK/2",
+     "5/WK/2",
+     "6/WK/2",
+     "7/WK/2",
+     "8/WK/2",
+     "9/WK/2",
+     "10/WK/2",
+     "11/WK/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SPELL"
+   ],
+   "homeTipBn": "Words to Know-এর শব্দগুলো মুখে বলে খাতায় লিখতে দিন (শ্রুতিলিখন); ভুল বানান তিনবার করে লেখান।",
+   "prereqCodes": [
+    "LO-C5-ENG-SK-SPELL-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 339,
+  "mapped": 339,
+  "unmapped": [],
+  "note": "exercisesTotal = every lettered exercise or text of the 30 lessons (170: headings A, A1, B2 … inside each lesson), the four writing guides of Units 1–4 (one ref each), the meaning test and the spelling test of each unit's Words to Know (22) and the 13 questions of each unit's Exam Practice paper (143) — 339 in all. Refs read \"unit/L<lesson>/<letter>\" (3/L2/B2 = Lesson 3.2, exercise B2), \"unit/WK/1|2\", \"unit/EP/<question>\", \"unit/Guide/1\"."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "The book is not yet printed and this is its first version. Source: C6_ENG_Book_v1_Writer-Reviewer (4 November 2026); the reviewer has not answered the memo yet. Exercise letters may move in the next version and at print — re-check all 339 refs before the lock. Three copyrighted poems (Holding Hands, The Chaos, Andre) are not printed in the copy: the school pastes them from English For Today."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Open memo decisions (C6_ENG_Memo_v1, all 13 unanswered) that can change the tree: D-01 the mark distribution itself (the 13 question types and marks in questionTypes); D-02 whether the annual Q10 covers all six poems (row 01-05); D-03/D-04/D-05 the marking of summary, story and paragraph (rows 04-01, 01-06, 01-07 — examUse only); D-13 the marking of True/False (row 02-03); D-12 whether Units 1–4 keep a writing guide each (the four Guide refs); D-09/D-10 the eleven unseen passages and the Q11–Q13 topics of the Exam Practice (refs stay, texts may change); D-06/D-07/D-08 the edited or new texts of Lessons 5.1, 5.2 and 7.1 (their exercises may change)."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Question types are the thirteen questions of the book's Appendix (Mohammadpur 2026 pattern, proposal D-01) plus the Appendix's four class tests (spelling and dictation, word-meaning test, reading aloud, class performance). Nothing else is used. A row carries an exam type only if it cites that question of an Exam Practice."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "This tree is built by skill, not by lesson, like the Class Three–Five English trees: the paper asks the same thirteen question types on whichever seen text the branch declares, so a row per text would repeat the same skill thirty times. Each row sits in the unit where the skill is first practised and cites its exercises in all eleven units. Grammar, letters, emails, applications and compositions are in the 2nd Paper tree (C6_ENG2)."
+  },
+  {
+   "code": "LO-C6-ENG-01-01.3",
+   "kind": "TOO_BROAD",
+   "text": "Gap filling: the lessons fill gaps from a word box (17 exercises), the paper's Q3 has no box. The book calls both \"the gap-filling type\", so they are one row (01-01.3). A child may manage with a box and fail without one — if teachers see that, split the row into \"with a word box\" (class work) and \"without a box\" (Q3)."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Thin rows the book team may want to support with more exercises: MCQ (01-01.1) has two lesson exercises; rearranging (03-01) one; adding \"e\" (04-03) one; suggestions (10-02) one; good and bad news (01-09) one. The Exam Practice papers carry most of the practice for the exam types."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Values outcomes are left out (owner rule): Lesson 9.2 \"value and thank Allah for the parents He has given us\". Content outcomes of single texts (e.g. Lesson 8.1 \"explain what global village and global citizen mean\", Lesson 7.1 \"explain the road-safety rule\") are not rows: they are tested through the passage questions (01-01)."
+  },
+  {
+   "code": "LO-C6-ENG-01-03",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): Words matched with meanings (01-03) is kept apart from synonyms/antonyms (01-02): the first is a lesson exercise and the meaning test, the second is Q4 of the paper. The reviewer may prefer one vocabulary row."
+  },
+  {
+   "code": "LO-C6-ENG-01-09",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): Functional-language outcomes are four small class-work rows (01-09 good/bad news, 02-01 introductions, 03-02 quantity phrases, 10-02 suggestions) plus 10-01 instructions. The alternative is one objective \"Use everyday expressions\" with these as sub-objectives; they were left as separate objectives because each belongs to one unit and guardians see the objective label."
+  },
+  {
+   "code": "LO-C6-ENG-SK-READ-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): The reading texts themselves (38 passages, dialogues and poems headed \"Read the …\") are inventoried as exercises and cited by the reading-aloud strand SK-READ-01, as in the Class Five tree. If the reviewer wants silent reading comprehension as its own row, it is the group 01-01."
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·01-01.3)। সূত্র: \"3/L2/B2\" = Unit 3, Lesson 3.2, exercise B2; \"5/EP/6\" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; \"5/WK/1\" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); \"2/Guide/1\" = Unit 2-এর writing guide।\n\n**বইটি ছাপা হয়নি এবং এটি প্রথম সংস্করণ** — স্মারকের ১৩টি সিদ্ধান্তই খোলা; নম্বর বণ্টন (D-01) নিজেই প্রস্তাব। পরের সংস্করণে সূত্র ও ধরন মিলিয়ে নিতে হবে।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **গাছটি দক্ষতা ধরে, পাঠ ধরে নয়** (পঞ্চম শ্রেণির মতো): প্রশ্নপত্রের ১৩টি প্রশ্নের প্রতিটি একটি সারি, যে ইউনিটে প্রথম শেখানো হয় সেখানে বসানো, আর ১১টি ইউনিটের অনুশীলনী ও Exam Practice উদ্ধৃত। তাই সারি মাত্র ২৫টি। ব্যাকরণ ও চিঠি-দরখাস্ত-রচনা ২য় পত্রের গাছে (C6_ENG2)।\n2. **Gap filling এক সারি (01-01.3)** — পাঠে শব্দ-বাক্স থাকে, প্রশ্নপত্রে (Q3) থাকে না। ভাগ করবেন কি?\n3. **শব্দের অর্থ মেলানো (01-03) আলাদা, synonym/antonym (01-02) আলাদা** — প্রথমটি শ্রেণি পরীক্ষার, দ্বিতীয়টি Q4।\n4. **কথোপকথনের ভাষার পাঁচটি ছোট সারি** (01-09, 02-01, 03-02, 10-01, 10-02) — শ্রেণির কাজ, প্রশ্নপত্রে নয়; প্রতিটিতে এক-দুটি অনুশীলনী। একটি দলে আনবেন, না এমনই রাখবেন?\n5. **উচ্চারণের তিন পাঠ (4.2, 6.2, 9.3) এক রুব্রিক-সারি (04-02)**; \"e যোগ করে নতুন শব্দ\" (04-03) আলাদা লিখিত সারি।\n6. **পড়ার অংশগুলো (passage, dialogue, poem) reading-aloud ধারায় (SK-READ-01)** উদ্ধৃত — পঞ্চম শ্রেণির মতো।\n7. **Summary (04-01), dialogue (01-08) ও MCQ (01-01.1) ষষ্ঠ শ্রেণিতে নতুন ধরন** — আগের ধাপ নেই বা দুর্বল; শুরুতে বেশি অনুশীলন লাগবে।\n\n**বই-দলের জন্য (পতাকা দেখুন):** MCQ, rearranging ও কয়েকটি ভাষা-সারির পাঠ-অনুশীলনী একটি-দুটি; gap filling-এ পাঠ ও প্রশ্নপত্রের রূপ আলাদা; তিনটি কবিতা কপিতে ছাপা নেই।\n"
+}

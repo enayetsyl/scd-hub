@@ -65,6 +65,7 @@ import type { ISectionAttendanceAssignment } from "../models/SectionAttendanceAs
 import type { IStudentLeaveApplication } from "../models/StudentLeaveApplication";
 import { CorrectionReasonInput, parseCorrectionReason } from "../../staff-mistakes/resolvers/correctionReasonInput";
 import { runWithCorrectionReason } from "../../staff-mistakes/services/correctionReasonContext";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 // ---------------------------------------------------------------------------
 // Local gates
@@ -888,7 +889,7 @@ builder.queryField("mySectionAttendance", (t) =>
       for (const s of scopes) {
         if ((s.kind === "teaching" || s.kind === "proxy") && s.sectionId) ids.add(s.sectionId);
       }
-      const ctSections = await Section.find({ classTeacherId: ctx.auth.userId, active: true })
+      const ctSections = await Section.find({ classTeacherId: ctx.auth.userId, active: true, ...(await currentYearSectionFilter()) })
         .select("_id")
         .lean();
       for (const s of ctSections) ids.add(s._id.toString());

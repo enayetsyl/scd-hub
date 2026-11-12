@@ -9,7 +9,7 @@ output is otherwise byte-identical):
   (b) production_core pin -> "SCD-Guide-v1";
   (c) single-period standalone Session Plan now renders ALL seven Spine fields
       (the Project 03 copy emitted only Objective + Must-Cover — the D-038 gap).
-SCD edition 2 adds: Nursery, KG and Classes 6–10 class names; subject ISL (ইসলাম শিক্ষা).
+SCD edition 2 adds: Nursery, KG and Classes 6–10 class names; subject ISLAM (ইসলাম শিক্ষা).
 
 Section order, frozen heading strings, Closing order, the flow-card frozen cells, and the
 numeral system are produced BY THIS TEMPLATE, not chosen by the chat — that is what removes
@@ -35,8 +35,8 @@ CLASS_NAME = {"NUR": "নার্সারি", "KG": "কেজি",
               7: "সপ্তম শ্রেণি", 8: "অষ্টম শ্রেণি", 9: "নবম শ্রেণি", 10: "দশম শ্রেণি"}
 
 SUBJECT_NAME = {"BAN": "বাংলা", "ENG": "English", "MATH": "গণিত", "SCI": "বিজ্ঞান",
-                "BGS": "বাংলাদেশ ও বিশ্বপরিচয়", "ISL": "ইসলাম শিক্ষা",
-                # scd-hub D-#1310: the app's content codes (ISLAM = ISL) and the Class 6 papers.
+                "BGS": "বাংলাদেশ ও বিশ্বপরিচয়",
+                # scd-hub D-#1310/#1440: the app's content codes — ISLAM is the only spelling (ISL dropped) — and the Class 6 papers.
                 "ISLAM": "ইসলাম শিক্ষা", "ICT": "তথ্য ও যোগাযোগ প্রযুক্তি",
                 "BAN2": "বাংলা ২য় পত্র", "ENG2": "English 2nd Paper"}
 

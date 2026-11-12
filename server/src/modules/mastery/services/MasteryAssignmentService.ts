@@ -36,6 +36,7 @@ import {
   assertMayWork,
   dayOf,
   nextPaperId,
+  openExtraSeen,
   rosterOf,
   sectionContext,
   type Auth,
@@ -334,7 +335,10 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     loCode,
     weakPct: sectionOutcomeSummary([...per.values()].map((s) => s.state), sec.assessments.get(loCode) ?? 0, policy.resolved).weakPct,
   }));
-  const partA = buildPartA(sectionWeak, policy.resolved.sectionTriggerPct, new Set(studentsByQid.keys()), bctx);
+  // PR-J (D-#1420): a question on any child's open extra sheet is seen by that child, so Part A (class-wide) avoids it.
+  const extraSeen = await openExtraSeen(ctx.sectionId, input.subject);
+  const openExtraQids = new Set([...extraSeen.values()].flatMap((q) => [...q]));
+  const partA = buildPartA(sectionWeak, policy.resolved.sectionTriggerPct, new Set([...studentsByQid.keys(), ...openExtraQids]), bctx, openExtraQids);
   const partAQids = new Set(partA.map((q) => q.qid));
 
   const now = new Date();
@@ -366,7 +370,7 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     const states = new Map(
       [...sec.states.entries()].flatMap(([lo, per]) => {
         const s = per.get(sid);
-        return s ? [[lo, { state: s.state, lastEvidenceAt: s.lastEvidenceAt, seenQids: s.seenQids }] as const] : [];
+        return s ? [[lo, { state: s.state, lastEvidenceAt: s.lastEvidenceAt, seenQids: extraSeen.has(sid) ? [...new Set([...s.seenQids, ...extraSeen.get(sid)!])] : s.seenQids }] as const] : [];
       }),
     );
     const built = buildPartB(states, bctx, partAQids);
@@ -481,6 +485,7 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const rows = await liveSectionRows(a.sectionId, a.subject, cur.loCode);
       const seen = new Set(rows.filter((r) => r.studentId === studentId && r.qid).map((r) => r.qid as string));
       for (const q of [...sheet.items, ...a.partA]) if (q.qid) seen.add(q.qid);
+      for (const q of (await openExtraSeen(a.sectionId, a.subject)).get(studentId) ?? []) seen.add(q);
       const exposure = new Map<string, number>();
       for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
       const next = pickQuestion(cur.loCode, seen, { bank: await goldBank([cur.loCode]), exposure });
@@ -701,7 +706,7 @@ export async function renderAssignmentPdfForChild(assignmentId: string, studentI
 }
 
 /** The current stimulus (shared stem) of every part on the sheets: ref → title + body (D-#926). */
-async function stemsFor(items: { stimulusRef?: string | null }[]): Promise<Map<string, { title: string | null; content: string }>> {
+export async function stemsFor(items: { stimulusRef?: string | null }[]): Promise<Map<string, { title: string | null; content: string }>> {
   const refs = [...new Set(items.map((q) => q.stimulusRef).filter((r): r is string => Boolean(r)))];
   if (refs.length === 0) return new Map();
   const arts = await ContentArtifact.find({ docType: "stimulus", current: true, "envelopeJson.payload.stimulus_id": { $in: refs } })

@@ -43,6 +43,7 @@ import { AssignmentItem } from "../../trackers/models/AssignmentItem";
 import { HomeworkItem } from "../../trackers/models/HomeworkItem";
 import { expectedItemsForWeek } from "../../trackers/services/AssignmentScheduleService";
 import { weekNumberFor } from "../../trackers/assignmentCalendar";
+import { currentYearFilter, currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 /** Owner ruling (D-#279): look back one week, school days only. */
 export const BACKLOG_DAYS = 7;
@@ -227,7 +228,7 @@ function deadlineFor(deliveryKey: string, dayStartMinutes: number): Date {
 }
 
 async function dayStartMinutes(): Promise<number> {
-  const win = await ScheduleWindow.findOne({ season: "regular", active: true })
+  const win = await ScheduleWindow.findOne({ season: "regular", active: true, ...(await currentYearFilter()) })
     .sort({ fromDate: 1 })
     .select("dayStartMinutes")
     .lean();
@@ -332,6 +333,7 @@ async function confirmerSections(userId: string): Promise<Array<{ sectionId: str
   const sections = await Section.find({
     active: true,
     $or: [{ classTeacherId: userId }, { homeworkConfirmerId: userId }],
+    ...(await currentYearSectionFilter()),
   })
     .select("_id classId")
     .lean();

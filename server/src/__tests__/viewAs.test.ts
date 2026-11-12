@@ -40,6 +40,13 @@ const leafFor = (fn: jest.Mock, args: unknown[]) => {
 
 const mockUserFindById = jest.fn();
 const mockUserFind = jest.fn();
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/foundation/models/User", () => ({
   User: {
     findById: (id: unknown) => leafFor(mockUserFindById, [id]),

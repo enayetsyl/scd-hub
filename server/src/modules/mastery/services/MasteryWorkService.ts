@@ -455,6 +455,30 @@ export function studentItemsOf(paper: Pick<IMasteryPaper, "source" | "perStudent
   return new Map((paper.perStudentItems ?? []).map((x) => [String(x.studentId), new Set(x.itemNos)]));
 }
 
+/**
+ * PR-J (D-#1420): the questions on a child's OPEN (unconfirmed) extra-homework sheets of this section ×
+ * subject count as SEEN for that child — an unmarked sheet writes no evidence yet, but the question
+ * has been handed out. studentId → qids. Bounded: a section's open extra sheets.
+ */
+export async function openExtraSeen(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Map<string, Set<string>>> {
+  const papers = await MasteryPaper.find({ sectionId, subject, extra: true, entryState: "OPEN" })
+    .select("items perStudentItems")
+    .lean(); // bounded: open extra sheets of one section × subject
+  const out = new Map<string, Set<string>>();
+  for (const p of papers) {
+    const qidOf = new Map(p.items.filter((i) => i.qid).map((i) => [i.itemNo, i.qid as string]));
+    for (const ps of p.perStudentItems ?? []) {
+      const set = out.get(String(ps.studentId)) ?? new Set<string>();
+      for (const n of ps.itemNos) {
+        const q = qidOf.get(n);
+        if (q) set.add(q);
+      }
+      out.set(String(ps.studentId), set);
+    }
+  }
+  return out;
+}
+
 /** Homework / assignment record state → the student's default status on a linked sheet. */
 async function trackerDefaults(paper: IMasteryPaper): Promise<Map<string, "PRESENT" | "ABSENT" | "NOT_SUBMITTED">> {
   const out = new Map<string, "PRESENT" | "ABSENT" | "NOT_SUBMITTED">();

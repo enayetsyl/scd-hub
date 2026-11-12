@@ -15,6 +15,7 @@ import { PeriodGrid } from "./models/PeriodGrid";
 import { ScheduleWindow } from "./models/ScheduleWindow";
 import { SubjectGroup } from "./models/SubjectGroup";
 import { computePeriodTimes } from "./schedule";
+import { currentYearFilter } from "../foundation/services/currentYear";
 
 /** Sections that ARE the whole class (post-merge) — their name is redundant next
  *  to the class, so the group name shows just the class. Boys/Girls stay appended. */
@@ -88,7 +89,7 @@ export async function enrichRoutineSlots<T extends Enrichable>(slots: T[]): Prom
 
   // 3. Period times per audience from the regular-season grids + window.
   const grids = await PeriodGrid.find({ season: "regular", active: true }).lean();
-  const win = await ScheduleWindow.findOne({ season: "regular", active: true }).sort({ fromDate: 1 }).lean();
+  const win = await ScheduleWindow.findOne({ season: "regular", active: true, ...(await currentYearFilter()) }).sort({ fromDate: 1 }).lean();
   const dayStart = win?.dayStartMinutes ?? 420;
   const timesByAudience = new Map<string, Map<number, { start: string; end: string }>>();
   for (const g of grids) {

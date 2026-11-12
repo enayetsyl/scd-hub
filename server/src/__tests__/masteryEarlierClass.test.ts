@@ -166,6 +166,30 @@ describe("an earlier class's code on a sheet", () => {
     expect(await MasteryAction.countDocuments({ loCode: C1 })).toBe(0);
   });
 
+  it("PR-K: a child with baseline evidence shows the ভিত্তি যাচাই rows with the right states; a child without does not", async () => {
+    const [a, b, c, d] = sids;
+    // After the previous test: a, b, c scored 0 on the Class 1 code (WEAK); d was never assessed on it.
+    const withBaseline = await studentDiagnosis(a, "MATH", TEACHER);
+    expect(withBaseline.baseline).toEqual([
+      expect.objectContaining({ loCode: C1, labelBn: "C1 ধাপ", classToken: "C1", state: "WEAK" }),
+    ]);
+    expect(withBaseline.baseline[0].lastEvidenceAt).toMatch(/^2027-03-09/);
+    // Own-class rows are untouched by the extra section.
+    expect(withBaseline.outcomes.map((o) => o.loCode)).toEqual([C2]);
+    expect((await studentDiagnosis(b, "MATH", TEACHER)).baseline.map((r) => [r.loCode, r.state])).toEqual([[C1, "WEAK"]]);
+    expect((await studentDiagnosis(c, "MATH", TEACHER)).baseline).toHaveLength(1);
+    // d was on the roster, so the confirmed sheet gave them full marks by default: judged, not weak.
+    const dBase = (await studentDiagnosis(d, "MATH", TEACHER)).baseline;
+    expect(dBase).toHaveLength(1);
+    expect(dBase[0].state).not.toBe("WEAK");
+    expect(dBase[0].state).not.toBe("NOT_ASSESSED");
+
+    // A child who joined after the baseline sheets has no evidence on an earlier-class code: the list is empty.
+    const sec = await Section.findById(sectionId).lean();
+    const [late] = await Student.create([{ schoolId: "EC-9", name: "Late Joiner", rollNumber: "9", classId: sec!.classId, sectionId: sec!._id, active: true }]);
+    expect((await studentDiagnosis(String(late._id), "MATH", TEACHER)).baseline).toEqual([]);
+  });
+
   it("the summary is empty for a section with no earlier-class evidence of that subject", async () => {
     const sum = await earlierClassSummary(sectionId, "BAN" as never, {}, PRINCIPAL);
     expect(sum).toMatchObject({ rows: [], total: 0 });

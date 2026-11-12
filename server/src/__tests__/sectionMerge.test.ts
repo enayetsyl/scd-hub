@@ -45,6 +45,12 @@ jest.mock("../modules/trackers/services/recordRehome", () => ({
   rehomeStudentRecords: (ids: unknown, to: unknown) => mockRehome(ids, to),
 }));
 
+// YC-1: the enrolment side is covered by enrolmentWriters.test.ts (real DB); here it is a stub.
+const mockRecordMove = jest.fn().mockResolvedValue({ moved: 0, failed: [] });
+jest.mock("../modules/foundation/services/EnrolmentService", () => ({
+  recordSectionMove: (a: unknown) => mockRecordMove(a),
+}));
+
 import {
   deriveGenderToSource,
   mergeSections,
@@ -107,6 +113,9 @@ describe("mergeSections", () => {
     // homework/assignment records follow the students into the combined section
     expect(mockRehome).toHaveBeenCalledWith(expect.any(Array), COMBINED);
     expect((mockRehome.mock.calls[0][0] as unknown[]).length).toBe(3);
+    // ...and so do their enrolments, for exactly the same students
+    expect(mockRecordMove).toHaveBeenCalledWith(expect.objectContaining({ toSectionId: COMBINED }));
+    expect((mockRecordMove.mock.calls[0][0].studentIds as unknown[]).length).toBe(3);
   });
 
   test("rejects when the class is already merged", async () => {

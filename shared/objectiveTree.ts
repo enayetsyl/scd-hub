@@ -17,6 +17,7 @@ import {
   MASTERY_SUBJECTS,
   parseMasteryLoCode,
 } from "./vocab";
+import { masteryPrereqSubjects } from "./masteryPartners";
 
 export const OBJECTIVE_TREE_FORMAT = "scd-objective-tree/1";
 export const OBJECTIVE_DOMAINS_FORMAT = "scd-objective-domains/1";
@@ -60,7 +61,7 @@ export interface TreeCheckInput {
   questionTypeCodes?: Iterable<string>;
   /** FILE mode: the file's coverage block. */
   coverage?: TreeCoverageInput | null;
-  /** Codes outside this tree a prerequisite may name (same subject, earlier class, live). */
+  /** Codes outside this tree a prerequisite may name (same subject or its partner paper, live). */
   externalCodes?: Iterable<string>;
 }
 
@@ -73,7 +74,7 @@ export const TREE_RULES = {
   TAGGED_IFF_LEAF: { text: "objective tagged iff it has no children; every SUB tagged", fileOnly: false },
   CHILD_NUMBERING: { text: "children numbered 1..N without gaps", fileOnly: true },
   TAGGED_CITES_EXERCISE: { text: "every tagged row cites >= 1 exercise", fileOnly: false },
-  PREREQ_RESOLVES: { text: "prerequisites resolve (same subject, same or earlier class, not self)", fileOnly: false },
+  PREREQ_RESOLVES: { text: "prerequisites resolve (same subject or its partner paper, same or earlier class, not self)", fileOnly: false },
   PREREQ_CYCLE: { text: "prerequisite graph has no cycles", fileOnly: false },
   DOMAIN_RESOLVES: { text: "domain codes resolve", fileOnly: false },
   HOME_TIP: { text: "home tip on every objective, none on subs", fileOnly: true },
@@ -195,7 +196,7 @@ export function checkTreeInvariants(input: TreeCheckInput): TreeViolation[] {
         bad("PREREQ_RESOLVES", n.code, `${pc} not found`);
         continue;
       }
-      if (p.subject !== subject || classIndex(p.classToken) > myClass) bad("PREREQ_RESOLVES", n.code, `${pc} is another subject or a later class`);
+      if (!masteryPrereqSubjects(subject).includes(p.subject) || classIndex(p.classToken) > myClass) bad("PREREQ_RESOLVES", n.code, `${pc} is another subject or a later class`);
     }
   }
 

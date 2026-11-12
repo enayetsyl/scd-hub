@@ -110,6 +110,7 @@ export interface ReviewQueue {
   chapters: { number: number; titleBn: string }[];
   domains: { code: string; labelBn: string }[];
   questionTypes: { code: string; labelBn: string }[];
+  externalLabels: { code: string; labelBn: string }[];
   rows: ReviewRow[];
   threads: ReviewThread[];
   unmapped: ReviewUnmapped[];
@@ -160,6 +161,7 @@ const QUEUE_FIELDS = `
   chapters { number titleBn }
   domains { code labelBn }
   questionTypes { code labelBn }
+  externalLabels { code labelBn }
   rows {
     code level parentCode domainCode chapterNumber strand tagged labelBn labelEn sourceText assess
     questionTypeCodes homeTipBn prereqCodes

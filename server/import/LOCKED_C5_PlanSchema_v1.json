@@ -63,6 +63,15 @@
     {
       "if": { "properties": { "subject": { "const": "ENG" } } },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "enum": ["Unit", "Lesson"] } } } } }
+    },
+    {
+      "comment": "D-#1440: Class 6 second papers — BAN2 divides into অধ্যায়, ENG2 into Unit.",
+      "if": { "properties": { "subject": { "const": "BAN2" } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অধ্যায়" } } } } }
+    },
+    {
+      "if": { "properties": { "subject": { "const": "ENG2" } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "Unit" } } } } }
     }
   ],
 

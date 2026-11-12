@@ -427,7 +427,7 @@ Creating the exam row itself stays `exam_syllabus:settings` (one exam record, SY
 | `exam_results:reopen` | Re-open a tabulated paper | সংকলিত বিষয়পত্র আবার খোলা | Unlock a tabulated paper with a reason | — | on | | exam:manage (July branch) |
 | `exam_results:comment` | Write the school comment | রিপোর্ট কার্ডে স্কুলের মন্তব্য লেখা | The Comment from School line on a student's card | — | on | | exam:manage (July branch) |
 | `exam_results:submit` | Send results for approval | ফলাফল অনুমোদনে পাঠানো | Submit the card set once every paper is tabulated | on | on | | exam:manage ∪ exam:mark (July branch) |
-| `exam_results:publish` | Approve & publish results | ফলাফল অনুমোদন ও প্রকাশ | Approve and publish, send back with a reason, unpublish | — | on | | exam:manage (July branch) |
+| `exam_results:publish` | Approve & publish results | ফলাফল অনুমোদন ও প্রকাশ | Approve and publish, send back with a reason, unpublish | — | — | | exam:manage (July branch) |
 
 #### `exam_custody` — খাতা ও প্রশ্নের হস্তান্তর (EX-6..EX-8, D-#382)
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -862,7 +862,8 @@ Guardians read the books of their own children's classes through `guardian:read_
 |---|---|---|---|---|---|---|---|
 | `classes_sections:create` | Open a class | নতুন শ্রেণি খোলা | Create a class (+ default শাখা) | — | on | | roster:manage |
 | `classes_sections:merge_split` | Merge / split শাখা | শাখা একত্র করা / আলাদা করা | Combine or reverse; active merges | — | on | | roster:manage |
-| `classes_sections:settings` | Academic years | শিক্ষাবর্ষ যোগ ও চালু বছর বদলানো | Add a year; set the current year | — | on | | roster:manage |
+| `classes_sections:settings` | Academic years | শিক্ষাবর্ষ যোগ করা | Add a year (switching the current year is `year_change:cut_over`, Principal only) | — | on | | roster:manage |
+| `year_change:cut_over` | Switch the current year | চালু শিক্ষাবর্ষ বদলানো | Flip the current academic year at the cut-over (D-#1451) | — | — | LOCKED | classes_sections:settings (flip half) |
 | `teaching_assignments:assign_class_teacher` | Assign শ্রেণি শিক্ষক | শ্রেণি শিক্ষক ও সহকারী শিক্ষক বরাদ্দ | Set/clear a শাখা's শ্রেণি শিক্ষক; support teachers; history | — | on | | roster:manage |
 | `teaching_assignments:assign_homework_checker` | Assign homework confirmers | বাড়ির কাজ চূড়ান্ত করার দায়িত্ব বরাদ্দ | Confirm delegate per শাখা; school-wide supervisor flag | — | on | | roster:manage |
 | `teaching_assignments:assign_subject_teacher` | Assign subject teacher | বিষয় শিক্ষক বরাদ্দ | Grant/revoke teaching scope; routine teacher read | — | — | ESCALATION | user:manage |

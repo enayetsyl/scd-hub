@@ -29,6 +29,7 @@ import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestSequence } from "../models/ClassTestSequence";
 import { ClassTestGroupSequence } from "../models/ClassTestGroupSequence";
+import { nextYearSeq, createWithYearId } from "../../../lib/yearSequence";
 import { ClassTestResult } from "../models/ClassTestResult";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -56,12 +57,8 @@ export async function generateCtId(
   classLevel: number,
   subject: HwSubject,
 ): Promise<string> {
-  const counter = await ClassTestSequence.findOneAndUpdate(
-    { academicYearId, classLevel, subject },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(ClassTestSequence, academicYearId, { classLevel, subject });
+  const n = String(seq).padStart(4, "0");
   return `CT-${classToken(classLevel)}-${subject}-${n}`;
 }
 
@@ -77,12 +74,8 @@ export async function generateGroupCtId(
   subjectGroupId: string,
   groupCode: string,
 ): Promise<string> {
-  const counter = await ClassTestGroupSequence.findOneAndUpdate(
-    { academicYearId, subjectGroupId },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  const n = String(counter.seq).padStart(4, "0");
+  const seq = await nextYearSeq(ClassTestGroupSequence, academicYearId, { subjectGroupId });
+  const n = String(seq).padStart(4, "0");
   const code = groupCode.trim().toUpperCase().replace(/\s+/g, "_");
   return `CT-G-${code}-${n}`;
 }
@@ -448,9 +441,11 @@ export async function createRequest(
     throw new Error("Copies-per-present needs a class; a group exam must give a fixed number of copies");
   }
 
-  const ctId = group
-    ? await generateGroupCtId(academicYearId.toString(), group._id.toString(), group.code)
-    : await generateCtId(academicYearId.toString(), classLevel!, subject);
+  const makeCtId = () =>
+    group
+      ? generateGroupCtId(academicYearId.toString(), group._id.toString(), group.code)
+      : generateCtId(academicYearId.toString(), classLevel!, subject);
+  const ctId = await makeCtId();
 
   // The ACCOUNTABLE subject teacher: an explicit pick (Principal/Office requesting
   // on a teacher's behalf) wins; otherwise the routine names the unit×subject
@@ -479,8 +474,15 @@ export async function createRequest(
   // D-#339: a no-print register is born PRINTED — the record is the official exam
   // immediately (deadline clock anchors on the exam date as usual).
   const now = new Date();
-  const doc = await ClassTest.create({
-    ctId,
+  const doc = await createWithYearId({
+    idField: "ctId",
+    seqModel: group ? ClassTestGroupSequence : ClassTestSequence,
+    academicYearId,
+    key: group ? { subjectGroupId: group._id.toString() } : { classLevel, subject },
+    firstId: ctId,
+    makeId: makeCtId,
+    create: (id) => ClassTest.create({
+    ctId: id,
     academicYearId,
     classLevel,
     classId,
@@ -502,6 +504,7 @@ export async function createRequest(
     printedBy: input.skipPrint ? new Types.ObjectId(input.actorId) : undefined,
     printedAt: input.skipPrint ? now : undefined,
     notes: input.notes,
+  }),
   });
 
   await writeAudit({
@@ -509,7 +512,7 @@ export async function createRequest(
     actorId: input.actorId,
     targetId: doc._id,
     targetKind: "ClassTest",
-    meta: { ctId, subject, source, sectionId: input.sectionId, testNumber, ...(input.skipPrint ? { skipPrint: true } : {}) },
+    meta: { ctId: doc.ctId, subject, source, sectionId: input.sectionId, testNumber, ...(input.skipPrint ? { skipPrint: true } : {}) },
   });
 
   if (input.skipPrint) {

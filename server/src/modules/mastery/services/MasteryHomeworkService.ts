@@ -33,6 +33,7 @@ import {
   assertMayWork,
   dayOf,
   nextPaperId,
+  openExtraSeen,
   paperView,
   rosterOf,
   sectionContext,
@@ -61,6 +62,10 @@ async function sectionSeen(sectionId: Types.ObjectId, subject: MasterySubject): 
   for (const r of rows) {
     if (!r.qid || r.routed) continue;
     by.set(r.qid, (by.get(r.qid) ?? new Set()).add(r.studentId));
+  }
+  // PR-J (D-#1420): a question on a child's open (unmarked) extra sheet is seen by that child too.
+  for (const [sid, qids] of await openExtraSeen(sectionId, subject)) {
+    for (const q of qids) by.set(q, (by.get(q) ?? new Set()).add(sid));
   }
   return by;
 }
@@ -260,6 +265,13 @@ async function extraContext(sectionId: string, subject: MasterySubject): Promise
     if (!r.qid || r.routed) continue;
     seenBy.set(r.studentId, (seenBy.get(r.studentId) ?? new Set()).add(r.qid));
     studentsByQid.set(r.qid, (studentsByQid.get(r.qid) ?? new Set()).add(r.studentId));
+  }
+  // PR-J (D-#1420): open (unconfirmed) extra sheets count as seen — in the preview and the create-time re-check.
+  for (const [sid, qids] of await openExtraSeen(ctx.sectionId, subject)) {
+    for (const q of qids) {
+      seenBy.set(sid, (seenBy.get(sid) ?? new Set()).add(q));
+      studentsByQid.set(q, (studentsByQid.get(q) ?? new Set()).add(sid));
+    }
   }
   return {
     ctx,

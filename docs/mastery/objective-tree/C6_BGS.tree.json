@@ -1,0 +1,1373 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C6",
+ "subject": "BGS",
+ "status": "DRAFT",
+ "source": {
+  "book": "C6_BGS_Book_v1_Writer-Reviewer — not yet printed (first Writer-Reviewer copy; the reviewer has not answered yet)",
+  "version": "C6_BGS_Book_v1_Writer-Reviewer (২ নভেম্বর ২০২৬) — not yet printed",
+  "files": [
+   "Book Review Material/Class 6 BGS/C6_BGS_Book_v1_Writer-Reviewer.md (+ .docx — the source: শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন; সিদ্ধান্ত-লগ)",
+   "Book Review Material/Class 6 BGS/C6_BGS_Memo_v1.docx (D-০১–D-০৫ — পর্যালোচকের সিদ্ধান্তের অপেক্ষায়)",
+   "docs/mastery/objective-tree/C5_BGS.tree.json (আগের ধাপের কোড)"
+  ],
+  "readOn": "2026-11-12"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "সমাজ বিবর্তনের ইতিহাস"
+  },
+  {
+   "number": 2,
+   "titleBn": "বাংলাদেশের ইতিহাস"
+  },
+  {
+   "number": 3,
+   "titleBn": "বাংলাদেশের সংস্কৃতি ও সমাজ"
+  },
+  {
+   "number": 4,
+   "titleBn": "বাংলাদেশের অর্থনীতি"
+  },
+  {
+   "number": 5,
+   "titleBn": "বাংলাদেশ ও বাংলাদেশের নাগরিক"
+  },
+  {
+   "number": 6,
+   "titleBn": "বাংলাদেশের পরিবেশ"
+  },
+  {
+   "number": 7,
+   "titleBn": "শিশুর বেড়ে ওঠা ও প্রতিবন্ধকতা: সামাজিকীকরণ"
+  },
+  {
+   "number": 8,
+   "titleBn": "বাংলাদেশ ও আঞ্চলিক সহযোগিতা"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-MCQ",
+   "labelBn": "বহুনির্বাচনি — সাধারণ",
+   "marksBn": "১",
+   "examUse": "অর্ধবার্ষিক ও বার্ষিক (একই কাঠামো, ১০০ নম্বর): বহুনির্বাচনি মোট ৩০টি × ১ = ৩০ — সাধারণ, বহুপদী সমাপ্তিসূচক ও অভিন্ন তথ্যভিত্তিক তিন ধরন মিলিয়ে (তিন ধরনের ভাগ বইয়ে নির্দিষ্ট করা নেই)।"
+  },
+  {
+   "code": "QT-MCQ-MULTI",
+   "labelBn": "বহুনির্বাচনি — বহুপদী সমাপ্তিসূচক (i, ii, iii)",
+   "marksBn": "১",
+   "examUse": "বহুনির্বাচনির ৩০টির অংশ।"
+  },
+  {
+   "code": "QT-MCQ-SHARED",
+   "labelBn": "বহুনির্বাচনি — অভিন্ন তথ্যভিত্তিক (অনুচ্ছেদ/উদ্দীপক)",
+   "marksBn": "১",
+   "examUse": "বহুনির্বাচনির ৩০টির অংশ; একটি অনুচ্ছেদ থেকে দুটি প্রশ্ন।"
+  },
+  {
+   "code": "QT-SHORT",
+   "labelBn": "সংক্ষিপ্ত-উত্তর",
+   "marksBn": "২",
+   "examUse": "১০টি × ২ = ২০; সব আবশ্যিক।"
+  },
+  {
+   "code": "QT-CQ",
+   "labelBn": "সৃজনশীল (উদ্দীপক + ক, খ, গ, ঘ)",
+   "marksBn": "১০ (ক ১ + খ ২ + গ ৩ + ঘ ৪)",
+   "examUse": "৫টি × ১০ = ৫০; সব আবশ্যিক। ক = জ্ঞান, খ = অনুধাবন, গ = প্রয়োগ, ঘ = উচ্চতর দক্ষতা। প্রতিটি অংশ আলাদা দক্ষতার প্রশ্ন — ব্যাংকে উদ্দীপক + অংশ হিসেবে, প্রতিটি অংশের নিজের কোড।"
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "খাতা দেখে (রুব্রিক) — প্রশ্নপত্রের ধরন নয়",
+   "marksBn": "—",
+   "examUse": "বইয়ের নম্বর বণ্টনের অংশ নয়; কেবল ধারা SK-ANS-01-এর জন্য — খাতা দেখে চার ধাপের রুব্রিক।"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C6-BGS-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "সমাজের ধারণা ও সাধারণ বৈশিষ্ট্য",
+   "sourceText": "সমাজের ধারণা ও সাধারণ বৈশিষ্ট্য ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বহুনির্বাচনি/2",
+     "1/বহুনির্বাচনি/3",
+     "1/সংক্ষিপ্ত/1",
+     "1/সংক্ষিপ্ত/2",
+     "1/সৃজনশীল 2/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: সমাজ কাকে বলে? আমাদের পাড়া বা গ্রামে মানুষ কীভাবে একে অন্যের ওপর নির্ভর করে — দুটি উদাহরণ দিতে বলুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "সমাজজীবনে প্রাকৃতিক ও ভৌগোলিক পরিবেশের প্রভাব",
+   "sourceText": "সমাজজীবনে প্রাকৃতিক ও ভৌগোলিক পরিবেশের প্রভাব উদাহরণসহ বর্ণনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বহুনির্বাচনি/1",
+     "1/সংক্ষিপ্ত/4",
+     "1/সৃজনশীল 1/1",
+     "1/সৃজনশীল 2/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "নিজের এলাকার উদাহরণ দিন — এখানকার মাটি, নদী বা আবহাওয়ার কারণে কোন পেশা বা কোন জিনিস বিখ্যাত (যেমন সিলেটের শীতলপাটি, রাজশাহীর রেশম)?",
+   "prereqCodes": [
+    "LO-C6-BGS-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "জীবিকার ধরন অনুযায়ী সমাজ বিকাশের ছয়টি স্তর",
+   "sourceText": "জীবিকার ধরন অনুযায়ী সমাজের ছয়টি স্তরের বৈশিষ্ট্য বর্ণনা ও তুলনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ-MULTI",
+    "QT-CQ",
+    "QT-MCQ",
+    "QT-MCQ-SHARED",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ছয়টি স্তর ক্রমে বলতে বলুন (শিকার ও সংগ্রহ → উদ্যানকৃষি → পশুপালন → কৃষি → শিল্প → শিল্পবিপ্লব-পরবর্তী); দাদা-নানার আমল আর এখনকার জীবিকার পার্থক্য নিয়ে গল্প করুন।",
+   "prereqCodes": [
+    "LO-C6-BGS-01-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-01-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-BGS-01-03",
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "শিকার ও সংগ্রহ, উদ্যানকৃষি ও পশুপালন সমাজের বৈশিষ্ট্য",
+   "sourceText": "জীবিকার ধরন অনুযায়ী সমাজের ছয়টি স্তরের বৈশিষ্ট্য বর্ণনা ও তুলনা করতে পারবে। [ভাগ: প্রথম তিন স্তর]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বহুনির্বাচনি/7",
+     "1/সৃজনশীল 1/2",
+     "1/সৃজনশীল 1/3",
+     "1/সৃজনশীল 1/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ-MULTI",
+    "QT-CQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-01-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-BGS-01-03",
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "কৃষি, শিল্প ও শিল্পবিপ্লব-পরবর্তী সমাজের বৈশিষ্ট্য ও তুলনা",
+   "sourceText": "জীবিকার ধরন অনুযায়ী সমাজের ছয়টি স্তরের বৈশিষ্ট্য বর্ণনা ও তুলনা করতে পারবে। [ভাগ: শেষ তিন স্তর]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বহুনির্বাচনি/5",
+     "1/বহুনির্বাচনি/6",
+     "1/বহুনির্বাচনি/8",
+     "1/বহুনির্বাচনি/9",
+     "1/বহুনির্বাচনি/10",
+     "1/সংক্ষিপ্ত/3",
+     "1/সৃজনশীল 2/2",
+     "1/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বইয়ের পাঠ-ভাগ (পাঠ ৩–৪ ও পাঠ ৫–৬) ধরে দুই ভাগ; আদিম সমাজ জানা শিক্ষার্থী শিল্পবিপ্লবের অংশে আলাদাভাবে আটকায়।"
+  },
+  {
+   "code": "LO-C6-BGS-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "বাংলাদেশের সমাজের প্রকৃতি",
+   "sourceText": "বাংলাদেশের সমাজের প্রকৃতি বিশ্লেষণ করতে পারবে।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/বহুনির্বাচনি/4",
+     "1/সংক্ষিপ্ত/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: আমাদের দেশে এখনো কোন কোন পুরোনো জীবিকা টিকে আছে (কৃষি, মাছ ধরা, তাঁত) আর নতুন কী এসেছে (কারখানা, তথ্যপ্রযুক্তি)?",
+   "prereqCodes": [
+    "LO-C6-BGS-01-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অনুশীলনীতে দুটি প্রশ্ন।"
+  },
+  {
+   "code": "LO-C6-BGS-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-HIST",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "বাংলায় মানব বসতি, প্রাচীন জনপদ ও প্রাচীন রাজবংশ (গুপ্ত, শশাঙ্ক, পাল, সেন)",
+   "sourceText": "বাংলায় মানব বসতির ধারা এবং প্রাচীন জনপদগুলোর নাম বলতে পারবে। · প্রাচীন বাংলার রাজবংশ ও শাসকদের (গুপ্ত, শশাঙ্ক, পাল, সেন) ক্রম অনুযায়ী বর্ণনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/বহুনির্বাচনি/1",
+     "2/বহুনির্বাচনি/7",
+     "2/বহুনির্বাচনি/9",
+     "2/সংক্ষিপ্ত/5",
+     "2/সৃজনশীল 1/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "চার শাসনকাল ক্রমে বলতে বলুন (গুপ্ত → শশাঙ্ক → পাল → সেন); শশাঙ্কের রাজধানী কোথায় ছিল, পাল যুগ কীসের জন্য বিখ্যাত?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বইয়ের দুটি শিখনফল (বসতি ও জনপদ; রাজবংশ) এক সারি — দুটি মিলিয়ে পাঁচটি প্রশ্ন, একই পাঠের (পাঠ ১–৩)।"
+  },
+  {
+   "code": "LO-C6-BGS-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-HIST",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "প্রাচীন বাংলার সমাজ, অর্থনীতি, স্থাপত্য, সাহিত্য ও শিক্ষা",
+   "sourceText": "প্রাচীন বাংলার কৃষি, কুটিরশিল্প, ব্যবসা-বাণিজ্য, স্থাপত্য, সাহিত্য ও শিক্ষার বৈশিষ্ট্য ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/বহুনির্বাচনি/2",
+     "2/বহুনির্বাচনি/10",
+     "2/সংক্ষিপ্ত/1",
+     "2/সৃজনশীল 1/3",
+     "2/সৃজনশীল 1/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: প্রাচীন বাংলার মানুষ কী চাষ করত, কোন কাপড়ের জন্য বিখ্যাত ছিল, কোথায় পড়াশোনা হতো (বিহার)? পাহাড়পুর বা মহাস্থানগড়ের ছবি দেখান।",
+   "prereqCodes": [
+    "LO-C6-BGS-02-01",
+    "LO-C5-BGS-06-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-HIST",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "মুসলিম শাসনামলে বাংলা — সুলতানি, মুঘল ও নবাবি আমলের ঘটনা ও অবদান",
+   "sourceText": "মুসলিম শাসনামলের (সুলতানি, মুঘল ও নবাবি) প্রধান ঘটনা ও অবদান বর্ণনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/বহুনির্বাচনি/3",
+     "2/সংক্ষিপ্ত/2",
+     "2/সৃজনশীল 1/2",
+     "2/সৃজনশীল 2/1",
+     "2/সৃজনশীল 2/2",
+     "2/সৃজনশীল 2/3",
+     "2/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: বাংলায় মুসলিম শাসন কবে শুরু হয়, ঢাকা কবে রাজধানী হয়? ষাট গম্বুজ মসজিদ বা ছোট সোনা মসজিদ কোন আমলের?",
+   "prereqCodes": [
+    "LO-C6-BGS-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-HIST",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "ঔপনিবেশিক যুগ ও ইংরেজবিরোধী আন্দোলন",
+   "sourceText": "ঔপনিবেশিক যুগের সময়কাল ও ইংরেজবিরোধী আন্দোলনগুলোর নাম বলতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/বহুনির্বাচনি/4",
+     "2/বহুনির্বাচনি/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: পলাশীর যুদ্ধ কবে হয়, ইংরেজরা কত বছর শাসন করে? ইংরেজবিরোধী দুটি আন্দোলনের নাম বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C6-BGS-02-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অনুশীলনীতে দুটি বহুনির্বাচনি মাত্র।"
+  },
+  {
+   "code": "LO-C6-BGS-02-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-HIST",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "বাংলাদেশের জন্ম ও স্বাধীনতা-উত্তর গণঅভ্যুত্থান — প্রধান তারিখ ও ঘটনা",
+   "sourceText": "বাংলাদেশের জন্ম ও স্বাধীনতা-উত্তর গণঅভ্যুত্থানের প্রধান তারিখ ও ঘটনা বইয়ের ভাষায় বলতে পারবে।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/বহুনির্বাচনি/5",
+     "2/বহুনির্বাচনি/6",
+     "2/সংক্ষিপ্ত/3",
+     "2/সংক্ষিপ্ত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "তারিখগুলো মিলিয়ে নিন: ২৬শে মার্চ, ১৬ই ডিসেম্বর ১৯৭১, ১৯৯০ ও ২০২৪-এর গণঅভ্যুত্থান — কোন দিনে কী ঘটেছিল।",
+   "prereqCodes": [
+    "LO-C6-BGS-02-04",
+    "LO-C5-BGS-05-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পাঠ ১০ (স্বাধীন বাংলাদেশে গণঅভ্যুত্থান) পুরো থাকবে না সংক্ষেপে — স্মারক D-০২ খোলা; সংক্ষেপ হলে এই সারির প্রশ্ন বদলাবে।"
+  },
+  {
+   "code": "LO-C6-BGS-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CULT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "সংস্কৃতির ধারণা",
+   "sourceText": "সংস্কৃতির ধারণা উদাহরণসহ ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/বহুনির্বাচনি/3",
+     "3/সংক্ষিপ্ত/1",
+     "3/সংক্ষিপ্ত/2",
+     "3/সংক্ষিপ্ত/4",
+     "3/সৃজনশীল 1/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: সংস্কৃতি বলতে কী বোঝায়? আমাদের খাওয়া, পোশাক, ভাষা, উৎসব — এগুলো কীভাবে সংস্কৃতির অংশ? সংস্কৃতি কি বদলায়?",
+   "prereqCodes": [
+    "LO-C5-BGS-07-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CULT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "সংস্কৃতির বস্তুগত ও অবস্তুগত উপাদান চিনে আলাদা করা",
+   "sourceText": "বাংলাদেশের সংস্কৃতির বস্তুগত ও অবস্তুগত উপাদান চিনে আলাদা করতে পারবে।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/বহুনির্বাচনি/1",
+     "3/বহুনির্বাচনি/2",
+     "3/বহুনির্বাচনি/4",
+     "3/সৃজনশীল 2/1",
+     "3/সৃজনশীল 2/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-CQ"
+   ],
+   "homeTipBn": "ঘরের জিনিস ও অভ্যাস দিয়ে খেলুন: নকশিকাঁথা, থালা, ঘর — বস্তুগত; গান, ভাষা, রীতিনীতি, বিশ্বাস — অবস্তুগত। সন্তানকে পাঁচটি করে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C6-BGS-03-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-03-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CULT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "বস্তুগত ও অবস্তুগত উপাদানের সম্পর্ক",
+   "sourceText": "বস্তুগত ও অবস্তুগত উপাদানের সম্পর্ক ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/সৃজনশীল 1/2",
+     "3/সৃজনশীল 2/2",
+     "3/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: মোবাইল ফোন (বস্তুগত) আসার পর আমাদের যোগাযোগের রীতি (অবস্তুগত) কীভাবে বদলেছে? একটি বদলালে অন্যটি বদলায় কেন?",
+   "prereqCodes": [
+    "LO-C6-BGS-03-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বইয়ের নিজস্ব শিখনফল; তিনটি প্রশ্নই সৃজনশীলের অংশ (অনুধাবন ও উচ্চতর দক্ষতা) — চেনার সারি (০৩-০২) থেকে আলাদাভাবে ভুল হয়।"
+  },
+  {
+   "code": "LO-C6-BGS-03-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CULT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "গ্রামীণ ও শহুরে সংস্কৃতির পার্থক্য, বৈচিত্র্য ও বিশ্বায়নের প্রভাব",
+   "sourceText": "গ্রামীণ ও শহুরে সংস্কৃতির পার্থক্য এবং বিশ্বায়নের প্রভাব বর্ণনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/বহুনির্বাচনি/5",
+     "3/বহুনির্বাচনি/6",
+     "3/বহুনির্বাচনি/7",
+     "3/বহুনির্বাচনি/8",
+     "3/বহুনির্বাচনি/9",
+     "3/বহুনির্বাচনি/10",
+     "3/সংক্ষিপ্ত/3",
+     "3/সংক্ষিপ্ত/5",
+     "3/সৃজনশীল 1/3",
+     "3/সৃজনশীল 1/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "গ্রামের বাড়ি আর শহরের জীবনের তিনটি পার্থক্য বলতে বলুন (খাবার, উৎসব, পোশাক); বিদেশি খাবার-পোশাক-অনুষ্ঠান শহরে বেশি দেখা যায় কেন?",
+   "prereqCodes": [
+    "LO-C6-BGS-03-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"গ্রামীণ সংস্কৃতি\" অংশের দুটি নতুন অনুচ্ছেদ স্মারক D-০৩-এ খোলা।"
+  },
+  {
+   "code": "LO-C6-BGS-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ECON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "গ্রাম ও শহরের মানুষের অর্থনৈতিক জীবনধারা",
+   "sourceText": "বাংলাদেশের গ্রাম ও শহরের মানুষের অর্থনৈতিক জীবনধারা বর্ণনা ও তুলনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বহুনির্বাচনি/1",
+     "4/বহুনির্বাচনি/2",
+     "4/বহুনির্বাচনি/7",
+     "4/সংক্ষিপ্ত/1",
+     "4/সংক্ষিপ্ত/2",
+     "4/সৃজনশীল 1/1",
+     "4/সৃজনশীল 2/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: গ্রামের মানুষ সাধারণত কী কী কাজ করে আয় করে, শহরের মানুষ কী করে? বাংলাদেশকে কৃষিনির্ভর দেশ বলা হয় কেন?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ECON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "বাংলাদেশের অর্থনীতির প্রধান খাত — কৃষি, শিল্প ও সেবা",
+   "sourceText": "বাংলাদেশের অর্থনীতির প্রধান খাতগুলো উদাহরণসহ চিনতে পারবে। · উদ্দীপকের কাজ কোন খাত বা কোন উন্নয়ন-পথের সাথে মেলে তা শনাক্ত করতে পারবে।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বহুনির্বাচনি/3",
+     "4/বহুনির্বাচনি/4",
+     "4/বহুনির্বাচনি/8",
+     "4/সংক্ষিপ্ত/3",
+     "4/সৃজনশীল 1/3",
+     "4/সৃজনশীল 1/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "পরিবার ও প্রতিবেশীর পেশা ধরে জিজ্ঞেস করুন — কৃষক, পোশাক-শ্রমিক, শিক্ষক, চালক, ডাক্তার: কে কোন খাতে (কৃষি, শিল্প, সেবা) কাজ করেন?",
+   "prereqCodes": [
+    "LO-C6-BGS-04-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিখনফল ৫ (উদ্দীপকের কাজ কোন খাতের — প্রয়োগ) আলাদা সারি নয়: এটি এই সারিরই সৃজনশীল গ ও ঘ অংশ।"
+  },
+  {
+   "code": "LO-C6-BGS-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ECON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "বাংলাদেশের অর্থনৈতিক উন্নয়নের সম্ভাবনা ও পথ",
+   "sourceText": "বাংলাদেশের অর্থনৈতিক উন্নয়নের সম্ভাবনা ও পথ ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বহুনির্বাচনি/6",
+     "4/বহুনির্বাচনি/9",
+     "4/বহুনির্বাচনি/10",
+     "4/সংক্ষিপ্ত/4",
+     "4/সংক্ষিপ্ত/5",
+     "4/সৃজনশীল 2/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: একটি সেতু বা রাস্তা হলে কৃষকের কী লাভ হয়? প্রবাসীরা টাকা পাঠালে দেশের কী উপকার হয়?",
+   "prereqCodes": [
+    "LO-C6-BGS-04-02",
+    "LO-C5-BGS-13-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-04-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ECON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "জনসংখ্যা কীভাবে মানবসম্পদে পরিণত হয়",
+   "sourceText": "জনসংখ্যা কীভাবে মানবসম্পদে পরিণত হয় তা ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বহুনির্বাচনি/5",
+     "4/সৃজনশীল 1/2",
+     "4/সৃজনশীল 2/1",
+     "4/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: মানবসম্পদ কাকে বলে? একজন মানুষ কী শিখলে দেশের সম্পদ হয়ে ওঠে (শিক্ষা, প্রশিক্ষণ, দক্ষতা)?",
+   "prereqCodes": [
+    "LO-C5-BGS-14-01",
+    "LO-C5-BGS-14-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CIV",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "রাষ্ট্রের ধারণা ও চারটি উপাদান; রাষ্ট্র হিসেবে বাংলাদেশ",
+   "sourceText": "রাষ্ট্রের ধারণা ও রাষ্ট্র গঠনের চারটি উপাদান ব্যাখ্যা করতে পারবে। · বাংলাদেশ কেন একটি রাষ্ট্র তা উপাদানগুলো দিয়ে ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/বহুনির্বাচনি/1",
+     "5/বহুনির্বাচনি/2",
+     "5/বহুনির্বাচনি/3",
+     "5/বহুনির্বাচনি/4",
+     "5/বহুনির্বাচনি/7",
+     "5/বহুনির্বাচনি/10",
+     "5/সংক্ষিপ্ত/1",
+     "5/সংক্ষিপ্ত/2",
+     "5/সৃজনশীল 1/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "রাষ্ট্রের চারটি উপাদান বলতে বলুন (জনসমষ্টি, নির্দিষ্ট ভূখণ্ড, সরকার, সার্বভৌমত্ব) এবং বাংলাদেশের বেলায় প্রতিটি মিলিয়ে দেখাতে বলুন।",
+   "prereqCodes": [
+    "LO-C5-BGS-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুটি শিখনফল এক সারি — \"বাংলাদেশ কেন রাষ্ট্র\" চার উপাদানেরই প্রয়োগ; আলাদা করলে দ্বিতীয়টিতে দুটি প্রশ্ন থাকত।"
+  },
+  {
+   "code": "LO-C6-BGS-05-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CIV",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "নাগরিক ও বিদেশির পার্থক্য; নাগরিকত্বের ধারণা",
+   "sourceText": "নাগরিক ও বিদেশির পার্থক্য ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/বহুনির্বাচনি/5",
+     "5/বহুনির্বাচনি/8",
+     "5/বহুনির্বাচনি/9",
+     "5/সংক্ষিপ্ত/3",
+     "5/সৃজনশীল 1/2",
+     "5/সৃজনশীল 2/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: নাগরিক কে? বাংলাদেশে কাজ করতে আসা একজন বিদেশি কেন এ দেশের নাগরিক নন — তাঁর কোন অধিকার নেই (যেমন ভোট)?",
+   "prereqCodes": [
+    "LO-C6-BGS-05-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-05-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CIV",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "নাগরিকত্ব লাভের নিয়ম (জন্মসূত্র, জন্মস্থান, অনুমোদনসূত্র) ও দ্বৈত-নাগরিকত্ব — ঘটনায় প্রয়োগ",
+   "sourceText": "নাগরিকত্ব লাভের নিয়ম (জন্মসূত্র নীতি, জন্মস্থান নীতি, অনুমোদনসূত্র) ও দ্বৈত-নাগরিকত্ব উদ্দীপকে প্রয়োগ করতে পারবে।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/বহুনির্বাচনি/6",
+     "5/সংক্ষিপ্ত/4",
+     "5/সৃজনশীল 1/3",
+     "5/সৃজনশীল 1/4",
+     "5/সৃজনশীল 2/2",
+     "5/সৃজনশীল 2/3",
+     "5/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "একটি ঘটনা দিন: বাংলাদেশি বাবা-মায়ের সন্তান যুক্তরাষ্ট্রে জন্মাল — সে কোন নীতিতে কোন দেশের নাগরিক? দ্বৈত-নাগরিকত্ব কী?",
+   "prereqCodes": [
+    "LO-C6-BGS-05-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-05-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-CIV",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "দেশের উন্নয়নে নাগরিকের দায়িত্ব ও কর্তব্য",
+   "sourceText": "দেশের উন্নয়নে নাগরিকের দায়িত্ব ও কর্তব্য বর্ণনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/সংক্ষিপ্ত/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: একজন ভালো নাগরিক দেশের জন্য কী কী করে (আইন মানা, কর দেওয়া, সম্পদ রক্ষা)? আমরা ঘরে ও বিদ্যালয়ে কী করতে পারি?",
+   "prereqCodes": [
+    "LO-C6-BGS-05-02",
+    "LO-C5-BGS-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অনুশীলনীতে একটিমাত্র প্রশ্ন (সংক্ষিপ্ত ৫) — বইয়ের নিজস্ব শিখনফল ও নিজস্ব পাঠ (পাঠ ৫) বলে সারি রাখা (দেখুন পতাকা)।"
+  },
+  {
+   "code": "LO-C6-BGS-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ENV",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "পরিবেশের সাথে মানুষের পারস্পরিক সম্পর্ক",
+   "sourceText": "পরিবেশের সাথে মানুষের পারস্পরিক সম্পর্ক ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/বহুনির্বাচনি/1",
+     "6/সংক্ষিপ্ত/1",
+     "6/সৃজনশীল 1/1",
+     "6/সৃজনশীল 1/2",
+     "6/সৃজনশীল 2/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: আমরা প্রকৃতি থেকে কী কী পাই (আলো, পানি, খাবার, কাঠ)? মানুষ কীভাবে প্রকৃতিকে বদলে ফেলছে?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-06-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ENV",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "পরিবেশগত সমস্যার কারণ ও প্রভাব — দূষণের ধরন চেনা",
+   "sourceText": "পরিবেশগত সমস্যার কারণ ও প্রভাব ব্যাখ্যা করতে পারবে। · উদ্দীপকের ঘটনা থেকে দূষণের ধরন চিনে উপায় বলতে পারবে। [ভাগ: দূষণের ধরন চেনা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/বহুনির্বাচনি/2",
+     "6/বহুনির্বাচনি/3",
+     "6/বহুনির্বাচনি/4",
+     "6/বহুনির্বাচনি/5",
+     "6/বহুনির্বাচনি/6",
+     "6/বহুনির্বাচনি/7",
+     "6/বহুনির্বাচনি/8",
+     "6/বহুনির্বাচনি/10",
+     "6/সংক্ষিপ্ত/2",
+     "6/সংক্ষিপ্ত/3",
+     "6/সংক্ষিপ্ত/4",
+     "6/সংক্ষিপ্ত/5",
+     "6/সৃজনশীল 1/3",
+     "6/সৃজনশীল 2/2",
+     "6/সৃজনশীল 2/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "এলাকার একটি সমস্যা ধরে আলাপ করুন (ময়লা, ধোঁয়া, শব্দ, গাছ কাটা) — কারণ কী, কার ক্ষতি হচ্ছে? ওজোন স্তর আমাদের কীভাবে রক্ষা করে?",
+   "prereqCodes": [
+    "LO-C6-BGS-06-01",
+    "LO-C5-BGS-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মোটা সারি (১৫টি প্রশ্ন): বায়ু, পানি, শব্দ, ভূমিক্ষয়, উষ্ণায়ন — প্রতিটির প্রশ্ন এক-দুটি, দক্ষতা একই (কারণ ও প্রভাব বলা)।"
+  },
+  {
+   "code": "LO-C6-BGS-06-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-ENV",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "বাংলাদেশের পরিবেশগত সমস্যা প্রতিরোধে করণীয়",
+   "sourceText": "বাংলাদেশের পরিবেশগত সমস্যা প্রতিরোধে নিজের করণীয় বর্ণনা করতে পারবে। · উদ্দীপকের ঘটনা থেকে দূষণের ধরন চিনে উপায় বলতে পারবে। [ভাগ: উপায় বলা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/বহুনির্বাচনি/9",
+     "6/সৃজনশীল 1/4",
+     "6/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ-SHARED",
+    "QT-CQ"
+   ],
+   "homeTipBn": "সন্তানের সঙ্গে ঠিক করুন — পরিবেশ রক্ষায় পরিবার কোন তিনটি কাজ করবে (গাছ লাগানো, পলিথিন কম ব্যবহার, বিদ্যুৎ-পানি অপচয় না করা)।",
+   "prereqCodes": [
+    "LO-C6-BGS-06-02",
+    "LO-C5-BGS-01-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "সামাজিকীকরণ কী ও সমাজজীবনে এর প্রভাব",
+   "sourceText": "সামাজিকীকরণ কী এবং সমাজজীবনে এর প্রভাব ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/বহুনির্বাচনি/2",
+     "7/সংক্ষিপ্ত/1",
+     "7/সৃজনশীল 2/1",
+     "7/সৃজনশীল 2/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: ছোটবেলা থেকে তুমি কার কাছ থেকে কথা বলা, সালাম দেওয়া, ভাগ করে খাওয়া শিখেছ? এই শেখাকেই কী বলে (সামাজিকীকরণ)?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-07-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "সামাজিকীকরণের মাধ্যম ও এদের গুরুত্ব (পরিবার, প্রতিবেশী, শিক্ষা প্রতিষ্ঠান, সাথি, ধর্ম, গণমাধ্যম)",
+   "sourceText": "সামাজিকীকরণের মাধ্যমগুলো (পরিবার, প্রতিবেশী, শিক্ষা প্রতিষ্ঠান, খেলা ও পড়ার সাথি, ধর্ম, গণমাধ্যম) ও এদের গুরুত্ব বর্ণনা করতে পারবে। · উদ্দীপকের ঘটনা থেকে সামাজিকীকরণের মাধ্যম বা শিশুশ্রম চিনে ব্যাখ্যা করতে পারবে। [ভাগ: মাধ্যম চেনা]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/বহুনির্বাচনি/1",
+     "7/বহুনির্বাচনি/3",
+     "7/বহুনির্বাচনি/4",
+     "7/বহুনির্বাচনি/5",
+     "7/বহুনির্বাচনি/8",
+     "7/বহুনির্বাচনি/10",
+     "7/সংক্ষিপ্ত/2",
+     "7/সংক্ষিপ্ত/4",
+     "7/সৃজনশীল 2/3",
+     "7/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "মাধ্যমগুলো ধরে জিজ্ঞেস করুন — পরিবার, বিদ্যালয়, বন্ধু, মসজিদ ও গণমাধ্যম থেকে তুমি কী কী শিখেছ? বন্ধু বাছাইয়ে সাবধান হতে হয় কেন?",
+   "prereqCodes": [
+    "LO-C6-BGS-07-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"ধর্ম\" অনুচ্ছেদ নতুন করে লেখা — স্মারক D-০৪ খোলা।"
+  },
+  {
+   "code": "LO-C6-BGS-07-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "শিশুশ্রম — ধারণা, কারণ ও প্রভাব",
+   "sourceText": "শিশুশ্রমের ধারণা, কারণ ও প্রভাব ব্যাখ্যা করতে পারবে। · উদ্দীপকের ঘটনা থেকে সামাজিকীকরণের মাধ্যম বা শিশুশ্রম চিনে ব্যাখ্যা করতে পারবে। [ভাগ: শিশুশ্রম চেনা]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/বহুনির্বাচনি/6",
+     "7/বহুনির্বাচনি/7",
+     "7/বহুনির্বাচনি/9",
+     "7/সংক্ষিপ্ত/3",
+     "7/সৃজনশীল 1/1",
+     "7/সৃজনশীল 1/2",
+     "7/সৃজনশীল 1/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: শিশুশ্রম কাকে বলে? কোন কোন কারণে শিশুরা কাজে যায়, এতে তাদের শরীর, মন ও পড়াশোনার কী ক্ষতি হয়?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-07-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "শ্রমজীবী শিশুর প্রতি আমাদের আচরণ",
+   "sourceText": "শ্রমজীবী শিশুর প্রতি আমাদের আচরণ কেমন হওয়া উচিত তা বর্ণনা করতে পারবে।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/সংক্ষিপ্ত/5",
+     "7/সৃজনশীল 1/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "আশপাশের কোনো কর্মজীবী শিশুর কথা তুলে জিজ্ঞেস করুন — তার সঙ্গে আমাদের কেমন ব্যবহার করা উচিত, আমরা কীভাবে তার কষ্ট কমাতে পারি?",
+   "prereqCodes": [
+    "LO-C6-BGS-07-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুটি প্রশ্ন; জ্ঞানমূলক অংশই প্রশ্নে আসে (কেমন আচরণ হওয়া উচিত তা বর্ণনা), আচরণ-চর্চা গাছে নেই।"
+  },
+  {
+   "code": "LO-C6-BGS-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-WORLD",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "আঞ্চলিক সহযোগিতার গুরুত্ব ও সহযোগিতার ক্ষেত্র",
+   "sourceText": "আঞ্চলিক সহযোগিতার গুরুত্ব ব্যাখ্যা করতে পারবে। · একই অঞ্চলের দেশগুলোর মধ্যে সহযোগিতার ক্ষেত্রগুলো উল্লেখ করতে পারবে।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/সংক্ষিপ্ত/2",
+     "8/সৃজনশীল 2/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: পাশাপাশি দেশগুলো মিলে কাজ করলে কী লাভ (ব্যবসা, শিক্ষা, দুর্যোগে সাহায্য)? কোনো দেশ কি একা চলতে পারে?",
+   "prereqCodes": [
+    "LO-C5-BGS-08-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুটি শিখনফল এক সারি; অনুশীলনীতে দুটি প্রশ্ন মাত্র।"
+  },
+  {
+   "code": "LO-C6-BGS-08-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-WORLD",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "আঞ্চলিক সহযোগিতা সংস্থা — সার্ক, আসিয়ান, ইইউ, জি-৭ ও ওআইসি",
+   "sourceText": "সার্ক, আসিয়ান, ইইউ, জি-৭ ও ওআইসি-র গঠন, সদস্য, সদর দপ্তর ও কার্যক্রম বর্ণনা করতে পারবে। · উদ্দীপকের তথ্য থেকে সংশ্লিষ্ট সহযোগিতা সংস্থা চিনে ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-SHORT",
+    "QT-CQ",
+    "QT-MCQ-SHARED"
+   ],
+   "homeTipBn": "একটি ছক বানাতে দিন: সংস্থার নাম, কবে গঠিত, সদর দপ্তর কোথায়, সদস্য কারা, প্রধান কাজ — সার্ক, আসিয়ান, ইইউ, জি-৭, ওআইসি।",
+   "prereqCodes": [
+    "LO-C6-BGS-08-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-08-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C6-BGS-08-02",
+   "domainCode": "DOM-BGS-WORLD",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "সার্ক ও আসিয়ান — গঠন, সদস্য, সদর দপ্তর ও কার্যক্রম",
+   "sourceText": "সার্ক, আসিয়ান, ইইউ, জি-৭ ও ওআইসি-র গঠন, সদস্য, সদর দপ্তর ও কার্যক্রম বর্ণনা করতে পারবে। [ভাগ: সার্ক ও আসিয়ান]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/বহুনির্বাচনি/1",
+     "8/বহুনির্বাচনি/3",
+     "8/বহুনির্বাচনি/4",
+     "8/বহুনির্বাচনি/7",
+     "8/সংক্ষিপ্ত/1",
+     "8/সৃজনশীল 1/1",
+     "8/সৃজনশীল 1/3",
+     "8/সৃজনশীল 1/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-BGS-08-01",
+    "LO-C5-BGS-08-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-08-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C6-BGS-08-02",
+   "domainCode": "DOM-BGS-WORLD",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ইইউ, জি-৭ ও ওআইসি — গঠন, সদস্য, সদর দপ্তর ও কার্যক্রম",
+   "sourceText": "সার্ক, আসিয়ান, ইইউ, জি-৭ ও ওআইসি-র গঠন, সদস্য, সদর দপ্তর ও কার্যক্রম বর্ণনা করতে পারবে। [ভাগ: ইইউ, জি-৭ ও ওআইসি]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/বহুনির্বাচনি/2",
+     "8/বহুনির্বাচনি/5",
+     "8/বহুনির্বাচনি/8",
+     "8/বহুনির্বাচনি/9",
+     "8/বহুনির্বাচনি/10",
+     "8/সংক্ষিপ্ত/4",
+     "8/সংক্ষিপ্ত/5",
+     "8/সৃজনশীল 2/1",
+     "8/সৃজনশীল 2/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MCQ-MULTI",
+    "QT-MCQ-SHARED",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C5-BGS-08-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পাঁচ সংস্থা দুই ভাগে: এশিয়ার দুটি (সার্ক পঞ্চম শ্রেণিতে পড়া) ও বাকি তিনটি (ইইউ, জি-৭ নতুন)। সংস্থা ধরে পাঁচ সারি করলে জি-৭ ও আসিয়ানে দুই-তিনটি করে প্রশ্ন থাকত।"
+  },
+  {
+   "code": "LO-C6-BGS-08-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-WORLD",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "দ্বিপাক্ষিক সহযোগিতা চুক্তি কী এবং কেন বাড়ছে",
+   "sourceText": "দ্বিপাক্ষিক সহযোগিতা চুক্তি কী এবং কেন তা বাড়ছে ব্যাখ্যা করতে পারবে।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/বহুনির্বাচনি/6",
+     "8/সংক্ষিপ্ত/3",
+     "8/সৃজনশীল 1/2",
+     "8/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-CQ"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন: দুটি দেশের মধ্যে চুক্তিকে কী বলে? বাংলাদেশ কোন কোন দেশে কর্মী পাঠায় বা পণ্য বেচে — এতে দুই দেশের কী লাভ?",
+   "prereqCodes": [
+    "LO-C6-BGS-08-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C6-BGS-SK-ANS-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BGS-SOC",
+   "chapterNumber": null,
+   "strand": "ANS",
+   "labelBn": "সৃজনশীল প্রশ্নের ক, খ, গ, ঘ অংশের উত্তর দক্ষতা অনুযায়ী লেখা (জ্ঞান → অনুধাবন → প্রয়োগ → উচ্চতর দক্ষতা)",
+   "sourceText": "সৃজনশীল প্রশ্নের ক, খ, গ, ঘ অংশের উত্তর দক্ষতা অনুযায়ী লিখতে পারবে।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/সৃজনশীল 1/4",
+     "1/সৃজনশীল 2/4"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "সৃজনশীল প্রশ্নের খাতা দেখুন: ক-এ এক বাক্য, খ-এ তথ্য ও কারণ, গ-এ উদ্দীপকের সঙ্গে মিলিয়ে ব্যাখ্যা, ঘ-এ যুক্তিসহ মত — চার অংশ চার রকম লেখা হয়েছে কি না।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "রুব্রিক-সারি — খাতা দেখে; বিষয়ের জ্ঞান নয়, উত্তর সাজানোর দক্ষতা। অধ্যায় ১-এর নিজস্ব শিখনফল (\"সৃজনশীল প্রশ্নের উত্তর কীভাবে লিখব\" অংশ)। ডোমেইন-মইয়ে উত্তর-লেখার ঘর নেই বলে অধ্যায়ের ডোমেইনে (SOC) রাখা।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 184,
+  "mapped": 184,
+  "unmapped": [],
+  "note": "exercisesTotal = লেখক-পর্যালোচক কপি v১-এর ৮টি অধ্যায়ের অনুশীলনীর সব নম্বরযুক্ত প্রশ্ন (১৮৪): প্রতি অধ্যায়ে বহুনির্বাচনি ১০, সংক্ষিপ্ত-উত্তর ৫ এবং সৃজনশীল ২টি × ৪ অংশ (ক, খ, গ, ঘ আলাদা আলাদা গোনা: \"৩/সৃজনশীল ২/৩\" = সৃজনশীল ২-এর গ)। বইয়ে নম্বরহীন \"কাজ\" নেই। অধ্যায় ১-এর \"সৃজনশীল প্রশ্নের উত্তর কীভাবে লিখব\" অংশের নমুনা প্রশ্ন গণনায় নেই।"
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "বইটি এখনো ছাপা হয়নি এবং এটি প্রথম সংস্করণ। উৎস: লেখক-পর্যালোচক কপি C6_BGS_Book_v1_Writer-Reviewer (২ নভেম্বর ২০২৬); পর্যালোচকের উত্তর এখনো আসেনি। পরের সংস্করণে ও ছাপার সময় অনুশীলনীর নম্বর বা প্রশ্ন সরতে পারে — তখন ১৮৪টি সূত্র আবার মিলিয়ে তবেই লক।"
+  },
+  {
+   "code": "LO-C6-BGS-02-05",
+   "kind": "OTHER",
+   "text": "স্মারক v১-এর পাঁচটি সিদ্ধান্তই খোলা: D-০১ (অধ্যায় ১ — সমাজের শুরু আদম (আ.) ও হাওয়া (আ.)-এর পরিবার থেকে); D-০২ (অধ্যায় ২-এর পাঠ ১০ «স্বাধীন বাংলাদেশে গণঅভ্যুত্থান» পুরো থাকবে না সংক্ষেপে — সারি ০২-০৫ ও তার প্রশ্ন বদলাতে পারে); D-০৩ (অধ্যায় ৩ \"গ্রামীণ সংস্কৃতি\"-র দুটি নতুন অনুচ্ছেদ — ০৩-০৪); D-০৪ (অধ্যায় ৭ \"ধর্ম\" অনুচ্ছেদের নতুন লেখা — ০৭-০২); D-০৫ (প্রতি অধ্যায়ের শুরুর আয়াতভিত্তিক বাক্য — প্রশ্নে আসে না, গাছ বদলাবে না)। এ ছাড়া বহুনির্বাচনির তিন ধরনের ভাগ ষষ্ঠ–অষ্টম শ্রেণির মই-স্মারকের উত্তরের অপেক্ষায়। অধ্যায় ৩ মোহাম্মদপুরের সিলেবাসে নেই, তবে বইয়ে আছে — গাছে রাখা।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "প্রশ্নের ধরন বইয়ের পরিশিষ্ট থেকে হুবহু: বহুনির্বাচনি ৩০ (তিন ধরন), সংক্ষিপ্ত-উত্তর ১০ × ২, সৃজনশীল ৫ × ১০ (ক ১, খ ২, গ ৩, ঘ ৪)। প্রতিটি সারির ধরন তার উদ্ধৃত প্রশ্নগুলো থেকে নেওয়া। QT-CLASS বইয়ের ধরন নয় — শুধু একটি রুব্রিক-ধারার জন্য।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "মূল্যবোধ-শিখনফল গাছে নেই (মালিকের নিয়ম): ৩-৫ \"আমাদের সংস্কৃতির সম্প্রীতি ও সহযোগিতার দিকটি চর্চা করবে\"। \"উদ্দীপক থেকে চিনে ব্যাখ্যা\" ধরনের শিখনফল (৪-৫, ৬-৪, ৭-৫, ৮-৫) আলাদা সারি পায়নি — এগুলো বিষয়-সারিরই সৃজনশীল গ ও ঘ অংশ; বিষয়ের সারির উৎস-লেখায় যুক্ত।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "এক-দুই প্রশ্নের সারি (বইয়ের নিজস্ব শিখনফল বলে রাখা; প্রশ্নব্যাংকের জন্য বইয়ে প্রশ্ন কম): ০৫-০৪ নাগরিকের দায়িত্ব ও কর্তব্য (১টি), ০১-০৪ বাংলাদেশের সমাজের প্রকৃতি (২টি), ০২-০৪ ঔপনিবেশিক যুগ (২টি), ০৭-০৪ শ্রমজীবী শিশুর প্রতি আচরণ (২টি), ০৮-০১ আঞ্চলিক সহযোগিতার গুরুত্ব (২টি)। বইয়ে কোনো \"কাজ\" বাক্স নেই (NCTB-র পাঁচটি কাজ বাদ দেওয়া হয়েছে), মানচিত্রের কাজও নেই — তাই পঞ্চম শ্রেণির মানচিত্র-ধারা (SK-MAP) এখানে নেই।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "সৃজনশীলের ক-অংশ প্রায়ই উদ্দীপকের বাইরের তথ্য (যেমন ১/সৃজনশীল ১-ক \"মুক্তাগাছা কীসের জন্য বিখ্যাত?\" অথচ উদ্দীপক জাদুঘরের হাতিয়ার নিয়ে; ৮/সৃজনশীল ১-ক \"ASEAN-এর পূর্ণরূপ\" অথচ উদ্দীপক সার্ক নিয়ে) — NCTB-র রীতি। তাই এক সৃজনশীল প্রশ্নের চার অংশ দুই-তিনটি ভিন্ন সারিতে গেছে; ব্যাংকে প্রতিটি অংশ নিজের কোড পাবে।"
+  },
+  {
+   "code": "LO-C6-BGS-01-03",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): অধ্যায় ১ «সমাজ বিবর্তনের ইতিহাস» ডোমেইন \"পরিবার, সমাজ ও সম্প্রীতি\" (SOC)-এ, ইতিহাস (HIST)-এ নয় — বিষয়টি সমাজবিজ্ঞানের (সমাজের ধারণা ও স্তর), ঘটনা-তারিখের ইতিহাস নয়। অধ্যায় ৭ (সামাজিকীকরণ, শিশুশ্রম)-ও SOC-এ; শিশুশ্রমকে CIV (অধিকার)-এ নেওয়ার বিকল্প আছে।"
+  },
+  {
+   "code": "LO-C6-BGS-03-03",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): সংস্কৃতির উপাদান \"চেনা\" (০৩-০২) ও \"সম্পর্ক ব্যাখ্যা\" (০৩-০৩) বইয়ের দুটি শিখনফল ধরে দুই সারি; ০৩-০৩-এর তিনটি প্রশ্নই সৃজনশীলের অংশ। পর্যালোচক চাইলে এক সারি করা যায়।"
+  },
+  {
+   "code": "LO-C6-BGS-04-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ৪/সৃজনশীল ১-ক («অভ্যন্তরীণ বাণিজ্য কী?») অর্থনৈতিক জীবনধারার সারিতে (০৪-০১) বসানো — উত্তরমালায় পাঠের উল্লেখ নেই; খাতের সারিতেও (০৪-০২, সেবাখাত) যেতে পারে। বিষয়-শিক্ষক মিলিয়ে নেবেন।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম ও বাড়ির টিপস দেখবেন। আগের ধাপ পঞ্চম শ্রেণির সারি দেখায় (যেমন C5·08-03)। সূত্র: \"৩/বহুনির্বাচনি/৪\", \"৩/সংক্ষিপ্ত/২\" = অধ্যায় ৩-এর অনুশীলনীর প্রশ্ন; \"৩/সৃজনশীল ২/৩\" = সৃজনশীল ২-এর গ অংশ।\n\n**বইটি ছাপা হয়নি এবং এটি প্রথম সংস্করণ** — স্মারকের পাঁচটি সিদ্ধান্তই খোলা (পতাকা ২); পাঠ ১০ (গণঅভ্যুত্থান) সংক্ষেপ হলে সারি ০২-০৫ বদলাবে।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **বইয়ের শিখনফল ধরে সারি; গাছটি ছোট (৩৩টি বিষয়-সারি)** — প্রতি অধ্যায়ে প্রশ্ন মাত্র ২৩টি। কাছাকাছি দুটি শিখনফল কয়েক জায়গায় এক সারি (০২-০১, ০৫-০১, ০৮-০১)।\n2. **ভাগ মাত্র দুটি:** সমাজের ছয় স্তর (০১-০৩ — প্রথম তিন / শেষ তিন) ও সহযোগিতা সংস্থা (০৮-০২ — সার্ক-আসিয়ান / ইইউ-জি-৭-ওআইসি)। সংস্থা ধরে পাঁচ সারি চাইলে বলুন।\n3. **\"উদ্দীপক থেকে চেনা\" শিখনফল আলাদা সারি নয়** (পতাকা ৪) — এটি সৃজনশীলের গ ও ঘ অংশ; বিষয়ের সারিতেই ট্যাগ হবে।\n4. **এক-দুই প্রশ্নের পাঁচটি সারি** (পতাকা ৫) — মেশাবেন কি না আপনার সিদ্ধান্ত (যেমন ০৫-০৪ → ০৫-০২, ০১-০৪ → ০১-০৩, ০২-০৪ → ০২-০৩)।\n5. **পরিবেশগত সমস্যা (০৬-০২) মোটা সারি** — ১৫টি প্রশ্ন; দূষণের ধরন ধরে ভাগ করলে প্রতি সারিতে এক-দুটি প্রশ্ন থাকত।\n6. **ডোমেইন:** অধ্যায় ১ ও ৭ SOC-এ (পতাকা ৭)। বিদ্যমান ডোমেইন-মই বদলানো হয়নি।\n7. **সৃজনশীল উত্তর লেখার ধারা (SK-ANS-01)** — অধ্যায় ১-এর নিজস্ব শিখনফল থেকে রুব্রিক-সারি; বিষয়ের জ্ঞান নয়। রাখবেন কি না দেখুন।\n\n**বই-দলের জন্য (পতাকা দেখুন):** পাঁচটি শিখনফলের প্রশ্ন এক-দুটি; বইয়ে কোনো \"কাজ\" বা মানচিত্রের কাজ নেই; সৃজনশীলের ক-অংশ প্রায়ই উদ্দীপকের বাইরের।\n"
+}

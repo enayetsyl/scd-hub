@@ -234,7 +234,7 @@ One board per exam: rows = papers, columns = the 13 stages, each cell showing �
 **Acceptance:** [ ] the board shows every paper's chain state at a glance; [ ] a receiver sees their pending acknowledgements without hunting; [ ] stale `PENDING_ACK` surfaces after the configured interval.
 
 ### EX-9 — Report-card PDF, approval gate, guardian release
-Mirrors the ratified CT-8 / CO-8 pattern rather than inventing a third shape: TABULATED → **teacher/tabulator submits** → **Office or Principal approves** (`exam:manage`, either, per D-A) → `PUBLISHED` sets `publishedAt`, which is the guardian-visible predicate. Send-back carries a reason and returns the exam to `MARKING`.
+Mirrors the ratified CT-8 / CO-8 pattern rather than inventing a third shape: TABULATED → **teacher/tabulator submits** → **the Principal approves** (`exam_results:publish`, Principal-only by default since D-#1435; the Office still submits and works on any paper, but does not approve or publish) → `PUBLISHED` sets `publishedAt`, which is the guardian-visible predicate. Send-back carries a reason and returns the exam to `MARKING`.
 - `GET /pdf/report-card/:examId/:studentId` — single card, and `GET /pdf/report-card/:examId?classId=` — the **class bundle**, which is exactly what `Report_Cards_*.pdf` is today.
 - Layout reproduces the current card: header, student block, grade reference, subject table with the band's component columns, `Total/GPA` row, `Comment from School`, `Principal's Signature` rule.
 - Guardian sees the published card in the portal under the existing `guardian:read_child` gate; **an unpublished or sent-back card is invisible to the guardian** and the PDF route refuses it.

@@ -18,6 +18,7 @@ import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel, masterySourceLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { openPdf } from "../../lib/pdf";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -41,6 +42,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [subject, setSubject] = useState<string>("MATH");
   const [page, setPage] = useState(1);
+  const [printMsg, setPrintMsg] = useState<string | null>(null);
   const active = sectionId ?? sections[0]?.id ?? null;
   const activeLevel = sections.find((s) => s.id === active)?.level ?? null;
 
@@ -112,6 +114,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
       ) : null}
 
       {error ? <Notice message={friendlyError(error)} tone="danger" /> : null}
+      {printMsg ? <Notice message={printMsg} tone="danger" /> : null}
       {fetching && rows.length === 0 ? <Loader /> : null}
       {!fetching && !error && rows.length === 0 ? <EmptyState message={STR.msNoSheets} /> : null}
 
@@ -130,7 +133,11 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
           <Muted>
             {p.paperId} · {p.source === "RUBRIC" ? `${levelFill(STR.msRubricLos, lv)}: ${bnNum(p.rubricLoCodes.length)}` : `${STR.msItems}: ${bnNum(p.items.length)} · ${bnNum(p.totalMarks)}`}
           </Muted>
-          <Button title={STR.msEntry} variant="secondary" onPress={() => navigation.navigate("MasteryEntry", { paperId: p.paperId })} />
+          <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+            <Button title={STR.msEntry} variant="secondary" onPress={() => navigation.navigate("MasteryEntry", { paperId: p.paperId })} />
+            {/* PR-J (D-#1420): the extra sheet as printed — one page per child. */}
+            {p.extra ? <Button title={STR.msPrint} variant="secondary" onPress={() => { setPrintMsg(null); void openPdf(`/pdf/mastery-extra/${p.paperId}`).catch(() => setPrintMsg(STR.errGeneric)); }} /> : null}
+          </View>
         </Card>
       ))}
 

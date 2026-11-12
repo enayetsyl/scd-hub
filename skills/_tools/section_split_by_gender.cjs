@@ -27,6 +27,7 @@ const AS = require(dist + '/modules/trackers/services/AssignmentScheduleService'
 const CT = require(dist + '/modules/foundation/services/ClassTeacherService');
 const chat = require(dist + '/modules/chat/services/ChatGroupService');
 const { rehomeStudentRecords } = require(dist + '/modules/trackers/services/recordRehome');
+const { recordSectionMove } = require(dist + '/modules/foundation/services/EnrolmentService');
 const { RoutineSlot } = require(dist + '/modules/routine/models/RoutineSlot');
 const { AssignmentSchedule } = require(dist + '/modules/trackers/models/AssignmentSchedule');
 const { Section } = require(dist + '/modules/foundation/models/Section');
@@ -77,7 +78,9 @@ async function settle(label, ops) {
   const actorId = String(principal._id);
 
   // ---- resolve class + sections ----
-  const cls = await db.collection('classes').findOne({ level: PLAN.classLevel, active: { $ne: false } });
+  // Two years can hold a class at this level (2026 + 2027): take the CURRENT year's. No current year => no filter (D-#1452).
+  const curYear = await db.collection('academicyears').findOne({ current: true });
+  const cls = await db.collection('classes').findOne({ level: PLAN.classLevel, active: { $ne: false }, ...(curYear ? { academicYearId: curYear._id } : {}) });
   if (!cls) throw new Error('class level not found: ' + PLAN.classLevel);
   const classId = String(cls._id);
   let secs = await Section.find({ classId: cls._id }).lean();
@@ -186,6 +189,9 @@ async function settle(label, ops) {
       if (!ids.length) continue;
       await Student.updateMany({ _id: { $in: ids } }, { $set: { sectionId: oid(to) } });
       console.log('moved', ids.length, gen, '-> records', JSON.stringify(await rehomeStudentRecords(ids, to)));
+      // YC-1: enrolment rows follow (ACTIVE on the split date; created if the DB has none yet). Does not change which records moved.
+      const enr = await recordSectionMove({ studentIds: ids, toSectionId: to, onKey: EFF_KEY, from: new Map(ids.map(i => [String(i), COMB])), actor: actorId });
+      console.log('  enrolments', enr.moved, 'moved', enr.failed.length ? 'FAILED ' + JSON.stringify(enr.failed) : 'ok');
     }
     // Legacy section-shaped attendance days (before the Quran-unit cutover, D-#278) are read through
     // the student's CURRENT section: copy each to both halves with that half's absentees. The

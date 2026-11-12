@@ -35,6 +35,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { Conversation, type IConversation } from "../models/Conversation";
 import { ConversationMember } from "../models/ConversationMember";
 import { ChatError } from "./ChatService";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 /** The SCHOOL conversation is a singleton — a fixed refId makes it findable. */
 const SCHOOL_REF = "ALL";
@@ -256,7 +257,7 @@ export interface ResyncSummary {
  *  sections, every ROUTINE_SUBJECTS value, and the school singleton; manual rows
  *  are never touched. */
 export async function resyncAllChatGroups(actorId: string): Promise<ResyncSummary> {
-  const sections = (await Section.find({ active: true }).select("_id").lean()) as Array<{
+  const sections = (await Section.find({ active: true, ...(await currentYearSectionFilter()) }).select("_id").lean()) as Array<{
     _id: Types.ObjectId;
   }>;
   for (const s of sections) await syncSectionGroup(s._id.toString());

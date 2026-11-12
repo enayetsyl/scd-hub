@@ -39,6 +39,7 @@ import { meetingDayKey, meetingWindow, childNumbers, previousMeetingOf, addDaysK
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { bnNum } from "../../../lib/bnNum";
 import { personName } from "../../../lib/personName";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 /** A refused chain action — a sentence for the person, never a fault (EXPECTED_ERROR_NAMES). */
 export class MeetingChainError extends Error {}
@@ -652,7 +653,7 @@ export interface SummaryWorkMeeting {
 
 /** The class teacher's Today card: their sections' children in every open meeting. */
 export async function mySummaryWork(actorId: string, now = new Date()): Promise<SummaryWorkMeeting[]> {
-  const sectionsMine = (await Section.find({ classTeacherId: oid(actorId), active: true }).select("_id").lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  const sectionsMine = (await Section.find({ classTeacherId: oid(actorId), active: true, ...(await currentYearSectionFilter()) }).select("_id").lean()) as unknown as Array<{ _id: Types.ObjectId }>;
   if (!sectionsMine.length) return [];
   const meetings = await openMeetings(now);
   if (!meetings.length) return [];
@@ -1063,7 +1064,7 @@ export async function emitMorningReminders(now = new Date()): Promise<{ notes: n
       }
     }
     if (reminderWindowOpen(today, c.summaryDueKey, meetingKey)) {
-      const cts = (await Section.find({ active: true, classTeacherId: { $ne: null } }).select("classTeacherId").lean()) as unknown as Array<{ classTeacherId: Types.ObjectId }>;
+      const cts = (await Section.find({ active: true, classTeacherId: { $ne: null }, ...(await currentYearSectionFilter()) }).select("classTeacherId").lean()) as unknown as Array<{ classTeacherId: Types.ObjectId }>;
       for (const ctId of new Set(cts.map((s) => str(s.classTeacherId)))) {
         const work = (await mySummaryWork(ctId, now)).find((w) => w.meetingId === str(m._id));
         const ready = work?.sections.reduce((t, s) => t + s.ready, 0) ?? 0;

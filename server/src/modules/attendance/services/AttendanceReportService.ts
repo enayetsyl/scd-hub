@@ -32,6 +32,7 @@ import { applicationCovers } from "./LeaveApplicationService";
 import { markerForUnit, AttendanceError } from "./StudentAttendanceService";
 import { resolveUnits, unitKey, type AttendanceUnit, type StudentLite } from "../attendanceUnit";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 // ---------------------------------------------------------------------------
 // Shared: day-record ⇄ unit plumbing
@@ -639,7 +640,7 @@ export async function unmarkedSections(
   if (dayType !== "FULL") return [];
 
   const [sections, marked, students] = await Promise.all([
-    Section.find({ active: true }).lean(),
+    Section.find({ active: true, ...(await currentYearSectionFilter()) }).lean(),
     StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId").lean(),
     Student.find({ active: true }).select("_id sectionId classId").lean(),
   ]);
@@ -749,7 +750,7 @@ export async function attendanceUnitsForDate(dateKey: string): Promise<AdminUnit
   if (dayType !== "FULL") return [];
 
   const [sections, marked, students] = await Promise.all([
-    Section.find({ active: true }).lean(),
+    Section.find({ active: true, ...(await currentYearSectionFilter()) }).lean(),
     StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId").lean(),
     Student.find({ active: true }).select("_id sectionId classId").lean(),
   ]);

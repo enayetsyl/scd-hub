@@ -1,7 +1,7 @@
 /**
  * AcademicYearScreen (design-A) — Principal/Office set the school's ACTIVE academic
  * year once a year; every operational screen then defaults to it (no per-screen year
- * picker). Add a new year and switch the current one. Gated classes_sections:settings.
+ * picker). Add a new year and switch the current one. Gated classes_sections:settings; switching the current year needs year_change:cut_over.
  */
 import React, { useCallback, useState } from "react";
 import { View } from "react-native";
@@ -32,11 +32,15 @@ import {
 } from "../../components/ui";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "AcademicYear">;
 
 export default function AcademicYearScreen(_props: Props): React.ReactElement {
+  const { can } = useAuth();
+  // Only the Principal flips the current year (year_change:cut_over, D-#1451).
+  const canCutOver = can("year_change:cut_over");
   const [{ data, fetching, error }, refetch] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const [, create] = useMutation(CREATE_ACADEMIC_YEAR);
   const [, setCurrent] = useMutation(SET_CURRENT_ACADEMIC_YEAR);
@@ -109,9 +113,9 @@ export default function AcademicYearScreen(_props: Props): React.ReactElement {
               <Body style={{ fontWeight: "700", flex: 1 }}>{y.label}</Body>
               {y.current ? (
                 <Badge text={STR.ayCurrentBadge} tone="ok" />
-              ) : (
+              ) : canCutOver ? (
                 <Button title={STR.aySetCurrent} variant="secondary" onPress={() => onSetCurrent(y.id)} disabled={busy} />
-              )}
+              ) : null}
             </View>
           </Card>
         ))
@@ -120,9 +124,11 @@ export default function AcademicYearScreen(_props: Props): React.ReactElement {
       <Divider />
       <H2>{STR.ayAdd}</H2>
       <Field label={STR.ayLabelField} value={label} onChangeText={setLabel} />
-      <ChipRow>
-        <Chip label={STR.ayMakeCurrent} selected={makeCurrent} onPress={() => setMakeCurrent((v) => !v)} />
-      </ChipRow>
+      {canCutOver ? (
+        <ChipRow>
+          <Chip label={STR.ayMakeCurrent} selected={makeCurrent} onPress={() => setMakeCurrent((v) => !v)} />
+        </ChipRow>
+      ) : null}
       <Button title={STR.ayAdd} onPress={onAdd} loading={busy} disabled={!label.trim() || busy} style={{ marginTop: space(2) }} />
     </Screen>
   );

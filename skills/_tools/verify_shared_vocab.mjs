@@ -47,8 +47,10 @@ check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.include
 check("NO pipeline perms remain — every permission is BUILD (chat:oversee flipped at M-6 per D-#111; chat:manage at M-2 per D-#98)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), []));
 // Exams EX-1..EX-9 (D-#375–#382), ported 2026-11-11 onto the permission catalogue (D-#799): the
 // July legacy exam:manage/custody/mark/read became exam_results:* and exam_custody:*.
-check("exams: Office runs the cycle (settings/assign/edit_all/reopen/comment/publish), TEACHER marks an assigned paper but never manages, GUARDIAN none (D-#375)",
-  ["PRINCIPAL","OFFICE"].every((r) => ["exam_results:settings","exam_results:assign","exam_results:edit_all","exam_results:publish"].every((p) => V.roleHasPermission(r, p)))
+check("exams: Office runs the cycle (settings/assign/edit_all/reopen/comment) but PUBLISH is the Principal's only (D-#1435), TEACHER marks an assigned paper but never manages, GUARDIAN none (D-#375)",
+  ["PRINCIPAL","OFFICE"].every((r) => ["exam_results:settings","exam_results:assign","exam_results:edit_all"].every((p) => V.roleHasPermission(r, p)))
+  && V.roleHasPermission("PRINCIPAL","exam_results:publish")
+  && !V.roleHasPermission("OFFICE","exam_results:publish")
   && V.roleHasPermission("TEACHER","exam_results:enter_marks")
   && !["exam_results:settings","exam_results:assign","exam_results:edit_all","exam_results:reopen","exam_results:comment","exam_results:publish"].some((p) => V.roleHasPermission("TEACHER", p))
   && !V.roleHasPermission("OFFICE","exam_results:enter_marks")
@@ -905,10 +907,10 @@ check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
   new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
 check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
   V.PERMISSIONS.every((p) => V.PERMISSION_LABELS_BN[p]?.name && V.PERMISSION_LABELS_EN[p]?.name && V.PERMISSION_BUILD_STATUS[p] === "build"));
-check("LOCKED actions are exactly the seventeen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138; +ai_assist:read_ai_log/delete_ai_log D-#1179; +ai_workspace:admin D-#1208)",
+check("LOCKED actions are exactly the eighteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138; +ai_assist:read_ai_log/delete_ai_log D-#1179; +ai_workspace:admin D-#1208; +year_change:cut_over D-#1451)",
   eq(flagged("LOCKED"), ["payroll:approve", "payroll:reopen", "salary_advance:issue", "salary_advance:settle", "offboarding:settle",
     "appraisal:sign_off", "conduct:sign_off", "chat:view_all", "message_templates:view", "message_templates:edit",
-    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats", "ai_assist:read_ai_log", "ai_assist:delete_ai_log", "ai_workspace:admin"]));
+    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats", "ai_assist:read_ai_log", "ai_assist:delete_ai_log", "ai_workspace:admin", "year_change:cut_over"]));
 check("RESERVED_PERMISSIONS = the legacy five ∪ every LOCKED action",
   eq(V.RESERVED_PERMISSIONS, [...new Set([...V.LEGACY_RESERVED_PERMISSIONS, ...flagged("LOCKED")])]));
 check("no LOCKED / PRINCIPAL_DEFAULT / ESCALATION action is on by default for TEACHER or OFFICE",
@@ -1009,7 +1011,8 @@ const ROLE_CHECK_DEFAULTS = {
     // Exams EX-1..EX-9 (D-#375–#382; the July exam:manage/custody/read for OFFICE): the Office runs
     // the cycle and is the hub of every custody handover; it does not mark (no enter_marks).
     "exam_results:view", "exam_results:settings", "exam_results:assign", "exam_results:edit_all",
-    "exam_results:reopen", "exam_results:comment", "exam_results:submit", "exam_results:publish",
+    "exam_results:reopen", "exam_results:comment", "exam_results:submit",
+    // D-#1435: exam_results:publish left the Office template — approving and publishing results is the Principal's.
     "exam_custody:view", "exam_custody:hand_over", "exam_custody:acknowledge"],
 };
 for (const role of ["TEACHER", "OFFICE"]) {

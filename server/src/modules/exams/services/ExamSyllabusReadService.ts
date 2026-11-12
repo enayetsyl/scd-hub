@@ -34,6 +34,8 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { ExamSyllabus, type ISyllabusMarkRow } from "../models/ExamSyllabus";
 import { ExamClassNote } from "../models/ExamClassNote";
+import { currentYearFilter } from "../../foundation/services/currentYear";
+import { Exam } from "../models/Exam";
 
 /**
  * A malformed exam/class/student id is a refusal with a sentence, not a fault. The
@@ -63,6 +65,14 @@ export function assertSyllabusReader(ctx: AppContext): void {
   if (!callerHasPermission(ctx.auth, "exam_syllabus:view") && !seesSyllabusDrafts(ctx.auth)) {
     throw new ForbiddenError("সিলেবাস দেখার অনুমতি নেই");
   }
+}
+
+/** The exam picker (D-#1435): syllabus readers, plus anyone who can view exam results or
+ *  custody — the picker must follow exam access, not only the syllabus switch. A guardian
+ *  passes untouched (assertSyllabusReader). */
+export function assertExamPicker(ctx: AppContext): void {
+  if (ctx.auth && (callerHasPermission(ctx.auth, "exam_results:view") || callerHasPermission(ctx.auth, "exam_custody:view"))) return;
+  assertSyllabusReader(ctx);
 }
 
 export interface SyllabusShape {
@@ -789,7 +799,9 @@ export async function examSyllabusBoard(
   }
   assertIds(examId);
 
-  const classes = (await Class.find({}).select("nameBn level").lean()) as unknown as Array<{
+  // Only the exam's own year: with 2027 classes beside 2026 ones the board listed every level twice.
+  const exam = (await Exam.findById(examId).select("academicYearId").lean()) as { academicYearId?: Types.ObjectId } | null;
+  const classes = (await Class.find(exam?.academicYearId ? { academicYearId: exam.academicYearId } : await currentYearFilter()).select("nameBn level").lean()) as unknown as Array<{
     _id: Types.ObjectId;
     nameBn?: string;
     level?: number;

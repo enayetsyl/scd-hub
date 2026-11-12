@@ -26,10 +26,18 @@ ISLAM label), তথ্য ও যোগাযোগ প্রযুক্তি
 `NCTB_GENERAL_SUBJECTS` keeps the old five for anything that means "the five general subjects". The
 operational `Subject` collection (`FOUNDATION_SUBJECTS`) is pinned to it + ISLAM, so it does not change.
 
-The Project 09 plan tools spell Islamic Studies `ISL`; the app code is `ISLAM`. The v2 plan schema accepts
-both, `build_envelope.py` writes `ISLAM` on the envelope, and the harness L3 treats them as equal. The
-import gate itself still validates plans against `LOCKED_C5_PlanSchema_v1.json`, which accepts `ISLAM`
-only — a P09 plan for import should say `ISLAM`.
+**One name for Islam (D-#1440, 2026-11-12).** The P09 spelling `ISL` is dropped: the plan tools
+(`LOCKED_SCD_PlanSchema_v2.json`, `render_plan.py`, `validate_plan.py`), `build_envelope.py` and the harness
+accept only `ISLAM`. An `ISL` plan or envelope is refused with a message naming `ISLAM`. No `ISL` plan existed
+in any fixture or case, so nothing was migrated. Any list of subjects for the P09 plan tools reads
+`BAN ENG MATH SCI BGS ISLAM ICT BAN2 ENG2`.
+
+**Division words.** A Class 6 `BAN2` plan uses `অধ্যায়`; an `ENG2` plan uses `Unit`. Enforced by the anchor-word
+rules in both plan schemas (`LOCKED_SCD_PlanSchema_v2.json` and the import gate's `LOCKED_C5_PlanSchema_v1.json`),
+with cases `pass_`/`fail_{ban2,eng2}_c6_session_plan_anchor_*` under `server/import/cases/subjects-2027/`.
+
+**Question time.** `QUESTION_TIME_RATES` for `ISLAM`, `ICT`, `BAN2`, `ENG2` is 1.8 minutes per mark for every
+question type (3 hours for 100 marks); the five older subjects keep their rows.
 
 ## Screens
 Bank filters, plan lists, review assignment and the content tree read `SUBJECTS` / `CLASS_LEVELS` and so

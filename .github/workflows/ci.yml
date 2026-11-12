@@ -40,6 +40,8 @@ jobs:
         run: node skills/_tools/verify_descriptive_carriers.mjs
       - name: Mastery LO-code import conformance (D-#785)
         run: node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes
+      - name: 2027 subjects + Class 6 import conformance (D-#1310, D-#1440)
+        run: node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/subjects-2027
       - name: Mastery catalogue files valid (D-#776)
         run: npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue
       - name: Objective-tree files pass the structural verifier (prd-objective-tree §10.1)
