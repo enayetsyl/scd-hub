@@ -30,6 +30,13 @@ const TEACHER_ID = oid().toString();
 
 const mockSyllabusFind = jest.fn();
 const mockSyllabusFindOne = jest.fn();
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/exams/models/ExamSyllabus", () => {
   const actual = jest.requireActual("../modules/exams/models/ExamSyllabus");
   return {
@@ -46,6 +53,11 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: {
     find: () => ({ select: () => ({ lean: async () => mockRoutineSlots() }) }),
   },
+}));
+
+// The board reads the exam's own year (YC-0 step 3); no exam row here => falls back to the current-year helper (mocked).
+jest.mock("../modules/exams/models/Exam", () => ({
+  Exam: { findById: () => ({ select: () => ({ lean: async () => null }) }) },
 }));
 
 jest.mock("../modules/exams/models/ExamClassNote", () => ({

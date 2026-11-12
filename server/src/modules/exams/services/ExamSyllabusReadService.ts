@@ -34,6 +34,8 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { ExamSyllabus, type ISyllabusMarkRow } from "../models/ExamSyllabus";
 import { ExamClassNote } from "../models/ExamClassNote";
+import { currentYearFilter } from "../../foundation/services/currentYear";
+import { Exam } from "../models/Exam";
 
 /**
  * A malformed exam/class/student id is a refusal with a sentence, not a fault. The
@@ -789,7 +791,9 @@ export async function examSyllabusBoard(
   }
   assertIds(examId);
 
-  const classes = (await Class.find({}).select("nameBn level").lean()) as unknown as Array<{
+  // Only the exam's own year: with 2027 classes beside 2026 ones the board listed every level twice.
+  const exam = (await Exam.findById(examId).select("academicYearId").lean()) as { academicYearId?: Types.ObjectId } | null;
+  const classes = (await Class.find(exam?.academicYearId ? { academicYearId: exam.academicYearId } : await currentYearFilter()).select("nameBn level").lean()) as unknown as Array<{
     _id: Types.ObjectId;
     nameBn?: string;
     level?: number;

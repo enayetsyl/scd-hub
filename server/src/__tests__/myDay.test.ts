@@ -33,6 +33,13 @@ const mockClassFind = jest.fn();
 // query (…sort().lean()) and the covering-periods query (…sort().lean(), same
 // shape since MyDayService now sorts both) — route by whether the query has an
 // `_id` filter (the covering lookup) vs `teacherId` (the own-periods lookup).
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: {
     find: (q: { _id?: unknown }) => ({

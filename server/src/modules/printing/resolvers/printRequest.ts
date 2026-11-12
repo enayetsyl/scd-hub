@@ -42,6 +42,7 @@ import {
 } from "../services/PrintRequestService";
 import { pageRef } from "../../../pageRef";
 import type { IPrintRequest } from "../models/PrintRequest";
+import { currentYearFilter } from "../../foundation/services/currentYear";
 
 // ---------------------------------------------------------------------------
 // Gates
@@ -703,7 +704,7 @@ builder.queryField("printHistoryFacets", (t) =>
 /** Roster class per LEVEL, for turning a suggested level into a real class id (PQ-9).
  *  Only ACTIVE classes: a suggestion must not point at a retired year's class. */
 async function activeClassByLevel(): Promise<Map<number, string>> {
-  const classes = await Class.find({ active: true }).select("level").lean();
+  const classes = await Class.find({ active: true, ...(await currentYearFilter()) }).select("level").lean();
   const out = new Map<number, string>();
   // First one wins per level; the roster has exactly one class per level today, and a
   // duplicate must not make the suggestion depend on document order silently.

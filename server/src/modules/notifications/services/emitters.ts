@@ -33,6 +33,7 @@ import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
 import { bnNum } from "../../../lib/bnNum";
 import { personName } from "../../../lib/personName";
+import { currentYearFilter } from "../../foundation/services/currentYear";
 
 type IdLike = { toString(): string };
 
@@ -1608,7 +1609,7 @@ export interface TeachingNotePublishedEvent {
 
 /** The teachers who teach `subject` to `classLevel`, from the routine. */
 async function teachersOfPair(classLevel: number, subject: string): Promise<string[]> {
-  const classes = (await Class.find({ level: classLevel }).select("_id").lean()) as unknown as Array<{
+  const classes = (await Class.find({ level: classLevel, ...(await currentYearFilter()) }).select("_id").lean()) as unknown as Array<{
     _id: IdLike;
   }>;
   const classIds = classes.map((c) => c._id.toString());

@@ -222,7 +222,7 @@ describe("generateGroupCtId (D-#507)", () => {
     expect(mockGroupSeqUpdate).toHaveBeenCalledWith(
       { academicYearId: AY_OID.toString(), subjectGroupId: GROUP_OID.toString() },
       { $inc: { seq: 1 } },
-      { new: true, upsert: true },
+      { new: true },
     );
   });
 

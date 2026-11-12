@@ -52,6 +52,7 @@ import {
 } from "../../trackers/services/AssignmentHandoutService";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { liveWindow } from "../liveWindow";
+import { currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 type IdLike = { toString(): string };
 
@@ -199,7 +200,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //    unreadable refs silently skipped so a stale ref never breaks the dashboard).
   const homework: MyDayHomeworkCounts = { pendingChecking: 0, openResubmissions: 0, activeChases: 0 };
   if (callerHasPermission(auth, "homework:view")) {
-    const sections = (await Section.find({ active: true }).select("_id classId").lean()) as unknown as Array<{
+    const sections = (await Section.find({ active: true, ...(await currentYearSectionFilter()) }).select("_id classId").lean()) as unknown as Array<{
       _id: { toString(): string };
       classId: { toString(): string };
     }>;
@@ -255,7 +256,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //     guardian login is never a section's classTeacherId.
   let classTeacherOf: ClassTeacherSection[] = [];
   if (auth.role !== "GUARDIAN") {
-    const mySections = (await Section.find({ classTeacherId: auth.userId, active: true })
+    const mySections = (await Section.find({ classTeacherId: auth.userId, active: true, ...(await currentYearSectionFilter()) })
       .select("nameBn classId")
       .lean()) as unknown as Array<{ _id: IdLike; nameBn: string; classId: IdLike }>;
     if (mySections.length > 0) {

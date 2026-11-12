@@ -34,6 +34,7 @@ import {
   type UnitType,
 } from "./attendanceUnit";
 import { pickCoveringAssignment } from "./services/StudentAttendanceService";
+import { currentYearSectionFilter } from "../foundation/services/currentYear";
 
 interface SlotLite {
   id: string;
@@ -102,7 +103,7 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
     StaffCoverSlot.find({ finalCoverTeacherUserId: userId, status: "approved", dateKey: { $in: keys } })
       .select("routineSlotId")
       .lean(),
-    Section.find({ classTeacherId: userId, active: true }).select("_id").lean(),
+    Section.find({ classTeacherId: userId, active: true, ...(await currentYearSectionFilter()) }).select("_id").lean(),
     SectionAttendanceAssignment.find({
       teacherId: userId,
       active: true,

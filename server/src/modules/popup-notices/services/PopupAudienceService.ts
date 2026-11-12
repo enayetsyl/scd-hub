@@ -43,6 +43,7 @@ import { personName } from "../../../lib/personName";
 import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
 import type { PopupAudience, PopupGuardianFilter, PopupStaffFilter } from "../models/PopupNotice";
 import type { PopupRecipientKind, PopupRecipientVars } from "../models/PopupNoticeRecipient";
+import { currentYearFilter, currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 export class PopupNoticeError extends Error {
   constructor(message: string) {
@@ -279,7 +280,7 @@ async function resolveStaff(a: PopupAudience, now: Date): Promise<{ rows: Resolv
   const teaching = needsRoutine ? await teachingFor(now) : new Map();
   const classTeachers = f?.classTeachersOnly
     ? new Set(
-        ((await Section.find({ active: true, classTeacherId: { $ne: null } }).select("classTeacherId").lean()) as unknown as Array<{ classTeacherId: Types.ObjectId }>)
+        ((await Section.find({ active: true, classTeacherId: { $ne: null }, ...(await currentYearSectionFilter()) }).select("classTeacherId").lean()) as unknown as Array<{ classTeacherId: Types.ObjectId }>)
           .map((s) => s.classTeacherId.toString()),
       )
     : new Set<string>();
@@ -332,7 +333,7 @@ async function resolveGuardians(a: PopupAudience): Promise<ResolvedRecipient[]> 
   const g = a.guardian;
   if (!g && a.studentIds.length === 0) return [];
 
-  const classes = (await Class.find({}).select("level active").lean()) as unknown as Array<{ _id: Types.ObjectId; level: number; active?: boolean }>;
+  const classes = (await Class.find(await currentYearFilter()).select("level active").lean()) as unknown as Array<{ _id: Types.ObjectId; level: number; active?: boolean }>;
   const levelOfClass = new Map(classes.map((c) => [c._id.toString(), c.level]));
 
   const or: Record<string, unknown>[] = [];

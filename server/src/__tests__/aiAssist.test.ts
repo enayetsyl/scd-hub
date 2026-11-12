@@ -19,6 +19,7 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import { Student } from "../modules/foundation/models/Student";
 import { Class } from "../modules/foundation/models/Class";
 import { Section } from "../modules/foundation/models/Section";
+import { AcademicYear } from "../modules/foundation/models/AcademicYear";
 import { ContentArtifact } from "../modules/content/models/ContentArtifact";
 import { AiAssistMessage } from "../modules/ai-assist/models/AiAssistMessage";
 import { AiAssistSession } from "../modules/ai-assist/models/AiAssistSession";
@@ -125,6 +126,25 @@ describe("with the rules on", () => {
     ]);
     expect((await AiAssistSession.findById(s.id).lean())!.turns).toBe(2);
     expect(await AiAssistMessage.countDocuments({ sessionId: s.id })).toBe(4);
+  });
+
+  test("a child on a NON-current-year section is still masked (privacy: the scope over-includes)", async () => {
+    const cur = await AcademicYear.create({ label: "2026", startDate: new Date("2026-01-01"), endDate: new Date("2026-12-31"), current: true });
+    try {
+      // this class belongs to a year that is NOT the current one
+      const c = await Class.create({ level: 3, nameBn: "তৃতীয় শ্রেণি (পরের বছর)", academicYearId: new Types.ObjectId() });
+      expect(String(c.academicYearId)).not.toBe(String(cur._id));
+      const sec = await Section.create({ classId: c._id, code: "G", nameBn: "বালিকা", active: true });
+      await Student.create({ schoolId: "0102", name: "Nusrat Jahan", nameBn: "নুসরাত জাহান", classId: c._id, sectionId: sec._id });
+      const s = await startAssistSession(teacher, { classLevel: 3, subject: "BAN", chapter: "4" });
+      mockSend.mockResolvedValueOnce(reply("ঠিক আছে।"));
+      await askAssistant(teacher, s.id, "নুসরাত শব্দার্থ পারে না");
+      const sent = mockSend.mock.calls[0][1].variablePart as string;
+      expect(sent).not.toContain("নুসরাত");
+      expect(sent).toMatch(/\[S\d+\]/);
+    } finally {
+      await AcademicYear.deleteMany({});
+    }
   });
 
   test("a cap or the AI failing → a Bangla AiAssistError, nothing stored", async () => {

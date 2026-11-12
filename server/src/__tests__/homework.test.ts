@@ -288,9 +288,10 @@ describe("T1.1 — HW_ID generation (year-continuous, per class+subject)", () =>
   test("keys the counter by (year, class, subject) so year-reset is automatic", async () => {
     await generateHwId(YEAR_ID, 1, "MATH");
     const [filter, update, opts] = mockSeqUpdate.mock.calls[0];
-    expect(filter).toEqual({ academicYearId: YEAR_ID, classLevel: 1, subject: "MATH" });
+    expect(String(filter.academicYearId)).toBe(String(YEAR_ID));
+    expect(filter).toMatchObject({ classLevel: 1, subject: "MATH" });
     expect(update).toEqual({ $inc: { seq: 1 } });
-    expect(opts).toMatchObject({ upsert: true, new: true });
+    expect(opts).toMatchObject({ new: true }); // YC-0: no blind upsert — the row is seeded first
   });
 });
 

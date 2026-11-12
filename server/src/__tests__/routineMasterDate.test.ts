@@ -6,6 +6,11 @@
 const find = jest.fn();
 const lean = (v: unknown) => ({ lean: jest.fn().mockResolvedValue(v) });
 
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: { find: (...a: unknown[]) => { find(...a); return { sort: () => lean([]) }; } },
 }));

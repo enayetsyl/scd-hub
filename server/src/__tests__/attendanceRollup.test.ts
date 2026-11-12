@@ -27,6 +27,13 @@ const mockResolveUnits = jest.fn();
 const mockMarkerForUnit = jest.fn();
 const mockGroupFind = jest.fn();
 
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/attendance/models/StudentAttendanceDay", () => ({
   StudentAttendanceDay: { find: (f: unknown) => ({ select: () => ({ lean: () => mockDayFind(f) }), lean: () => mockDayFind(f) }) },
 }));

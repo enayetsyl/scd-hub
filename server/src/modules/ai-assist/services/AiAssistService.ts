@@ -186,6 +186,9 @@ export async function chapterContext(s: Pick<IAiAssistSession, "classLevel" | "s
 }
 
 async function schoolScope(): Promise<DeidScope> {
+  // PRIVACY: deliberately NOT filtered to the current year. This builds the name list that
+  // de-identifies text sent to the outside AI provider, so masking must OVER-include: a child
+  // on a last-year / next-year section still has to be masked.
   const sections = await Section.find({ active: { $ne: false } }).select("_id").lean();
   return scopeForSections(sections.map((s) => s._id.toString()));
 }

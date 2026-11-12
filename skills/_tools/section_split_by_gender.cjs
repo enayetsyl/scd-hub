@@ -77,7 +77,9 @@ async function settle(label, ops) {
   const actorId = String(principal._id);
 
   // ---- resolve class + sections ----
-  const cls = await db.collection('classes').findOne({ level: PLAN.classLevel, active: { $ne: false } });
+  // Two years can hold a class at this level (2026 + 2027): take the CURRENT year's. No current year => no filter (D-#1452).
+  const curYear = await db.collection('academicyears').findOne({ current: true });
+  const cls = await db.collection('classes').findOne({ level: PLAN.classLevel, active: { $ne: false }, ...(curYear ? { academicYearId: curYear._id } : {}) });
   if (!cls) throw new Error('class level not found: ' + PLAN.classLevel);
   const classId = String(cls._id);
   let secs = await Section.find({ classId: cls._id }).lean();

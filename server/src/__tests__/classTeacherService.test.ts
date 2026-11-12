@@ -13,6 +13,13 @@ const oid = () => new mongoose.Types.ObjectId();
 
 const mockSectionFindById = jest.fn();
 const mockSectionFind = jest.fn();
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: {
     findById: (id: unknown) => mockSectionFindById(id),

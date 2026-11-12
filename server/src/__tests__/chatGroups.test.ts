@@ -27,6 +27,13 @@ const mockConvUpsert = jest.fn();
 const mockConvCreate = jest.fn();
 const mockConvFindById = jest.fn();
 const mockConvUpdateOne = jest.fn();
+// No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+jest.mock("../modules/foundation/services/currentYear", () => ({
+  currentAcademicYearId: async () => null,
+  currentYearClassIds: async () => null,
+  currentYearFilter: async () => ({}),
+  currentYearSectionFilter: async () => ({}),
+}));
 jest.mock("../modules/chat/models/Conversation", () => ({
   ...jest.requireActual("../modules/chat/models/Conversation"),
   Conversation: {
