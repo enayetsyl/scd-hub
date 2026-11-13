@@ -19,7 +19,7 @@ jest.mock("../modules/foundation/models/Class", () => ({ Class: { find: () => le
 jest.mock("../modules/routine/models/SubjectGroup", () => ({ SubjectGroup: { find: () => lean([]) } }));
 jest.mock("../modules/routine/models/PeriodGrid", () => ({ PeriodGrid: { findOne: () => lean(null) } }));
 jest.mock("../modules/routine/models/ScheduleWindow", () => ({
-  ScheduleWindow: { findOne: () => ({ sort: () => lean(null) }) },
+  ScheduleWindow: { findOne: () => ({ sort: () => lean(null) }), find: () => ({ sort: () => lean([]) }) },
 }));
 jest.mock("../modules/routine/slotView", () => ({ enrichRoutineSlots: jest.fn().mockResolvedValue([]) }));
 
