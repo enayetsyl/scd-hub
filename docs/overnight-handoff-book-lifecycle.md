@@ -202,3 +202,53 @@ full server suite --maxWorkers=2 →
 ### Decisions
 
 D-#1627 (BL-3 build details).
+
+## BL-4 — MCP book tools (Path B MCP) + single-use upload links
+
+**Commits:** the `[BL-4]` commit after BL-3 — see `git log --oneline`.
+
+### Built
+
+- `book-lifecycle/mcp/bookTools.ts` — the eleven tools of §15.1 (`list_books`, `get_book_version`, `start_book_edit`,
+  `edit_chapter`, `put_chapter`, `submit_book_version`, `add_feedback_items`, `list_round_scans`, `get_scan_page`,
+  `propose_decision`, `request_upload_url`) and the instructions block, registered from `registerWorkspaceTools` with the
+  existing non-generic helper (+ a raw-content variant for the scan image). Each tool re-checks its own
+  `book_lifecycle:*` action; the token user is rebuilt from the User row on every request.
+- The tools exist only when the book plane is open (always on the server): a W-5-only setup keeps exactly its ten
+  tools and its instructions, so `aiWorkspaceW5` is unchanged and green.
+- `services/uploadUrl.ts` + `POST /files/book-lc/upload/:token` — hashed, single-use, 10-minute, size-bound (±1 %)
+  links; no session on the POST (the token is the credential), the user re-read and must hold `manage`; audited.
+- `services/scanPages.ts` — a scan page as a JPEG ≤ 2,000 px (`pdftoppm`), 300 pages per user per day.
+- `names.ts` `activeAuthOf` (the caller rebuilt from the User row, for session-less doors).
+- Help guide `book-claude-edit` (draft, no pictures).
+
+### Verified
+
+```
+new suites --runInBand: bookMcpTools 6 · bookUploadUrl 4 → 10 passed
+touched --runInBand: aiWorkspaceW5, dataAssistantMcp, firewall, helpGuides, permissionCatalogueGates, all bookLc*, expectedErrorRegistry, graphqlDocuments → 24 suites, 274 passed
+verify_shared_vocab → RESULT: PASS · verify_help_guides → ALL CHECKS PASSED · shared build 0 · shared tsc 0 · server tsc (4 GB) 0 · app tsc 0
+expo export --platform web → EXPO_EXIT 0
+full server suite --maxWorkers=2 →
+  Test Suites: 498 passed, 498 total
+  Tests:       7815 passed, 7815 total
+  Time:        446.475 s
+```
+
+### tsc memory (`npx tsc --noEmit --extendedDiagnostics`, server, 4 GB heap)
+
+| | Files | Types | Instantiations | Memory used | Check time |
+|---|---|---|---|---|---|
+| before BL-4 (BL-3 tree) | 2,845 | 2,171,158 | 9,205,148 | 3,874,593K | 90.15 s |
+| after BL-4 | 2,850 | 2,175,970 | 9,222,118 | 3,891,513K | 90.09 s |
+
+BL-4 adds about 17 MB. **Flag for the lead:** the server was already at ~3.87 GB of CI's 4 GB heap before this slice —
+little margin is left for any feature, not caused by the book tools (the non-generic registration kept them small).
+
+### Not done / notes
+
+- No app screen in BL-4 (the connector is the existing W-5 one). The help guide explains both MCP and the bundle.
+
+### Decisions
+
+D-#1629 (BL-4 build details).

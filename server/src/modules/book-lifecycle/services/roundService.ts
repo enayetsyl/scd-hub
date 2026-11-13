@@ -462,6 +462,20 @@ export async function proposeTranscription(
   assertStatus(r, "sent_on_paper");
   if (!r.scanFileIds.length) throw new BookLcError("NO_SCAN", "এই পর্যালোচনার কোনো স্ক্যান নেই");
   scanOf(r, input.scanFileId);
+  // Validate EVERY mark before anything is written: a wrong code must not leave half an answer behind.
+  if (input.itemMarks?.length || input.decisionMarks?.length) {
+    const asked = await BookFeedback.find({ _id: { $in: r.feedbackIds } }).select("code").lean();
+    for (const m of input.itemMarks ?? []) {
+      if (!asked.some((x) => x.code === m.feedbackCode)) throw new BookLcError("NOT_ASKED", `${m.feedbackCode} এই স্মারকে চাওয়া হয়নি`);
+      if (!(BOOK_ITEM_VERDICTS as readonly string[]).includes(m.verdict)) throw new BookLcError("BAD_VERDICT", "একমত / একমত নই / বদলে");
+    }
+    const decs = await BookDecision.find({ _id: { $in: r.decisionIds } }).select("code options").lean();
+    for (const m of input.decisionMarks ?? []) {
+      const d = decs.find((x) => x.code === m.decisionCode);
+      if (!d) throw new BookLcError("NOT_ASKED", `${m.decisionCode} এই স্মারকে চাওয়া হয়নি`);
+      if (m.optionKey && !d.options.some((o) => o.key === m.optionKey)) throw new BookLcError("BAD_OPTION", `${m.decisionCode}: বিকল্প ভুল`);
+    }
+  }
   const items = input.items.length ? await addReviewerPoints(auth, roundId, { scanFileId: input.scanFileId, items: input.items }, via) : [];
   if (input.itemMarks?.length) {
     const fb = await BookFeedback.find({ _id: { $in: r.feedbackIds } }).select("code").lean();

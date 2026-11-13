@@ -36,6 +36,7 @@ import { requireBookLc, canBookLc, uid, oid } from "./access";
 import { BookLcError } from "./errors";
 import { lcEvent } from "./events";
 import { allowedMimesFor, capFor, capRefusalBn, detectLcMime, storeLcFile } from "./files";
+import { normZipPath, openMediaZip, readMediaEntry } from "./zipSafe";
 import {
   FRONT_KEY,
   changedRegions,
@@ -149,16 +150,10 @@ export async function updateBook(
 // Media (§6.4)
 // ---------------------------------------------------------------------------
 
-const MEDIA_MAX_ENTRIES = 5000;
-
-/** Normalise a zip entry / reference path: forward slashes, no leading "./" or "/". */
-const normPath = (p: string): string => p.split("\\").join("/").replace(/^(\.\/)+/, "").replace(/^\/+/, "");
-
 /** Resolve every `media/…` reference: from the media zip (stored, de-duplicated by sha) or carried
- *  from the parent version. Only the entries a reference names are extracted, keyed by their FULL
- *  path (a zip may hold same-named files in different folders), and each one's declared
- *  uncompressed size is checked BEFORE it is inflated (a zip bomb is refused). Anything
- *  unresolved refuses the upload, named. SVG is not accepted (script-capable). */
+ *  from the parent version. The zip is read by the ONE hardened helper (zipSafe): only the entries a
+ *  reference names are inflated, keyed by FULL path, declared sizes checked first, SVG refused.
+ *  All pictures are read and checked BEFORE any is stored. Anything unresolved refuses the upload, named. */
 async function resolveMedia(
   auth: AuthPayload,
   book: ISchoolBook,
@@ -169,36 +164,26 @@ async function resolveMedia(
 ): Promise<IBookVersion["media"]> {
   const wanted = [...new Set(refs)];
   const out: IBookVersion["media"] = [];
-  const entries = new Map<string, JSZip.JSZipObject>();
-  if (mediaZip) {
-    if (mediaZip.length > capFor("book_lc_media", "application/zip", { zip: true })) throw new BookLcError("CAP", capRefusalBn(capFor("book_lc_media", "application/zip", { zip: true })));
-    let zip: JSZip;
-    try {
-      zip = await JSZip.loadAsync(mediaZip);
-    } catch {
-      throw new BookLcError("BAD_ZIP", "ছবির zip খোলা যায়নি");
-    }
-    const files = Object.values(zip.files).filter((f) => !f.dir);
-    if (files.length > MEDIA_MAX_ENTRIES) throw new BookLcError("BAD_ZIP", "ছবির zip-এ অনেক বেশি ফাইল");
-    for (const f of files) entries.set(normPath(f.name), f);
-  }
+  const z = mediaZip ? await openMediaZip(mediaZip) : null;
   const missing: string[] = [];
-  let inflated = 0;
+  const found: { path: string; data: Buffer; mime: string; base: string }[] = [];
   for (const path of wanted) {
-    const key = normPath(path);
-    const entry = entries.get(key) ?? entries.get(key.replace(/^media\//, ""));
-    if (entry) {
-      const base = key.split("/").pop()!;
-      const declared = (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
-      if (typeof declared !== "number") throw new BookLcError("BAD_ZIP", `ছবির zip-এর ${base} পড়া যায়নি`);
-      inflated += declared;
-      if (declared > capFor("book_lc_media", "image/png") || inflated > capFor("book_lc_media", "application/zip", { zip: true }) * 4) {
-        throw new BookLcError("CAP", `${base}: ${capRefusalBn(capFor("book_lc_media", "image/png"))}`);
-      }
-      const data = await entry.async("nodebuffer");
-      const mime = detectLcMime(base, data, allowedMimesFor("book_lc_media"));
-      if (!mime) throw new BookLcError("BAD_MEDIA", `ছবির ধরন চলবে না: ${base}`);
-      if (data.length > capFor("book_lc_media", mime)) throw new BookLcError("CAP", `${base}: ${capRefusalBn(capFor("book_lc_media", mime))}`);
+    const key = normZipPath(path);
+    const hit = z ? (z.entries.has(key) ? key : z.entries.has(key.replace(/^media\//, "")) ? key.replace(/^media\//, "") : null) : null;
+    if (hit && z) {
+      found.push({ path, ...(await readMediaEntry(z, hit)) });
+      continue;
+    }
+    if (!parentMedia.some((m) => m.path === path)) missing.push(path);
+  }
+  if (missing.length) throw new BookLcError("MEDIA_MISSING", `ছবির ফাইল পাওয়া যায়নি: ${missing.join(", ")} — ছবির zip দিন`);
+  for (const path of wanted) {
+    const f = found.find((x) => x.path === path);
+    if (!f) {
+      out.push(parentMedia.find((m) => m.path === path)!);
+      continue;
+    }
+    const { data, mime, base } = f;
       const sha = sha256(data);
       let asset = await BookMediaAsset.findOne({ bookId: book._id, sha256: sha });
       if (!asset) {
@@ -206,13 +191,7 @@ async function resolveMedia(
         asset = await BookMediaAsset.create({ bookId: book._id, sha256: sha, originalName: base, mime, bytes: data.length, storedFileId: stored._id });
       }
       out.push({ path, assetId: asset._id, sha256: sha });
-      continue;
-    }
-    const carried = parentMedia.find((m) => m.path === path);
-    if (carried) out.push(carried);
-    else missing.push(path);
   }
-  if (missing.length) throw new BookLcError("MEDIA_MISSING", `ছবির ফাইল পাওয়া যায়নি: ${missing.join(", ")} — ছবির zip দিন`);
   return out;
 }
 
