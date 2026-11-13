@@ -802,3 +802,160 @@ export const SUPPORT_CARD_FOOTER_BN = "রোগ নির্ণয় নয়
 /** The push preview of every support/safeguarding notice: no name, no detail (§9.7). */
 export const SUPPORT_PUSH_PREVIEW_BN = "শিক্ষার্থী সহায়তা: নতুন বার্তা";
 
+// ---------------------------------------------------------------------------------------------
+// The result schema `support-result/v1` (§6.11, NORMATIVE) — one schema, both modes (D-#1587)
+// ---------------------------------------------------------------------------------------------
+
+export const SUPPORT_VERDICTS = ["READY", "NEEDS_REWRITE"] as const;
+export const SUPPORT_TEXT_READS = ["POSITIVE", "CONCERN", "MIXED", "HOSTILE", "GLOWING"] as const;
+export const SUPPORT_CONFIDENCE = ["LOW", "HIGH"] as const;
+export const SUPPORT_AGREEMENT_STATUSES = ["CONSISTENT", "DIFFERENT_CONTEXT", "CONTRADICTS_REPORTS", "CONTRADICTS_RECORDS", "ONLY_SOURCE"] as const;
+export const SUPPORT_AUTHOR_SKEW = ["NONE", "MORE_NEGATIVE_THAN_OTHERS", "MORE_POSITIVE_THAN_OTHERS", "TOO_FEW"] as const;
+export const SUPPORT_FLAG_FIELDS = ["situation", "settingNote", "behaviour", "tried", "result", "exception", "whatWorked", "goodThing"] as const;
+export const SUPPORT_RESULT_SCHEMA_NAME = "support-result/v1";
+/** Per-text limits inside a result (V-12). A profile sentence is ≤ 300; a card do ≤ 90 (rule 13). */
+export const SUPPORT_RESULT_LIMITS = { sentence: 300, quote: 300, ask: 200, why: 200, suggestion: 600, note: 300, summary: 600, sectionItems: 12, flags: 8 } as const;
+
+/** A tiny JSON-schema subset (object / array / string / integer / boolean / null / enum / pattern /
+ *  maxLength / maxItems / required / additionalProperties:false) — enough for support-result/v1. */
+export type MiniSchema =
+  | { type: "object"; properties: Record<string, MiniSchema>; required?: readonly string[]; additionalProperties?: false }
+  | { type: "array"; items: MiniSchema; maxItems?: number }
+  | { type: "string"; maxLength?: number; enum?: readonly string[]; pattern?: string; const?: string }
+  | { type: "integer"; minimum?: number; maximum?: number }
+  | { type: "boolean" }
+  | { anyOf: readonly MiniSchema[] }
+  | { type: "null" };
+
+const str = (maxLength: number, extra: Partial<{ enum: readonly string[]; pattern: string }> = {}): MiniSchema => ({ type: "string", maxLength, ...extra });
+const en = (values: readonly string[]): MiniSchema => ({ type: "string", enum: values });
+const nul = (s: MiniSchema): MiniSchema => ({ anyOf: [s, { type: "null" }] });
+const arr = (items: MiniSchema, maxItems = 50): MiniSchema => ({ type: "array", items, maxItems });
+const obj = (properties: Record<string, MiniSchema>, required: readonly string[] = Object.keys(properties)): MiniSchema => ({ type: "object", properties, required, additionalProperties: false });
+const L = SUPPORT_RESULT_LIMITS;
+const REPORT_CODE = "^R-\\d{3}$";
+const CHILD_CODE = "^C-\\d{3}$";
+const STRATEGY_CODE = "^(S-\\d{2,3}|NEW)$";
+const ITEM_CODE = "^I-\\d{2,3}$";
+const REF = "^n\\d{1,3}$";
+
+const FLAG_SCHEMA = obj({
+  id: str(10),
+  category: en(SUPPORT_CATEGORIES),
+  severity: en(SUPPORT_SEVERITIES),
+  field: en(SUPPORT_FLAG_FIELDS),
+  quote: str(L.quote),
+  whyBn: str(L.why),
+  askBn: str(L.ask),
+  suggestionBn: str(L.suggestion),
+});
+const CHECK_SCHEMA = obj({
+  verdict: en(SUPPORT_VERDICTS),
+  flags: arr(FLAG_SCHEMA, 200),
+  toneCheck: obj({ teacherTone: en(SUPPORT_TONES), textReads: en(SUPPORT_TEXT_READS) }),
+  strategyCandidate: obj({ present: { type: "boolean" }, titleBn: str(90), starterKey: nul(en(SUPPORT_STARTER_KEYS as readonly string[])), punitive: { type: "boolean" } }),
+  safeguarding: obj({ present: { type: "boolean" }, signs: arr(en(SAFEGUARDING_SIGNS), 9), confidence: en(SUPPORT_CONFIDENCE), quote: str(L.quote) }),
+});
+const COMPARE_SCHEMA = obj({
+  agreement: arr(obj({ claim: str(200), status: en(SUPPORT_AGREEMENT_STATUSES), otherReportIds: arr(str(5, { pattern: REPORT_CODE }), 30), recordFacts: arr(str(40), 10), noteBn: str(L.note) }), 10),
+  authorSkew: obj({ status: en(SUPPORT_AUTHOR_SKEW), noteBn: str(L.note) }),
+  sectionHints: arr(en(SUPPORT_SECTIONS), 8),
+  skillHints: arr(en(SUPPORT_SKILLS), 10),
+  functionHint: obj({ tag: nul(en(SUPPORT_FUNCTIONS)), reportIds: arr(str(5, { pattern: REPORT_CODE }), 30), noteBn: str(L.note) }),
+  strategyMatches: arr(obj({ strategyId: str(5, { pattern: STRATEGY_CODE }), starterKey: nul(en(SUPPORT_STARTER_KEYS as readonly string[])), outcome: en(["WORKED", "PARTLY", "DID_NOT_WORK"]) }), 10),
+  echoOfProfile: { type: "boolean" },
+  safeguardingPattern: obj({ present: { type: "boolean" }, signs: arr(en(SAFEGUARDING_SIGNS), 9), reportIds: arr(str(5, { pattern: REPORT_CODE }), 30), noteBn: str(L.note) }),
+  principalSummaryBn: str(L.summary),
+});
+export const SUPPORT_ITEM_SCHEMA = obj(
+  {
+    ref: str(4, { pattern: REF }),
+    textBn: str(L.sentence),
+    evidence: arr(str(5, { pattern: REPORT_CODE }), 40),
+    counterEvidence: arr(str(5, { pattern: REPORT_CODE }), 40),
+    claimedLevel: en(SUPPORT_LEVELS),
+    strategyId: nul(str(5, { pattern: STRATEGY_CODE })),
+    kind: nul(en(SUPPORT_STRATEGY_KINDS)),
+    insteadOfItem: nul(str(4, { pattern: REF })),
+    needTag: nul(en(SUPPORT_NEEDS)),
+    functionTag: nul(en(SUPPORT_FUNCTIONS)),
+    skillKey: nul(en(SUPPORT_SKILLS)),
+    settings: arr(str(40), 10),
+    actionable: nul(obj({ verbFirst: { type: "boolean" }, observable: { type: "boolean" }, specific: { type: "boolean" }, doable: { type: "boolean" } })),
+    replacesItemId: nul(str(5, { pattern: ITEM_CODE })),
+    baselineBn: nul(str(200)),
+    expectedBn: nul(str(200)),
+  },
+  ["ref", "textBn", "evidence", "counterEvidence", "claimedLevel", "settings"],
+);
+const DRAFT_SCHEMA = obj({
+  sections: obj(Object.fromEntries(SUPPORT_SECTIONS.map((s) => [s, arr(SUPPORT_ITEM_SCHEMA, 200)])), []),
+  card: obj({ doItems: arr(str(4, { pattern: REF }), 50), avoidItems: arr(str(4, { pattern: REF }), 50), strengthItems: arr(str(4, { pattern: REF }), 50), goalItem: nul(str(4, { pattern: REF })) }),
+  changeNoteBn: str(L.note),
+});
+export const SUPPORT_REPORT_RESULT_SCHEMA = obj({ report: str(5, { pattern: REPORT_CODE }), check: CHECK_SCHEMA, compare: nul(COMPARE_SCHEMA) }, ["report", "check"]);
+export const SUPPORT_CHILD_RESULT_SCHEMA = obj({ child: str(5, { pattern: CHILD_CODE }), profileDraft: nul(DRAFT_SCHEMA) });
+export const SUPPORT_RESULT_SCHEMA = obj({
+  schema: { type: "string", const: SUPPORT_RESULT_SCHEMA_NAME },
+  batch: str(6, { pattern: "^B-\\d{4}$" }),
+  nonce: str(20),
+  methodVersion: str(6, { pattern: "^v\\d+$" }),
+  complete: { type: "boolean" },
+  reports: arr(SUPPORT_REPORT_RESULT_SCHEMA, 400),
+  children: arr(SUPPORT_CHILD_RESULT_SCHEMA, 200),
+  selfCheck: obj({
+    reportsDone: { type: "integer", minimum: 0 },
+    childrenDone: { type: "integer", minimum: 0 },
+    everySentenceCited: { type: "boolean" },
+    noNamesOrCodesInSentences: { type: "boolean" },
+    noNewFacts: { type: "boolean" },
+    safeguardingMarked: { type: "boolean" },
+  }),
+});
+
+/** Check a value against a MiniSchema. Returns null, or the first problem: { path, kind }. */
+export function checkMiniSchema(value: unknown, schema: MiniSchema, path = "$"): { path: string; kind: "UNKNOWN_FIELD" | "BAD_VALUE" | "TOO_BIG" } | null {
+  if ("anyOf" in schema) {
+    for (const s of schema.anyOf) if (!checkMiniSchema(value, s, path)) return null;
+    return { path, kind: "BAD_VALUE" };
+  }
+  switch (schema.type) {
+    case "null":
+      return value === null ? null : { path, kind: "BAD_VALUE" };
+    case "boolean":
+      return typeof value === "boolean" ? null : { path, kind: "BAD_VALUE" };
+    case "integer":
+      if (typeof value !== "number" || !Number.isInteger(value)) return { path, kind: "BAD_VALUE" };
+      if (schema.minimum != null && value < schema.minimum) return { path, kind: "BAD_VALUE" };
+      if (schema.maximum != null && value > schema.maximum) return { path, kind: "BAD_VALUE" };
+      return null;
+    case "string":
+      if (typeof value !== "string") return { path, kind: "BAD_VALUE" };
+      if (schema.const != null && value !== schema.const) return { path, kind: "BAD_VALUE" };
+      if (schema.enum && !schema.enum.includes(value)) return { path, kind: "BAD_VALUE" };
+      if (schema.pattern && !new RegExp(schema.pattern).test(value)) return { path, kind: "BAD_VALUE" };
+      if (schema.maxLength != null && [...value].length > schema.maxLength) return { path, kind: "TOO_BIG" };
+      return null;
+    case "array": {
+      if (!Array.isArray(value)) return { path, kind: "BAD_VALUE" };
+      if (schema.maxItems != null && value.length > schema.maxItems) return { path, kind: "TOO_BIG" };
+      for (let i = 0; i < value.length; i++) {
+        const e = checkMiniSchema(value[i], schema.items, `${path}[${i}]`);
+        if (e) return e;
+      }
+      return null;
+    }
+    case "object": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return { path, kind: "BAD_VALUE" };
+      const v = value as Record<string, unknown>;
+      for (const k of Object.keys(v)) if (!(k in schema.properties)) return { path: `${path}.${k}`, kind: "UNKNOWN_FIELD" };
+      for (const k of schema.required ?? []) if (!(k in v)) return { path: `${path}.${k}`, kind: "BAD_VALUE" };
+      for (const [k, s] of Object.entries(schema.properties)) {
+        if (!(k in v)) continue;
+        const e = checkMiniSchema(v[k], s, `${path}.${k}`);
+        if (e) return e;
+      }
+      return null;
+    }
+  }
+}

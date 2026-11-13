@@ -96,11 +96,7 @@ const OPEN_FIELDS: Record<string, string> = {
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
-const DECLARED_AHEAD: Record<string, string> = {
-  // Catalogued at CSP-1 with the rest of the feature (D-#1548); its batch / pack / result
-  // resolvers arrive in CSP-2 (docs/prd-child-support-profile.md §12). Leaves this list then.
-  "support_profile:process": "CSP-2 — batches, the analysis pack, result upload",
-};
+const DECLARED_AHEAD: Record<string, string> = {};
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):
  *  target-protection guards (whose login is touched), recipient routing splits, the book
