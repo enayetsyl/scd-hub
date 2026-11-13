@@ -55,6 +55,7 @@ import type {
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
+  WinterTaskStackParamList,
   ExamPapersStackParamList,
   StorybooksStackParamList,
   ActivityStackParamList,
@@ -186,6 +187,8 @@ import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
 import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
 import VivaResultsScreen from "../screens/viva/VivaResultsScreen";
 import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
+import WinterBookletsScreen from "../screens/winterTask/WinterBookletsScreen";
+import WinterBookletScreen from "../screens/winterTask/WinterBookletScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
@@ -1987,6 +1990,18 @@ function ClassBooksNavigator(): React.ReactElement {
   );
 }
 
+// D-#1620: winter-task booklet review — the list, then one booklet page by page.
+const WinterTaskStack = createNativeStackNavigator<WinterTaskStackParamList>();
+function WinterTaskNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <WinterTaskStack.Navigator screenOptions={stackOptions}>
+      <WinterTaskStack.Screen name="WinterBooklets" component={WinterBookletsScreen} options={{ title: STR.wtTitle }} />
+      <WinterTaskStack.Screen name="WinterBooklet" component={WinterBookletScreen} options={{ title: STR.wtTitle }} />
+    </WinterTaskStack.Navigator>
+  );
+}
+
 // SB-1 (D-#980): the storybook shelf — one stack for staff (StorybooksTab) and guardians
 // (GuardianStoriesTab). StoryShelf is first: the initial route takes no params.
 const StorybooksStack = createNativeStackNavigator<StorybooksStackParamList>();
@@ -2274,6 +2289,8 @@ export function AppTabs(): React.ReactElement {
   const guardianFeatures = useGuardianFeatures();
   // D-#870: class books — staff by action; guardians get their own tab (GuardianBooksTab).
   const canClassBooks = any("class_books:view", "class_books:manage");
+  // D-#1620: winter-task booklet review — a named reviewer, and the Principal.
+  const canWinterTask = any("winter_task:review", "winter_task:manage");
   // D-#1030–#1033: exam paper bank — every staff member may be given a paper to review
   // (exam_papers:review is SELF), so the stack mounts for any of its actions.
   const canExamPapers = any("exam_papers:review", "exam_papers:view", "exam_papers:manage", "exam_papers:view_reference", "exam_papers:manage_reference");
@@ -2297,7 +2314,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canWinterTask || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2366,6 +2383,7 @@ export function AppTabs(): React.ReactElement {
         {canLibrary ? <Drawer.Screen name="StorybooksTab" component={StorybooksNavigator} /> : null}
         {canActivity ? <Drawer.Screen name="ActivityTab" component={ActivityNavigator} /> : null}
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
+        {canWinterTask ? <Drawer.Screen name="WinterTaskTab" component={WinterTaskNavigator} /> : null}
         {canExamPapers ? <Drawer.Screen name="ExamPapersTab" component={ExamPapersNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canViva ? <Drawer.Screen name="VivaTab" component={VivaNavigator} /> : null}

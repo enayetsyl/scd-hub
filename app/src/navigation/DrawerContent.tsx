@@ -246,6 +246,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
   // D-#870: class books (staff read every class's; the Office uploads).
   { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
+  // D-#1620: winter-holiday booklet review (a named reviewer + the Principal).
+  { type: "item", route: "WinterTaskTab", labelKey: "wtNav", icon: "❄️", perms: ["winter_task:review", "winter_task:manage"] },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   // Pop-up notices (D-#852): the sender's list for Office / Principal; আমার বার্তা for every
   // staff login (the pop-ups they received, to read again).
