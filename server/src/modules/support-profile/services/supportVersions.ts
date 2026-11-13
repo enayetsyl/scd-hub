@@ -18,14 +18,14 @@ import { randomBytes } from "node:crypto";
 import {
   SUPPORT_SECTIONS,
   SUPPORT_SECTION_MIN_LEVEL,
+  SUPPORT_SKILLS,
+  SUPPORT_STRATEGY_KINDS,
   SUPPORT_THRESHOLDS,
-  bannedProfileWordIn,
-  blockedTermIn,
   callerHasPermission,
+  goodThingCounts,
   evidenceLevel,
   insideWindow,
   levelRank,
-  safeguardingTermIn,
   sideOfSection,
   type Permission,
   type SupportSection,
@@ -39,7 +39,9 @@ import { SupportProfileVersion, type ISupportProfileVersion, type SupportItem } 
 import { SupportReport } from "../models/SupportReport";
 import { SupportReview } from "../models/SupportReview";
 import { SupportProfileRefusal } from "./errors";
-import { supportCaller, holdsViewAll, type SupportCtx } from "./supportAccess";
+import { supportCaller, holdsViewAll, isSwitchedOn, type SupportCtx } from "./supportAccess";
+import { functionTagKept, reportUsableOnSide, viaGoodThingOf } from "./supportEvidenceRules";
+import { textProblem as validatorTextProblem } from "./supportResultValidator";
 import { notifyUser } from "./supportNotify";
 import { currentSupportReaders } from "./supportScope";
 
@@ -62,15 +64,17 @@ async function recompute(profileId: Types.ObjectId, section: SupportSection, it:
   const side = sideOfSection(section);
   const ids = [...it.evidence, ...it.counterEvidence].map(String);
   const reps = await SupportReport.find({ _id: { $in: ids.map(oid) }, profileId, status: { $in: statuses } })
-    .select("authorId occurredOn periodNo context subject source result")
+    .select("authorId occurredOn periodNo context subject source result tone goodThing gotOrAvoided")
     .lean();
   const ok = (id: Types.ObjectId) => reps.find((r) => String(r._id) === String(id) && (!side || insideWindow(side, r.occurredOn, todayKey)));
-  const evidence = it.evidence.filter((e) => ok(e));
+  const gt = (id: Types.ObjectId) => goodThingCounts(ok(id)!.goodThing);
+  // E-2: on the positive side a CONCERN report counts only through a concrete good thing (as the validator does).
+  const evidence = it.evidence.filter((e) => ok(e) && reportUsableOnSide(side, ok(e)!.tone, gt(e)));
   const counter = it.counterEvidence.filter((e) => ok(e));
   if (!evidence.length) return null;
   const ev = (id: Types.ObjectId) => {
     const r = ok(id)!;
-    return { id: String(r._id), authorId: String(r.authorId), occurredOn: r.occurredOn, slot: r.periodNo != null ? `P${r.periodNo}` : (r.context ?? "OTHER"), setting: r.subject || r.context || "OTHER", source: r.source, result: r.result };
+    return { id: String(r._id), authorId: String(r.authorId), occurredOn: r.occurredOn, slot: r.periodNo != null ? `P${r.periodNo}` : (r.context ?? "OTHER"), setting: r.subject || r.context || "OTHER", source: r.source, result: r.result, viaGoodThing: viaGoodThingOf(side, r.tone, goodThingCounts(r.goodThing)) };
   };
   const s = evidenceLevel({ side: side ?? "POSITIVE", evidence: evidence.map(ev), counter: counter.map(ev), isStrategy: section === "works", todayKey });
   if (section !== "goals") {
@@ -78,8 +82,11 @@ async function recompute(profileId: Types.ObjectId, section: SupportSection, it:
     if (!s.level || (min && levelRank(s.level) < levelRank(min))) return null;
     if (section === "works" && !evidence.some((e) => ["WORKED", "PARTLY"].includes(ok(e)!.result ?? ""))) return null;
   }
+  // E-12: a possible reason survives only with ≥ 3 observations from ≥ 2 teachers that share it.
+  const functionTag = functionTagKept(it.functionTag, evidence.map((e) => ({ ...ev(e), gotOrAvoided: ok(e)!.gotOrAvoided ?? [] })));
   return {
     ...it,
+    functionTag,
     evidence,
     provisionalEvidence: [],
     counterEvidence: counter,
@@ -108,50 +115,83 @@ export function buildCard(sections: Record<SupportSection, SupportItem[]>, propo
   const doIds = [...established.sort(order), ...leads.sort(order)].slice(0, SUPPORT_THRESHOLDS.cardDo).map((i) => i.itemId);
   const avoidIds = proposed.avoidItemIds
     .map((id) => byId.get(id))
-    .filter((i) => !!i && i.section === "avoid" && !!i.insteadItemId && byId.has(i.insteadItemId) && levelRank(i.level) >= levelRank("ESTABLISHED") && !i.mixed)
+    .filter((i) => !!i && i.section === "avoid" && !!i.insteadItemId && byId.get(i.insteadItemId)?.section === "works" && levelRank(i.level) >= levelRank("ESTABLISHED") && !i.mixed)
     .slice(0, SUPPORT_THRESHOLDS.cardAvoid)
     .map((i) => i!.itemId);
-  const strengthIds = proposed.strengthItemIds.filter((id) => byId.get(id)?.section === "strengths").slice(0, SUPPORT_THRESHOLDS.cardStrengths);
+  const strengthIds = proposed.strengthItemIds.filter((id) => byId.get(id)?.section === "strengths" && levelRank(byId.get(id)!.level) >= levelRank("EMERGING")).slice(0, SUPPORT_THRESHOLDS.cardStrengths);
   const goalId = proposed.goalItemId && byId.get(proposed.goalItemId)?.section === "goals" ? proposed.goalItemId : null;
   return { doItemIds: doIds, avoidItemIds: avoidIds, strengthItemIds: strengthIds, goalItemId: goalId };
 }
 
+type SectionsMap = Record<SupportSection, SupportItem[]>;
+const emptySections = (): SectionsMap => Object.fromEntries(SUPPORT_SECTIONS.map((s) => [s, [] as SupportItem[]])) as unknown as SectionsMap;
+
+/**
+ * Rewrite a DRAFT's sections atomically: load, change, write back only if the document is still at the
+ * version we read (a lost-update guard); retry on a clash. `fn` returns the new sections and how many
+ * items it dropped. Returns false when the draft is gone or no longer a DRAFT.
+ */
+async function mutateDraft(versionId: Types.ObjectId, fn: (sections: SectionsMap, profileId: Types.ObjectId) => Promise<{ sections: SectionsMap; dropped: number }>): Promise<boolean> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const v = await SupportProfileVersion.findById(versionId).lean();
+    if (!v || v.status !== "DRAFT") return false;
+    const base = emptySections();
+    for (const s of SUPPORT_SECTIONS) base[s] = (v.sections?.[s] ?? []).map(plainItem);
+    const out = await fn(base, v.profileId);
+    const res = await SupportProfileVersion.updateOne(
+      { _id: versionId, status: "DRAFT", __v: (v as unknown as { __v: number }).__v },
+      { $set: { sections: out.sections, droppedItems: (v.droppedItems ?? 0) + out.dropped }, $inc: { __v: 1 } },
+    );
+    if (res.modifiedCount === 1) return true;
+  }
+  throw new SupportProfileRefusal("খসড়াটি একই সময়ে বদলেছে — আবার চেষ্টা করুন।");
+}
+
 /** Rule 16 — keep DRAFT versions in step with a decision on a report they cite. */
 export async function reconcileDrafts(reportId: Types.ObjectId, event: "APPROVED" | "REMOVED"): Promise<number> {
-  const drafts = await SupportProfileVersion.find({ status: "DRAFT", $or: [...SUPPORT_SECTIONS.flatMap((s) => [{ [`sections.${s}.provisionalEvidence`]: reportId }, { [`sections.${s}.evidence`]: reportId }])] });
+  const lists = ["provisionalEvidence", "evidence", "counterEvidence"];
+  const drafts = await SupportProfileVersion.find({ status: "DRAFT", $or: SUPPORT_SECTIONS.flatMap((s) => lists.map((l) => ({ [`sections.${s}.${l}`]: reportId }))) })
+    .select("_id")
+    .lean();
   const today = dhakaDayKey(new Date());
-  let dropped = 0;
-  for (const v of drafts) {
-    for (const s of SUPPORT_SECTIONS) {
-      const next: SupportItem[] = [];
-      for (const raw of v.sections[s] ?? []) {
-        const it = plainItem(raw);
-        const cites = (l: Types.ObjectId[]) => l.some((x) => String(x) === String(reportId));
-        if (!cites(it.provisionalEvidence) && !cites(it.evidence) && !cites(it.counterEvidence)) {
-          next.push(it);
-          continue;
+  const cites = (l: Types.ObjectId[]) => l.some((x) => String(x) === String(reportId));
+  const without = (l: Types.ObjectId[]) => l.filter((x) => String(x) !== String(reportId));
+  let total = 0;
+  for (const d of drafts) {
+    let last = 0;
+    await mutateDraft(d._id, async (sections, profileId) => {
+      let dropped = 0; // per draft and per attempt
+      const next = emptySections();
+      for (const s of SUPPORT_SECTIONS) {
+        for (const it of sections[s]) {
+          if (!cites(it.provisionalEvidence) && !cites(it.evidence) && !cites(it.counterEvidence)) {
+            next[s].push(it);
+            continue;
+          }
+          if (event === "APPROVED") {
+            // Only a provisional citation becomes firm; a counter citation stays a counter citation.
+            if (cites(it.provisionalEvidence)) {
+              it.provisionalEvidence = without(it.provisionalEvidence);
+              if (!cites(it.evidence)) it.evidence.push(reportId);
+            }
+            next[s].push(it);
+            continue;
+          }
+          it.provisionalEvidence = without(it.provisionalEvidence);
+          it.evidence = without(it.evidence);
+          it.counterEvidence = without(it.counterEvidence);
+          // Recompute with what is left (approved firm + still-provisional count as the draft's view).
+          const keep = it.evidence.length + it.provisionalEvidence.length > 0 ? await recomputeDraft(profileId, s, it, today) : null;
+          if (keep) next[s].push(keep);
+          else dropped++;
         }
-        if (event === "APPROVED") {
-          it.provisionalEvidence = it.provisionalEvidence.filter((x) => String(x) !== String(reportId));
-          if (!cites(it.evidence)) it.evidence.push(reportId);
-          next.push(it);
-          continue;
-        }
-        it.provisionalEvidence = it.provisionalEvidence.filter((x) => String(x) !== String(reportId));
-        it.evidence = it.evidence.filter((x) => String(x) !== String(reportId));
-        it.counterEvidence = it.counterEvidence.filter((x) => String(x) !== String(reportId));
-        // Recompute with what is left (approved firm + still-provisional count as the draft's view).
-        const keep = it.evidence.length + it.provisionalEvidence.length > 0 ? await recomputeDraft(v.profileId, s, it, today) : null;
-        if (keep) next.push(keep);
-        else dropped++;
       }
-      v.sections[s] = next;
-    }
-    v.droppedItems += dropped;
-    v.markModified("sections");
-    await v.save();
+      last = dropped;
+      return { sections: next, dropped };
+    });
+    total += last;
   }
-  return dropped;
+  return total;
 }
 
 /** A draft item's level counting provisional citations too (rule 15); null when it fails its minimum. */
@@ -163,88 +203,134 @@ async function recomputeDraft(profileId: Types.ObjectId, section: SupportSection
   return { ...r, evidence: r.evidence.filter((e) => firm.has(String(e))), provisionalEvidence: r.evidence.filter((e) => !firm.has(String(e))) };
 }
 
+/** Principal-written text: the validator's checks WITH the roster / staff names and the code scan (rule 14). */
+async function principalTextProblem(t: string | null | undefined): Promise<string | null> {
+  if (!t || !t.trim()) return "বাক্যটি লিখুন।";
+  const { packRoster } = await import("./SupportBatchService");
+  const roster = await packRoster();
+  const rosterNames = [...roster.students, ...roster.guardians, ...roster.staff].flatMap((p) => p.names).filter((n) => [...n.trim()].length >= 3);
+  const reason = validatorTextProblem(t, { reports: new Map(), rosterNames }, null);
+  if (!reason) return null;
+  const msg: Record<string, string> = {
+    SAFEGUARDING_TERM: "সুরক্ষা-শব্দ আছে — এটি প্রোফাইলে যাবে না।",
+    LABEL_TERM: "লেবেল বা রোগের নাম আছে।",
+    FREQUENCY_WORD: "'সবসময়'-এর মতো শব্দ চলবে না।",
+    LINK_OR_HTML: "কোড বা লিংক চলবে না।",
+    TOKEN_OR_NAME: "নাম বা কোড চলবে না।",
+  };
+  return msg[reason] ?? "এই বাক্য চলবে না।";
+}
+async function assertPlainText(t: string | null | undefined, optional = false): Promise<void> {
+  if (optional && (!t || !t.trim())) return;
+  const problem = await principalTextProblem(t);
+  if (problem) throw new SupportProfileRefusal(problem);
+}
+
 export async function publishVersion(ctx: SupportCtx, versionId: string, changeNoteBn?: string | null): Promise<ISupportProfileVersion> {
   const auth = await assertApprove(ctx);
+  if (!Types.ObjectId.isValid(versionId)) throw new SupportProfileRefusal("খসড়া পাওয়া যায়নি।");
   const v = await SupportProfileVersion.findById(oid(versionId));
   if (!v || v.status !== "DRAFT") throw new SupportProfileRefusal("খসড়া পাওয়া যায়নি।");
-  const provisional = SUPPORT_SECTIONS.some((s) => (v.sections[s] ?? []).some((i) => i.provisionalEvidence.length > 0));
-  if (provisional) throw new SupportProfileRefusal("খসড়ায় এখনো অনুমোদন-বাকি রিপোর্টের উল্লেখ আছে — আগে সেগুলোর সিদ্ধান্ত দিন।");
+  const p0 = await SupportProfile.findById(v.profileId);
+  if (!p0) throw new SupportProfileRefusal("প্রোফাইল পাওয়া যায়নি।");
+  if (p0.currentVersionId) {
+    const cur = await SupportProfileVersion.findById(p0.currentVersionId).select("versionNo").lean();
+    if (cur && v.versionNo < cur.versionNo) throw new SupportProfileRefusal("এই খসড়াটি বর্তমান সংস্করণের চেয়ে পুরোনো — এটি বাতিল করুন।");
+  }
+  await assertPlainText(changeNoteBn, true);
+  // Rule 16: no citation of any kind may be unapproved. A provisional id whose report is now APPROVED is firm
+  // (an event may have been lost); a counter id must be APPROVED too.
+  const plain = emptySections();
+  for (const s of SUPPORT_SECTIONS) plain[s] = (v.sections[s] ?? []).map(plainItem);
+  const pending = [...new Set(SUPPORT_SECTIONS.flatMap((s) => plain[s].flatMap((i) => [...i.provisionalEvidence, ...i.counterEvidence]).map(String)))];
+  const approvedIds = new Set((await SupportReport.find({ _id: { $in: pending.map(oid) }, profileId: v.profileId, status: "APPROVED" }).select("_id").lean()).map((r) => String(r._id)));
+  for (const s of SUPPORT_SECTIONS)
+    for (const i of plain[s]) {
+      if (i.provisionalEvidence.some((x) => !approvedIds.has(String(x))) || i.counterEvidence.some((x) => !approvedIds.has(String(x))))
+        throw new SupportProfileRefusal("খসড়ায় এখনো অনুমোদন-বাকি রিপোর্টের উল্লেখ আছে — আগে সেগুলোর সিদ্ধান্ত দিন।");
+      const firmNow = i.provisionalEvidence.filter((x) => !i.evidence.some((e) => String(e) === String(x)));
+      i.evidence = [...i.evidence, ...firmNow];
+      i.provisionalEvidence = [];
+    }
   const today = dhakaDayKey(new Date());
   let dropped = 0;
-  const sections = {} as Record<SupportSection, SupportItem[]>;
+  const sections = emptySections();
   for (const s of SUPPORT_SECTIONS) {
-    sections[s] = [];
-    for (const raw of v.sections[s] ?? []) {
-      const r = await recompute(v.profileId, s, plainItem(raw), today);
+    for (const it of plain[s]) {
+      const r = await recompute(v.profileId, s, it, today);
       if (r) sections[s].push(r);
       else dropped++;
     }
   }
   if (sections.goals.length > SUPPORT_THRESHOLDS.maxActiveGoals) throw new SupportProfileRefusal("সর্বোচ্চ ২টি লক্ষ্য রাখা যায়।");
   if (!sections.strengths.length) throw new SupportProfileRefusal("প্রকাশের জন্য অন্তত একটি শক্তির দিক দরকার — শিক্ষকদের ভালো দিকের রিপোর্ট লিখতে বলুন।");
-  v.sections = sections;
-  v.card = buildCard(sections, { doItemIds: v.card.doItemIds, avoidItemIds: v.card.avoidItemIds, strengthItemIds: v.card.strengthItemIds, goalItemId: v.card.goalItemId });
-  v.status = "PUBLISHED";
-  v.publishedBy = oid(auth.userId);
-  v.publishedAt = new Date();
-  v.droppedItems += dropped;
-  if (changeNoteBn?.trim()) v.changeNoteBn = changeNoteBn.trim().slice(0, 300);
-  v.markModified("sections");
-  await v.save();
-  const p = await SupportProfile.findById(v.profileId);
-  if (p) {
-    p.currentVersionId = v._id;
-    const concern = ["triggers", "feelings", "avoid"].some((s) => sections[s as SupportSection].length > 0) || sections.goals.length > 0;
-    const [y, m, d] = today.split("-").map(Number);
-    p.nextReviewDueKey = new Date(Date.UTC(y, m - 1, d + (concern ? 90 : 365))).toISOString().slice(0, 10);
-    p.lastReviewedAt = new Date();
-    await p.save();
-    // §9.7: current teachers are told; the notice names no child (the name shows in the app).
-    for (const r of await currentSupportReaders(String(p.studentId))) await notifyUser(r.userId, "একটি সহায়তা প্রোফাইল হালনাগাদ হয়েছে — ক্লাসের আগে দেখে নিন", `support-published:${v._id}`);
+  const card = buildCard(sections, { doItemIds: v.card.doItemIds, avoidItemIds: v.card.avoidItemIds, strengthItemIds: v.card.strengthItemIds, goalItemId: v.card.goalItemId });
+  const now = new Date();
+  const note = changeNoteBn?.trim() ? changeNoteBn.trim().slice(0, 300) : null;
+  // Claim the draft atomically: a second publish (or a concurrent edit) finds nothing to claim.
+  const claimed = await SupportProfileVersion.findOneAndUpdate(
+    { _id: v._id, status: "DRAFT", __v: (v as unknown as { __v: number }).__v },
+    { $set: { sections, card, status: "PUBLISHED", publishedBy: oid(auth.userId), publishedAt: now, droppedItems: v.droppedItems + dropped, ...(note ? { changeNoteBn: note } : {}) }, $inc: { __v: 1 } },
+    { new: true },
+  );
+  if (!claimed) throw new SupportProfileRefusal("খসড়াটি এইমাত্র বদলেছে বা প্রকাশ হয়েছে — আবার দেখুন।");
+  const concern = ["triggers", "feelings", "avoid"].some((s) => sections[s as SupportSection].length > 0) || sections.goals.length > 0;
+  const [y, m, d] = today.split("-").map(Number);
+  const switched = await SupportProfile.findOneAndUpdate(
+    { _id: v.profileId, currentVersionId: p0.currentVersionId ?? null },
+    { $set: { currentVersionId: v._id, nextReviewDueKey: new Date(Date.UTC(y, m - 1, d + (concern ? 90 : 365))).toISOString().slice(0, 10), lastReviewedAt: now } },
+    { new: true },
+  );
+  if (!switched) {
+    // Another publish moved the profile first — put this draft back so nothing is half-done.
+    await SupportProfileVersion.updateOne({ _id: v._id, status: "PUBLISHED" }, { $set: { status: "DRAFT", publishedBy: null, publishedAt: null } });
+    throw new SupportProfileRefusal("প্রোফাইল এইমাত্র আরেকটি সংস্করণে বদলেছে — আবার দেখুন।");
+  }
+  // §9.7: current teachers are told — only when the feature is on and the profile is open; the notice names no child.
+  if (switched.status === "OPEN" && (await isSwitchedOn())) {
+    for (const r of await currentSupportReaders(String(switched.studentId))) await notifyUser(r.userId, "একটি সহায়তা প্রোফাইল হালনাগাদ হয়েছে — ক্লাসের আগে দেখে নিন", `support-published:${v._id}`);
   }
   const perLevel: Record<string, number> = {};
   for (const s of SUPPORT_SECTIONS) for (const i of sections[s]) perLevel[i.level ?? "NONE"] = (perLevel[i.level ?? "NONE"] ?? 0) + 1;
-  await SupportReview.create({ profileId: v.profileId, kind: "VERSION_PUBLISH", versionId: v._id, decision: "PUBLISHED", reasonBn: v.changeNoteBn, by: oid(auth.userId), at: new Date() });
+  await SupportReview.create({ profileId: v.profileId, kind: "VERSION_PUBLISH", versionId: v._id, decision: "PUBLISHED", reasonBn: claimed.changeNoteBn, by: oid(auth.userId), at: now });
   await writeAudit({ eventKind: "SUPPORT_VERSION_PUBLISHED", actorId: auth.userId, targetId: String(v._id), targetKind: "SupportProfileVersion", meta: { versionNo: v.versionNo, perLevel, droppedItems: dropped } });
-  return v;
+  return claimed;
 }
 
 export async function discardVersion(ctx: SupportCtx, versionId: string): Promise<ISupportProfileVersion> {
   const auth = await assertApprove(ctx);
-  const v = await SupportProfileVersion.findById(oid(versionId));
-  if (!v || v.status !== "DRAFT") throw new SupportProfileRefusal("খসড়া পাওয়া যায়নি।");
-  v.status = "DISCARDED";
-  await v.save();
+  if (!Types.ObjectId.isValid(versionId)) throw new SupportProfileRefusal("খসড়া পাওয়া যায়নি।");
+  const v = await SupportProfileVersion.findOneAndUpdate({ _id: oid(versionId), status: "DRAFT" }, { $set: { status: "DISCARDED" } }, { new: true });
+  if (!v) throw new SupportProfileRefusal("খসড়া পাওয়া যায়নি।");
   await SupportReview.create({ profileId: v.profileId, kind: "VERSION_DISCARD", versionId: v._id, decision: "DISCARDED", by: oid(auth.userId), at: new Date() });
   await writeAudit({ eventKind: "SUPPORT_VERSION_DISCARDED", actorId: auth.userId, targetId: String(v._id), targetKind: "SupportProfileVersion", meta: { versionNo: v.versionNo } });
   return v;
 }
 
-const textProblem = (t: string): string | null =>
-  !t.trim() ? "বাক্যটি লিখুন।" : safeguardingTermIn(t) ? "সুরক্ষা-শব্দ আছে — এটি প্রোফাইলে যাবে না।" : blockedTermIn(t) ? "লেবেল বা রোগের নাম আছে।" : bannedProfileWordIn(t) ? "'সবসময়'-এর মতো শব্দ চলবে না।" : /\[[^\]]*\]|https?:\/\//.test(t) ? "কোড বা লিংক চলবে না।" : null;
-
 /** Edit a DRAFT item's wording (its evidence stays) or delete it. A PUBLISHED version is never edited. */
 export async function editDraftItem(ctx: SupportCtx, versionId: string, itemId: string, textBn: string | null): Promise<ISupportProfileVersion> {
   await assertApprove(ctx);
-  const v = await SupportProfileVersion.findById(oid(versionId));
-  if (!v) throw new SupportProfileRefusal("সংস্করণ পাওয়া যায়নি।");
-  if (v.status !== "DRAFT") throw new SupportProfileRefusal("প্রকাশিত সংস্করণ বদলানো যায় না — নতুন সংস্করণ করুন।");
-  for (const s of SUPPORT_SECTIONS) {
-    const list = (v.sections[s] ?? []).map(plainItem);
-    const idx = list.findIndex((i) => i.itemId === itemId);
-    if (idx < 0) continue;
-    if (textBn == null) list.splice(idx, 1);
-    else {
-      const problem = textProblem(textBn);
-      if (problem) throw new SupportProfileRefusal(problem);
-      list[idx] = { ...list[idx], textBn: textBn.trim().slice(0, 300), sourceKind: "PRINCIPAL" };
+  if (!Types.ObjectId.isValid(versionId)) throw new SupportProfileRefusal("সংস্করণ পাওয়া যায়নি।");
+  const v0 = await SupportProfileVersion.findById(oid(versionId)).select("status").lean();
+  if (!v0) throw new SupportProfileRefusal("সংস্করণ পাওয়া যায়নি।");
+  if (v0.status !== "DRAFT") throw new SupportProfileRefusal("প্রকাশিত সংস্করণ বদলানো যায় না — নতুন সংস্করণ করুন।");
+  if (textBn != null) await assertPlainText(textBn);
+  let found = false;
+  const ok = await mutateDraft(oid(versionId), async (sections) => {
+    found = false;
+    for (const s of SUPPORT_SECTIONS) {
+      const idx = sections[s].findIndex((i) => i.itemId === itemId);
+      if (idx < 0) continue;
+      found = true;
+      if (textBn == null) sections[s].splice(idx, 1);
+      else sections[s][idx] = { ...sections[s][idx], textBn: textBn.trim().slice(0, 300), sourceKind: "PRINCIPAL" };
+      break;
     }
-    v.sections[s] = list;
-    v.markModified("sections");
-    await v.save();
-    return v;
-  }
-  throw new SupportProfileRefusal("বাক্যটি পাওয়া যায়নি।");
+    return { sections, dropped: 0 };
+  });
+  if (!ok) throw new SupportProfileRefusal("প্রকাশিত সংস্করণ বদলানো যায় না — নতুন সংস্করণ করুন।");
+  if (!found) throw new SupportProfileRefusal("বাক্যটি পাওয়া যায়নি।");
+  return (await SupportProfileVersion.findById(oid(versionId)))!;
 }
 
 export interface HandItemInput {
@@ -268,8 +354,11 @@ export async function handVersion(ctx: SupportCtx, studentId: string, items: Han
   const refToId = new Map<number, string>();
   for (const [n, h] of items.entries()) {
     if (!(SUPPORT_SECTIONS as readonly string[]).includes(h.section)) throw new SupportProfileRefusal("অজানা অংশ।");
-    const problem = textProblem(h.textBn);
-    if (problem) throw new SupportProfileRefusal(problem);
+    await assertPlainText(h.textBn);
+    await assertPlainText(h.baselineBn, true);
+    await assertPlainText(h.expectedBn, true);
+    if (h.kind && !(SUPPORT_STRATEGY_KINDS as readonly string[]).includes(h.kind)) throw new SupportProfileRefusal("অজানা ধরন।");
+    if (h.skillKey && !(SUPPORT_SKILLS as readonly string[]).includes(h.skillKey)) throw new SupportProfileRefusal("অজানা দক্ষতা।");
     if (!h.reportIds.length) throw new SupportProfileRefusal("প্রতিটি বাক্যের জন্য অন্তত একটি অনুমোদিত রিপোর্ট বাছুন।");
     const itemId = `it_${randomBytes(5).toString("hex")}`;
     const draft: SupportItem = {
@@ -350,6 +439,20 @@ export function diffVersions(a: ISupportProfileVersion, b: ISupportProfileVersio
   return { added, removed, changed };
 }
 
+/** The diff of two versions of one child — PUBLISHED versions and the one open DRAFT only; audited as HISTORY. */
+export async function versionDiff(ctx: SupportCtx, studentId: string, fromId: string, toId: string): Promise<VersionDiff> {
+  const auth = await supportCaller(ctx);
+  if (!holdsViewAll(auth)) throw new SupportProfileRefusal("অনুমতি নেই।");
+  if (![studentId, fromId, toId].every((x) => Types.ObjectId.isValid(x))) throw new SupportProfileRefusal("ভুল আইডি।");
+  const p = await SupportProfile.findOne({ studentId: oid(studentId) }).select("_id").lean();
+  const [x, y] = await Promise.all([SupportProfileVersion.findById(oid(fromId)), SupportProfileVersion.findById(oid(toId))]);
+  if (!p || !x || !y || String(x.profileId) !== String(p._id) || String(y.profileId) !== String(p._id)) throw new SupportProfileRefusal("সংস্করণ পাওয়া যায়নি।");
+  if (![x, y].every((v) => v.status === "PUBLISHED" || v.status === "DRAFT")) throw new SupportProfileRefusal("বাতিল করা খসড়ার সঙ্গে তুলনা করা যায় না।");
+  if (x.status === "DRAFT" && y.status === "DRAFT") throw new SupportProfileRefusal("দুটি খসড়ার তুলনা করা যায় না।");
+  await writeAudit({ eventKind: "SUPPORT_PROFILE_VIEWED", actorId: auth.userId, targetId: studentId, targetKind: "Student", meta: { studentId, versionNo: null, versionNos: [x.versionNo, y.versionNo], surface: "HISTORY", via: "QUEUE", readerVia: "PRINCIPAL" } });
+  return diffVersions(x, y);
+}
+
 /** কে পড়েছেন — reads of THIS child's profile, from the audit rows (paged). */
 export async function readersPage(ctx: SupportCtx, studentId: string, args: { page?: number | null; pageSize?: number | null }) {
   const auth = await supportCaller(ctx);
@@ -371,8 +474,11 @@ export async function readersPage(ctx: SupportCtx, studentId: string, args: { pa
 }
 
 /** §11 / E-11: the Principal marks a goal's progress at a review (stored as a decision row). */
-export async function markGoalProgress(ctx: SupportCtx, studentId: string, itemId: string, progress: "NOT_YET" | "AS_EXPECTED" | "MORE"): Promise<boolean> {
+export async function markGoalProgress(ctx: SupportCtx, studentId: string, itemId: string, progress: string): Promise<boolean> {
   const auth = await assertApprove(ctx);
+  // §8.1: goals sit under `manage` (LOCKED) — the Principal holds it; nobody else does.
+  if (!callerHasPermission(auth, "support_profile:manage" as Permission)) throw new SupportProfileRefusal("লক্ষ্য নিয়ে কাজ করার অনুমতি নেই।");
+  if (!["NOT_YET", "AS_EXPECTED", "MORE"].includes(progress)) throw new SupportProfileRefusal("অজানা অগ্রগতি।");
   const p = await SupportProfile.findOne({ studentId: oid(studentId) });
   if (!p?.currentVersionId) throw new SupportProfileRefusal("প্রকাশিত প্রোফাইল নেই।");
   const v = await SupportProfileVersion.findById(p.currentVersionId).lean();

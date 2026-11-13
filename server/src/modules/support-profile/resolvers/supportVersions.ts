@@ -1,18 +1,13 @@
 /**
  * Profile versions and history (docs/prd-child-support-profile.md §6.6, §9.5; CSP-4).
- *   publishSupportVersion / discardSupportVersion / editSupportDraftItem / createHandSupportVersion /
- *   markSupportGoalProgress                                   support_profile:approve (LOCKED)
+ *   publishSupportVersion / discardSupportVersion / editSupportDraftItem / createHandSupportVersion  support_profile:approve (LOCKED)
+ *   markSupportGoalProgress                                   support_profile:manage (LOCKED; goals, §8.1)
  *   supportVersionsPage / supportVersionDiff / supportReadersPage   support_profile:view_all (LOCKED)
  */
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
-import { Types } from "mongoose";
 import { SUPPORT_SECTIONS } from "@scd/shared";
 import type { ISupportProfileVersion } from "../models/SupportProfileVersion";
-import { SupportProfileVersion } from "../models/SupportProfileVersion";
-import { SupportProfile } from "../models/SupportProfile";
-import { SupportProfileRefusal } from "../services/errors";
-import { holdsViewAll, supportCaller } from "../services/supportAccess";
 import {
   diffVersions,
   discardVersion,
@@ -21,6 +16,7 @@ import {
   markGoalProgress,
   publishVersion,
   readersPage,
+  versionDiff,
   versionsPage,
   type HandItemInput,
 } from "../services/supportVersions";
@@ -103,9 +99,9 @@ builder.mutationField("createHandSupportVersion", (t) =>
 builder.mutationField("markSupportGoalProgress", (t) =>
   t.boolean({
     description: "এখনো নয় · প্রত্যাশামতো · প্রত্যাশার চেয়ে বেশি — against the goal's own baseline (§11).",
-    authScopes: { hasPermission: "support_profile:approve" },
+    authScopes: { hasPermission: "support_profile:manage" },
     args: { studentId: t.arg.string({ required: true }), itemId: t.arg.string({ required: true }), progress: t.arg.string({ required: true }) },
-    resolve: (_r, a, ctx) => markGoalProgress(ctx, a.studentId, a.itemId, a.progress === "MORE" ? "MORE" : a.progress === "AS_EXPECTED" ? "AS_EXPECTED" : "NOT_YET"),
+    resolve: (_r, a, ctx) => markGoalProgress(ctx, a.studentId, a.itemId, a.progress),
   }),
 );
 
@@ -123,14 +119,7 @@ builder.queryField("supportVersionDiff", (t) =>
     type: DiffRef,
     authScopes: { hasPermission: "support_profile:view_all" },
     args: { studentId: t.arg.string({ required: true }), fromVersionId: t.arg.string({ required: true }), toVersionId: t.arg.string({ required: true }) },
-    resolve: async (_r, a, ctx) => {
-      const auth = await supportCaller(ctx);
-      if (!holdsViewAll(auth)) throw new SupportProfileRefusal("অনুমতি নেই।");
-      const p = await SupportProfile.findOne({ studentId: new Types.ObjectId(a.studentId) }).select("_id").lean();
-      const [x, y] = await Promise.all([SupportProfileVersion.findById(a.fromVersionId), SupportProfileVersion.findById(a.toVersionId)]);
-      if (!p || !x || !y || String(x.profileId) !== String(p._id) || String(y.profileId) !== String(p._id)) throw new SupportProfileRefusal("সংস্করণ পাওয়া যায়নি।");
-      return diffVersions(x, y);
-    },
+    resolve: (_r, a, ctx) => versionDiff(ctx, a.studentId, a.fromVersionId, a.toVersionId),
   }),
 );
 builder.queryField("supportReadersPage", (t) =>
