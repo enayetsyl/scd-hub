@@ -303,3 +303,35 @@ full server suite --maxWorkers=2, run 2 →
 ### Decisions
 
 D-#1622 (BL-5 build details).
+
+## BL-6 — switch-on pack
+
+**Commits:** the `[BL-6]` commit (docs only).
+
+### Built
+
+- STATUS: the owner's switch-on checklist (method approval, BL-0 backup, pilot import, reviewer name, teacher
+  template, first packet, `book_edit` caps and switch, guide pictures).
+
+### Verified
+
+```
+verify_help_guides → coverage (report-only): 322 of 482 catalogue actions have a guide ALL CHECKS PASSED
+verify_shared_vocab → RESULT: PASS — all checks green
+(docs only: no code changed, so no typecheck/test/export rerun)
+```
+
+### Not done
+
+- **Guide pictures.** The seven `book-*` guides are drafts without screenshots. Taking them needs one local walk of the
+  app with a book plane and invented books (one browser, everything stopped after) — not possible honestly from this
+  cloud session without a running app against data; left for the lead. The help verifier passes with drafts.
+
+## Merging this branch
+
+- `origin/dev` moved on after BL-1 was pushed (CSP-2 and later, now `23f20b41`). A trial merge (throwaway worktree,
+  nothing committed) conflicts only in `CHANGELOG.md`, `STATUS.md` (append-only: keep both sides) and
+  `server/src/__tests__/permissionCatalogueGates.test.ts` — `DECLARED_AHEAD`: dev emptied it (CSP-2 gated
+  `support_profile:process`) and BL-5 removed `book_lifecycle:ai_edit`, so the merged value is `{}`.
+- Decision numbers D-#1620–#1622 are past the reserved D-#1590–#1619; dev ended at D-#1588 at the trial merge.
+- Re-run the full gate after the merge (the AI caps total in `aiWorkspaceW1` assumes dev added no new capped feature).
