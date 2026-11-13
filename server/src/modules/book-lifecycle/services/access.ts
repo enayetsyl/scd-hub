@@ -8,6 +8,7 @@ import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AuthPayload } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { isBookDbReady } from "../../../bookDb";
+import { BookLcError } from "./errors";
 
 export type BookLcAction = "view" | "manage" | "finalize" | "release" | "ai_edit" | "teacher_view" | "report";
 
@@ -35,6 +36,6 @@ export function uid(auth: AuthPayload): Types.ObjectId {
 
 export function oid(id: string | Types.ObjectId, what = "id"): Types.ObjectId {
   if (id instanceof Types.ObjectId) return id;
-  if (!Types.ObjectId.isValid(id)) throw new Error(`ভুল ${what}`);
+  if (!Types.ObjectId.isValid(id)) throw new BookLcError("BAD_ID", `ভুল ${what}`);
   return new Types.ObjectId(id);
 }

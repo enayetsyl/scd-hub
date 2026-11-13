@@ -18,12 +18,14 @@ async function safe(fn: () => Promise<unknown>): Promise<void> {
 }
 
 /** A teacher / print report arrived → `manage` holders, one per book per Dhaka day. */
-export async function notifyFeedbackFiled(book: ISchoolBook, item: IBookFeedback): Promise<void> {
+export async function notifyFeedbackFiled(book: ISchoolBook, item: IBookFeedback, filedBy?: string): Promise<void> {
   if (item.source !== "teacher" && item.source !== "print_error") return;
   const day = dhakaDayKey(new Date());
   await safe(async () => {
     for (const userId of await holderIdsOf("book_lifecycle:manage")) {
       if (item.reporterId && item.reporterId.toString() === userId) continue;
+      // The person who filed it (e.g. the Principal logging a print error) is not told of her own item.
+      if (filedBy && filedBy === userId) continue;
       await emit({
         recipientUserId: userId,
         kind: "BOOK_FEEDBACK_FILED",

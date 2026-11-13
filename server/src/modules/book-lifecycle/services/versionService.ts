@@ -12,8 +12,10 @@
  */
 import { Types } from "mongoose";
 import JSZip from "jszip";
+import { diffLines } from "@scd/shared";
 import {
   BOOK_CODE_RE,
+  BOOK_OPEN_ROUND_STATUSES,
   BOOK_EDITIONS,
   ROSTER_CLASS_LEVELS,
   ROUTINE_SUBJECTS,
@@ -34,7 +36,7 @@ import { BookMemoRound } from "../models/BookMemoRound";
 import { requireBookLc, canBookLc, uid, oid } from "./access";
 import { BookLcError } from "./errors";
 import { lcEvent } from "./events";
-import { capFor, capRefusalBn, mimeFromName, storeLcFile } from "./files";
+import { allowedMimesFor, capFor, capRefusalBn, detectLcMime, storeLcFile } from "./files";
 import {
   FRONT_KEY,
   changedRegions,
@@ -145,10 +147,16 @@ export async function updateBook(
 // Media (§6.4)
 // ---------------------------------------------------------------------------
 
-const MEDIA_MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", svg: "image/svg+xml" };
+const MEDIA_MAX_ENTRIES = 5000;
+
+/** Normalise a zip entry / reference path: forward slashes, no leading "./" or "/". */
+const normPath = (p: string): string => p.split("\\").join("/").replace(/^(\.\/)+/, "").replace(/^\/+/, "");
 
 /** Resolve every `media/…` reference: from the media zip (stored, de-duplicated by sha) or carried
- *  from the parent version. Anything unresolved refuses the upload, named. */
+ *  from the parent version. Only the entries a reference names are extracted, keyed by their FULL
+ *  path (a zip may hold same-named files in different folders), and each one's declared
+ *  uncompressed size is checked BEFORE it is inflated (a zip bomb is refused). Anything
+ *  unresolved refuses the upload, named. SVG is not accepted (script-capable). */
 async function resolveMedia(
   auth: AuthPayload,
   book: ISchoolBook,
@@ -159,7 +167,7 @@ async function resolveMedia(
 ): Promise<IBookVersion["media"]> {
   const wanted = [...new Set(refs)];
   const out: IBookVersion["media"] = [];
-  const zipFiles = new Map<string, Buffer>();
+  const entries = new Map<string, JSZip.JSZipObject>();
   if (mediaZip) {
     if (mediaZip.length > capFor("book_lc_media", "application/zip", { zip: true })) throw new BookLcError("CAP", capRefusalBn(capFor("book_lc_media", "application/zip", { zip: true })));
     let zip: JSZip;
@@ -168,25 +176,31 @@ async function resolveMedia(
     } catch {
       throw new BookLcError("BAD_ZIP", "ছবির zip খোলা যায়নি");
     }
-    for (const f of Object.values(zip.files)) {
-      if (f.dir) continue;
-      const base = f.name.split("/").pop() ?? f.name;
-      zipFiles.set(base, await f.async("nodebuffer"));
-    }
+    const files = Object.values(zip.files).filter((f) => !f.dir);
+    if (files.length > MEDIA_MAX_ENTRIES) throw new BookLcError("BAD_ZIP", "ছবির zip-এ অনেক বেশি ফাইল");
+    for (const f of files) entries.set(normPath(f.name), f);
   }
   const missing: string[] = [];
+  let inflated = 0;
   for (const path of wanted) {
-    const base = path.split("/").pop()!;
-    const data = zipFiles.get(base);
-    if (data) {
-      const ext = base.toLowerCase().split(".").pop() ?? "";
-      const mime = MEDIA_MIME[ext];
+    const key = normPath(path);
+    const entry = entries.get(key) ?? entries.get(key.replace(/^media\//, ""));
+    if (entry) {
+      const base = key.split("/").pop()!;
+      const declared = (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
+      if (typeof declared !== "number") throw new BookLcError("BAD_ZIP", `ছবির zip-এর ${base} পড়া যায়নি`);
+      inflated += declared;
+      if (declared > capFor("book_lc_media", "image/png") || inflated > capFor("book_lc_media", "application/zip", { zip: true }) * 4) {
+        throw new BookLcError("CAP", `${base}: ${capRefusalBn(capFor("book_lc_media", "image/png"))}`);
+      }
+      const data = await entry.async("nodebuffer");
+      const mime = detectLcMime(base, data, allowedMimesFor("book_lc_media"));
       if (!mime) throw new BookLcError("BAD_MEDIA", `ছবির ধরন চলবে না: ${base}`);
       if (data.length > capFor("book_lc_media", mime)) throw new BookLcError("CAP", `${base}: ${capRefusalBn(capFor("book_lc_media", mime))}`);
       const sha = sha256(data);
       let asset = await BookMediaAsset.findOne({ bookId: book._id, sha256: sha });
       if (!asset) {
-        const stored = await storeLcFile({ kind: "book_lc_media", name: base, mime, data, bookCode: book.code, version: versionLabel, role: "media", uploadedBy: auth.userId });
+        const stored = await storeLcFile({ kind: "book_lc_media", name: base, data, bookCode: book.code, version: versionLabel, role: "media", uploadedBy: auth.userId });
         asset = await BookMediaAsset.create({ bookId: book._id, sha256: sha, originalName: base, mime, bytes: data.length, storedFileId: stored._id });
       }
       out.push({ path, assetId: asset._id, sha256: sha });
@@ -267,11 +281,13 @@ async function createVersionCore(i: CreateVersionInput): Promise<IBookVersion> {
   return version;
 }
 
-/** Items cited by the new version's change list become `applied` (§5.6), reporters told. */
+/** Items cited by the new version's change list become `applied` (§5.6) — ONLY `accepted` ones:
+ *  an item still with the reviewer stays so until she rules (a `with_reviewer` item is never
+ *  applied by being cited). Reporters are told. */
 async function markCitedApplied(book: ISchoolBook, version: IBookVersion, actor: AuthPayload): Promise<void> {
   const codes = [...new Set(version.changes.flatMap((c) => c.refs).filter((r) => r.startsWith("F-")))];
   if (!codes.length) return;
-  const items = await BookFeedback.find({ bookId: book._id, code: { $in: codes }, status: { $in: ["accepted", "with_reviewer", "open"] } });
+  const items = await BookFeedback.find({ bookId: book._id, code: { $in: codes }, status: "accepted" });
   for (const it of items) {
     it.status = "applied";
     it.appliedInVersionId = version._id;
@@ -324,7 +340,7 @@ export async function importBook(auth: AuthPayload, input: ImportBookInput): Pro
       actor: auth,
     });
     await SchoolBook.updateOne({ _id: book._id }, { $set: { maxChapterNo: split.maxChapterNo } });
-    const mdFile = await storeLcFile({ kind: "book_lc_master", name: `${book.code}_${vlabel(version)}.md`, mime: "text/markdown", data: Buffer.from(await storedMaster(version)), bookCode: book.code, version: vlabel(version), role: "master_md", uploadedBy: auth.userId });
+    const mdFile = await storeLcFile({ kind: "book_lc_master", name: `${book.code}_${vlabel(version)}.md`, data: Buffer.from(await storedMaster(version)), bookCode: book.code, version: vlabel(version), role: "master_md", uploadedBy: auth.userId });
     await BookVersion.updateOne({ _id: version._id }, { $push: { files: { role: "master_md", format: "md", storedFileId: mdFile._id, fromMasterHash: version.masterHash, uploadedBy: uid(auth), at: new Date() } } });
     return { book: await loadBook(book._id), version: await loadVersion(version._id) };
   } catch (e) {
@@ -341,22 +357,25 @@ export async function importBook(auth: AuthPayload, input: ImportBookInput): Pro
 export async function uploadVersionFile(
   auth: AuthPayload,
   versionId: string,
-  input: { role: "master_docx" | "master_pdf" | "edition"; edition?: BookEdition | null; name: string; data: Buffer; mime?: string },
+  input: { role: "master_docx" | "master_pdf" | "edition"; edition?: BookEdition | null; name: string; data: Buffer; /** ignored — the server derives the type */ mime?: string },
 ): Promise<IBookVersion> {
   requireBookLc(auth, "manage");
+  const early = capFor("book_lc_master", detectLcMime(input.name, input.data, allowedMimesFor("book_lc_master")) ?? "text/plain");
+  if (input.data.length > early) throw new BookLcError("CAP", capRefusalBn(early));
   const v = await loadVersion(versionId);
   const book = await loadBook(v.bookId);
   if (v.status === "final" || v.status === "print_released") throw new BookLcError("FROZEN", "চূড়ান্ত সংস্করণে আর ফাইল যোগ করা যায় না — ছাপার ফাইল ছাপা অংশে তুলুন");
-  const mime = input.mime ?? mimeFromName(input.name);
-  const format = mime === "application/pdf" ? "pdf" : mime.includes("wordprocessingml") ? "docx" : mime === "text/markdown" || input.name.endsWith(".md") ? "md" : null;
-  if (!format) throw new BookLcError("BAD_TYPE", "শুধু PDF, DOCX বা MD ফাইল");
+  // The type is the server's: extension + magic bytes; the client's Content-Type is never used.
+  const mime = detectLcMime(input.name, input.data, allowedMimesFor("book_lc_master"));
+  if (!mime) throw new BookLcError("BAD_TYPE", "শুধু PDF, DOCX বা MD ফাইল (ফাইলের ভেতরের লেখা নামের সাথে মিলতে হবে)");
+  const format = mime === "application/pdf" ? "pdf" : mime === "text/plain" ? "md" : "docx";
   if (input.role === "master_pdf" && format !== "pdf") throw new BookLcError("BAD_TYPE", "মাস্টার PDF হতে হবে");
   if (input.role === "master_docx" && format !== "docx") throw new BookLcError("BAD_TYPE", "মাস্টার DOCX হতে হবে");
   if (input.role === "edition") {
     if (!input.edition || !book.editions.includes(input.edition)) throw new BookLcError("BAD_EDITION", "এই বইয়ের সংস্করণের ধরন বেছে নিন");
   }
   const kind = input.role === "edition" ? "book_lc_edition" : "book_lc_master";
-  const stored = await storeLcFile({ kind, name: input.name, mime, data: input.data, bookCode: book.code, version: vlabel(v), role: input.role === "edition" ? `edition-${input.edition}` : input.role, edition: input.edition ?? undefined, uploadedBy: auth.userId });
+  const stored = await storeLcFile({ kind, name: input.name, data: input.data, bookCode: book.code, version: vlabel(v), role: input.role === "edition" ? `edition-${input.edition}` : input.role, edition: input.edition ?? undefined, uploadedBy: auth.userId });
   const file: BookVersionFile = { role: input.role, edition: input.edition ?? undefined, format, storedFileId: stored._id, fromMasterHash: v.masterHash, uploadedBy: uid(auth), at: new Date() };
   // One current file per (role, edition, format): a re-upload replaces the carried/stale one.
   const keep = v.files.filter((f) => !(f.role === file.role && (f.edition ?? null) === (file.edition ?? null) && f.format === file.format));
@@ -492,7 +511,7 @@ export interface ChangeRowInput {
 }
 
 /** Resolve a ref list against the book: F-n (not rejected/duplicate), I-n, D-n (ruled). */
-export async function resolveRefs(bookId: Types.ObjectId, refs: string[]): Promise<{ route: BookChange["route"]; sacred: boolean; unknown: string[]; dead: string[] }> {
+export async function resolveRefs(bookId: Types.ObjectId, refs: string[]): Promise<{ route: BookChange["route"]; sacred: boolean; unknown: string[]; dead: string[]; untriaged: string[] }> {
   const F = refs.filter((r) => r.startsWith("F-"));
   const I = refs.filter((r) => r.startsWith("I-"));
   const D = refs.filter((r) => r.startsWith("D-"));
@@ -512,7 +531,8 @@ export async function resolveRefs(bookId: Types.ObjectId, refs: string[]): Promi
   else if (routes.length && routes.every((r) => r === "verbal_errata")) route = "verbal_errata";
   else if (!routes.length && instr.length) route = "instruction";
   const sacred = items.some((x) => x.category === "sacred_text");
-  return { route, sacred, unknown, dead };
+  const untriaged = items.filter((x) => x.status === "open").map((x) => x.code);
+  return { route, sacred, unknown, dead, untriaged };
 }
 
 export async function setDraftChanges(auth: AuthPayload, draftId: string, rows: ChangeRowInput[]): Promise<IBookEditDraft> {
@@ -529,6 +549,7 @@ export async function setDraftChanges(auth: AuthPayload, draftId: string, rows: 
     const res = await resolveRefs(draft.bookId, refs);
     if (res.unknown.length) throw new BookLcError("VR-3", `সারি ${i + 1}: অজানা সূত্র ${res.unknown.join(", ")} (VR-3)`);
     if (res.dead.length) throw new BookLcError("VR-3", `সারি ${i + 1}: বাতিল/অমীমাংসিত সূত্র ${res.dead.join(", ")} (VR-3)`);
+    if (res.untriaged.length) throw new BookLcError("VR-3", `সারি ${i + 1}: এখনো বাছাই হয়নি এমন মতামত ${res.untriaged.join(", ")} — আগে বাছাই করুন (VR-3)`);
     changes.push({
       chapterKey: r.chapterKey,
       where: (r.where ?? "").slice(0, 200),
@@ -543,6 +564,7 @@ export async function setDraftChanges(auth: AuthPayload, draftId: string, rows: 
   }
   draft.changes = changes;
   await draft.save();
+  await lcEvent({ bookId: draft.bookId, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: `draft change rows set (${changes.length})`, refs: { draftId: draft._id } });
   return draft;
 }
 
@@ -551,6 +573,7 @@ export async function confirmDraftRekey(auth: AuthPayload, draftId: string): Pro
   const draft = await loadDraft(draftId);
   if (draft.rekey?.newChapters) draft.rekey.confirmed = true;
   await draft.save();
+  await lcEvent({ bookId: draft.bookId, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: "draft new/missing chapters confirmed", refs: { draftId: draft._id } });
   return draft;
 }
 
@@ -563,6 +586,7 @@ export async function confirmProtectedChange(auth: AuthPayload, draftId: string)
   await draft.save();
   const book = await loadBook(draft.bookId);
   await writeAudit({ eventKind: "BOOK_LC_PROTECTED_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookEditDraft", targetId: draft._id.toString(), meta: { bookCode: book.code } });
+  await lcEvent({ bookId: draft.bookId, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: "draft protected-text change confirmed", refs: { draftId: draft._id } });
   return draft;
 }
 
@@ -585,6 +609,7 @@ export async function decideDraftChapter(auth: AuthPayload, draftId: string, cha
   ch.decidedBy = uid(auth);
   ch.decidedAt = new Date();
   await draft.save();
+  await lcEvent({ bookId: draft.bookId, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: `chapter ${chapterKey} ${accept ? "accepted" : "rejected"} in draft`, refs: { draftId: draft._id } });
   return draft;
 }
 
@@ -623,6 +648,7 @@ export async function acceptDraft(auth: AuthPayload, draftId: string, input: { b
   if (!OPEN_DRAFT.includes(draft.status)) throw new BookLcError("DRAFT_CLOSED", "খসড়াটি আর খোলা নেই");
   const book = await loadBook(draft.bookId);
   await assertDraftBaseFresh(draft, book);
+  if (await BookMemoRound.exists({ bookId: book._id, versionId: draft.baseVersionId, status: { $in: BOOK_OPEN_ROUND_STATUSES } })) throw new BookLcError("ROUND_OPEN", "এই সংস্করণের পর্যালোচনা চলছে — ফেরত লিপিবদ্ধ বা প্রত্যাহারের পরে খসড়া গ্রহণ করুন");
   if (needsRekeyConfirm(draft)) throw new BookLcError("REKEY", `নতুন/হারানো অধ্যায় নিশ্চিত করুন: নতুন ${draft.rekey?.newChapters?.join(", ") || "—"}; হারানো ${draft.rekey?.missingChapters?.join(", ") || "—"}`);
   if (draft.protectedChange?.changed && !draft.protectedChange.confirmedBy) throw new BookLcError("PROTECTED", "সুরক্ষিত লেখা বদলেছে — চূড়ান্তকারী নিশ্চিত না করলে গ্রহণ করা যাবে না");
   const changed = draft.chapters.filter((c) => c.status === "edited" || c.status === "accepted" || c.status === "rejected" || c.status === "failed");
@@ -691,6 +717,61 @@ async function pushStatus(v: IBookVersion, status: BookVersionStatus, auth: Auth
 }
 export { pushStatus };
 
+const SERVER_REGION_RE = /(<!-- bl:server start[^>]*?-->)[\s\S]*?(<!-- bl:server end -->)/g;
+const squash = (t: string): string => t.replace(/\s+/g, " ").trim();
+
+/** Inserted / deleted word runs (outside server regions) between two chapter texts. */
+function changedRuns(oldText: string, newText: string): { ins: string[]; del: string[] } {
+  const strip = (t: string) => t.replace(SERVER_REGION_RE, "$1$2");
+  const ins: string[] = [];
+  const del: string[] = [];
+  for (const h of diffLines(strip(oldText), strip(newText))) {
+    let run: { op: string; text: string } | null = null;
+    const flush = () => {
+      const t = run ? squash(run.text) : "";
+      if (t) (run!.op === "ins" ? ins : del).push(t);
+      run = null;
+    };
+    for (const w of h.words) {
+      if (w.op === "eq") flush();
+      else if (run && run.op === w.op) run.text += w.text;
+      else {
+        flush();
+        run = { op: w.op, text: w.text };
+      }
+    }
+    flush();
+  }
+  return { ins, del };
+}
+
+/**
+ * Interim coverage (VR-7 arrives with BL-3, D-#1620): a direct-fix approve of an uploaded version
+ * needs every changed word run to be accounted for by a change row of that chapter — each
+ * inserted run sits inside a row's after-excerpt, each deleted run inside a row's before-excerpt — and no chapter may
+ * be added or removed. Returns the chapters that are not fully covered.
+ */
+async function directFixUncovered(v: IBookVersion, parent: IBookVersion): Promise<string[]> {
+  const [now, before] = await Promise.all([versionChapters(v), versionChapters(parent)]);
+  const old = new Map(before.map((c) => [c.key, c.text]));
+  const bad = new Set<string>();
+  for (const k of old.keys()) if (!now.some((c) => c.key === k)) bad.add(k);
+  for (const c of now) {
+    const prev = old.get(c.key);
+    if (prev === undefined) {
+      bad.add(c.key);
+      continue;
+    }
+    const { ins, del } = changedRuns(prev, c.text);
+    if (!ins.length && !del.length) continue;
+    const rows = v.changes.filter((r) => r.chapterKey === c.key);
+    const after = rows.map((r) => squash(r.afterExcerpt ?? "")).filter((x) => x.length > 0);
+    const beforeEx = rows.map((r) => squash(r.beforeExcerpt ?? "")).filter((x) => x.length > 0);
+    if (ins.some((run) => !after.some((x) => x.includes(run))) || del.some((run) => !beforeEx.some((x) => x.includes(run)))) bad.add(c.key);
+  }
+  return [...bad];
+}
+
 /**
  * Direct-fix approve (§4.3, D-#1594): draft → approved without a round. Every change must cite
  * only direct_fix / verbal_errata items (no reviewer item, no needs-review instruction, no
@@ -702,7 +783,7 @@ export async function approveDirectFix(auth: AuthPayload, versionId: string): Pr
   const book = await loadBook(v.bookId);
   if (v.status !== "draft") throw new BookLcError("BAD_STATE", "শুধু খসড়া সংস্করণ সরাসরি অনুমোদন করা যায়");
   if (!book.latestVersionId?.equals(v._id)) throw new BookLcError("NOT_LATEST", "শুধু সর্বশেষ সংস্করণ");
-  if (await BookMemoRound.exists({ versionId: v._id, status: { $in: ["draft", "packet_ready", "sent_on_paper"] } })) throw new BookLcError("ROUND_OPEN", "এই সংস্করণের পর্যালোচনা চলছে");
+  if (await BookMemoRound.exists({ versionId: v._id, status: { $in: BOOK_OPEN_ROUND_STATUSES } })) throw new BookLcError("ROUND_OPEN", "এই সংস্করণের পর্যালোচনা চলছে");
   if (!v.changes.length) throw new BookLcError("NO_CHANGES", "সরাসরি সংশোধনের তালিকা নেই");
   for (const c of v.changes) {
     if (c.sacred) throw new BookLcError("SACRED", "কুরআন/হাদিস/দোয়ার পরিবর্তন সরাসরি অনুমোদন করা যায় না (VR-12)");
@@ -714,6 +795,11 @@ export async function approveDirectFix(auth: AuthPayload, versionId: string): Pr
   if (bad.length || items.length !== codes.length) throw new BookLcError("NEEDS_REVIEW", `এগুলো সরাসরি সংশোধন নয়: ${bad.join(", ") || codes.join(", ")}`);
   if (items.some((x) => x.category === "sacred_text")) throw new BookLcError("SACRED", "কুরআন/হাদিস/দোয়ার মতামত সরাসরি সংশোধন হতে পারে না");
   const parent = v.parentVersionId ? await loadVersion(v.parentVersionId) : null;
+  if (v.source === "upload") {
+    if (!parent) throw new BookLcError("NEEDS_REVIEW", "সরাসরি অনুমোদনের ভিত্তি-সংস্করণ নেই");
+    const uncovered = await directFixUncovered(v, parent);
+    if (uncovered.length) throw new BookLcError("UNCOVERED", `এই অধ্যায়ের সব পরিবর্তন সারিতে নেই — সরাসরি অনুমোদন নয়, পর্যালোচনায় পাঠান: ${uncovered.join(", ")}`);
+  }
   const basis = parent?.approvalBasis?.kind ? { kind: "inherited" as const, roundId: parent.approvalBasis.roundId } : undefined;
   const out = await pushStatus(v, "approved", auth, "direct fix (reviewSkipped)", {
     reviewSkipped: { by: uid(auth), at: new Date() },

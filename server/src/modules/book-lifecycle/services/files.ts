@@ -8,6 +8,7 @@ import { Types } from "mongoose";
 import { BOOK_LC_LIMITS } from "@scd/shared";
 import { StoredFile, type IStoredFile, type StoredFileKind } from "../../platform/models/StoredFile";
 import { downloadFromDrive, uploadToDrive } from "../../platform/services/DriveStore";
+import { BookLcError } from "./errors";
 
 export type BookLcFileKind =
   | "book_lc_master"
@@ -45,10 +46,11 @@ export function capRefusalBn(cap: number): string {
   return `ফাইল খুব বড় — সর্বোচ্চ ${Math.round(cap / MB).toLocaleString("bn-BD")} মেগাবাইট`;
 }
 
+/** Extension → the MIME the server will store (never a client-supplied one). Markdown is stored as
+ *  `text/plain` and SVG is not accepted anywhere: nothing the server stores can render as HTML/script. */
 export const MIME_BY_EXT: Record<string, string> = {
-  md: "text/markdown",
+  md: "text/plain",
   txt: "text/plain",
-  json: "application/json",
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   zip: "application/zip",
@@ -56,7 +58,6 @@ export const MIME_BY_EXT: Record<string, string> = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   webp: "image/webp",
-  svg: "image/svg+xml",
 };
 
 export function mimeFromName(name: string, fallback = "application/octet-stream"): string {
@@ -64,10 +65,58 @@ export function mimeFromName(name: string, fallback = "application/octet-stream"
   return MIME_BY_EXT[ext] ?? fallback;
 }
 
+const DOCX = MIME_BY_EXT.docx;
+/** What each kind may hold (derived MIME). */
+const ALLOWED_BY_KIND: Record<BookLcFileKind, string[]> = {
+  book_lc_master: ["application/pdf", DOCX, "text/plain"],
+  book_lc_edition: ["application/pdf", DOCX, "text/plain"],
+  book_lc_media: ["image/png", "image/jpeg", "image/webp", "application/zip"],
+  book_lc_packet: ["application/pdf"],
+  book_lc_feedback: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
+  book_lc_print: ["application/pdf", "application/zip", DOCX, "image/png", "image/jpeg", "image/webp"],
+  book_lc_history: ["application/pdf", "image/png", "image/jpeg", DOCX, "text/plain"],
+};
+
+/** Does the content match its claimed type? Binary types by magic bytes; text must be NUL-free. */
+function magicOk(mime: string, d: Buffer): boolean {
+  const at = (off: number, sig: number[]) => sig.every((b, i) => d[off + i] === b);
+  switch (mime) {
+    case "application/pdf":
+      return d.subarray(0, 1024).includes(Buffer.from("%PDF-"));
+    case "image/png":
+      return at(0, [0x89, 0x50, 0x4e, 0x47]);
+    case "image/jpeg":
+      return at(0, [0xff, 0xd8, 0xff]);
+    case "image/webp":
+      return d.length > 12 && d.subarray(0, 4).toString("latin1") === "RIFF" && d.subarray(8, 12).toString("latin1") === "WEBP";
+    case "application/zip":
+    case DOCX:
+      return at(0, [0x50, 0x4b, 0x03, 0x04]);
+    case "text/plain":
+      return !d.subarray(0, 8192).includes(0);
+    default:
+      return false;
+  }
+}
+
+/** The MIME the server decides for `name` + `data` (extension, confirmed by magic bytes), or null
+ *  when the type is not one of `allowed`. The client's `Content-Type` is never consulted. */
+export function detectLcMime(name: string, data: Buffer, allowed: string[]): string | null {
+  const mime = mimeFromName(name, "");
+  if (!mime || !allowed.includes(mime)) return null;
+  return magicOk(mime, data) ? mime : null;
+}
+
+export function allowedMimesFor(kind: BookLcFileKind, opts: { zip?: boolean } = {}): string[] {
+  const all = ALLOWED_BY_KIND[kind];
+  return opts.zip ? all : all.filter((m) => m !== "application/zip");
+}
+
 export interface StoreLcFileInput {
   kind: BookLcFileKind;
   name: string;
-  mime: string;
+  /** Ignored for the stored type — the server derives it from the name and the bytes. */
+  mime?: string;
   data: Buffer;
   bookCode: string;
   version: string;
@@ -81,15 +130,17 @@ export interface StoreLcFileInput {
 
 /** Drive FIRST, then the StoredFile row (GP-J8: only a successful upload persists metadata). */
 export async function storeLcFile(input: StoreLcFileInput): Promise<IStoredFile> {
-  if (input.data.length < 1) throw new Error("ফাইল খালি");
+  if (input.data.length < 1) throw new BookLcError("EMPTY", "ফাইল খালি");
+  const mime = detectLcMime(input.name, input.data, input.trusted ? ["application/pdf"] : allowedMimesFor(input.kind, { zip: input.capOpts?.zip }));
+  if (!mime) throw new BookLcError("BAD_TYPE", "ফাইলের ধরন চলবে না, বা ফাইলের ভেতরের লেখা নামের সাথে মেলে না");
   if (!input.trusted) {
-    const cap = capFor(input.kind, input.mime, input.capOpts);
-    if (input.data.length > cap) throw new Error(capRefusalBn(cap));
+    const cap = capFor(input.kind, mime, input.capOpts);
+    if (input.data.length > cap) throw new BookLcError("CAP", capRefusalBn(cap));
   }
   const safeName = input.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 180);
   const driveFileId = await uploadToDrive({
     name: `${Date.now()}_${safeName}`,
-    mime: input.mime,
+    mime,
     data: input.data,
     year: "books-lc",
     subfolder: `${input.bookCode}/${input.version}/${input.role}`,
@@ -97,7 +148,7 @@ export async function storeLcFile(input: StoreLcFileInput): Promise<IStoredFile>
   });
   return StoredFile.create({
     kind: input.kind as StoredFileKind,
-    mime: input.mime,
+    mime,
     sizeBytes: input.data.length,
     originalName: safeName,
     driveFileId,
@@ -107,6 +158,6 @@ export async function storeLcFile(input: StoreLcFileInput): Promise<IStoredFile>
 
 export async function loadLcFile(id: Types.ObjectId | string): Promise<{ file: IStoredFile; data: Buffer }> {
   const file = await StoredFile.findById(id);
-  if (!file || !String(file.kind).startsWith("book_lc_")) throw new Error("ফাইল পাওয়া যায়নি");
+  if (!file || !String(file.kind).startsWith("book_lc_")) throw new BookLcError("NO_FILE", "ফাইল পাওয়া যায়নি");
   return { file, data: await downloadFromDrive(file.driveFileId) };
 }

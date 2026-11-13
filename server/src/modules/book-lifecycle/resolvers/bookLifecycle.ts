@@ -525,9 +525,10 @@ builder.queryField("bookLcDraftDiff", (t) =>
     description: "The draft's diff against its base, per chapter (S11).",
     args: { draftId: t.arg.string({ required: true }), chapterKey: t.arg.string() },
     resolve: async (_r, a, ctx) => {
-      requireBookLc(auth(ctx), "view");
+      const au = requireBookLc(auth(ctx), "view");
       assertBookPlane();
       const d = await V.loadDraft(a.draftId);
+      await recordContentRead({ bookId: d.bookId, versionId: d.baseVersionId, userId: au.userId, surface: "app", what: "draft diff" });
       const chapters = d.chapters.filter((c) => (!a.chapterKey || c.key === a.chapterKey) && c.status !== "unchanged" && c.status !== "pending");
       const texts = await chapterTextsBySha(chapters.flatMap((c) => [c.baseSha, c.newSha]).filter((x): x is string => !!x));
       return chapters.map((c) => ({

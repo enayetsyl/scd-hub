@@ -101,7 +101,7 @@ import {
 import { LibraryError } from "../modules/library/errors";
 import { storyStickerCodes, storyStickerPdf } from "../modules/library/services/StoryDeskService";
 import { registerActivityFileRoutes } from "./activityFiles";
-import { registerBookLcFileRoutes, assertBookLcFileReadAccess } from "../modules/book-lifecycle/routes/bookLcFiles";
+import { registerBookLcFileRoutes, assertBookLcFileReadAccess, recordBookLcFileRead, bookLcServeHeaders } from "../modules/book-lifecycle/routes/bookLcFiles";
 import { assertActivityFileReadAccess } from "../modules/activity-sheets/services/ActivityBankService";
 import { assertAiWorkspaceFileReadAccess, startAiProjectFileUpload } from "../modules/ai-workspace/services/FileIngestService";
 import { AiWorkspaceError } from "../modules/ai-workspace/services/AiProjectService";
@@ -1605,10 +1605,18 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
 
   try {
     const data = await downloadFromDrive(file.driveFileId);
+    let disposition = "inline";
+    if (file.kind.startsWith("book_lc_")) {
+      // Book lifecycle (§18): a content read is logged; the type is the server-derived one, never
+      // rendered as a page (nosniff) and only PDF / raster images open inline.
+      await recordBookLcFileRead(ctx, file);
+      disposition = bookLcServeHeaders(file).disposition;
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    }
     res.setHeader("Content-Type", file.mime);
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${encodeURIComponent(file.originalName)}"`,
+      `${disposition}; filename="${encodeURIComponent(file.originalName)}"`,
     );
     res.setHeader("Content-Length", data.byteLength);
     res.send(data);

@@ -91,7 +91,7 @@ export async function createFeedbackRow(
     history: [{ action: "filed", by: meta.actor, at: new Date(), note: meta.source }],
   });
   await lcEvent({ bookId: book._id, kind: "FEEDBACK_FILED", actorId: meta.actor, origin: meta.origin, summary: `${item.code} filed (${meta.source})`, refs: { feedbackId: item._id, roundId: meta.roundId, versionId } });
-  await notifyFeedbackFiled(book, item);
+  await notifyFeedbackFiled(book, item, meta.actor.toString());
   return item;
 }
 
@@ -118,7 +118,9 @@ export async function triageFeedback(auth: AuthPayload, ids: string[], action: T
   const out: IBookFeedback[] = [];
   for (const item of items) {
     const book = await loadBook(item.bookId);
-    if (item.status !== "open") throw new BookLcError("NOT_OPEN", `${item.code} আগেই বাছাই হয়েছে`);
+    // A sacred-text item her ruling accepted may still be routed verbal_errata (§9.4) — the one re-triage allowed.
+    const sacredAfterRuling = action.kind === "route" && action.route === "verbal_errata" && item.category === "sacred_text" && item.status === "accepted" && !!item.reviewerRuling?.verdict && item.reviewerRuling.verdict !== "disagree";
+    if (item.status !== "open" && !sacredAfterRuling) throw new BookLcError("NOT_OPEN", `${item.code} আগেই বাছাই হয়েছে`);
     const now = new Date();
     if (action.kind === "route") {
       if (action.route === "direct_fix" && item.category === "sacred_text") throw new BookLcError("SACRED", `${item.code}: কুরআন/হাদিস/দোয়ার মতামত সরাসরি সংশোধন হতে পারে না (VR-12)`);
@@ -159,6 +161,7 @@ export async function updateFeedbackAnchor(auth: AuthPayload, id: string, patch:
   if (patch.page !== undefined) item.anchor.page = patch.page?.slice(0, 20) || undefined;
   item.history.push({ action: "anchor", by: uid(auth), at: new Date() });
   await item.save();
+  await lcEvent({ bookId: item.bookId, kind: "FEEDBACK_TRIAGED", actorId: uid(auth), summary: `${item.code} anchor changed`, refs: { feedbackId: item._id } });
   return item;
 }
 
@@ -222,7 +225,9 @@ export async function addInstruction(auth: AuthPayload, bookId: string, input: {
   if (!text) throw new BookLcError("NO_TEXT", "নির্দেশনা লিখুন");
   if (text.length > BOOK_LC_LIMITS.instruction) throw new BookLcError("LONG", "নির্দেশনা ৪,০০০ অক্ষরের মধ্যে");
   const n = await takeCounter(book._id, "nextInstructionNo");
-  return BookInstruction.create({ bookId: book._id, code: `I-${n}`, textBn: text, needsReview: input.needsReview ?? true, createdBy: uid(auth) });
+  const ins = await BookInstruction.create({ bookId: book._id, code: `I-${n}`, textBn: text, needsReview: input.needsReview ?? true, createdBy: uid(auth) });
+  await lcEvent({ bookId: book._id, kind: "FEEDBACK_FILED", actorId: uid(auth), summary: `${ins.code} instruction added`, refs: {} });
+  return ins;
 }
 
 // ---------------------------------------------------------------------------

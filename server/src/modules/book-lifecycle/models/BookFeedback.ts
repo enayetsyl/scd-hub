@@ -149,6 +149,8 @@ export interface IBookDecision extends Document {
   recommendedKey?: string;
   status: BookDecisionStatus;
   ruling?: { optionKey?: string; textBn?: string; by: string; recordedBy: Types.ObjectId; at: Date; selfRuled: boolean; recordedFromPaper: boolean; roundId?: Types.ObjectId };
+  /** Rulings a correction replaced (never overwritten, D-#1621). */
+  rulingHistory?: unknown[];
   supersededBy?: Types.ObjectId;
   promotedToRuleSet?: { key: string; version: number };
   createdBy: Types.ObjectId;
@@ -177,6 +179,7 @@ const BookDecisionSchema = new Schema<IBookDecision>(
       recordedFromPaper: Boolean,
       roundId: Schema.Types.ObjectId,
     },
+    rulingHistory: { type: [Schema.Types.Mixed], default: [] },
     supersededBy: Schema.Types.ObjectId,
     promotedToRuleSet: { key: String, version: Number },
     createdBy: { type: Schema.Types.ObjectId, required: true },

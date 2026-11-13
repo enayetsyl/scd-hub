@@ -26,7 +26,7 @@ import { takeCounter } from "../models/SchoolBook";
 import { requireBookLc, uid, oid } from "./access";
 import { BookLcError } from "./errors";
 import { lcEvent, recordContentRead } from "./events";
-import { loadLcFile, mimeFromName, storeLcFile } from "./files";
+import { capFor, capRefusalBn, loadLcFile, mimeFromName, storeLcFile } from "./files";
 import { loadBook, loadVersion, vlabel } from "./store";
 import { freshMasterPdf, pushStatus } from "./versionService";
 import { bookMemoMarkdown, buildMemoData, changedChapterKeys } from "./memo";
@@ -65,6 +65,9 @@ export async function openRound(
   if (!reviewerName) throw new BookLcError("NO_REVIEWER", "পর্যালোচকের নাম লিখুন");
   if (reviewerName.length > 120) throw new BookLcError("LONG_NAME", "পর্যালোচকের নাম ১২০ অক্ষরের মধ্যে");
   const lastReturned = await BookMemoRound.findOne({ bookId: book._id, status: "returned" }).sort({ memoNo: -1 });
+  // D-#1619: no returned round yet → the base is the imported version (approved before the app),
+  // so Part 1 lists every change — and every direct fix — made since the import.
+  const baseVersionId = lastReturned?.versionId ?? (await importedAncestor(v))?._id;
   const feedbackIds = input.feedbackIds
     ? input.feedbackIds.map((x) => oid(x))
     : (await BookFeedback.find({ bookId: book._id, status: "with_reviewer" }).sort({ createdAt: 1 }).select("_id").lean()).map((x) => x._id);
@@ -77,7 +80,7 @@ export async function openRound(
     bookId: book._id,
     memoNo,
     versionId: v._id,
-    baseVersionId: lastReturned?.versionId,
+    baseVersionId,
     reviewerName,
     assignedBy: uid(auth),
     selfReviewed: !!input.selfReview,
@@ -90,6 +93,16 @@ export async function openRound(
   });
   await lcEvent({ bookId: book._id, kind: "ROUND_OPENED", actorId: uid(auth), summary: `memo ${memoNo} on ${vlabel(v)}`, refs: { roundId: round._id, versionId: v._id } });
   return round;
+}
+
+/** The newest ancestor of `v` whose approval was recorded by import (`approvalBasis.kind: imported`). */
+async function importedAncestor(v: IBookVersion): Promise<IBookVersion | null> {
+  let cur: IBookVersion | null = v.parentVersionId ? await BookVersion.findById(v.parentVersionId) : null;
+  for (let guard = 0; cur && guard < 500; guard++) {
+    if (cur.approvalBasis?.kind === "imported") return cur;
+    cur = cur.parentVersionId ? await BookVersion.findById(cur.parentVersionId) : null;
+  }
+  return null;
 }
 
 async function assertOfferable(bookId: Types.ObjectId, feedbackIds: Types.ObjectId[], decisionIds: Types.ObjectId[]): Promise<void> {
@@ -135,6 +148,7 @@ export async function updateRound(
     r.decisionIds = d;
   }
   await r.save();
+  await lcEvent({ bookId: r.bookId, kind: "ROUND_OPENED", actorId: uid(auth), summary: `memo ${r.memoNo} settings changed`, refs: { roundId: r._id } });
   return r;
 }
 
@@ -177,6 +191,7 @@ export async function detectPageMap(auth: AuthPayload, roundId: string): Promise
   r.packet = { scope: r.packet?.scope ?? "whole", sourcePdfFileId: fileId, sourcePdfMasterHash: v.masterHash, pageMap, pageCount, pageMapSource: source };
   r.markModified("packet");
   await r.save();
+  await lcEvent({ bookId: r.bookId, kind: "PACKET_MADE", actorId: uid(auth), summary: `memo ${r.memoNo}: chapter pages detected (${source})`, refs: { roundId: r._id, versionId: v._id } });
   return r;
 }
 
@@ -197,6 +212,7 @@ export async function setPageMap(auth: AuthPayload, roundId: string, entries: { 
   if (starts.some((s, i) => i > 0 && s < starts[i - 1])) throw new BookLcError("ORDER", "অধ্যায়ের পৃষ্ঠা বইয়ের ক্রমে বাড়তে হবে");
   r.markModified("packet");
   await r.save();
+  await lcEvent({ bookId: r.bookId, kind: "PACKET_MADE", actorId: uid(auth), summary: `memo ${r.memoNo}: chapter start pages confirmed (${entries.length})`, refs: { roundId: r._id } });
   return r;
 }
 
@@ -265,6 +281,8 @@ export async function markSentOnPaper(auth: AuthPayload, roundId: string, input:
   assertStatus(r, "packet_ready");
   const v = await loadVersion(r.versionId);
   if (v.status !== "draft") throw new BookLcError("NOT_DRAFT", "সংস্করণটি খসড়া অবস্থায় নেই");
+  const book = await loadBook(r.bookId);
+  if (!book.latestVersionId?.equals(v._id)) throw new BookLcError("NOT_LATEST", "সংস্করণটি আর সর্বশেষ নয় — প্যাকেট নতুন করে বানান");
   r.status = "sent_on_paper";
   r.sentOnPaperAt = input.sentAt ?? new Date();
   r.sentBy = uid(auth);
@@ -295,15 +313,17 @@ export async function withdrawRound(auth: AuthPayload, roundId: string, reasonBn
 
 const SCAN_MIMES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 
-export async function addRoundScan(auth: AuthPayload, roundId: string, input: { name: string; data: Buffer; mime?: string; returnedAt?: Date | null }): Promise<IBookMemoRound> {
+export async function addRoundScan(auth: AuthPayload, roundId: string, input: { name: string; data: Buffer; /** ignored — the server derives the type */ mime?: string; returnedAt?: Date | null }): Promise<IBookMemoRound> {
   requireBookLc(auth, "manage");
   const r = await loadRound(roundId);
   assertStatus(r, "sent_on_paper");
-  const mime = input.mime ?? mimeFromName(input.name);
+  const mime = mimeFromName(input.name, "");
   if (!SCAN_MIMES.has(mime)) throw new BookLcError("BAD_TYPE", "স্ক্যান PDF বা ছবি (PNG/JPEG) হতে হবে");
+  const scanCap = capFor("book_lc_feedback", mime, { photo: mime !== "application/pdf" });
+  if (input.data.length > scanCap) throw new BookLcError("CAP", capRefusalBn(scanCap));
   const book = await loadBook(r.bookId);
   const v = await loadVersion(r.versionId);
-  const f = await storeLcFile({ kind: "book_lc_feedback", name: input.name, mime, data: input.data, bookCode: book.code, version: vlabel(v), role: `scan-memo-${r.memoNo}`, uploadedBy: auth.userId });
+  const f = await storeLcFile({ kind: "book_lc_feedback", name: input.name, data: input.data, capOpts: { photo: mime !== "application/pdf" }, bookCode: book.code, version: vlabel(v), role: `scan-memo-${r.memoNo}`, uploadedBy: auth.userId });
   r.scanFileIds.push(f._id);
   if (input.returnedAt) r.returnedAt = input.returnedAt;
   r.history.push({ action: "scan", by: uid(auth), at: new Date(), note: f._id.toString() });
@@ -341,16 +361,19 @@ export async function setItemMarks(auth: AuthPayload, roundId: string, marks: It
   requireBookLc(auth, "manage");
   const r = await loadRound(roundId);
   assertStatus(r, "sent_on_paper");
+  const changes: string[] = [];
   for (const m of marks) {
     const fid = oid(m.feedbackId);
     if (!r.feedbackIds.some((x) => x.equals(fid))) throw new BookLcError("NOT_ASKED", "এই মতামত এই স্মারকে চাওয়া হয়নি");
     if (!(BOOK_ITEM_VERDICTS as readonly string[]).includes(m.verdict)) throw new BookLcError("BAD_VERDICT", "একমত / একমত নই / বদলে");
     if ((m.noteBn ?? "").length > 2000) throw new BookLcError("LONG", "নোট ২,০০০ অক্ষরের মধ্যে");
+    changes.push(`${fid}:${r.itemMarks.find((x) => x.feedbackId.equals(fid))?.verdict ?? "-"}>${m.verdict}`);
     const row = { feedbackId: fid, verdict: m.verdict, noteBn: m.noteBn?.trim() || undefined, scanFileId: scanOf(r, m.scanFileId), scanPage: m.scanPage ?? undefined, via, recordedBy: uid(auth) };
     r.itemMarks = [...r.itemMarks.filter((x) => !x.feedbackId.equals(fid)), row];
   }
   r.markModified("itemMarks");
   await r.save();
+  await lcEvent({ bookId: r.bookId, kind: "FEEDBACK_RULED", origin: via === "hand" ? "app" : "claude", actorId: uid(auth), summary: `memo ${r.memoNo}: item mark(s) ${via} [${changes.join(" ")}]`, refs: { roundId: r._id, ...(marks.length === 1 ? { feedbackId: oid(marks[0].feedbackId) } : {}) } });
   return r;
 }
 
@@ -359,6 +382,7 @@ export async function setDecisionMarks(auth: AuthPayload, roundId: string, marks
   requireBookLc(auth, "manage");
   const r = await loadRound(roundId);
   assertStatus(r, "sent_on_paper");
+  const changes: string[] = [];
   for (const m of marks) {
     const did = oid(m.decisionId);
     if (!r.decisionIds.some((x) => x.equals(did))) throw new BookLcError("NOT_ASKED", "এই সিদ্ধান্ত এই স্মারকে চাওয়া হয়নি");
@@ -366,11 +390,13 @@ export async function setDecisionMarks(auth: AuthPayload, roundId: string, marks
       const d = await BookDecision.findById(did).lean();
       if (!d?.options.some((o) => o.key === m.optionKey)) throw new BookLcError("BAD_OPTION", "বিকল্প ভুল");
     }
+    changes.push(`${did}:${r.decisionMarks.find((x) => x.decisionId.equals(did))?.optionKey ?? "-"}>${m.optionKey ?? "later"}`);
     const row = { decisionId: did, optionKey: m.optionKey ?? undefined, noteBn: m.noteBn?.trim() || undefined, scanFileId: scanOf(r, m.scanFileId), scanPage: m.scanPage ?? undefined, via, recordedBy: uid(auth) };
     r.decisionMarks = [...r.decisionMarks.filter((x) => !x.decisionId.equals(did)), row];
   }
   r.markModified("decisionMarks");
   await r.save();
+  await lcEvent({ bookId: r.bookId, kind: "DECISION_RULED", origin: via === "hand" ? "app" : "claude", actorId: uid(auth), summary: `memo ${r.memoNo}: decision mark(s) ${via} [${changes.join(" ")}]`, refs: { roundId: r._id, ...(marks.length === 1 ? { decisionId: oid(marks[0].decisionId) } : {}) } });
   return r;
 }
 
@@ -500,9 +526,10 @@ export async function uncheckedRows(r: IBookMemoRound): Promise<number> {
 
 const toBn = (n: number) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
 
-async function applyMarks(r: IBookMemoRound, auth: AuthPayload, at: Date): Promise<void> {
+async function applyMarks(r: IBookMemoRound, auth: AuthPayload, at: Date, only?: { items: Set<string>; decisions: Set<string> }): Promise<void> {
   const book = await loadBook(r.bookId);
   for (const m of r.itemMarks) {
+    if (only && !only.items.has(m.feedbackId.toString())) continue;
     const item = await BookFeedback.findById(m.feedbackId);
     if (!item) continue;
     item.reviewerRuling = { verdict: m.verdict, noteBn: m.noteBn, recordedBy: uid(auth), at, roundId: r._id, recordedFromPaper: true };
@@ -523,9 +550,15 @@ async function applyMarks(r: IBookMemoRound, auth: AuthPayload, at: Date): Promi
   }
   for (const m of r.decisionMarks) {
     if (!m.optionKey) continue;
+    if (only && !only.decisions.has(m.decisionId.toString())) continue;
+    const prev = await BookDecision.findById(m.decisionId).lean();
     await BookDecision.updateOne(
       { _id: m.decisionId },
-      { $set: { status: "ruled", roundId: r._id, ruling: { optionKey: m.optionKey, textBn: m.noteBn, by: r.reviewerName, recordedBy: uid(auth), at, selfRuled: r.selfReviewed, recordedFromPaper: true, roundId: r._id } } },
+      {
+        $set: { status: "ruled", roundId: r._id, ruling: { optionKey: m.optionKey, textBn: m.noteBn, by: r.reviewerName, recordedBy: uid(auth), at, selfRuled: r.selfReviewed, recordedFromPaper: true, roundId: r._id } },
+        // A correction never overwrites: the ruling it replaces is kept, dated.
+        ...(prev?.ruling ? { $push: { rulingHistory: { ...prev.ruling, replacedAt: at } } } : {}),
+      },
     );
     await lcEvent({ bookId: r.bookId, kind: "DECISION_RULED", actorId: uid(auth), summary: `decision ruled ${m.optionKey} (from paper, ${r.reviewerName})`, refs: { decisionId: m.decisionId, roundId: r._id } });
   }
@@ -593,12 +626,15 @@ export async function correctReturn(
   const r = await loadRound(roundId);
   if (r.status !== "returned") throw new BookLcError("ROUND_STATE", "শুধু লিপিবদ্ধ ফেরত সংশোধন করা যায়");
   const v = await loadVersion(r.versionId);
-  if (v.status !== "approved" && v.status !== "changes_requested") throw new BookLcError("FROZEN", "চূড়ান্ত হওয়ার পরে আর সংশোধন করা যায় না");
+  // PRD §10.3: only while the version is `approved` and not final.
+  if (v.status !== "approved") throw new BookLcError("FROZEN", "শুধু অনুমোদিত (এখনো চূড়ান্ত নয়) সংস্করণের ফেরত সংশোধন করা যায়");
   if (!input.noteBn?.trim()) throw new BookLcError("NO_REASON", "সংশোধনের কারণ লিখুন");
   const at = new Date();
   r.history.push({ action: "correction", by: uid(auth), at, note: input.noteBn.trim(), before: JSON.parse(JSON.stringify({ itemMarks: r.itemMarks, decisionMarks: r.decisionMarks, reviewerNoteBn: r.reviewerNoteBn ?? null })) });
+  const only = { items: new Set<string>(), decisions: new Set<string>() };
   for (const m of input.itemMarks ?? []) {
     const fid = oid(m.feedbackId);
+    only.items.add(fid.toString());
     const old = r.itemMarks.find((x) => x.feedbackId.equals(fid));
     if (!old) throw new BookLcError("NOT_ASKED", "এই মতামত এই স্মারকে চাওয়া হয়নি");
     old.verdict = m.verdict;
@@ -607,6 +643,7 @@ export async function correctReturn(
   }
   for (const m of input.decisionMarks ?? []) {
     const did = oid(m.decisionId);
+    only.decisions.add(did.toString());
     const old = r.decisionMarks.find((x) => x.decisionId.equals(did));
     if (!old) throw new BookLcError("NOT_ASKED", "এই সিদ্ধান্ত এই স্মারকে চাওয়া হয়নি");
     if (v.status === "approved" && !m.optionKey) throw new BookLcError("DECISION_LATER", "অনুমোদিত সংস্করণে সিদ্ধান্ত \"পরে\" রাখা যায় না");
@@ -618,7 +655,9 @@ export async function correctReturn(
   r.markModified("itemMarks");
   r.markModified("decisionMarks");
   await r.save();
-  await applyMarks(r, auth, at);
+  await applyMarks(r, auth, at, only);
+  const book = await loadBook(r.bookId);
+  await writeAudit({ eventKind: "BOOK_LC_FINALIZED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookMemoRound", targetId: r._id.toString(), meta: { action: "correct_return", bookCode: book.code, version: vlabel(v), memoNo: r.memoNo } });
   await lcEvent({ bookId: r.bookId, kind: "ROUND_RETURN_CORRECTED", actorId: uid(auth), summary: `memo ${r.memoNo}: recorded return corrected`, reason: input.noteBn, refs: { roundId: r._id } });
   return r;
 }

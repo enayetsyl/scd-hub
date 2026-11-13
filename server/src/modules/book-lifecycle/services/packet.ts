@@ -59,12 +59,16 @@ export function foldForMatch(s: string): string {
 /** Each chapter's first page (1-based) at or after the previous chapter's, by heading text. */
 export function detectChapterStarts(pages: string[], chapters: { key: string; title: string }[]): { chapterKey: string; title: string; startPage: number | null; confirmed: boolean }[] {
   const folded = pages.map(foldForMatch);
+  const titles = chapters.map((c) => foldForMatch(c.title)).filter(Boolean);
+  // A contents page names several chapters: it is never a chapter's start page.
+  const contents = new Set(folded.map((f, i) => (titles.filter((t) => f.includes(t)).length >= 2 ? i : -1)).filter((i) => i >= 0));
   let from = 0;
   return chapters.map((c) => {
     const t = foldForMatch(c.title);
     let hit: number | null = null;
     if (t) {
       for (let i = from; i < folded.length; i++) {
+        if (contents.has(i)) continue;
         if (folded[i].includes(t)) {
           hit = i + 1;
           from = i;

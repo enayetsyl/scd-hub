@@ -56,7 +56,7 @@ it("generates the memo byte for byte from records", async () => {
   const data = await buildMemoData(r2, new Date("2026-11-13T06:00:00Z"));
   const md = bookMemoMarkdown(data);
   if (process.env.UPDATE_FIXTURES === "1") require("fs").writeFileSync(EXPECTED, md);
-  expect(md).toBe(readFileSync(EXPECTED, "utf8"));
+  expect(md).toBe(readFileSync(EXPECTED, "utf8").split("\r\n").join("\n"));
 });
 
 it("teacher items print without the teacher's name; direct fixes are FYI in Part 1", async () => {

@@ -12,6 +12,7 @@
 import type { Request, Response, Router, RequestHandler } from "express";
 import multer from "multer";
 import { tmpdir } from "os";
+import type { Types } from "mongoose";
 import { readFile, unlink } from "fs/promises";
 import { BOOK_LC_LIMITS, type BookEdition, type BookVersionStatus } from "@scd/shared";
 import { buildContext, type AppContext } from "../../../context";
@@ -25,7 +26,9 @@ import { importBook, uploadNewVersionDraft, uploadVersionFile } from "../service
 import { addRoundScan, loadRound, roundMemoMarkdown } from "../services/roundService";
 import { loadBook, loadVersion, servedMaster, vlabel } from "../services/store";
 import { recordContentRead, lcEvent } from "../services/events";
-import { mimeFromName, storeLcFile } from "../services/files";
+import { capFor, capRefusalBn, mimeFromName, storeLcFile } from "../services/files";
+import { BookVersion } from "../models/BookVersion";
+import { BookMemoRound } from "../models/BookMemoRound";
 import { SchoolBook } from "../models/SchoolBook";
 
 const upload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.printBytes + 1, files: 2 } });
@@ -42,12 +45,16 @@ const parse = (fields: { name: string; maxCount: number }[]): RequestHandler => 
 
 type Files = Record<string, Express.Multer.File[] | undefined>;
 
-async function take(req: Request, name: string): Promise<{ data: Buffer; name: string; mime: string } | null> {
+/** The temp file, read into memory only after its size passed `capOf(name)` (the type is the
+ *  server's to decide later — the client's Content-Type is never used). */
+async function take(req: Request, name: string, capOf: (fileName: string) => number): Promise<{ data: Buffer; name: string } | null> {
   const f = (req.files as Files | undefined)?.[name]?.[0];
   if (!f) return null;
   try {
     const original = Buffer.from(f.originalname, "latin1").toString("utf8");
-    return { data: await readFile(f.path), name: original, mime: f.mimetype && f.mimetype !== "application/octet-stream" ? f.mimetype : mimeFromName(original) };
+    const cap = capOf(original);
+    if (f.size > cap) throw new BookLcError("CAP", capRefusalBn(cap));
+    return { data: await readFile(f.path), name: original };
   } finally {
     await unlink(f.path).catch(() => undefined);
   }
@@ -74,6 +81,12 @@ function ctxOf(req: Request, res: Response): AppContext {
   return ctx;
 }
 
+const masterCap = (n: string): number => capFor("book_lc_master", mimeFromName(n, "text/plain"));
+const mdCap = (): number => capFor("book_lc_master", "text/plain");
+const zipCap = (): number => capFor("book_lc_media", "application/zip", { zip: true });
+const scanCap = (n: string): number => capFor("book_lc_feedback", mimeFromName(n, ""), { photo: mimeFromName(n, "") !== "application/pdf" });
+const historyCap = (): number => capFor("book_lc_history", "application/pdf");
+
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
 export function registerBookLcFileRoutes(router: Router): void {
@@ -81,8 +94,8 @@ export function registerBookLcFileRoutes(router: Router): void {
   router.post("/book-lc/import", parse([{ name: "master", maxCount: 1 }, { name: "media", maxCount: 1 }]), async (req, res) => {
     try {
       const ctx = ctxOf(req, res);
-      const master = await take(req, "master");
-      const media = await take(req, "media");
+      const master = await take(req, "master", mdCap);
+      const media = await take(req, "media", zipCap);
       if (!master) throw new BookLcError("NO_FILE", "মাস্টার .md ফাইল দিন");
       const b = req.body ?? {};
       const { book, version } = await importBook(ctx.auth!, {
@@ -113,8 +126,8 @@ export function registerBookLcFileRoutes(router: Router): void {
   router.post("/book-lc/upload-version", parse([{ name: "master", maxCount: 1 }, { name: "media", maxCount: 1 }]), async (req, res) => {
     try {
       const ctx = ctxOf(req, res);
-      const master = await take(req, "master");
-      const media = await take(req, "media");
+      const master = await take(req, "master", mdCap);
+      const media = await take(req, "media", zipCap);
       if (!master) throw new BookLcError("NO_FILE", "মাস্টার .md ফাইল দিন");
       const draft = await uploadNewVersionDraft(ctx.auth!, str(req.body?.bookId), { masterMd: master.data, mediaZip: media?.data ?? null });
       res.json({ draftId: draft._id.toString() });
@@ -129,11 +142,11 @@ export function registerBookLcFileRoutes(router: Router): void {
   router.post("/book-lc/version-file", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
     try {
       const ctx = ctxOf(req, res);
-      const f = await take(req, "file");
+      const f = await take(req, "file", masterCap);
       if (!f) throw new BookLcError("NO_FILE", "ফাইল দিন");
       const role = str(req.body?.role) as "master_docx" | "master_pdf" | "edition";
       if (!["master_docx", "master_pdf", "edition"].includes(role)) throw new BookLcError("BAD_ROLE", "ফাইলের ধরন ভুল");
-      const v = await uploadVersionFile(ctx.auth!, str(req.body?.versionId), { role, edition: (str(req.body?.edition) || null) as BookEdition | null, name: f.name, data: f.data, mime: f.mime });
+      const v = await uploadVersionFile(ctx.auth!, str(req.body?.versionId), { role, edition: (str(req.body?.edition) || null) as BookEdition | null, name: f.name, data: f.data });
       res.json({ versionId: v._id.toString() });
     } catch (e) {
       fail(res, e);
@@ -146,10 +159,10 @@ export function registerBookLcFileRoutes(router: Router): void {
   router.post("/book-lc/round-scan", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
     try {
       const ctx = ctxOf(req, res);
-      const f = await take(req, "file");
+      const f = await take(req, "file", scanCap);
       if (!f) throw new BookLcError("NO_FILE", "স্ক্যান ফাইল দিন");
       const ret = str(req.body?.returnedAt);
-      const r = await addRoundScan(ctx.auth!, str(req.body?.roundId), { name: f.name, data: f.data, mime: f.mime, returnedAt: ret ? new Date(ret) : null });
+      const r = await addRoundScan(ctx.auth!, str(req.body?.roundId), { name: f.name, data: f.data, returnedAt: ret ? new Date(ret) : null });
       res.json({ roundId: r._id.toString(), scanFileId: r.scanFileIds[r.scanFileIds.length - 1].toString() });
     } catch (e) {
       fail(res, e);
@@ -163,10 +176,10 @@ export function registerBookLcFileRoutes(router: Router): void {
     try {
       const ctx = ctxOf(req, res);
       requireBookLc(ctx.auth, "manage");
-      const f = await take(req, "file");
+      const f = await take(req, "file", historyCap);
       if (!f) throw new BookLcError("NO_FILE", "ফাইল দিন");
       const book = await loadBook(str(req.body?.bookId));
-      const stored = await storeLcFile({ kind: "book_lc_history", name: f.name, mime: f.mime, data: f.data, bookCode: book.code, version: "history", role: "history", uploadedBy: ctx.auth!.userId });
+      const stored = await storeLcFile({ kind: "book_lc_history", name: f.name, data: f.data, bookCode: book.code, version: "history", role: "history", uploadedBy: ctx.auth!.userId });
       await SchoolBook.updateOne({ _id: book._id }, { $push: { historyFiles: { storedFileId: stored._id, label: (str(req.body?.label) || f.name).slice(0, 200) } } });
       await lcEvent({ bookId: book._id, kind: "FILE_UPLOADED", actorId: uid(ctx.auth!), summary: "history attachment added" });
       res.json({ fileId: stored._id.toString() });
@@ -187,6 +200,7 @@ export function registerBookLcFileRoutes(router: Router): void {
       const text = await servedMaster(v);
       await recordContentRead({ bookId: book._id, versionId: v._id, userId: ctx.auth!.userId, surface: "app", what: "master.md" });
       res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+      res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(`${book.code}_${vlabel(v)}.md`)}"`);
       res.send(text);
     } catch (e) {
@@ -201,7 +215,9 @@ export function registerBookLcFileRoutes(router: Router): void {
       requireBookLc(ctx.auth, "view");
       const r = await loadRound(req.params.id);
       const book = await loadBook(r.bookId);
+      await recordContentRead({ bookId: book._id, versionId: r.versionId, userId: ctx.auth!.userId, surface: "app", what: "memo.md" });
       res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+      res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(`${book.code}_memo-${r.memoNo}.md`)}"`);
       res.send(await roundMemoMarkdown(r));
     } catch (e) {
@@ -216,6 +232,31 @@ export type BookLcReadRule = (ctx: AppContext, file: IStoredFile) => Promise<boo
 const readRules: BookLcReadRule[] = [];
 export function registerBookLcReadRule(r: BookLcReadRule): void {
   if (!readRules.includes(r)) readRules.push(r);
+}
+
+/** A download of a master / edition / packet file is a content read of the version it belongs to
+ *  (§18) — once per user, version, surface and Dhaka day. Fail-soft: never blocks the download. */
+export async function recordBookLcFileRead(ctx: AppContext, file: IStoredFile): Promise<void> {
+  if (!ctx.auth || !["book_lc_master", "book_lc_edition", "book_lc_packet"].includes(file.kind)) return;
+  try {
+    let ref: { versionId: Types.ObjectId; bookId: Types.ObjectId } | null = null;
+    const v = await BookVersion.findOne({ "files.storedFileId": file._id }).select("_id bookId").lean();
+    if (v) ref = { versionId: v._id, bookId: v.bookId };
+    else {
+      const r = await BookMemoRound.findOne({ $or: [{ "packet.memoPdfFileId": file._id }, { "packet.bookPdfFileId": file._id }] }).select("versionId bookId").lean();
+      if (r) ref = { versionId: r.versionId, bookId: r.bookId };
+    }
+    if (ref) await recordContentRead({ ...ref, userId: ctx.auth.userId, surface: file.kind === "book_lc_packet" ? "packet" : "app", what: file.kind.replace("book_lc_", "") });
+  } catch (err) {
+    console.error("[BookLcEvent] file read:", err);
+  }
+}
+
+/** Types a browser may show inline; everything else a `book_lc_*` file serves as a download, and
+ *  every one is `nosniff` (the stored type is server-derived, this is the second lock). */
+const INLINE_SAFE = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
+export function bookLcServeHeaders(file: IStoredFile): { disposition: "inline" | "attachment" } {
+  return { disposition: INLINE_SAFE.has(file.mime) ? "inline" : "attachment" };
 }
 
 /** `GET /files/:id` gate for `book_lc_*` (§5.13). `view` reads every kind; `release` also reads

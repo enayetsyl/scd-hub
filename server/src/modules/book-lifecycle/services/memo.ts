@@ -67,6 +67,7 @@ const SOURCE_BN: Record<string, string> = {
   proof_read: "প্রুফ দেখা",
 };
 
+const an = (f: { anchor?: { chapterKey?: string; where?: string; quote?: string; page?: string } }) => f.anchor ?? {};
 const cell = (s: string): string => s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ").trim() || "—";
 const quote = (s: string, n = 80): string => {
   const t = s.replace(/\s+/g, " ").trim();
@@ -209,14 +210,14 @@ export async function buildMemoData(round: IBookMemoRound, now = new Date()): Pr
   }
   const edits = new Map(round.wordingEdits.map((w) => [w.code, w.textBn]));
   const fb = await BookFeedback.find({ _id: { $in: round.feedbackIds } }).sort({ createdAt: 1 }).lean();
-  const items: MemoItem[] = fb.map((f) => ({
+  const items: MemoItem[] = fb.map((f0) => { const f = { ...f0, anchor: f0.anchor ?? {} }; return {
     code: f.code,
     where: [f.anchor.chapterKey ? titleOf(f.anchor.chapterKey) : "", f.anchor.where ?? "", f.anchor.page ? `পৃ. ${toBnDigits(f.anchor.page)}` : f.anchor.chapterKey ? (pageRange(pageMap, total, f.anchor.chapterKey) ? `পৃ. ${pageRange(pageMap, total, f.anchor.chapterKey)}` : "") : ""].filter(Boolean).join(" › "),
     quote: f.anchor.quote ? quote(f.anchor.quote, 160) : "",
     textBn: edits.get(f.code) ?? f.textBn,
     edited: edits.has(f.code),
     sourceBn: SOURCE_BN[f.source] ?? f.source,
-  }));
+  }; });
   const decs = await BookDecision.find({ _id: { $in: round.decisionIds } }).sort({ code: 1 }).lean();
   const decisions: MemoDecision[] = decs.map((d) => ({ code: d.code, questionBn: edits.get(d.code) ?? d.questionBn, options: d.options, recommendedKey: d.recommendedKey }));
   const assigner = { name: (await namesOf([round.assignedBy])).get(round.assignedBy.toString()) };
