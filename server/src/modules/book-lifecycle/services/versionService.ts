@@ -12,7 +12,6 @@
  */
 import { Types } from "mongoose";
 import JSZip from "jszip";
-import { diffLines } from "@scd/shared";
 import {
   BOOK_CODE_RE,
   BOOK_OPEN_ROUND_STATUSES,
@@ -61,6 +60,7 @@ import {
   vno,
 } from "./store";
 import { checkCharacters } from "./charGuard";
+import { validateUploadedChapters } from "./uploadValidation";
 import { writeAudit } from "../../platform/services/AuditService";
 import { notifyFeedbackAnswered } from "./notify";
 import { onVersionCreatedHooks } from "./hooks";
@@ -592,7 +592,7 @@ export async function confirmProtectedChange(auth: AuthPayload, draftId: string)
   return draft;
 }
 
-export async function decideDraftChapter(auth: AuthPayload, draftId: string, chapterKey: string, accept: boolean): Promise<IBookEditDraft> {
+export async function decideDraftChapter(auth: AuthPayload, draftId: string, chapterKey: string, accept: boolean, expectedNewSha?: string | null): Promise<IBookEditDraft> {
   requireBookLc(auth, "manage");
   const draft = await loadDraft(draftId);
   if (!OPEN_DRAFT.includes(draft.status)) throw new BookLcError("DRAFT_CLOSED", "খসড়াটি আর খোলা নেই");
@@ -603,14 +603,20 @@ export async function decideDraftChapter(auth: AuthPayload, draftId: string, cha
   if (accept) {
     const blocking = ch.findings.filter((f) => f.level === "blocking");
     if (blocking.length) throw new BookLcError(blocking[0].code, `${ch.key}: ${blocking[0].messageBn} (${blocking[0].code})`);
-    const unacked = ch.unexplained.filter((u) => !u.ack);
+    const unacked = ch.unexplained.filter((u) => !u.ack?.at);
     if (unacked.length) throw new BookLcError("VR-7", `${ch.key}: ${unacked.length}টি ব্যাখ্যাহীন পরিবর্তন — চূড়ান্তকারীর "আমি দেখেছি" দরকার (VR-7)`);
     if (ch.status === "failed") throw new BookLcError("FAILED", `${ch.key}: ব্যর্থ অধ্যায় গ্রহণ করা যায় না`);
   }
-  ch.status = accept ? "accepted" : "rejected";
-  ch.decidedBy = uid(auth);
-  ch.decidedAt = new Date();
-  await draft.save();
+  // The person accepts what they SAW: if the chapter was re-edited since, the answer is refused.
+  if (expectedNewSha !== undefined && expectedNewSha !== null && (ch.newSha ?? null) !== expectedNewSha) throw new BookLcError("CHANGED", `${ch.key}: দেখানোর পরে অধ্যায়টি বদলেছে — আবার দেখে সিদ্ধান্ত নিন`);
+  // One atomic write, conditional on the chapter still being exactly what was checked above.
+  const res = await BookEditDraft.updateOne(
+    { _id: draft._id, chapters: { $elemMatch: { key: chapterKey, newSha: ch.newSha ?? null, status: ch.status } } },
+    { $set: { "chapters.$.status": accept ? "accepted" : "rejected", "chapters.$.decidedBy": uid(auth), "chapters.$.decidedAt": new Date() } },
+  );
+  if (!res.modifiedCount) throw new BookLcError("CHANGED", `${ch.key}: অধ্যায়টি এইমাত্র বদলেছে — আবার দেখুন`);
+  const fresh = await loadDraft(draft._id);
+  draft.set("chapters", fresh.chapters);
   await lcEvent({ bookId: draft.bookId, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: `chapter ${chapterKey} ${accept ? "accepted" : "rejected"} in draft`, refs: { draftId: draft._id } });
   return draft;
 }
@@ -666,6 +672,21 @@ export async function acceptDraft(auth: AuthPayload, draftId: string, input: { b
   const base = await loadVersion(draft.baseVersionId);
   const baseChapters = await versionChapters(base);
   const shaText = await (await import("./store")).chapterTextsBySha(accepted.map((c) => c.newSha).filter((s): s is string => !!s));
+  // Built-in guard (never depends on which module was imported): no accepted chapter carries a blocking
+  // finding or an unexplained change nobody has looked at (VR-7 / VR-15).
+  for (const c of accepted) {
+    const blocking = c.findings.find((f) => f.level === "blocking");
+    if (blocking) throw new BookLcError(blocking.code, `${c.key}: ${blocking.messageBn}`);
+    if (c.unexplained.some((u) => !u.ack?.at)) throw new BookLcError("VR-7", `${c.key}: ব্যাখ্যাহীন পরিবর্তন দেখা হয়নি (VR-7)`);
+  }
+  // A whole upload runs the same text rules now: VR-7 + VR-12 per accepted chapter against its change rows.
+  if (draft.source === "upload") {
+    const baseText = new Map(baseChapters.map((c) => [c.key, c.text]));
+    const check = accepted.filter((c) => c.newSha && baseText.has(c.key)).map((c) => ({ key: c.key, base: baseText.get(c.key)!, next: shaText.get(c.newSha!) ?? "" }));
+    const r = await validateUploadedChapters(draft.bookId, check, draft.changes, new Set([...base.media.map((m) => m.path), ...draft.media.map((m) => m.path)]), !!draft.protectedChange?.confirmedBy);
+    if (r.blocking.length) throw new BookLcError(r.blocking[0].code, r.blocking[0].messageBn);
+    if (r.unexplained.length) throw new BookLcError("VR-7", `${r.unexplained[0].key}: ${r.unexplained[0].count}টি পরিবর্তন কোনো সারিতে ব্যাখ্যা করা নেই (VR-7) — সারি যোগ করুন`);
+  }
   const byKey = new Map(draft.chapters.map((c) => [c.key, c]));
   const out: { key: string; title: string; text: string }[] = [];
   // Draft order is the new reading order; base chapters not in the draft keep their place.
@@ -719,58 +740,25 @@ async function pushStatus(v: IBookVersion, status: BookVersionStatus, auth: Auth
 }
 export { pushStatus };
 
-const SERVER_REGION_RE = /(<!-- bl:server start[^>]*?-->)[\s\S]*?(<!-- bl:server end -->)/g;
-const squash = (t: string): string => t.replace(/\s+/g, " ").trim();
-
-/** Inserted / deleted word runs (outside server regions) between two chapter texts. */
-function changedRuns(oldText: string, newText: string): { ins: string[]; del: string[] } {
-  const strip = (t: string) => t.replace(SERVER_REGION_RE, "$1$2");
-  const ins: string[] = [];
-  const del: string[] = [];
-  for (const h of diffLines(strip(oldText), strip(newText))) {
-    let run: { op: string; text: string } | null = null;
-    const flush = () => {
-      const t = run ? squash(run.text) : "";
-      if (t) (run!.op === "ins" ? ins : del).push(t);
-      run = null;
-    };
-    for (const w of h.words) {
-      if (w.op === "eq") flush();
-      else if (run && run.op === w.op) run.text += w.text;
-      else {
-        flush();
-        run = { op: w.op, text: w.text };
-      }
-    }
-    flush();
-  }
-  return { ins, del };
-}
-
 /**
- * Interim coverage (VR-7 arrives with BL-3, D-#1622): a direct-fix approve of an uploaded version
- * needs every changed word run to be accounted for by a change row of that chapter — each
- * inserted run sits inside a row's after-excerpt, each deleted run inside a row's before-excerpt — and no chapter may
- * be added or removed. Returns the chapters that are not fully covered.
+ * Direct-fix coverage (VR-7 + VR-12, BL-3; replaces the BL-1 interim rule, D-#1628): every changed chapter must
+ * pass the validator against its change rows, and no chapter may be added or removed. Returns the chapters that fail.
  */
 async function directFixUncovered(v: IBookVersion, parent: IBookVersion): Promise<string[]> {
   const [now, before] = await Promise.all([versionChapters(v), versionChapters(parent)]);
   const old = new Map(before.map((c) => [c.key, c.text]));
   const bad = new Set<string>();
   for (const k of old.keys()) if (!now.some((c) => c.key === k)) bad.add(k);
+  const changed: { key: string; base: string; next: string }[] = [];
   for (const c of now) {
     const prev = old.get(c.key);
-    if (prev === undefined) {
-      bad.add(c.key);
-      continue;
-    }
-    const { ins, del } = changedRuns(prev, c.text);
-    if (!ins.length && !del.length) continue;
-    const rows = v.changes.filter((r) => r.chapterKey === c.key);
-    const after = rows.map((r) => squash(r.afterExcerpt ?? "")).filter((x) => x.length > 0);
-    const beforeEx = rows.map((r) => squash(r.beforeExcerpt ?? "")).filter((x) => x.length > 0);
-    if (ins.some((run) => !after.some((x) => x.includes(run))) || del.some((run) => !beforeEx.some((x) => x.includes(run)))) bad.add(c.key);
+    if (prev === undefined) bad.add(c.key);
+    else if (prev !== c.text) changed.push({ key: c.key, base: prev, next: c.text });
   }
+  // BL-3's VR-7 / VR-12 judge every changed chapter (replaces the BL-1 interim coverage rule).
+  const r = await validateUploadedChapters(v.bookId, changed, v.changes, new Set([...parent.media.map((m) => m.path), ...v.media.map((m) => m.path)]));
+  for (const f of r.blocking) bad.add(f.messageBn.split(":")[0]);
+  for (const u of r.unexplained) bad.add(u.key);
   return [...bad];
 }
 

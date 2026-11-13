@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { BL_ACK_UNEXPLAINED, BL_SUBMIT_DRAFT } from "../../graphql/bookLifecycleEdit";
 import { BL_ACCEPT_DRAFT, BL_CONFIRM_PROTECTED, BL_CONFIRM_REKEY, BL_DECIDE_CHAPTER, BL_DRAFT, BL_DRAFT_DIFF, BL_REJECT_DRAFT, BL_SET_CHANGES } from "../../graphql/bookLifecycle";
 import { Badge, Body, Button, Card, Chip, ChipRow, Field, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -33,6 +34,8 @@ export default function BookLcDraftScreen({ navigation, route }: Props): React.R
   const [, confirmProtected] = useMutation(BL_CONFIRM_PROTECTED);
   const [{ fetching: accepting }, accept] = useMutation(BL_ACCEPT_DRAFT);
   const [, reject] = useMutation(BL_REJECT_DRAFT);
+  const [{ fetching: submitting }, submit] = useMutation(BL_SUBMIT_DRAFT);
+  const [, ackHunk] = useMutation(BL_ACK_UNEXPLAINED);
   const [msg, setMsg] = useMsg();
   const [rows, setRows] = useState<Row[]>([]);
   const [bump, setBump] = useState<"minor" | "major">("minor");
@@ -89,15 +92,22 @@ export default function BookLcDraftScreen({ navigation, route }: Props): React.R
                     </Body>
                     <Badge text={c.isNew ? BL.added : c.removed ? BL.removed : BL.changed} tone="info" />
                     <Badge text={c.status} tone={c.status === "accepted" ? "ok" : c.status === "rejected" ? "danger" : "muted"} />
+                    {c.mode ? <Badge text={c.mode === "ops" ? `${BL.modeOps} (${c.opsCount})` : BL.modeWhole} tone="muted" /> : null}
                   </View>
                   {c.findings.map((f, i) => (
                     <Notice key={i} tone={f.level === "blocking" ? "danger" : "warn"} message={`${f.code}: ${f.messageBn}`} />
                   ))}
                   {c.notApplied.length ? <Muted>{`${BL.notApplied}: ${c.notApplied.map((n) => `${n.code} (${n.textBn})`).join("; ")}`}</Muted> : null}
+                  {c.unexplained.map((u) => (
+                    <View key={u.index} style={{ marginVertical: space(1) }}>
+                      <Notice tone="warn" message={`${BL.unexplainedHunk}: «${u.beforeText.slice(0, 120)}» → «${u.afterText.slice(0, 120)}»`} />
+                      {u.acked ? <Badge text={`✓ ${BL.ackHunk}`} tone="ok" /> : finalize && open ? <Button title={BL.ackHunk} variant="ghost" onPress={() => void ackHunk({ draftId, chapterKey: c.key, index: u.index, runHash: u.runHash }).then(after)} /> : null}
+                    </View>
+                  ))}
                   {diffs.get(c.key) ? <DiffView hunks={diffs.get(c.key)!.hunks} /> : null}
                   {manage && open ? (
                     <View style={{ flexDirection: "row", gap: space(2) }}>
-                      <Button title={BL.accept} onPress={() => void decide({ draftId, chapterKey: c.key, accept: true }).then(after)} />
+                      <Button title={BL.accept} onPress={() => void decide({ draftId, chapterKey: c.key, accept: true, expectedNewSha: c.newSha }).then(after)} />
                       <Button title={BL.drop} variant="ghost" onPress={() => void decide({ draftId, chapterKey: c.key, accept: false }).then(after)} />
                     </View>
                   ) : null}
@@ -145,6 +155,19 @@ export default function BookLcDraftScreen({ navigation, route }: Props): React.R
                 </ChipRow>
                 <Field label={BL.summary} value={summary} onChangeText={setSummary} multiline autoCapitalize="sentences" />
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                  <Button
+                    title={BL.submit}
+                    variant="secondary"
+                    loading={submitting}
+                    onPress={() =>
+                      void submit({ draftId, summaryBn: summary || null, bump }).then((res) => {
+                        if (res.error) return setMsg({ tone: "danger", text: friendlyError(res.error) });
+                        const r = res.data!.submitBookLcDraft;
+                        setMsg({ tone: r.status === "ready" ? "ok" : "danger", text: `${r.status} · ${r.blocking.length} / ${r.warnings.length}` });
+                        refetch({ requestPolicy: "network-only" });
+                      })
+                    }
+                  />
                   <Button
                     title={BL.createVersion}
                     loading={accepting}

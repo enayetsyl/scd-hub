@@ -88,6 +88,8 @@ export interface IBookMemoRound extends Document {
   dueBy?: Date;
   returnedAt?: Date;
   scanFileIds: Types.ObjectId[];
+  /** BL-3: the nonce of the last return-transcription pack downloaded for this round. */
+  transcriptionNonce?: string;
   recordedBy?: Types.ObjectId;
   recordedAt?: Date;
   recordedFromPaper: boolean;
@@ -140,6 +142,7 @@ const BookMemoRoundSchema = new Schema<IBookMemoRound>(
     dueBy: Date,
     returnedAt: Date,
     scanFileIds: { type: [Schema.Types.ObjectId], default: [] },
+    transcriptionNonce: { type: String },
     recordedBy: Schema.Types.ObjectId,
     recordedAt: Date,
     recordedFromPaper: { type: Boolean, default: false },

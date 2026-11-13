@@ -282,8 +282,8 @@ describe("10 — direct-fix approve of an uploaded version needs the diff covere
     const draft = await uploadNewVersionDraft(P(), id, { masterMd: Buffer.from(edited) });
     await setDraftChanges(P(), draft._id.toString(), [{ chapterKey: "ch-001", beforeExcerpt: "1টি নৌকা", afterExcerpt: "একটি নৌকা", refs: [fix.code] }]);
     await decideDraftChapter(P(), draft._id.toString(), "ch-001", true);
-    const v = await acceptDraft(P(), draft._id.toString(), { summaryBn: "একটি সংশোধন" });
-    await expect(approveDirectFix(P(), v._id.toString())).rejects.toMatchObject({ code: "UNCOVERED" });
+    // BL-3: a whole upload runs VR-7 now, so the silent edit cannot even be accepted into a version.
+    await expect(acceptDraft(P(), draft._id.toString(), { summaryBn: "একটি সংশোধন" })).rejects.toMatchObject({ code: "VR-7" });
     // a fully covered upload is approved (the same path the other suites use)
     const { book: b2 } = await importSample(P(), { code: "C3-ENG", state: "approved" });
     const f3 = await item(P(), b2._id.toString(), "direct_fix");

@@ -14,8 +14,8 @@ interface PageMapRow { chapterKey: string; title: string; startPage: number | nu
 interface MarkRow { targetId: string; value: string | null; noteBn: string | null; scanFileId: string | null; scanPage: number | null; via: string; checkedAt: string | null; checkedByName: string | null }
 interface OptionRow { key: string; textBn: string }
 interface Finding { code: string; level: string; messageBn: string }
-interface Unexplained { index: number; beforeText: string; afterText: string; acked: boolean }
-interface DraftChapterRow { key: string; title: string; status: string; mode: string | null; isNew: boolean; removed: boolean; opsCount: number; findings: Finding[]; unexplained: Unexplained[]; notApplied: Wording[] }
+interface Unexplained { index: number; beforeText: string; afterText: string; runHash: string | null; acked: boolean }
+interface DraftChapterRow { key: string; newSha: string | null; title: string; status: string; mode: string | null; isNew: boolean; removed: boolean; opsCount: number; findings: Finding[]; unexplained: Unexplained[]; notApplied: Wording[] }
 interface Word { op: string; text: string }
 interface Hunk { aStart: number; aLines: number; bStart: number; bLines: number; words: Word[] }
 interface DiffChapter { key: string; title: string; status: string; hunks: Hunk[] }
@@ -80,11 +80,12 @@ const FindingRef = builder.objectRef<Finding>("BookLcFinding").implement({
   fields: (t) => ({ code: t.exposeString("code"), level: t.exposeString("level"), messageBn: t.exposeString("messageBn") }),
 });
 const UnexplainedRef = builder.objectRef<Unexplained>("BookLcUnexplained").implement({
-  fields: (t) => ({ index: t.exposeInt("index"), beforeText: t.exposeString("beforeText"), afterText: t.exposeString("afterText"), acked: t.exposeBoolean("acked") }),
+  fields: (t) => ({ index: t.exposeInt("index"), beforeText: t.exposeString("beforeText"), afterText: t.exposeString("afterText"), runHash: t.exposeString("runHash", { nullable: true }), acked: t.exposeBoolean("acked") }),
 });
 const DraftChapterRef = builder.objectRef<DraftChapterRow>("BookLcDraftChapter").implement({
   fields: (t) => ({
     key: t.exposeString("key"),
+    newSha: t.exposeString("newSha", { nullable: true }),
     title: t.exposeString("title"),
     status: t.exposeString("status"),
     mode: t.exposeString("mode", { nullable: true }),

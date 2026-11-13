@@ -36,7 +36,8 @@ import { useAuth } from "../../auth/AuthContext";
 import { useConfirm } from "../../state/ConfirmContext";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
-import { downloadBookLcMemo, pickBookLcFile, postBookLc } from "../../lib/bookLcFiles";
+import { downloadBookLcMemo, downloadBookLcTranscriptionPack, pickBookLcFile, postBookLc, readPickedText } from "../../lib/bookLcFiles";
+import { BL_UPLOAD_TRANSCRIPTION } from "../../graphql/bookLifecycleEdit";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { bnNum } from "../../lib/labels";
 import type { BookLcStackParamList } from "../../navigation/types";
@@ -76,6 +77,7 @@ export default function BookLcRoundScreen({ route }: Props): React.ReactElement 
   const [, addPoints] = useMutation(BL_ADD_POINTS);
   const [, checkRow] = useMutation(BL_CHECK_ROW);
   const [{ fetching: recording }, recordReturn] = useMutation(BL_RECORD_RETURN);
+  const [, uploadTranscription] = useMutation(BL_UPLOAD_TRANSCRIPTION);
   const [msg, setMsg] = useMsg();
   const pull = usePullRefresh(q.fetching, () => (refetch({ requestPolicy: "network-only" }), refetchF({ requestPolicy: "network-only" })));
 
@@ -302,6 +304,22 @@ export default function BookLcRoundScreen({ route }: Props): React.ReactElement 
 
                     <SectionTitle>{BL.newPoints}</SectionTitle>
                     <Muted>{BL.claudeRoute}</Muted>
+                    {manage ? (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                        {Platform.OS === "web" ? <Button title={BL.transcriptionPack} variant="ghost" onPress={() => void downloadBookLcTranscriptionPack(r.id, `transcription-memo-${r.memoNo}.zip`).catch((e) => setMsg({ tone: "danger", text: String(e) }))} /> : null}
+                        <Button
+                          title={BL.uploadTranscription}
+                          variant="ghost"
+                          onPress={() =>
+                            void pickBookLcFile("any").then(async (a) => {
+                              if (!a) return;
+                              const res = await uploadTranscription({ roundId: r.id, text: await readPickedText(a) });
+                              after(res, BL.done);
+                            })
+                          }
+                        />
+                      </View>
+                    ) : null}
                     {points.map((p) => (
                       <Card key={p.id} style={{ marginTop: space(2) }}>
                         <Body>

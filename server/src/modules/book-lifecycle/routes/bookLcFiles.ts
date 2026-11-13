@@ -9,7 +9,7 @@
  * The read gate for `book_lc_*` kinds is `assertBookLcFileReadAccess`, dispatched in GET /files/:id
  * BEFORE the old `book_` prefix.
  */
-import type { Request, Response, Router, RequestHandler } from "express";
+import express, { type Request, type Response, type Router, type RequestHandler } from "express";
 import multer from "multer";
 import { tmpdir } from "os";
 import type { Types } from "mongoose";
@@ -33,6 +33,7 @@ import { SchoolBook } from "../models/SchoolBook";
 import { addReleaseFile } from "../services/releaseService";
 import { teacherMayRead, uploadReportPhoto } from "../services/teacherService";
 import type { BookReleaseFileKind } from "@scd/shared";
+import { downloadBundle, downloadTranscriptionPack, uploadBundleWhole } from "../services/bundle";
 
 const upload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.printBytes + 1, files: 2 } });
 
@@ -61,6 +62,18 @@ const photoParse: RequestHandler = (req, res, next) => {
   photoUpload.fields([{ name: "file", maxCount: 1 }])(req, res, (err: unknown) => {
     if (err) {
       res.status(422).json({ error: "ছবি খুব বড় বা ভুল" });
+      return;
+    }
+    next();
+  });
+};
+
+/** The whole-text upload: master.md ≤ 5 MB, changes.json ≤ 4 MB — enforced while the body streams in. */
+const wholeUpload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.masterMdBytes + 1, files: 2 } });
+const wholeParse: RequestHandler = (req, res, next) => {
+  wholeUpload.fields([{ name: "master", maxCount: 1 }, { name: "changes", maxCount: 1 }])(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: "ফাইল খুব বড় বা ভুল" });
       return;
     }
     next();
@@ -240,6 +253,54 @@ export function registerBookLcFileRoutes(router: Router): void {
       fail(res, e);
     } finally {
       await cleanup(req);
+    }
+  });
+
+  // BL-3: download a bundle zip (manage). The zip is built in memory and streamed, never stored.
+  router.post("/book-lc/bundle", express.json({ limit: "200kb" }), async (req, res) => {
+    try {
+      const ctx = ctxOf(req, res);
+      const b = req.body ?? {};
+      const out = await downloadBundle(ctx.auth!, str(b.bookId), { feedback: Array.isArray(b.feedback) ? b.feedback.map(String) : [], instructionIds: Array.isArray(b.instructionIds) ? b.instructionIds.map(String) : [], instructions: Array.isArray(b.instructions) ? b.instructions : [], includeMedia: !!b.includeMedia }, { buffer: false });
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(out.filename)}"`);
+      res.setHeader("X-Bundle-Nonce", out.nonce);
+      res.setHeader("X-Draft-Id", out.draftId);
+      res.setHeader("X-Left-Out", encodeURIComponent(JSON.stringify(out.excluded)));
+      res.setHeader("Access-Control-Expose-Headers", "X-Bundle-Nonce, X-Draft-Id, Content-Disposition, X-Left-Out");
+      // Streamed, never held whole in memory.
+      out.jszip.generateNodeStream({ streamFiles: true, compression: "DEFLATE" }).on("error", () => res.destroy()).pipe(res);
+    } catch (e) {
+      fail(res, e);
+    }
+  });
+
+  // BL-3: a whole master.md + changes.json back into a bundle's draft.
+  router.post("/book-lc/bundle-whole", wholeParse, async (req, res) => {
+    try {
+      const ctx = ctxOf(req, res);
+      const master = await take(req, "master", mdCap);
+      const changes = await take(req, "changes", () => 4 * 1024 * 1024);
+      if (!master || !changes) throw new BookLcError("NO_FILE", "master.md ও changes.json দুটোই দিন");
+      const out = await uploadBundleWhole(ctx.auth!, str(req.body?.bookId), { nonce: str(req.body?.nonce), master: master.data, changesJson: changes.data.toString("utf8") });
+      res.json(out);
+    } catch (e) {
+      fail(res, e);
+    } finally {
+      await cleanup(req);
+    }
+  });
+
+  // BL-3: the return-transcription pack for a round out on paper (manage).
+  router.get("/book-lc/round/:id/transcription-pack.zip", async (req, res) => {
+    try {
+      const ctx = ctxOf(req, res);
+      const out = await downloadTranscriptionPack(ctx.auth!, req.params.id, { buffer: false });
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(out.filename)}"`);
+      out.jszip.generateNodeStream({ streamFiles: true, compression: "DEFLATE" }).on("error", () => res.destroy()).pipe(res);
+    } catch (e) {
+      fail(res, e);
     }
   });
 

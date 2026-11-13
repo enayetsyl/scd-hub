@@ -801,6 +801,7 @@ export type BookLcStackParamList = {
   BookLcFeedback: { bookId: string };
   BookLcDraft: { draftId: string };
   BookLcRelease: { bookId: string };
+  BookLcBundle: { bookId: string };
 };
 
 /** Book lifecycle — teachers (§8 S8/S9): আমার বই (param-free initial route) and ভুল জানান. */

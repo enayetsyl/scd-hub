@@ -148,6 +148,7 @@ import BookLcFeedbackScreen from "../screens/booklifecycle/BookLcFeedbackScreen"
 import BookLcDraftScreen from "../screens/booklifecycle/BookLcDraftScreen";
 import BookLcRuleSetsScreen from "../screens/booklifecycle/BookLcRuleSetsScreen";
 import BookLcReleaseScreen from "../screens/booklifecycle/BookLcReleaseScreen";
+import BookLcBundleScreen from "../screens/booklifecycle/BookLcBundleScreen";
 import BookLcMyBooksScreen from "../screens/booklifecycle/BookLcMyBooksScreen";
 import BookLcReportScreen from "../screens/booklifecycle/BookLcReportScreen";
 import { BL as BLS } from "../screens/booklifecycle/blStrings";
@@ -2008,6 +2009,7 @@ function BookLcNavigator(): React.ReactElement {
       <BookLcStack.Screen name="BookLcFeedback" component={BookLcFeedbackScreen} options={{ title: BLS.triageTitle }} />
       <BookLcStack.Screen name="BookLcDraft" component={BookLcDraftScreen} options={{ title: BLS.draftTitle }} />
       <BookLcStack.Screen name="BookLcRelease" component={BookLcReleaseScreen} options={{ title: BLS.printTitle }} />
+      <BookLcStack.Screen name="BookLcBundle" component={BookLcBundleScreen} options={{ title: BLS.bundleOpen }} />
     </BookLcStack.Navigator>
   );
 }

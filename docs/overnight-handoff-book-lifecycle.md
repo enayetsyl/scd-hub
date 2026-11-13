@@ -151,3 +151,54 @@ full server suite --maxWorkers=2 →
 ### Decisions
 
 D-#1624 (BL-2 build details).
+
+## BL-3 — edit pipeline, validator, editing method, bundle, return-transcription pack
+
+**Commits:** the `[BL-3]` commit after BL-2 — see `git log --oneline`.
+
+### Built
+
+- `editOps` — the `book-chapter-edit/v1` engine (§12.2, normative): exact NFC quotes, each found once, no overlap,
+  `after ≠ before`, ≤ 300 ops, every op cites F-n / I-n / D-n; strict zod schemas (unknown field → VR-2).
+- `validator` — VR-1…VR-15 (§12.3): draft level (base fresh, coverage, accept) and chapter level (schema, refs, ops,
+  scope, markers, explained, pictures, regions, characters, size, sacred text, lexicon), Bangla messages with codes.
+- `method` + `server/assets/book-lifecycle/edit_method_v1.md` — the one method file (M-0…M-8), read byte for byte;
+  drafts record version + SHA-256 (`bookMethodParity` pins API / MCP / bundle parity).
+- `draftService` — open (latest base only, F/I refs, optional scope), `applyChapterEdit`, `putChapter` (whole chapter +
+  change list), `submitDraft` (ready / refused; never a version), the finalize "আমি দেখেছি" tick, the accept guard.
+- `bundle` — Path B zip (METHOD.md, master with markers, outline, de-identified items — an item naming a child or
+  guardian is left out and listed — instructions, rule sets, decisions, OUTPUT.md), streamed, never stored; result
+  upload as edit JSON or a whole master + changes.json; the return-transcription pack and its upload (unchecked marks).
+- REST `POST /files/book-lc/bundle`, `/bundle-whole`, `GET /files/book-lc/round/:id/transcription-pack.zip`;
+  GraphQL `bookLifecycleEdit.ts` (submit, ack, bundle-result upload, transcription upload).
+- App: S12 bundle screen (from the book page), S11 submit button + validator summary + unexplained list with the
+  finalize tick + ops/whole badge, round screen transcription pack download/upload.
+
+### Verified
+
+```
+new suites --runInBand: bookEditOps · bookEditValidator · bookEditCoverage · bookEditAccept · bookBundle · bookReturnPack · bookMethodParity → 33 passed
+all book suites + touched (graphqlDocuments, permissionCatalogueGates, firewall, helpGuides, supportBookFiles, expectedErrorRegistry) → 28 suites, 281 passed
+verify_shared_vocab → RESULT: PASS · verify_help_guides → ALL CHECKS PASSED · shared build ok · shared tsc 0 · server tsc (4 GB) 0 · app tsc 0
+expo export --platform web → EXPO_EXIT 0
+full server suite --maxWorkers=2 →
+  Test Suites: 496 passed, 496 total
+  Tests:       7805 passed, 7805 total
+  Time:        496.435 s
+  EXIT 0
+```
+
+### Fixed while testing
+
+- VR-7 at line level let a second edit on the same line hide behind the first row → word-level change runs (D-#1627).
+- The accept check read `!u.ack` — a Mongoose nested `{}` is truthy → `!u.ack?.at`.
+- Submitting a stale draft threw "closed" → answers `refused` with VR-1.
+
+### Not done / notes
+
+- No new help guide in BL-3 (the Claude/bundle guide comes with BL-4, the AI guide with BL-5).
+- **D-#1627 is past the reserved D-#1590–#1619.** origin/dev ends at D-#1588 today; renumber at merge if taken.
+
+### Decisions
+
+D-#1627 (BL-3 build details).

@@ -41,7 +41,7 @@ export interface DraftChapter {
   notApplied: { ref: string; reasonBn: string }[];
   alsoElsewhere: { ref: string; hintBn: string }[];
   /** VR-7 hunks no declared change explains; each needs a finalize holder's tick. */
-  unexplained: { index: number; beforeText: string; afterText: string; ack?: { by: Types.ObjectId; at: Date } }[];
+  unexplained: { index: number; beforeText: string; afterText: string; runHash?: string; context?: string; ack?: { by: Types.ObjectId; at: Date } }[];
   sacredTouched?: boolean;
   decidedBy?: Types.ObjectId;
   decidedAt?: Date;
@@ -110,7 +110,7 @@ const BookEditDraftSchema = new Schema<IBookEditDraft>(
           notApplied: { type: [{ ref: String, reasonBn: String, _id: false }], default: [] },
           alsoElsewhere: { type: [{ ref: String, hintBn: String, _id: false }], default: [] },
           unexplained: {
-            type: [{ index: Number, beforeText: String, afterText: String, ack: { by: Schema.Types.ObjectId, at: Date }, _id: false }],
+            type: [{ index: Number, beforeText: String, afterText: String, runHash: String, context: String, ack: { by: Schema.Types.ObjectId, at: Date }, _id: false }],
             default: [],
           },
           sacredTouched: Boolean,
