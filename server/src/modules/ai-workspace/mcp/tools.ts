@@ -22,6 +22,7 @@ import { aiProjectInstructions, aiProjectsPage, contextBudgetOf, loadProject, sa
 import { aiProjectFilesPage, aiProjectFileText } from "../services/FileIngestService";
 import { createJob, estimateJob, job } from "../services/JobService";
 import { draft, draftVersion, reviseDraft } from "../services/DraftService";
+import { registerBookTools } from "../../book-lifecycle/mcp/bookTools";
 
 const MAX_SLICE = 50_000;
 const MODEL = z
@@ -37,6 +38,8 @@ const KIND = z.enum(["free", "lesson_plan", "question_bank", "book_chapter", "st
 type ToolRun = { project_id: string; title: string; kind: string; model: string; thinking: string; run_at: string };
 
 type Reply = { content: Array<{ type: "text"; text: string }>; isError?: boolean };
+/** A reply with its own content blocks (an image page, BL-4 `get_scan_page`). */
+type RawReply = { content: unknown[]; isError?: boolean };
 
 function reply(data: unknown): Reply {
   return { content: [{ type: "text", text: JSON.stringify(data) }] };
@@ -60,6 +63,24 @@ function logged(auth: AuthPayload, clientName: string, tool: string, fn: (args: 
   };
 }
 
+/** As `logged`, for a tool that builds its own content blocks (logged size = the JSON of the blocks). */
+function loggedRaw(auth: AuthPayload, clientName: string, tool: string, fn: (args: never) => Promise<RawReply>) {
+  return async (args: never): Promise<RawReply> => {
+    const started = Date.now();
+    let out: RawReply;
+    let ok = true;
+    try {
+      out = await fn(args);
+    } catch (e) {
+      ok = false;
+      out = { content: [{ type: "text", text: JSON.stringify({ error: (e as Error).message || "failed" }) }], isError: true };
+    }
+    const bytes = Buffer.byteLength(JSON.stringify(out.content), "utf8");
+    void AiMcpCall.create({ at: new Date(), userId: new Types.ObjectId(auth.userId), clientName, tool, ok, replyBytes: bytes, ms: Date.now() - started }).catch(() => undefined);
+    return out;
+  };
+}
+
 const slice = (text: string, offset?: number, length?: number) => {
   const total = text.length;
   const from = Math.max(0, Math.min(total, Math.floor(offset ?? 0)));
@@ -72,12 +93,17 @@ const slice = (text: string, offset?: number, length?: number) => {
  * type for every input shape; ten of them made `tsc` run out of memory (4 GB, CI and local).
  * The zod schemas still validate at runtime; each callback types its own arguments.
  */
-type PlainRegister = (name: string, config: { description: string; inputSchema: Record<string, z.ZodTypeAny> }, cb: (args: never) => Promise<Reply>) => unknown;
+type PlainRegister = (name: string, config: { description: string; inputSchema: Record<string, z.ZodTypeAny> }, cb: (args: never) => Promise<Reply | RawReply>) => unknown;
 
-export function registerWorkspaceTools(server: McpServerLike, auth: AuthPayload, clientName: string): void {
+export function registerWorkspaceTools(server: McpServerLike, auth: AuthPayload, clientName: string, baseUrl = "", withBooks = false): void {
   const register = (server.registerTool as unknown as PlainRegister).bind(server);
   const t = <A>(name: string, description: string, inputSchema: Record<string, z.ZodTypeAny>, fn: (args: A) => Promise<unknown>) =>
     register(name, { description, inputSchema }, logged(auth, clientName, name, fn as never));
+  const raw = <A>(name: string, description: string, inputSchema: Record<string, z.ZodTypeAny>, fn: (args: A) => Promise<RawReply>) =>
+    register(name, { description, inputSchema }, loggedRaw(auth, clientName, name, fn as never));
+
+  // Book lifecycle (BL-4, D-#1604): same helper, each tool re-checks its own book_lifecycle action.
+  if (withBooks) registerBookTools(t, raw, auth, baseUrl);
 
   t("list_projects", "Projects in the SCD Hub AI Workspace, with their context size in tokens (instructions + pinned files) and defaults.", {}, async () => {
     const page = await aiProjectsPage(auth, { page: 1, pageSize: 100 });
