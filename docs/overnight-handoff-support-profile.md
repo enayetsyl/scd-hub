@@ -244,3 +244,51 @@ npx jest --maxWorkers=2 (full server suite) → Test Suites: 490 passed, 490 tot
 - "Once a year, within 30 school days of the year cut-over" is simplified to publish + 365 days.
 
 **Decisions:** D-#1555 (CSP-4 part), D-#1556, D-#1557, D-#1562, D-#1563, D-#1565.
+
+---
+
+## CSP-5 — teacher surfaces, nudges, leaver sweep
+
+**Commits:** the single `[CSP-5] feat(support-profile): …` commit (see `git log`).
+
+**What was built**
+- App (`app/src/screens/support/`): SupportHome (the switch for the Principal, links by permission,
+  profiles by class and name), SupportCard (card ⇄ full profile, footer, "পড়ছেন:" line), the report
+  form (chips, the good thing with "—" + reason, the safety question YES/NO, blocked/ask word feedback,
+  the always-present safeguarding line with the five steps, questions under their fields with
+  এভাবে লিখুন / আমি একমত নই / মনে নেই), আমার রিপোর্ট (status chips, আগে → পরে, withdraw, comment
+  prompts still to write), the Principal's queue (waiting / processed / quick; decide; safety hold),
+  the batch screen (new batch, download pack — a file on the web, text elsewhere — the chat line and
+  privacy reminder, paste + chat label, preview with "আমার কাছে রাখুন", apply/discard, the evaluation
+  pack round-trip), safeguarding referrals. GraphQL documents in `app/src/graphql/supportProfile.ts`
+  (validated by the server's `graphqlDocuments` test). ~140 BN/EN strings in `STR` (prefix `sup`).
+- Entry points: the drawer item, the student page button, the attendance roster row, the comment
+  prompt on the comment screen after a NEW comment is saved; notification taps open SupportHome /
+  SafeguardingReferrals.
+- Server: leaver sweep, new-class / cover-morning / monthly (25th) / review-due / approval-load
+  notices (from 07:00 Dhaka, once a day), `processedAt`, the approval-load card and the owner's choice,
+  per-child series and school totals.
+
+**Verified**
+```
+npm run build --workspace=shared → exit 0
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_descriptive_carriers lo-codes / subjects-2027 / descriptive → RESULT: PASS (22 / 20 / 11 cases)
+verify_help_guides → ALL CHECKS PASSED
+typecheck shared / server / app → exit 0 / exit 0 / exit 0
+npx jest --runInBand support permissionCatalogueGates firewall expectedErrorRegistry notificationsScheduler notificationNavCoverage graphqlDocuments dataAssistantSupportExcluded
+  → Test Suites: 53 passed, 53 total · Tests: 661 passed, 661 total
+npx jest --maxWorkers=2 (full server suite) → Test Suites: 495 passed, 495 total · Tests: 7756 passed, 7756 total · exit 0
+(app) npx expo export --platform web → expo export exit 0 (0 lines matching error)
+```
+
+**Not done in CSP-5**
+- **No UI walk was run** (the PRD asks for one local walk as a teacher, a cover teacher, a non-teacher
+  and the Principal). It needs a running server with seeded data; not done in this session. The screens
+  are typechecked and bundled (expo export) and their documents validated against the schema only.
+- Chip not yet on MyRoutine, the class note and class-test entry; no "কাজে লেগেছে?" tap; the review
+  screen does not yet show the compare panel, evidence preview or records (the fields exist on
+  `supportReport`); the version publish/diff/history screens are not built (resolvers exist).
+- Enum labels (chips) show Bangla in both languages (they come from `shared`).
+
+**Decisions:** D-#1557 (CSP-5 part), D-#1558, D-#1559, D-#1589.

@@ -738,6 +738,7 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
     if (res.safeguarding.present) {
       // SG-9: the teacher is not asked — the Principal is; the report is neither approved nor returned.
       r.status = "PROCESSED";
+      r.processedAt = now;
       r.safeguardingHold = "OPEN";
       r.safeguardingHoldSource = res.safeguarding.confidence === "HIGH" ? "BATCH_HIGH" : "BATCH_LOW";
       r.openFlags = questions;
@@ -758,6 +759,7 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
       summary.valid.returns++;
     } else {
       r.status = "PROCESSED";
+      r.processedAt = now;
       r.openFlags = questions;
       r.returnQuestions = [];
       await r.save();

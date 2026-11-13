@@ -248,6 +248,8 @@ const STAFF_NAV: NavSection[] = [
   // staff login (the pop-ups they received, to read again).
   { type: "item", route: "PopupNoticesTab", labelKey: "ppTitleNav", icon: "📣" },
   { type: "item", route: "HomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
+  // Student support profile (D-#1546): teachers who teach, the Principal; never Office (no action).
+  { type: "item", route: "HomeTab", screen: "SupportHome", labelKey: "supTitle", icon: "🌱", perms: ["support_profile:report", "support_profile:view_all", "safeguarding:receive"] },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
   { type: "item", route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
   {

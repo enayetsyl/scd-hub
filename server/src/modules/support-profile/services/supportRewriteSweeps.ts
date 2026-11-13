@@ -24,6 +24,7 @@ export async function sweepRewrites(now: Date = new Date()): Promise<number> {
     const reads = !!(await readerOf(String(r.studentId), String(r.authorId), now));
     if (!reads || age >= 21 * DAY) {
       r.status = "PROCESSED";
+      r.processedAt = now;
       r.openFlags = r.returnQuestions;
       r.returnQuestions = [];
       await r.save();

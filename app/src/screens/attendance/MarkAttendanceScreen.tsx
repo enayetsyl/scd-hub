@@ -8,6 +8,7 @@
  * the roster is always rendered under CLASS/SECTION headings, because a Quran group
  * mixes sections and the school reads attendance class-wise (D-#278).
  */
+import { SupportProfileRow } from "../../components/SupportProfileButton";
 import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -168,6 +169,8 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
                   />
                 ))}
               </ChipRow>
+              {/* D-#1557: a leaf beside each child with a support profile (readers only). */}
+              <SupportProfileRow students={section.students.map((s) => ({ id: s.studentId, name: personName(s) }))} via="ATTENDANCE" />
             </Card>
           ))}
 

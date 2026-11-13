@@ -44,6 +44,7 @@ import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
+import { SupportSeedPrompt } from "../../components/SupportSeedPrompt";
 import { AiCheckPanel, gateMessage, useAiCommentCheck } from "../../components/AiCommentCheck";
 
 type Props = NativeStackScreenProps<CommentsStackParamList, "CommentEntry">;
@@ -147,6 +148,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       const created = res.data?.recordStudentComment;
       if (created) {
         setCommentId(created.id);
+        setSeedFor(created.id); // D-#1561: offer a support report about the same moment
         toast.show(STR.cmSaved, "ok");
         refetchComment();
       }
@@ -216,6 +218,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   }
 
   const [, recordComment] = useMutation(RECORD_STUDENT_COMMENT);
+  const [seedFor, setSeedFor] = useState<string | null>(null);
   const [, editComment] = useMutation(EDIT_STUDENT_COMMENT);
   const [, removeAttachment] = useMutation(REMOVE_COMMENT_ATTACHMENT);
   const [, deliver] = useMutation(DELIVER_STUDENT_COMMENT);
@@ -401,6 +404,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
             ) : null}
           </Card>
         ) : null}
+        <SupportSeedPrompt commentId={seedFor} />
       </ScrollView>
     </Screen>
   );

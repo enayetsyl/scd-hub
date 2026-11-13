@@ -13,6 +13,7 @@ import { sweepBatches } from "./SupportBatchService";
 import { batchReminders, sweepRewrites } from "./supportRewriteSweeps";
 import { dailyDigest } from "./supportQueueExtras";
 import { sweepSeedPrompts } from "./supportSeed";
+import { leaverSweep, monthlyNudge, newClassAndCoverNotices, reviewNotices } from "./supportLifecycle";
 
 export type RunOnce = (key: string, fn: () => Promise<void>) => Promise<boolean>;
 
@@ -24,9 +25,19 @@ export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Prom
     n += await sweepRewrites(now);
     n += await batchReminders(now);
     n += await sweepSeedPrompts(now);
+    n += await leaverSweep(now);
   });
-  // §9.7: the approvers' digest at 16:00 Dhaka, once a day.
   const hour = Number(now.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hour12: false }));
+  // §9.7 morning notices (from 07:00 Dhaka, once a day): new class, the cover morning, the monthly
+  // nudge (the 25th), review due and the approval-load review day.
+  if (hour >= 7) {
+    await runOnce("SUPPORT_MORNING", async () => {
+      n += await newClassAndCoverNotices(now);
+      n += await monthlyNudge(now);
+      n += await reviewNotices(now);
+    });
+  }
+  // §9.7: the approvers' digest at 16:00 Dhaka, once a day.
   if (hour >= 16) {
     await runOnce("SUPPORT_DIGEST", async () => {
       n += await dailyDigest(now);
