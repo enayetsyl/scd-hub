@@ -1,5 +1,6 @@
 /** CSP-3 — guardian information (docs/prd-child-support-profile.md §7.5; owner Q-11; D-#1560). */
 import mongoose from "mongoose";
+import { evidenceLevel } from "@scd/shared";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import "../registerResolvers";
 import { builder } from "../schema";
@@ -33,9 +34,23 @@ it("the chip shows (source GUARDIAN_INFO) and it is never quick-approvable", asy
   const q = await run(`query($id: String!) { supportReport(reportId: $id) { source } }`, authOf(fx.principal, "PRINCIPAL"), { id: String(r!._id) });
   expect(q.data?.supportReport.source).toBe("GUARDIAN_INFO");
   r!.status = "PROCESSED";
+  (r as unknown as { compare: unknown }).compare = { agreement: [] };
   expect(isQuickApprovable(r!)).toBe(false);
   r!.source = "TEACHER";
   expect(isQuickApprovable(r!)).toBe(true); // the same report from a teacher would be
+});
+
+it("D-#1560 / rule 12: guardian information alone is at most one positive item (SINGLE) and never a concern item", () => {
+  const today = "2026-06-30";
+  const evidence = [1, 2, 3, 4].map((n) => ({ id: `g${n}`, authorId: `u${n}`, occurredOn: `2026-06-0${n}`, slot: "OTHER", setting: "HOME", source: "GUARDIAN_INFO" as const, result: null }));
+  const positive = evidenceLevel({ side: "POSITIVE", todayKey: today, isStrategy: false, evidence });
+  expect(positive.level).toBe("SINGLE");
+  expect(positive.hasGuardianInfo).toBe(true);
+  const concern = evidenceLevel({ side: "CONCERN", todayKey: today, isStrategy: false, evidence });
+  expect(concern.level).toBeNull();
+  // a teacher report beside it still counts only the teacher's own observation
+  const withTeacher = evidenceLevel({ side: "POSITIVE", todayKey: today, isStrategy: false, evidence: [...evidence, { id: "t1", authorId: "t", occurredOn: "2026-06-05", slot: "P2", setting: "MATH", source: "TEACHER" as never, result: "WORKED" as never }] });
+  expect(withTeacher.obsCount).toBe(1);
 });
 
 it("MISSING_PART is not raised on guardian information", () => {

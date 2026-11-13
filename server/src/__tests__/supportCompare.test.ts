@@ -70,15 +70,12 @@ it("a compare result is stored for the Principal (codes mapped back) and never s
   const r = await SupportReport.findById(s.r1).lean();
   const cmp = (r as unknown as { compare: { agreement: { otherReportIds: string[] }[]; authorSkew: { status: string } } }).compare;
   expect(cmp.agreement[0].otherReportIds).toEqual([s.a1]);
+  // fewer than 3 + 3 reports → the skew is forced to TOO_FEW (this very report, not "the first PROCESSED one")
+  expect(cmp.authorSkew.status).toBe("TOO_FEW");
   const asPrincipal = await run(`query($id: String!) { supportReport(reportId: $id) { compareJson } }`, P(fx), { id: s.r1 });
   expect(asPrincipal.data?.supportReport.compareJson).toContain(s.a1);
   const asAuthor = await run(`query($id: String!) { supportReport(reportId: $id) { compareJson } }`, authOf(fx.classTeacher, "TEACHER"), { id: s.r1 });
   expect(asAuthor.data?.supportReport.compareJson).toBeNull();
-});
-
-it("authorSkew is forced to TOO_FEW with fewer than 3 + 3 reports", async () => {
-  const r = await SupportReport.findById((await SupportReport.find({ status: "PROCESSED" }).sort({ _id: 1 }).lean())[0]._id).lean();
-  expect((r as unknown as { compare: { authorSkew: { status: string } } }).compare.authorSkew.status).toBe("TOO_FEW");
 });
 
 it("a foreign or unknown report or strategy id in the compare → that item INVALID (the report returns to TO_PROCESS)", async () => {
