@@ -102,3 +102,52 @@ D-#1590–#1616 (PRD §22, recorded), D-#1617 (markdown/version build details), 
 - None blocking. PRD §21 open items followed as recommended (Q3 minor default, Q6 notification only, Q8
   open/download, Q10 DeepSeek with a warning — BL-5, Q13 later, Q14 Office `release` by grant, Q15 nothing
   auto-deleted, Q16 memo printed from the packet PDF, no .docx, Q17 packet uses the uploaded master PDF).
+
+---
+
+## BL-2 — final, editions, print releases, errata, teacher surfaces
+
+**Commits:** the `[BL-2]` commit(s) after BL-1 — see `git log --oneline`.
+
+### Built
+
+- Mark final (BL-1 service) now covered end to end: approval basis required (round / inherited / imported), every
+  required edition present and every file of it fresh, no open needs_reviewer item on the version, finalize only.
+- `BookPrintRelease` + `BookErratum` models; `releaseService` (create from a final version, files per edition as
+  `book_lc_print`, record once the Student IDML zip + preview PDF are there → version print_released + book's current
+  release, statuses prepared → sent_to_press → printed with dates, newer printed supersedes older, শিক্ষকদের জানান →
+  BOOK_RELEASED to readers, class-books publish behind the per-book switch, pageplan.json → chapter suggestion);
+  `errataService` (verbal_errata triage → erratum draft on the current release, edit, announce by finalize →
+  BOOK_ERRATUM to readers only, ack per reader, carried into the version that applies the item; the release rule);
+  `teacherScope.bookTeachersNow` (routine teachers of class+subject + class teachers of the level, active staff);
+  `teacherService` (আমার বই, my reports, the report form with an optional page photo, the file read rule).
+- GraphQL `bookLifecycleRelease.ts`; REST `/files/book-lc/release-file`, `/files/book-lc/report-photo`.
+- App: S6 ছাপা ও ভুল-সংশোধনী (from the book page), S8 আমার বই and S9 ভুল জানান in a teacher tab (drawer আমার বই),
+  notification deep links. Guides (drafts): `book-teacher-errata`, `book-teacher-report`, `book-print-release`.
+- `permissionCatalogueGates`: release / teacher_view / report are now gated (only ai_edit stays declared ahead).
+
+### Verified
+
+```
+new suites --runInBand: bookLcFinal 6 · bookLcRelease 5 · bookLcTeacherScope 3 · bookLcErrata 2 · bookLcClassBooks 2 → 18 passed
+touched --runInBand: graphqlDocuments, permissionCatalogueGates, bookLcPermissions, firewall, helpGuides, supportBookFiles → 167 passed
+verify_shared_vocab → PASS · verify_help_guides → ALL CHECKS PASSED · server tsc (4 GB) 0 · app tsc 0 · expo export web → EXPO_EXIT 0
+full server suite --maxWorkers=2 →
+  Test Suites: 489 passed, 489 total
+  Tests:       7768 passed, 7768 total
+  Time:        448.588 s
+  EXIT 0
+```
+
+### Not done / notes
+
+- Errata pop-up (Q6 optional): not built — notification + the আমার বই list only (the existing pop-up composer can
+  still be used by hand).
+- Teacher edition opens through `GET /files/:id` (Q8: open/download for scoped teachers).
+- `origin/dev` moved on (CSP-2, PR #1528) after BL-1 was pushed. Bringing it in would need a merge into this branch or a
+  rebase + force-push, both outside this session's rules, so the branch stays on its BL-1 base; a trial merge result
+  is reported at the end of this file.
+
+### Decisions
+
+D-#1619 (BL-2 build details).

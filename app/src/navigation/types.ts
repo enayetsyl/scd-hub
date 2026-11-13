@@ -786,6 +786,13 @@ export type BookLcStackParamList = {
   BookLcRound: { roundId: string };
   BookLcFeedback: { bookId: string };
   BookLcDraft: { draftId: string };
+  BookLcRelease: { bookId: string };
+};
+
+/** Book lifecycle — teachers (§8 S8/S9): আমার বই (param-free initial route) and ভুল জানান. */
+export type BookLcTeacherStackParamList = {
+  BookLcMyBooks: undefined;
+  BookLcReport: { bookId: string; titleBn: string };
 };
 
 export type SupportBookStackParamList = {
@@ -916,6 +923,8 @@ export type TabParamList = {
   SupportBookTab: NavigatorScreenParams<SupportBookStackParamList>;
   /** Book lifecycle (D-#1590): বই ও সংস্করণ. */
   BookLcTab: NavigatorScreenParams<BookLcStackParamList>;
+  /** Book lifecycle for teachers (teacher_view / report). */
+  BookLcTeacherTab: NavigatorScreenParams<BookLcTeacherStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;

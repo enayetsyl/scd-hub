@@ -27,6 +27,9 @@ import { loadBook, loadVersion, servedMaster, vlabel } from "../services/store";
 import { recordContentRead, lcEvent } from "../services/events";
 import { mimeFromName, storeLcFile } from "../services/files";
 import { SchoolBook } from "../models/SchoolBook";
+import { addReleaseFile } from "../services/releaseService";
+import { teacherMayRead, uploadReportPhoto } from "../services/teacherService";
+import type { BookReleaseFileKind } from "@scd/shared";
 
 const upload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.printBytes + 1, files: 2 } });
 
@@ -177,6 +180,35 @@ export function registerBookLcFileRoutes(router: Router): void {
     }
   });
 
+  // BL-2: a print-release file (release).
+  router.post("/book-lc/release-file", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
+    try {
+      const ctx = ctxOf(req, res);
+      const f = await take(req, "file");
+      if (!f) throw new BookLcError("NO_FILE", "ফাইল দিন");
+      const r = await addReleaseFile(ctx.auth!, str(req.body?.releaseId), { edition: str(req.body?.edition) as BookEdition, kind: str(req.body?.kind) as BookReleaseFileKind, name: f.name, data: f.data, mime: f.mime });
+      res.json({ releaseId: r._id.toString() });
+    } catch (e) {
+      fail(res, e);
+    } finally {
+      await cleanup(req);
+    }
+  });
+
+  // BL-2: a teacher's photo of the page for a report (report + reader; ≤ 5 MB).
+  router.post("/book-lc/report-photo", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
+    try {
+      const ctx = ctxOf(req, res);
+      const f = await take(req, "file");
+      if (!f) throw new BookLcError("NO_FILE", "ছবি দিন");
+      res.json({ fileId: await uploadReportPhoto(ctx.auth!, str(req.body?.bookId), { name: f.name, data: f.data, mime: f.mime }) });
+    } catch (e) {
+      fail(res, e);
+    } finally {
+      await cleanup(req);
+    }
+  });
+
   // Download the master .md as served (audited as a content read).
   router.get("/book-lc/version/:id/master.md", async (req, res) => {
     try {
@@ -228,3 +260,6 @@ export async function assertBookLcFileReadAccess(ctx: AppContext, file: IStoredF
   for (const r of readRules) if (await r(ctx, file)) return;
   throw new ForbiddenError("অনুমতি নেই");
 }
+
+// BL-2 (§7.3): a reader opens the released Teacher edition; a reporter their own page photo.
+registerBookLcReadRule(async (ctx, file) => !!ctx.auth && teacherMayRead(ctx.auth, file));

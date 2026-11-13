@@ -21,6 +21,8 @@ import { loadBook, loadVersion } from "./store";
 import { notifyFeedbackAnswered, notifyFeedbackFiled } from "./notify";
 import { sha256 } from "./markdown";
 import { onTriageHooks } from "./hooks";
+// Side effect: registers the verbal_errata → erratum hook and the errata carry hook (BL-2).
+import "./errataService";
 
 export interface FeedbackInput {
   versionId?: string | null;

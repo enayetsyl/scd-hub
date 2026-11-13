@@ -62,6 +62,8 @@ import { checkCharacters } from "./charGuard";
 import { writeAudit } from "../../platform/services/AuditService";
 import { notifyFeedbackAnswered } from "./notify";
 import { onVersionCreatedHooks } from "./hooks";
+// Side effect: the errata carry hook (BL-2) runs on every version creation.
+import "./errataService";
 
 // ---------------------------------------------------------------------------
 // Books

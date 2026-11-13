@@ -9908,6 +9908,7 @@ const STR_BN = {
   ycCreatedBlocked: "উত্তরণের পরে নতুন বছরের শাখায় কাজ যোগ হয়েছে (উপরের আইডিগুলো)। অ্যাপ থেকে এটি ফিরিয়ে নেওয়া যাবে না — শুধু সার্ভারের স্ক্রিপ্ট দিয়ে জোর করে ফেরানো যায়; প্রযুক্তি সহায়তা নিন।",
   ycInvariantAfter: "অসঙ্গতি পাওয়া গেছে",
   blNavTitle: "বই ও সংস্করণ",
+  blMyBooks: "আমার বই",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -18368,6 +18369,7 @@ const STR_EN: StrTable = {
   ycCreatedBlocked: "Work was added on the new year's sections after the switch (the IDs above). The app cannot undo this - only the server script can force it; ask for technical help.",
   ycInvariantAfter: "Inconsistencies found",
   blNavTitle: "Books & versions",
+  blMyBooks: "My books",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
