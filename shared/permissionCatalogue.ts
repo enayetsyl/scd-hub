@@ -915,6 +915,18 @@ export const FEATURE_CATALOGUE = {
       manage: { en: "Upload and manage class books", bn: "শ্রেণির বই আপলোড ও সম্পাদনা", desc: "Upload a book PDF (turned into page images), rename, move class, hide, delete", teacher: false, office: true, flags: [] },
     },
   },
+  // Winter-holiday booklet review (D-#1620, docs/prd-winter-task.md): a named reviewer suggests edits to the
+  // printed booklets' text, the Principal accepts them. Both switches are OFF for every role template —
+  // `review` is granted per person, `manage` is the Principal's.
+  winter_task: {
+    group: "content_and_books",
+    en: "Winter task booklets",
+    bn: "শীতের ছুটির খাতা",
+    actions: {
+      review: { en: "Review winter booklets", bn: "শীতের খাতা পর্যালোচনা", desc: "See every winter booklet, suggest text edits and page notes, edit or delete your own open suggestions", teacher: false, office: false, flags: [] },
+      manage: { en: "Manage winter booklets", bn: "শীতের খাতার সিদ্ধান্ত", desc: "Accept or reject suggestions, mark a booklet approved, export the accepted text (booklets are imported by script)", teacher: false, office: false, flags: [] },
+    },
+  },
   // Activity sheets (AS-1..AS-6, D-#988/#989, docs/prd-activity-sheets.md): the 3,597-sheet bank —
   // trays of pre-printed sheets at the office, guardian-chosen sheets printed with the child's name.
   activity_sheets: {

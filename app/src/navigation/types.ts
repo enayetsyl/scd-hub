@@ -300,6 +300,11 @@ export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
 };
+/** D-#1620 — winter-task booklet review. WinterBooklets stays first: the initial route takes no params. */
+export type WinterTaskStackParamList = {
+  WinterBooklets: undefined;
+  WinterBooklet: { bookletId: string; title: string };
+};
 /** SB-1 (D-#980) — the storybook shelf. StoryShelf stays first: the initial route takes no params. */
 /** AS-1 (D-#988) — activity sheets. ActivityBanks stays first: the initial route takes no params. */
 export type ActivityStackParamList = {
@@ -935,6 +940,8 @@ export type TabParamList = {
   /** D-#870 — class books: the staff shelf and the guardian's (same stack, two routes so
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** D-#1620 — winter-task booklet review (winter_task:review | manage). */
+  WinterTaskTab: NavigatorScreenParams<WinterTaskStackParamList>;
   /** D-#1030–#1033 — exam paper bank: draft papers + item review, and Mohammadpur's papers. */
   ExamPapersTab: NavigatorScreenParams<ExamPapersStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
