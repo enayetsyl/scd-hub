@@ -2,7 +2,7 @@
 
 Contract: `docs/prd-book-lifecycle.md` **Revision 2** (pre-flight passed: on `origin/dev` 82187534 with the
 §0.1 "R2" row and §1.3 owner answers). Branch: `claude/new-session-6juppd` (started from `origin/dev`
-82187534; `git merge-base --is-ancestor origin/dev HEAD` OK). No PR opened (blocked here; the lead opens it).
+82187534, rebased onto 2a7ba3ea before the first push — no force-push; `git merge-base --is-ancestor origin/dev HEAD` OK). No PR opened (blocked here; the lead opens it).
 
 Decisions used: D-#1590–#1616 recorded as written in PRD §22; build-time D-#1617, D-#1618 (BL-1), D-#1619
 (later slices). `origin/dev:DECISIONS.md` re-read before each commit: highest there D-#1576 (no clash; D-#1582/#1583
@@ -76,6 +76,16 @@ full server suite --maxWorkers=2 (NODE_OPTIONS 4 GB, as CI) →
 
 poppler (`pdftotext`) **is** installed on this cloud machine, so the packet's page-map case ran (not skipped). If the
 CI runner lacks it, that case skips with the named reason "poppler-utils (pdftotext) is not installed on this runner".
+
+**After rebasing onto `origin/dev` 2a7ba3ea (CSP-1 merged meanwhile; conflicts in DECISIONS/CHANGELOG/STATUS
+kept both sides; vocab NOTIFICATION_KINDS, the verifier's kinds + LOCKED lists, the catalogue README, firewall and
+permissionCatalogueGates merged as a union), re-run:**
+
+```
+verify_shared_vocab → RESULT: PASS · verify_help_guides → ALL CHECKS PASSED
+shared build + typecheck ok · server tsc (4 GB) exit 0 · app tsc exit 0 · expo export --platform web → EXPO_EXIT 0
+full server suite --maxWorkers=2 → Test Suites: 484 passed, 484 total · Tests: 7735 passed, 7735 total (564 s)
+```
 
 ### Not done in BL-1 (by design or deferred)
 

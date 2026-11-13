@@ -751,6 +751,9 @@ describe("Support-profile firewall (ADR-005 / CSP-1, D-#1548)", () => {
   });
   test("the support-profile module never imports the corpus plane", () => {
     for (const f of walkDir(path.join(modules, "support-profile"))) expect(fs.readFileSync(f, "utf8")).not.toMatch(importPattern("corpus/"));
+  });
+});
+
 /**
  * Book lifecycle (docs/prd-book-lifecycle.md §18, D-#1590): the module reads the identity plane only
  * for display names — in its resolvers and the one `services/names.ts` helper — and never imports
