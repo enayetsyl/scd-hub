@@ -71,7 +71,7 @@ export async function createRelease(auth: AuthPayload, versionId: string, input:
 }
 
 /** Parse the engine's pageplan.json into page → chapter, tolerant of its shape: an array of
- *  `{ page, chapterKey | chapter | heading | title }`, or `{ pages: [...] }` (D-#1622). Headings are
+ *  `{ page, chapterKey | chapter | heading | title }`, or `{ pages: [...] }` (D-#1624). Headings are
  *  matched to the version's chapter titles (whitespace-folded). */
 export function parsePagePlan(json: unknown, chapters: { key: string; title: string }[]): { page: number; chapterKey: string }[] {
   const rows = Array.isArray(json) ? json : Array.isArray((json as { pages?: unknown })?.pages) ? (json as { pages: unknown[] }).pages : [];

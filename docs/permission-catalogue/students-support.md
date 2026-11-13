@@ -16,6 +16,7 @@ OFFICE and GUARDIAN refused whatever is stored; "view as" refused unless the rea
 | resolveSupportSafeguardingHold | `support_profile:approve` | never under "view as" |
 | openSupportProfile / closeSupportProfile / reopenSupportProfile | `support_profile:manage` | never under "view as" |
 | setSupportProfileSwitch | `support_profile:manage` | ships OFF |
+| offerSupportSeed / answerSupportSeed | `support_profile:report` | own comment, CONCERN/POSITIVE, current reader (CSP-3) |
 
 ## (b) Queries — same file
 | resolver | gate | extra rule |
@@ -24,7 +25,8 @@ OFFICE and GUARDIAN refused whatever is stored; "view as" refused unless the rea
 | supportReport | any of `report` / `approve` / `view_all` | own while a reader, else approve/view_all; audited (REPORT) |
 | supportProfileView | any of `view` / `view_all` | current reader; audited (CARD / FULL) |
 | supportProfileChips | any of `view` / `view_all` | existence only; not audited |
-| supportQueuePage | `support_profile:approve` | |
+| supportQueuePage | `support_profile:approve` | status QUICK = the quick-approve list (CSP-3) |
+| mySupportSeedPrompts | `support_profile:report` | own open prompts |
 | supportProfilesPage | `support_profile:view_all` | ordered by class and name |
 | supportProfileSetting | `support_profile:manage` | |
 
@@ -43,6 +45,12 @@ Every field `support_profile:process` (LOCKED) and refused in every "view as" se
 | downloadSupportPack | `support_profile:process` | fail-closed name scan; built in memory, hash + download entry + audit only |
 | uploadSupportResult / supportImportPreview / applySupportImport / discardSupportImport | `support_profile:process` | the producer needs a passed evaluation for the method version |
 | downloadSupportEvalPack / recordSupportEvaluation / supportMethodInfo | `support_profile:process` | |
+
+## (d2) Versions (CSP-4) — `server/src/modules/support-profile/resolvers/supportVersions.ts`
+| resolver | gate | extra rule |
+|---|---|---|
+| publishSupportVersion / discardSupportVersion / editSupportDraftItem / createHandSupportVersion / markSupportGoalProgress | `support_profile:approve` | never under "view as" |
+| supportVersionsPage / supportVersionDiff / supportReadersPage | `support_profile:view_all` | the history read is audited (HISTORY) |
 
 ## (e) App gates
 Screens arrive with CSP-5 (teacher surfaces) and CSP-2/3 (batch, queue). Each button checks its action with `can("support_profile:…")`.

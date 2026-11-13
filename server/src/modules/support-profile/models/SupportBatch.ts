@@ -13,7 +13,7 @@ export interface SupportCodeMap {
   children: { code: string; studentId: Types.ObjectId }[];
   teachers: { code: string; userId: Types.ObjectId }[];
   reports: { code: string; reportId: Types.ObjectId; isNew: boolean }[];
-  strategies: { code: string; strategyId: Types.ObjectId }[];
+  strategies: { code: string; strategyId: Types.ObjectId; studentId?: Types.ObjectId }[];
   items: { code: string; itemId: string; studentId: Types.ObjectId }[];
 }
 

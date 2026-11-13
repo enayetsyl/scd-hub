@@ -150,4 +150,4 @@ full server suite --maxWorkers=2 →
 
 ### Decisions
 
-D-#1622 (BL-2 build details).
+D-#1624 (BL-2 build details).

@@ -35,7 +35,10 @@ import {
   type SupportReportInput,
 } from "../services/SupportReportService";
 import { chipStudentIds, openProfile, profilesPage, readProfile, setProfileStatus, setSwitch, type ProfileView } from "../services/SupportProfileService";
-import { getSupportSetting, supportCaller } from "../services/supportAccess";
+import { canSeeSafeguardingBanner, getSupportSetting, supportCaller } from "../services/supportAccess";
+import { evidencePreview, isQuickApprovable } from "../services/supportQueueExtras";
+import { recordsPack } from "../services/supportRecords";
+import { answerSeed, offerSeed, pendingSeeds } from "../services/supportSeed";
 
 // ---------------------------------------------------------------------------------------------
 // Types
@@ -119,6 +122,17 @@ const ReportRef = builder.objectRef<ReportView>("SupportReport").implement({
     principalEdited: t.boolean({ resolve: (v) => v.r.principalEdited }),
     edits: t.field({ type: [EditRef], resolve: (v) => (v.textVisible ? editsOf(v.r) : []) }),
     decisionReasonBn: t.string({ nullable: true, resolve: (v) => (v.textVisible ? v.r.decisionReasonBn : null) }),
+    // Principal-only (§9.4): the compare panel (incl. author skew), the evidence preview, the open
+    // flags, the records pack, quick-approve. Never shown to the author (§10).
+    quickApprovable: t.boolean({ resolve: (v) => v.quick ?? (!!v.principal && isQuickApprovable(v.r)) }),
+    compareJson: t.string({ nullable: true, resolve: (v) => (v.principal && v.r.compare ? JSON.stringify(v.r.compare) : null) }),
+    suggestedLinksJson: t.string({ nullable: true, resolve: (v) => (v.principal ? JSON.stringify(v.r.suggestedLinks ?? []) : null) }),
+    openFlags: t.field({ type: [QuestionRef], resolve: (v) => (v.principal ? v.r.openFlags : []) }),
+    disagreements: t.stringList({ resolve: (v) => (v.principal ? v.r.teacherDisagreements.map((d) => d.reasonBn) : []) }),
+    dontRememberCount: t.int({ resolve: (v) => (v.principal ? v.r.dontRememberCount : 0) }),
+    sectionHints: t.stringList({ resolve: (v) => (v.principal ? v.r.sectionHints : []) }),
+    evidencePreviewJson: t.string({ nullable: true, resolve: async (v) => (v.principal ? JSON.stringify(await evidencePreview(v.r)) : null) }),
+    recordsJson: t.string({ nullable: true, resolve: async (v) => (v.principal ? JSON.stringify(await recordsPack(String(v.r.studentId))) : null) }),
     createdAt: t.string({ resolve: (v) => v.r.createdAt.toISOString() }),
   }),
 });
@@ -189,7 +203,7 @@ const ProfileViewRef = builder.objectRef<ProfileView>("SupportProfileView").impl
     status: t.string({ resolve: (v) => v.profile.status }),
     versionNo: t.int({ nullable: true, resolve: (v) => v.version?.versionNo ?? null }),
     publishedAt: t.string({ nullable: true, resolve: (v) => v.version?.publishedAt?.toISOString() ?? null }),
-    safeguardingBanner: t.boolean({ resolve: (v) => !!v.profile.safeguardingBanner }),
+    safeguardingBanner: t.boolean({ description: "SG-6: only for approve / view_all / safeguarding:receive holders; cleared when the referral is seen.", resolve: (v, _a, ctx) => !!v.profile.safeguardingBanner && canSeeSafeguardingBanner(ctx.auth ?? null) }),
     sections: t.field({ type: [SectionRef], resolve: (v) => v.sections }),
     card: t.field({ type: CardRef, nullable: true, resolve: (v) => v.card }),
   }),
@@ -261,6 +275,15 @@ const QuestionAnswerInput = builder.inputType("SupportQuestionAnswerInput", {
     flagId: t.string({ required: true }),
     answer: t.string({ required: true, description: "REWRITTEN · USED_SUGGESTION · DISAGREE · DONT_REMEMBER" }),
     reasonBn: t.string({ required: false }),
+  }),
+});
+
+const StrategyLinkInput = builder.inputType("SupportStrategyLinkInput", {
+  fields: (t) => ({
+    strategyId: t.string({ required: true, description: "An existing strategy id, or NEW" }),
+    outcome: t.string({ required: true, description: "WORKED · PARTLY · DID_NOT_WORK" }),
+    starterKey: t.string({ required: false }),
+    titleBn: t.string({ required: false }),
   }),
 });
 
@@ -390,10 +413,19 @@ builder.mutationField("decideSupportReport", (t) =>
       decision: t.arg.string({ required: true }),
       reasonBn: t.arg.string({ required: false }),
       edited: t.arg({ type: EditedTextInput, required: false }),
+      strategyLinks: t.arg({ type: [StrategyLinkInput], required: false }),
+      sectionHints: t.arg.stringList({ required: false }),
     },
     resolve: async (_r, a, ctx) => {
       const d = a.decision as "APPROVED" | "APPROVED_EDITED" | "RETURNED" | "NOT_USED";
-      const r = await decideSupportReport(ctx, { reportId: a.reportId, decision: d, reasonBn: a.reasonBn, edited: (a.edited ?? null) as never });
+      const r = await decideSupportReport(ctx, {
+        reportId: a.reportId,
+        decision: d,
+        reasonBn: a.reasonBn,
+        edited: (a.edited ?? null) as never,
+        strategyLinks: (a.strategyLinks ?? null) as never,
+        sectionHints: a.sectionHints ?? null,
+      });
       return { r, textVisible: false, studentName: null, authorName: null };
     },
   }),
@@ -458,5 +490,58 @@ builder.mutationField("setSupportProfileSwitch", (t) =>
     authScopes: { hasPermission: "support_profile:manage" },
     args: { on: t.arg.boolean({ required: true }) },
     resolve: (_r, a, ctx) => setSwitch(ctx, a.on),
+  }),
+);
+
+// ---------------------------------------------------------------------------------------------
+// Comment → report (§7.4, CSP-3) — offered from this side; comments/ imports nothing from here
+// ---------------------------------------------------------------------------------------------
+
+const SeedOfferRef = builder
+  .objectRef<{ offered: boolean; safeguardingFirst: boolean; praise: boolean; state: string | null }>("SupportSeedOffer")
+  .implement({
+    fields: (t) => ({
+      offered: t.exposeBoolean("offered"),
+      safeguardingFirst: t.exposeBoolean("safeguardingFirst"),
+      praise: t.exposeBoolean("praise"),
+      state: t.string({ nullable: true, resolve: (o) => o.state }),
+    }),
+  });
+const SeedAnswerRef = builder
+  .objectRef<{ state: string; draft: ReportView | null }>("SupportSeedAnswer")
+  .implement({ fields: (t) => ({ state: t.exposeString("state"), draft: t.field({ type: ReportRef, nullable: true, resolve: (a) => a.draft }) }) });
+const SeedPromptRef = builder
+  .objectRef<{ commentId: string; studentId: string; state: string; expiresKey: string }>("SupportSeedPrompt")
+  .implement({ fields: (t) => ({ commentId: t.exposeString("commentId"), studentId: t.exposeString("studentId"), state: t.exposeString("state"), expiresKey: t.exposeString("expiresKey") }) });
+
+builder.mutationField("offerSupportSeed", (t) =>
+  t.field({
+    type: SeedOfferRef,
+    description: "After a comment is saved: 'এই বিষয়ে একটি সহায়তা রিপোর্ট লিখবেন? (২ মিনিট)' — only for a CONCERN/POSITIVE comment by a current reader.",
+    authScopes: { hasPermission: "support_profile:report" },
+    args: { commentId: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => offerSeed(ctx, a.commentId),
+  }),
+);
+builder.mutationField("answerSupportSeed", (t) =>
+  t.field({
+    type: SeedAnswerRef,
+    description: "এখন লিখুন (NOW → one COMMENT_SEED draft) · পরে (LATER) · না (NO).",
+    authScopes: { hasPermission: "support_profile:report" },
+    args: { commentId: t.arg.string({ required: true }), choice: t.arg.string({ required: true }) },
+    resolve: async (_r, a, ctx) => {
+      const choice = a.choice === "NOW" ? "NOW" : a.choice === "LATER" ? "LATER" : "NO";
+      const { prompt, draft } = await answerSeed(ctx, a.commentId, choice);
+      return { state: prompt.state, draft: draft ? { r: draft, textVisible: true, studentName: null, authorName: null } : null };
+    },
+  }),
+);
+builder.queryField("mySupportSeedPrompts", (t) =>
+  t.field({
+    type: [SeedPromptRef],
+    description: "'লেখা বাকি' — open prompts, at most 50, gone by themselves after the comment day + 7.",
+    authScopes: { hasPermission: "support_profile:report" },
+    resolve: async (_r, _a, ctx) =>
+      (await pendingSeeds(ctx)).map((p) => ({ commentId: String(p.commentId), studentId: String(p.studentId), state: p.state, expiresKey: p.expiresKey })),
   }),
 );

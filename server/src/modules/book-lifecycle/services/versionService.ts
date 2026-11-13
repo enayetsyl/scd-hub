@@ -748,7 +748,7 @@ function changedRuns(oldText: string, newText: string): { ins: string[]; del: st
 }
 
 /**
- * Interim coverage (VR-7 arrives with BL-3, D-#1620): a direct-fix approve of an uploaded version
+ * Interim coverage (VR-7 arrives with BL-3, D-#1622): a direct-fix approve of an uploaded version
  * needs every changed word run to be accounted for by a change row of that chapter — each
  * inserted run sits inside a row's after-excerpt, each deleted run inside a row's before-excerpt — and no chapter may
  * be added or removed. Returns the chapters that are not fully covered.

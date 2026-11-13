@@ -27,9 +27,21 @@ export class SafeguardingRefusal extends Error {
 
 const RECEIVE = "safeguarding:receive" as Permission;
 export const SAFEGUARDING_NOTICE_BN = "শিশু সুরক্ষা: একজন শিক্ষক এখনই আপনার সাথে কথা বলতে চান";
+/** SG-6: a build-up the system noticed across reports — no teacher is waiting to talk, so the notice says what it is. */
+export const SAFEGUARDING_PATTERN_NOTICE_BN = "শিশু সুরক্ষা: একটি শিশুর একাধিক রিপোর্টে একই ধরনের বিষয় উঠেছে — দেখুন";
+const noticeBodyFor = (source: string): string => (source === "SUPPORT_COMPARE" ? SAFEGUARDING_PATTERN_NOTICE_BN : SAFEGUARDING_NOTICE_BN);
+
+/** Called when a referral is first seen or closed (the support profile clears its SG-6 banner here;
+ *  this file imports nothing from that module). */
+export type ReferralClosedHook = (ref: { studentId: string; source: string }) => Promise<void>;
+const referralClosedHooks: ReferralClosedHook[] = [];
+export function onReferralSeen(h: ReferralClosedHook): void {
+  if (!referralClosedHooks.includes(h)) referralClosedHooks.push(h);
+}
+
 const PREVIEW_BN = "শিক্ষার্থী সহায়তা: নতুন বার্তা";
 
-async function noticeReceivers(referralId: string, slot: string): Promise<number> {
+async function noticeReceivers(referralId: string, slot: string, source: string): Promise<number> {
   let n = 0;
   for (const uid of await holderIdsOf(RECEIVE)) {
     try {
@@ -37,7 +49,7 @@ async function noticeReceivers(referralId: string, slot: string): Promise<number
         recipientUserId: uid,
         kind: "SAFEGUARDING",
         titleBn: PREVIEW_BN,
-        bodyBn: SAFEGUARDING_NOTICE_BN,
+        bodyBn: noticeBodyFor(source),
         dedupeKey: `safeguarding:${referralId}:${slot}:${uid}`,
       });
       if (r.created) n++;
@@ -74,7 +86,7 @@ export async function raiseReferral(input: {
     targetKind: "SafeguardingReferral",
     meta: { referralId: ref._id.toString(), studentId: input.studentId, source: input.source, signs },
   });
-  await noticeReceivers(ref._id.toString(), "raised");
+  await noticeReceivers(ref._id.toString(), "raised", ref.source);
   return ref;
 }
 
@@ -149,6 +161,15 @@ export async function markReferral(
   ref.status = action === "CLOSED_OUTSIDE_APP" ? "CLOSED_OUTSIDE_APP" : ref.status === "RAISED" ? "SEEN" : ref.status;
   if (noteBn != null) ref.noteBn = noteBn.slice(0, 300);
   await ref.save();
+  if (firstSeen || action === "CLOSED_OUTSIDE_APP") {
+    for (const h of referralClosedHooks) {
+      try {
+        await h({ studentId: String(ref.studentId), source: ref.source });
+      } catch {
+        /* a hook never blocks the receiver */
+      }
+    }
+  }
   if (firstSeen) {
     await writeAudit({
       eventKind: "SAFEGUARDING_REFERRAL_SEEN",
@@ -168,7 +189,7 @@ export async function renotifyUnseenReferrals(now: Date = new Date()): Promise<n
   const due = await SafeguardingReferral.find({ status: "RAISED", lastNotifiedAt: { $lte: new Date(now.getTime() - 60 * 60 * 1000) } }).limit(200);
   let n = 0;
   for (const r of due) {
-    n += await noticeReceivers(r._id.toString(), `${dhakaDayKey(now)}T${hour}`);
+    n += await noticeReceivers(r._id.toString(), `${dhakaDayKey(now)}T${hour}`, r.source);
     r.lastNotifiedAt = now;
     await r.save();
   }

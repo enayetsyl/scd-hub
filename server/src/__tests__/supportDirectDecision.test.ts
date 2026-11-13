@@ -29,6 +29,10 @@ it("approve / edit / return / not used a TO_PROCESS report → checkSkipped DECI
   expect(a.data?.decideSupportReport).toMatchObject({ status: "APPROVED", checkSkipped: "DECIDED_DIRECTLY" });
   const e = await run(DECIDE, P(), { id: await newReport(), d: "APPROVED_EDITED", edited: { behaviour: "সে দুটি অঙ্ক বুঝিয়ে দিয়েছে" } });
   expect(e.data?.decideSupportReport).toMatchObject({ status: "APPROVED", principalEdited: true, checkSkipped: "DECIDED_DIRECTLY" });
+  expect((await SupportReport.findById(e.data?.decideSupportReport.id).lean())?.approvedText?.behaviour).toBe("সে দুটি অঙ্ক বুঝিয়ে দিয়েছে");
+  // an approval with no wording change is not marked edited
+  const same = await run(DECIDE, P(), { id: await newReport(), d: "APPROVED_EDITED", edited: {} });
+  expect(same.data?.decideSupportReport.principalEdited).toBe(false);
   const ret = await run(DECIDE, P(), { id: await newReport(), d: "RETURNED", reason: "কোন পিরিয়ডে ঘটেছে লিখুন" });
   expect(ret.data?.decideSupportReport.status).toBe("RETURNED");
   const nu = await run(DECIDE, P(), { id: await newReport(), d: "NOT_USED", reason: "পুনরাবৃত্তি" });
