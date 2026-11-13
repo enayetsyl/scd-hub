@@ -18,7 +18,7 @@
 import "dotenv/config";
 import { disconnectDb } from "../db";
 import { disconnectBookDb } from "../bookDb";
-import { aiWorkerPass, openWorkerPlanes } from "./aiWorkerPlanes";
+import { aiWorkerPass, drainBookJobs, openWorkerPlanes } from "./aiWorkerPlanes";
 import { refreshAiConfig } from "../modules/platform/services/AiSettingService";
 import { loadRoleTemplateOverrides } from "../modules/access-control/services/RoleTemplateService";
 import { registerExpoPushChannel } from "../modules/notifications/services/pushChannel";
@@ -50,6 +50,9 @@ async function main(): Promise<void> {
     }
     await new Promise((r) => setTimeout(r, TICK_MS));
   }
+  // Shutting down: let a running book job finish its call (a minute at most), else hand it back to the queue.
+  const drained = await drainBookJobs(bookInFlight);
+  if (drained.requeued) console.log(`[ai-worker] ${drained.requeued} book job(s) handed back to the queue`);
 }
 
 for (const sig of ["SIGINT", "SIGTERM"] as const) {

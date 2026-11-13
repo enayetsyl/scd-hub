@@ -9,7 +9,7 @@ import type { AiProviderName } from "../../platform/ai/provider";
 
 export interface BookEditJobChapter {
   key: string;
-  status: "queued" | "running" | "done" | "unchanged" | "failed";
+  status: "queued" | "running" | "done" | "unchanged" | "failed" | "skipped";
   attempts: number;
   fixes: number;
   costUsd: number;
@@ -59,7 +59,7 @@ const BookEditJobSchema = new Schema<IBookEditJob>(
       type: [
         {
           key: String,
-          status: { type: String, enum: ["queued", "running", "done", "unchanged", "failed"], default: "queued" },
+          status: { type: String, enum: ["queued", "running", "done", "unchanged", "failed", "skipped"], default: "queued" },
           attempts: { type: Number, default: 0 },
           fixes: { type: Number, default: 0 },
           costUsd: { type: Number, default: 0 },

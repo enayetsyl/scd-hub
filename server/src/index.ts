@@ -89,8 +89,11 @@ app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.get("/readyz", async (_req, res) => {
   const { mongoose } = await import("./db");
   const state = mongoose.connection.readyState;
-  if (state === 1) res.json({ ok: true });
-  else res.status(503).json({ ok: false, dbState: state });
+  const { isBookDbReady } = await import("./bookDb");
+  // The book plane is optional (D-#404): reported, never a reason to fail readiness.
+  const book = isBookDbReady() ? "[book] plane connected" : "[book] plane not connected";
+  if (state === 1) res.json({ ok: true, book });
+  else res.status(503).json({ ok: false, dbState: state, book });
 });
 // MON-4: notification-ticker heartbeat (no PII). MON-5's off-box monitor watches
 // `ageSeconds` and alerts when the ticker stalls (past ~2× the 60s interval).

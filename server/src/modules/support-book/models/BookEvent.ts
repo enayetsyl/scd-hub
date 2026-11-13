@@ -77,6 +77,7 @@ export const BOOK_EVENT_KINDS = [
   "DRAFT_REJECTED",
   "JOB_STARTED",
   "JOB_FINISHED",
+  "JOB_STOP_REQUESTED",
   "RELEASE_RECORDED",
   "RELEASE_STATUS",
   "ERRATUM_ANNOUNCED",
@@ -97,7 +98,7 @@ export interface IBookEvent extends Document {
   /** Absent = the lesson-JSON flow (old rows stay valid); "LIFECYCLE" = the book lifecycle (§5.14). */
   flow?: "LESSON_JSON" | "LIFECYCLE";
   /** Who drove the write: the app, or Claude over MCP (§15.1). Lifecycle rows only. */
-  origin?: "app" | "claude";
+  origin?: "app" | "claude" | "ai_job";
   /** Once-per-key rows (CONTENT_READ: user × version × surface × Dhaka day). */
   dedupeKey?: string;
   /** Bare id — identity is on the other connection (D-#404). */
@@ -136,7 +137,7 @@ const BookEventSchema = new Schema<IBookEvent>(
     targetId: { type: String },
     kind: { type: String, enum: BOOK_EVENT_KINDS, required: true },
     flow: { type: String, enum: ["LESSON_JSON", "LIFECYCLE"] },
-    origin: { type: String, enum: ["app", "claude"] },
+    origin: { type: String, enum: ["app", "claude", "ai_job"] },
     dedupeKey: { type: String },
     actorId: { type: Schema.Types.ObjectId, required: true },
     at: { type: Date, required: true, default: () => new Date() },
