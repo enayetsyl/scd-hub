@@ -836,7 +836,6 @@ export function rollupOf(
   };
 }
 
-/** One row per section for a month — the newest revision of each child. */
 /**
  * Every section's month at once (the `monthlyClassRollups` query's body, moved here unchanged so
  * the data assistant reuses it — DA-1, D-#1534). The caller gates (`requireMonthly(ctx,
@@ -853,6 +852,7 @@ export async function monthlyClassRollups(periodKey: string): Promise<ClassRollu
   return out.filter((r) => r.students > 0);
 }
 
+/** One row per section for a month — the newest revision of each child. */
 export async function monthlyClassRollup(sectionId: string, periodKey: string): Promise<ClassRollup> {
   const rows = (await MonthlyReport.find({ sectionId: new Types.ObjectId(sectionId), periodKey })
     .sort({ revision: -1 })

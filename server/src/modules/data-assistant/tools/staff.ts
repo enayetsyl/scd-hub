@@ -151,8 +151,8 @@ export const staffLeave: ToolDef = {
     const to = args.to ?? ctx.today;
     const from = args.from ?? addDays(to, -29);
     checkRange(from, to, 366);
-    const page = await listLeavePage({ status: args.status, fromKey: from, toKey: to }, { page: 1, pageSize: 200 });
-    const rows = page.rows.filter((r) => !args.staff_id || String(r.staffProfileId) === args.staff_id);
+    const page = await listLeavePage({ status: args.status, fromKey: from, toKey: to, staffProfileId: args.staff_id }, { page: 1, pageSize: 200 });
+    const rows = page.rows;
     const c = cap(rows, 100);
     const names = await staffNames(c.rows.map((r) => String(r.staffProfileId)));
     const out: Record<string, unknown> = {
@@ -175,7 +175,7 @@ export const staffLeave: ToolDef = {
       const b = await balancesForStaff(args.staff_id, await currentYearIdOrThrow());
       out.balances = b.map((x) => ({ type: x.leaveType, paid: x.paid, allowance: x.allowanceDays, carried_over: x.carriedOverDays, taken: x.takenDays, left: x.remainingDays }));
     }
-    return { data: out, rowCount: c.rows.length, truncated: c.truncated || page.total > page.rows.length, total: args.staff_id ? rows.length : page.total };
+    return { data: out, rowCount: c.rows.length, truncated: c.truncated || page.total > page.rows.length, total: page.total };
   },
 };
 

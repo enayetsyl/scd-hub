@@ -34,11 +34,25 @@ export function isDeniedKey(key: string): boolean {
 
 /** "+880 1712-345678", "+88 01712 345678", "৮৮০ ১৭১২…" — spacing PHONE_PATTERN does not cover. */
 const INTL_PHONE = /(?:\+|00)?(?:88|৮৮)[\s-]?[0০]?[\s-]?[1১][3-9৩-৯](?:[\s-]?[0-9০-৯]){8}/g;
+/**
+ * Separated formats (0171-2345678, 0171 234 5678, 01712-34-56-78, 01712.345.678, (01712) 345678,
+ * ০১৭ ১২৩৪ ৫৬৭৮) and the bare 10-digit body (1712345678): an optional +88/88/0088 prefix, an
+ * optional leading 0, then `1[3-9]` and 8 more digits, with up to two separator characters
+ * (space - . parentheses) between any two digits. Exactly 10 digits after the prefix, bounded by
+ * digit lookarounds, so amounts ("৳ 12,500"), dates ("2026-11-13") and short school ids stay.
+ */
+const SEP = String.raw`[\s\-.()]{0,2}`;
+const DIG = "[0-9০-৯]";
+const SEPARATED_PHONE = new RegExp(
+  String.raw`\(?(?:(?:\+|00)?(?:88|৮৮)${SEP})?(?:[0০]${SEP})?[1১]${SEP}[3-9৩-৯](?:${SEP}${DIG}){8}`,
+  "g",
+);
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 
 /** Digit boundaries: a phone is never the middle of a longer number (an amount, a hex id). */
 const bounded = (src: string) => `(?<![0-9০-৯])(?:${src})(?![0-9০-৯])`;
 const PHONE_RE = () => new RegExp(bounded(PHONE_PATTERN.source), "g");
+const SEP_RE = () => new RegExp(bounded(SEPARATED_PHONE.source), "g");
 const INTL_RE = () => new RegExp(bounded(INTL_PHONE.source), "g");
 const EMAIL_RE = () => new RegExp(EMAIL.source, "g");
 /** A Mongo id as tools return it: never swept (24 hex can hold an 11-digit run). */
@@ -47,13 +61,13 @@ const OBJECT_ID = /^[0-9a-f]{24}$/i;
 /** Layer 3 on one string. */
 export function sweepText(s: string): string {
   if (OBJECT_ID.test(s)) return s;
-  return s.replace(EMAIL_RE(), EMAIL_MASK).replace(INTL_RE(), PHONE_MASK).replace(PHONE_RE(), PHONE_MASK);
+  return s.replace(EMAIL_RE(), EMAIL_MASK).replace(INTL_RE(), PHONE_MASK).replace(PHONE_RE(), PHONE_MASK).replace(SEP_RE(), PHONE_MASK);
 }
 
 /** True when a string still holds a phone or an e-mail (tests + the outgoing-question check). */
 export function hasContact(s: string): boolean {
   if (OBJECT_ID.test(s)) return false;
-  return PHONE_RE().test(s) || INTL_RE().test(s) || EMAIL_RE().test(s);
+  return PHONE_RE().test(s) || INTL_RE().test(s) || SEP_RE().test(s) || EMAIL_RE().test(s);
 }
 
 /**

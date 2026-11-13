@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 import { callerHasPermission } from "@scd/shared";
+import { Class } from "../../foundation/models/Class";
+import { currentYearFilter } from "../../foundation/services/currentYear";
 import { Student } from "../../foundation/models/Student";
 import { assertSectionReportAccess } from "../../attendance/resolvers/studentAttendance";
 import { absenteeReport, studentAttendanceHistory, unmarkedSections } from "../../attendance/services/AttendanceReportService";
@@ -137,9 +139,16 @@ export const attendanceRanking: ToolDef = {
     assertRule(ctx.auth, gateOf(attendanceRanking, args.who));
     const window = args.window === "year" ? "cumulative" : args.window;
     const anchorKey = args.anchor ?? ctx.today;
+    let classId: string | undefined;
+    if (args.who === "students" && args.class_level !== undefined) {
+      // axis "level" would filter Quran SubjectGroup.level, not the class: resolve this year's class.
+      const cls = (await Class.find({ ...(await currentYearFilter()), level: args.class_level, active: { $ne: false } }).select("_id").sort({ _id: 1 }).limit(1).lean()) as Array<{ _id: unknown }>;
+      if (cls.length === 0) throw new ToolInvalid("No class at that level in the current academic year.");
+      classId = String(cls[0]._id);
+    }
     const res =
       args.who === "students"
-        ? await rankStudents({ window, anchorKey, axis: args.class_level === undefined ? "school" : "level", axisValue: args.class_level === undefined ? undefined : String(args.class_level) })
+        ? await rankStudents({ window, anchorKey, axis: classId ? "class" : "school", axisValue: classId })
         : await rankStaff({ window, anchorKey });
     const sorted = [...res.rows].sort((x, y) => (args.order === "highest" ? y.presentPct - x.presentPct : x.presentPct - y.presentPct));
     const c = cap(sorted, args.limit ?? 20);

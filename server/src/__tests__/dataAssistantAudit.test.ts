@@ -35,7 +35,7 @@ it("writes one row per call with every field", async () => {
 
 it("a denial carries the missing permissions; arguments are swept of phones", async () => {
   await runTool(fx.auth.office, "mastery_overview", {}, { surface: "in_app" });
-  await runTool(fx.auth.principal, "find_students", { query: "01711 223344" }, { surface: "in_app" });
+  await runTool(fx.auth.principal, "find_students", { query: "01700 000001" }, { surface: "in_app" });
   const denied = await AiDataCall.findOne({ outcome: "denied" }).lean();
   expect(denied!.deniedNeeds).toEqual(["mastery:view", "mastery:approve"]);
   const swept = await AiDataCall.findOne({ tool: "find_students" }).lean();
