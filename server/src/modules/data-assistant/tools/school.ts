@@ -10,11 +10,11 @@
 import { z } from "zod";
 import { callerHasPermission } from "@scd/shared";
 import { ANY_PART } from "../../daily-report/partSwitches";
-import { dailyReportFor, viewerFor } from "../../daily-report/services/DailyReportService";
+import { assertCanSee, DailyReportError, dailyReportFor, viewerFor } from "../../daily-report/services/DailyReportService";
 import { popupNoticeReport, popupNoticesPage, popupRecipientsPage } from "../../popup-notices/services/PopupNoticeService";
 import { assertRule } from "../gates";
 import { SHORT_TEXT_CAP, wrapUntrusted } from "../untrusted";
-import { type ToolDef } from "../types";
+import { ToolDenied, type ToolDef } from "../types";
 import { cap, checkDay, DATE_KEY, iso, OBJECT_ID } from "./common";
 
 /** The daily-report parts the assistant may pass on (DAILY_REPORT_SECTIONS at DA-1). */
@@ -38,6 +38,13 @@ export const dailyReport: ToolDef = {
     const date = args.date ?? ctx.today;
     checkDay(date, ctx.today, 400);
     const viewer = await viewerFor({ ...ctx.auth, userId: ctx.auth.userId });
+    try {
+      // An expired share (or no part left) is the §5.4 denial, not a failure.
+      assertCanSee(viewer);
+    } catch (e) {
+      if (e instanceof DailyReportError) throw new ToolDenied(ANY_PART, e.message);
+      throw e;
+    }
     const view = await dailyReportFor(date, viewer);
     if (!view) return { data: { date, report: null, note: "No saved report for that day." }, rowCount: 0 };
     const parts = view.parts.filter((p) => (DAILY_PARTS_ALLOWED as readonly string[]).includes(p.key));
@@ -54,7 +61,7 @@ export const dailyReport: ToolDef = {
         problems: p.problems,
         mistakes: p.mistakes,
         numbers: Object.fromEntries((p.stats ?? []).map((s) => [s.key, s.value])),
-        items: items.rows.map((i) => ({ tone: i.tone, title: i.title, subtitle: i.subtitle ?? null, value: i.value ?? null })),
+        items: items.rows.map((i) => ({ tone: i.tone, title: p.key === "WORK_BOARD" ? wrapUntrusted(i.title, SHORT_TEXT_CAP) : i.title, subtitle: i.subtitle ?? null, value: i.value ?? null })),
         more_items: (p.itemsMore ?? 0) + (items.total - items.rows.length),
       };
     });
@@ -102,7 +109,7 @@ export const notices: ToolDef = {
         acted: r.acted,
         done: r.done,
         not_seen: r.notSeen,
-        choices: r.choices.map((c) => ({ label: c.label, count: c.count })),
+        choices: r.choices.map((c) => ({ label: wrapUntrusted(c.label, SHORT_TEXT_CAP), count: c.count })),
         groups: r.groups.map((g) => ({ group: g.group, reachable: g.reachable, seen: g.seen, done: g.done })),
       };
       let rows = 1;
@@ -110,7 +117,7 @@ export const notices: ToolDef = {
         const page = await popupRecipientsPage(args.notice_id, args.recipients === "pending" ? "not_done" : "done", { page: 1, pageSize: 100 });
         // Q3: guardian names only with guardians:view_all. Never the row's phone / wa.me link.
         const guardianNames = callerHasPermission(ctx.auth, "guardians:view_all");
-        out.recipient_list = page.rows.map((p) => ({ name: p.kind === "guardian" && !guardianNames ? null : p.name, kind: p.kind, group: p.group, state: p.state, done: p.done }));
+        out.recipient_list = page.rows.map((p) => ({ name: String(p.kind).toUpperCase() === "GUARDIAN" && !guardianNames ? null : p.name, kind: p.kind, group: p.group, state: p.state, done: p.done }));
         out.recipient_total = page.total;
         rows += page.rows.length;
       }
@@ -120,7 +127,7 @@ export const notices: ToolDef = {
     return {
       data: page.rows.map((n) => ({
         notice_id: n.id,
-        title: n.titleBn || n.titleEn,
+        title: wrapUntrusted(n.titleBn || n.titleEn, SHORT_TEXT_CAP),
         body: wrapUntrusted(n.bodyBn || n.bodyEn, SHORT_TEXT_CAP),
         audience: n.audienceSummary,
         status: n.displayStatus,
