@@ -30,7 +30,8 @@ it("routes move the status: needs_reviewer → with_reviewer; direct_fix / verba
   const id = book._id.toString();
   expect((await item(P(), id, "needs_reviewer")).status).toBe("with_reviewer");
   expect((await item(P(), id, "direct_fix")).status).toBe("accepted");
-  expect((await item(P(), id, "verbal_errata")).status).toBe("accepted");
+  // No printed release yet → a verbal erratum would be lost: refused with a plain reason.
+  await expect(item(P(), id, "verbal_errata")).rejects.toMatchObject({ code: "NO_RELEASE" });
   const f = await fileFeedback(P(), id, "proof_read", { category: "layout", textBn: "লাইন ভাঙা" });
   expect(f.status).toBe("open");
   expect(f.code).toBe("F-4");
@@ -72,7 +73,7 @@ it("direct-fix approve only when every change cites direct_fix / verbal_errata i
   await expect(approveDirectFix(P(), v1._id.toString())).rejects.toThrow(/সরাসরি সংশোধন নয়/);
   // A new child (v1 stays a draft; its child is latest) whose only change cites a direct fix.
   const fix = await item(P(), id, "direct_fix");
-  const errata = await item(P(), id, "verbal_errata");
+  const errata = await item(P(), id, "direct_fix", { chapterKey: "ch-003" });
   const v2 = await childVersion(P(), id, "2টি নৌকা", "দুটি নৌকা", [fix.code, errata.code]);
   const ok = await approveDirectFix(P(), v2._id.toString());
   expect(ok.status).toBe("approved");

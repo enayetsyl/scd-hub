@@ -52,6 +52,7 @@ export const MIME_BY_EXT: Record<string, string> = {
   md: "text/plain",
   txt: "text/plain",
   pdf: "application/pdf",
+  json: "application/json",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   zip: "application/zip",
   png: "image/png",
@@ -73,7 +74,7 @@ const ALLOWED_BY_KIND: Record<BookLcFileKind, string[]> = {
   book_lc_media: ["image/png", "image/jpeg", "image/webp", "application/zip"],
   book_lc_packet: ["application/pdf"],
   book_lc_feedback: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
-  book_lc_print: ["application/pdf", "application/zip", DOCX, "image/png", "image/jpeg", "image/webp"],
+  book_lc_print: ["application/pdf", "application/zip", "application/json", DOCX, "image/png", "image/jpeg", "image/webp"],
   book_lc_history: ["application/pdf", "image/png", "image/jpeg", DOCX, "text/plain"],
 };
 
@@ -92,6 +93,7 @@ function magicOk(mime: string, d: Buffer): boolean {
     case "application/zip":
     case DOCX:
       return at(0, [0x50, 0x4b, 0x03, 0x04]);
+    case "application/json":
     case "text/plain":
       return !d.subarray(0, 8192).includes(0);
     default:
@@ -109,7 +111,7 @@ export function detectLcMime(name: string, data: Buffer, allowed: string[]): str
 
 export function allowedMimesFor(kind: BookLcFileKind, opts: { zip?: boolean } = {}): string[] {
   const all = ALLOWED_BY_KIND[kind];
-  return opts.zip ? all : all.filter((m) => m !== "application/zip");
+  return kind === "book_lc_media" && !opts.zip ? all.filter((m) => m !== "application/zip") : all;
 }
 
 export interface StoreLcFileInput {

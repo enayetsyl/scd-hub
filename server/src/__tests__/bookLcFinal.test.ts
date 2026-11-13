@@ -18,7 +18,7 @@ afterAll(async () => teardownLc(fx));
 beforeEach(async () => resetBooks());
 const P = () => fx.auth.principal;
 const edition = async (versionId: string, e: "TEACHER" | "STUDENT", format: "pdf" | "docx" = "pdf") =>
-  uploadVersionFile(P(), versionId, { role: "edition", edition: e, name: `${e}.${format}`, data: format === "pdf" ? await samplePdf(1, []) : Buffer.from("PK docx fixture"), mime: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  uploadVersionFile(P(), versionId, { role: "edition", edition: e, name: `${e}.${format}`, data: format === "pdf" ? await samplePdf(1, []) : Buffer.from("PK docx fixture"), mime: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 
 async function approvedOnPaper() {
   const { book } = await importSample(P());

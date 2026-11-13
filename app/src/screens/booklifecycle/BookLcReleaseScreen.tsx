@@ -21,6 +21,7 @@ import {
   BL_RELEASES,
   BL_RELEASE_STATUS,
   BL_UPDATE_ERRATUM,
+  BL_WITHDRAW_ERRATUM,
 } from "../../graphql/bookLifecycleRelease";
 import { Badge, Body, Button, Card, Chip, ChipRow, EmptyState, Field, Muted, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -42,11 +43,13 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
   const release = can("book_lifecycle:release");
   const manage = can("book_lifecycle:manage");
   const finalize = can("book_lifecycle:finalize");
+  const [relPages, setRelPages] = useState(1);
+  const [errPages, setErrPages] = useState(1);
   const [bq, refetchBook] = useQuery({ query: BL_BOOK, variables: { id: bookId } });
   const [vq] = useQuery({ query: BL_VERSIONS, variables: { bookId, page: 1, pageSize: 50 } });
-  const [rq, refetchR] = useQuery({ query: BL_RELEASES, variables: { bookId, page: 1, pageSize: 20 }, requestPolicy: "cache-and-network" });
+  const [rq, refetchR] = useQuery({ query: BL_RELEASES, variables: { bookId, page: 1, pageSize: 20 * relPages }, requestPolicy: "cache-and-network" });
   const book = bq.data?.bookLcBook;
-  const [eq, refetchE] = useQuery({ query: BL_ERRATA, variables: { bookId, releaseId: book?.currentReleaseId ?? null, page: 1, pageSize: 50 }, pause: !book });
+  const [eq, refetchE] = useQuery({ query: BL_ERRATA, variables: { bookId, releaseId: book?.currentReleaseId ?? null, page: 1, pageSize: 50 * errPages }, pause: !book });
   const [, createRelease] = useMutation(BL_CREATE_RELEASE);
   const [, recordRelease] = useMutation(BL_RECORD_RELEASE);
   const [, setStatus] = useMutation(BL_RELEASE_STATUS);
@@ -55,6 +58,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
   const [, setSwitch] = useMutation(BL_CLASSBOOKS_SWITCH);
   const [, updateErratum] = useMutation(BL_UPDATE_ERRATUM);
   const [, announce] = useMutation(BL_ANNOUNCE_ERRATUM);
+  const [, withdraw] = useMutation(BL_WITHDRAW_ERRATUM);
   const [msg, setMsg] = useMsg();
   const [label, setLabel] = useState("");
   const [press, setPress] = useState("");
@@ -62,7 +66,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
   const [kind, setKind] = useState<string>("idml_zip");
   const [date, setDate] = useState("");
   const [copies, setCopies] = useState("");
-  const [edits, setEdits] = useState<Record<string, { correctText?: string; page?: string; instructionBn?: string }>>({});
+  const [edits, setEdits] = useState<Record<string, { correctText?: string; wrongText?: string; whereBn?: string; editions?: string[]; page?: string; instructionBn?: string }>>({});
   const refresh = (): void => {
     refetchBook({ requestPolicy: "network-only" });
     refetchR({ requestPolicy: "network-only" });
@@ -122,7 +126,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
             {r.distributedAt ? <Line label={BL.tellTeachers} value={ymd(r.distributedAt)} /> : null}
             <ChipRow>
               {r.files.map((f) => (
-                <Chip key={`${f.edition}-${f.kind}`} label={`${BOOK_EDITION_LABELS_BN[f.edition as BookEdition] ?? f.edition} · ${f.kind}`} onPress={() => void openStoredFile(f.fileId)} />
+                <Chip key={`${f.edition}-${f.kind}`} label={`${BOOK_EDITION_LABELS_BN[f.edition as BookEdition] ?? f.edition} · ${(BL as Record<string, string>)[`fk_${f.kind}`] ?? f.kind}`} onPress={() => void openStoredFile(f.fileId)} />
               ))}
             </ChipRow>
             {release && r.status !== "superseded" ? (
@@ -134,7 +138,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
                 </ChipRow>
                 <ChipRow>
                   {BOOK_RELEASE_FILE_KINDS.map((k) => (
-                    <Chip key={k} label={k} selected={kind === k} onPress={() => setKind(k)} />
+                    <Chip key={k} label={(BL as Record<string, string>)[`fk_${k}`] ?? k} selected={kind === k} onPress={() => setKind(k)} />
                   ))}
                 </ChipRow>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
@@ -160,6 +164,8 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
         ))}
       </QueryGate>
 
+      {(rq.data?.bookLcReleasesPage.total ?? 0) > 20 * relPages ? <Button title={BL.moreReleases} variant="ghost" onPress={() => setRelPages(relPages + 1)} /> : null}
+
       <SectionTitle>{BL.errata}</SectionTitle>
       <QueryGate result={eq} onRetry={refresh} isEmpty={!eq.data?.bookLcErrataPage.rows.length} empty={<EmptyState message={BL.noErrata} />}>
         {eq.data?.bookLcErrataPage.rows.map((e) => (
@@ -168,7 +174,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
               <Body style={{ fontWeight: "700" }}>
                 {e.code} {e.page ? `· পৃ. ${e.page}` : ""}
               </Body>
-              <Badge text={e.status} tone={e.status === "announced" ? "info" : "muted"} />
+              <Badge text={e.status === "announced" ? BL.errAnnounced : e.status === "withdrawn" ? BL.errWithdrawn : BL.errDraft} tone={e.status === "announced" ? "info" : "muted"} />
               {e.carried ? <Badge text={BL.carried} tone="ok" /> : null}
             </View>
             <Body>
@@ -183,18 +189,36 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
             ) : null}
             {e.status === "draft" && manage ? (
               <View>
+                <Field label={BL.wrongText} value={edits[e.id]?.wrongText ?? e.wrongText} onChangeText={(t) => setEdits({ ...edits, [e.id]: { ...edits[e.id], wrongText: t } })} autoCapitalize="sentences" />
+                <Field label={BL.whereLabel} value={edits[e.id]?.whereBn ?? e.whereBn} onChangeText={(t) => setEdits({ ...edits, [e.id]: { ...edits[e.id], whereBn: t } })} autoCapitalize="sentences" />
+                <ChipRow>
+                  {(["TEACHER", "STUDENT", "SCHOLARSHIP_STUDENT"] as const).map((ed) => {
+                    const cur = edits[e.id]?.editions ?? e.editions;
+                    return (
+                      <Chip
+                        key={ed}
+                        label={BOOK_EDITION_LABELS_BN[ed]}
+                        selected={cur.includes(ed)}
+                        onPress={() => setEdits({ ...edits, [e.id]: { ...edits[e.id], editions: cur.includes(ed) ? cur.filter((x) => x !== ed) : [...cur, ed] } })}
+                      />
+                    );
+                  })}
+                </ChipRow>
                 <Field label={BL.correctText} value={edits[e.id]?.correctText ?? e.correctText} onChangeText={(t) => setEdits({ ...edits, [e.id]: { ...edits[e.id], correctText: t } })} autoCapitalize="sentences" />
                 <Field label={BL.page} value={edits[e.id]?.page ?? e.page ?? ""} onChangeText={(t) => setEdits({ ...edits, [e.id]: { ...edits[e.id], page: t } })} />
                 <Field label={BL.instruction} value={edits[e.id]?.instructionBn ?? e.instructionBn} onChangeText={(t) => setEdits({ ...edits, [e.id]: { ...edits[e.id], instructionBn: t } })} autoCapitalize="sentences" />
                 <View style={{ flexDirection: "row", gap: space(2) }}>
                   <Button title={BL.saveMark} variant="secondary" onPress={() => void updateErratum({ id: e.id, ...edits[e.id] }).then((x) => after(x, BL.saved))} />
                   {finalize ? <Button title={BL.announce} onPress={() => void announce({ id: e.id }).then((x) => after(x))} /> : null}
+                  {finalize ? <Button title={BL.withdraw} variant="ghost" onPress={() => void withdraw({ id: e.id }).then((x) => after(x))} /> : null}
                 </View>
               </View>
             ) : null}
+            {e.status === "announced" && finalize ? <Button title={BL.withdraw} variant="ghost" onPress={() => void withdraw({ id: e.id }).then((x) => after(x))} /> : null}
           </Card>
         ))}
       </QueryGate>
+      {(eq.data?.bookLcErrataPage.total ?? 0) > 50 * errPages ? <Button title={BL.moreErrata} variant="ghost" onPress={() => setErrPages(errPages + 1)} /> : null}
     </Screen>
   );
 }

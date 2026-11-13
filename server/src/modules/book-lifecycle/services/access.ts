@@ -39,3 +39,10 @@ export function oid(id: string | Types.ObjectId, what = "id"): Types.ObjectId {
   if (!Types.ObjectId.isValid(id)) throw new BookLcError("BAD_ID", `ভুল ${what}`);
   return new Types.ObjectId(id);
 }
+
+/** Passes when the caller holds ANY of these actions (an Office login with only `release` may read
+ *  the book header, versions list and the release / errata lists it works on). */
+export function requireBookLcAny(auth: AuthPayload | null | undefined, actions: BookLcAction[]): AuthPayload {
+  if (!auth || !actions.some((a) => canBookLc(auth, a))) throw new ForbiddenError(`${BOOK_LC_FORBIDDEN_BN} (${actions.map((a) => `book_lifecycle:${a}`).join(" / ")})`);
+  return auth;
+}

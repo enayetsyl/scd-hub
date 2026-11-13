@@ -27,8 +27,8 @@ it("a release only from a final version; the Student IDML zip + preview PDF are 
   const { version: fin } = await importSample(P(), { code: "C3-ENG", state: "final" });
   const r = await createRelease(fx.auth.officeRelease, fin._id.toString(), { labelBn: "২০২৭ প্রথম ছাপা" });
   await expect(recordRelease(fx.auth.officeRelease, r._id.toString())).rejects.toThrow(/IDML/);
-  await addReleaseFile(fx.auth.officeRelease, r._id.toString(), { edition: "STUDENT", kind: "idml_zip", name: "s.zip", data: Buffer.from("PK zip"), mime: "application/zip" });
-  await expect(addReleaseFile(fx.auth.officeRelease, r._id.toString(), { edition: "STUDENT", kind: "preview_pdf", name: "s.zip", data: Buffer.from("PK zip"), mime: "application/zip" })).rejects.toThrow(/ধরন/);
+  await addReleaseFile(fx.auth.officeRelease, r._id.toString(), { edition: "STUDENT", kind: "idml_zip", name: "s.zip", data: Buffer.from("PK zip"), mime: "application/zip" });
+  await expect(addReleaseFile(fx.auth.officeRelease, r._id.toString(), { edition: "STUDENT", kind: "preview_pdf", name: "s.zip", data: Buffer.from("PK zip"), mime: "application/zip" })).rejects.toThrow(/ধরন/);
   await addReleaseFile(fx.auth.officeRelease, r._id.toString(), { edition: "STUDENT", kind: "preview_pdf", name: "s.pdf", data: await samplePdf(1, []), mime: "application/pdf" });
   const rec = await recordRelease(fx.auth.officeRelease, r._id.toString());
   expect(rec.recordedAt).toBeInstanceOf(Date);
@@ -47,7 +47,7 @@ it("statuses in order with dates; a newer printed release supersedes the older o
   expect(printed.copies).toBe(120);
   // a reprint of the same final version (no errata announced) — the second printed supersedes the first
   const r2 = await createRelease(P(), version._id.toString(), { labelBn: "দ্বিতীয় ছাপা" });
-  await addReleaseFile(P(), r2._id.toString(), { edition: "STUDENT", kind: "idml_zip", name: "s.zip", data: Buffer.from("PK"), mime: "application/zip" });
+  await addReleaseFile(P(), r2._id.toString(), { edition: "STUDENT", kind: "idml_zip", name: "s.zip", data: Buffer.from("PK"), mime: "application/zip" });
   await addReleaseFile(P(), r2._id.toString(), { edition: "STUDENT", kind: "preview_pdf", name: "s.pdf", data: await samplePdf(1, []), mime: "application/pdf" });
   await recordRelease(P(), r2._id.toString());
   await setReleaseStatus(P(), r2._id.toString(), { status: "sent_to_press" });

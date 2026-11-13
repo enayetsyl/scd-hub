@@ -46,6 +46,27 @@ const parse = (fields: { name: string; maxCount: number }[]): RequestHandler => 
   });
 };
 
+/** Report photos: their own small multer (photoBytes + 1), and the caller is authenticated and holds
+ *  `report` BEFORE a byte of the body is parsed. */
+const photoUpload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.photoBytes + 1, files: 1 } });
+const photoParse: RequestHandler = (req, res, next) => {
+  try {
+    const ctx = buildContext(req, res);
+    if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+    requireBookLc(ctx.auth, "report");
+  } catch (e) {
+    fail(res, e);
+    return;
+  }
+  photoUpload.fields([{ name: "file", maxCount: 1 }])(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: "ছবি খুব বড় বা ভুল" });
+      return;
+    }
+    next();
+  });
+};
+
 type Files = Record<string, Express.Multer.File[] | undefined>;
 
 /** The temp file, read into memory only after its size passed `capOf(name)` (the type is the
@@ -197,9 +218,9 @@ export function registerBookLcFileRoutes(router: Router): void {
   router.post("/book-lc/release-file", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
     try {
       const ctx = ctxOf(req, res);
-      const f = await take(req, "file");
+      const f = await take(req, "file", () => capFor("book_lc_print", "application/zip"));
       if (!f) throw new BookLcError("NO_FILE", "ফাইল দিন");
-      const r = await addReleaseFile(ctx.auth!, str(req.body?.releaseId), { edition: str(req.body?.edition) as BookEdition, kind: str(req.body?.kind) as BookReleaseFileKind, name: f.name, data: f.data, mime: f.mime });
+      const r = await addReleaseFile(ctx.auth!, str(req.body?.releaseId), { edition: str(req.body?.edition) as BookEdition, kind: str(req.body?.kind) as BookReleaseFileKind, name: f.name, data: f.data });
       res.json({ releaseId: r._id.toString() });
     } catch (e) {
       fail(res, e);
@@ -209,12 +230,12 @@ export function registerBookLcFileRoutes(router: Router): void {
   });
 
   // BL-2: a teacher's photo of the page for a report (report + reader; ≤ 5 MB).
-  router.post("/book-lc/report-photo", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
+  router.post("/book-lc/report-photo", photoParse, async (req, res) => {
     try {
       const ctx = ctxOf(req, res);
-      const f = await take(req, "file");
+      const f = await take(req, "file", () => capFor("book_lc_feedback", "image/png", { photo: true }));
       if (!f) throw new BookLcError("NO_FILE", "ছবি দিন");
-      res.json({ fileId: await uploadReportPhoto(ctx.auth!, str(req.body?.bookId), { name: f.name, data: f.data, mime: f.mime }) });
+      res.json({ fileId: await uploadReportPhoto(ctx.auth!, str(req.body?.bookId), { name: f.name, data: f.data }) });
     } catch (e) {
       fail(res, e);
     } finally {

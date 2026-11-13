@@ -127,6 +127,8 @@ export async function triageFeedback(auth: AuthPayload, ids: string[], action: T
     if (action.kind === "route") {
       if (action.route === "direct_fix" && item.category === "sacred_text") throw new BookLcError("SACRED", `${item.code}: কুরআন/হাদিস/দোয়ার মতামত সরাসরি সংশোধন হতে পারে না (VR-12)`);
       if (action.route === "verbal_errata" && item.category === "sacred_text" && !item.reviewerRuling?.verdict) throw new BookLcError("SACRED", `${item.code}: কুরআন/হাদিস/দোয়ার ভুল-সংশোধনী শুধু পর্যালোচকের রায়ের পরে`);
+      // A verbal erratum is announced against a printed release; with none yet it would be lost.
+      if (action.route === "verbal_errata" && !book.currentReleaseId) throw new BookLcError("NO_RELEASE", `${item.code}: এই বই এখনো ছাপা হয়নি — ভুল-সংশোধনী নয়, পরের সংস্করণে সরাসরি সংশোধন বা পর্যালোচনায় পাঠান`);
       item.route = action.route;
       item.status = action.route === "needs_reviewer" ? "with_reviewer" : "accepted";
       item.history.push({ action: `triage:${action.route}`, by: uid(auth), at: now });

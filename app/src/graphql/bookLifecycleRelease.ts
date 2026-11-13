@@ -104,10 +104,10 @@ export const BL_CLASSBOOKS_SWITCH = gql<{ setBookLcClassBooksSwitch: boolean }, 
 `;
 export const BL_UPDATE_ERRATUM = gql<
   { updateBookLcErratum: BlErratumT },
-  { id: string; page?: string | null; whereBn?: string | null; wrongText?: string | null; correctText?: string | null; instructionBn?: string | null }
+  { id: string; page?: string | null; editions?: string[] | null; whereBn?: string | null; wrongText?: string | null; correctText?: string | null; instructionBn?: string | null }
 >`
-  mutation UpdateBookLcErratum($id: String!, $page: String, $whereBn: String, $wrongText: String, $correctText: String, $instructionBn: String) {
-    updateBookLcErratum(id: $id, page: $page, whereBn: $whereBn, wrongText: $wrongText, correctText: $correctText, instructionBn: $instructionBn) { ${ERRATUM} }
+  mutation UpdateBookLcErratum($id: String!, $page: String, $editions: [String!], $whereBn: String, $wrongText: String, $correctText: String, $instructionBn: String) {
+    updateBookLcErratum(id: $id, page: $page, editions: $editions, whereBn: $whereBn, wrongText: $wrongText, correctText: $correctText, instructionBn: $instructionBn) { ${ERRATUM} }
   }
 `;
 export const BL_ANNOUNCE_ERRATUM = gql<{ announceBookLcErratum: BlErratumT }, { id: string }>`

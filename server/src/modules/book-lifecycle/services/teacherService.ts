@@ -9,7 +9,7 @@ import { Types } from "mongoose";
 import type { BookEdition, BookFeedbackCategory } from "@scd/shared";
 import type { AuthPayload } from "../../../context";
 import { SchoolBook, type ISchoolBook } from "../models/SchoolBook";
-import { BookPrintRelease, BookErratum, type IBookErratum, type IBookPrintRelease } from "../models/BookRelease";
+import { BookPrintRelease, BookErratum, BookReportPhoto, type IBookErratum, type IBookPrintRelease } from "../models/BookRelease";
 import { BookVersion } from "../models/BookVersion";
 import { BookFeedback, type IBookFeedback } from "../models/BookFeedback";
 import { StoredFile } from "../../platform/models/StoredFile";
@@ -18,8 +18,9 @@ import { BookLcError } from "./errors";
 import { createFeedbackRow } from "./feedbackService";
 import { bookTeachersNow, isBookReader } from "./teacherScope";
 import { suggestChapterForPage } from "./releaseService";
-import { storeLcFile, mimeFromName } from "./files";
+import { storeLcFile, detectLcMime } from "./files";
 import { vlabel } from "./store";
+import { lcEvent } from "./events";
 
 export interface MyBookRow {
   book: ISchoolBook;
@@ -77,11 +78,12 @@ export async function fileTeacherReport(auth: AuthPayload, bookId: string, input
   if (!release) throw new BookLcError("NO_RELEASE", "এই বই এখনো ছাপা হয়নি");
   const photos = (input.photoFileIds ?? []).slice(0, 3);
   if (photos.length) {
-    const own = await StoredFile.countDocuments({ _id: { $in: photos.map((p) => oid(p)) }, kind: "book_lc_feedback", uploadedBy: uid(auth) });
-    if (own !== photos.length) throw new BookLcError("BAD_PHOTO", "ছবিটি আপনার তোলা নয়");
+    // A photo counts only for the book it was uploaded for, by this reporter.
+    const own = await BookReportPhoto.countDocuments({ storedFileId: { $in: photos.map((p) => oid(p)) }, userId: uid(auth), bookId: book._id });
+    if (own !== photos.length) throw new BookLcError("BAD_PHOTO", "ছবিটি আপনার তোলা নয়, বা অন্য বইয়ের");
   }
   const pageNo = Number(String(input.page ?? "").replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))));
-  const chapterKey = Number.isInteger(pageNo) && pageNo > 0 ? await suggestChapterForPage(book._id, pageNo) : null;
+  const chapterKey = Number.isInteger(pageNo) && pageNo > 0 ? await suggestChapterForPage(book._id, pageNo, input.edition ?? null) : null;
   return createFeedbackRow(
     book,
     { versionId: release.versionId.toString(), releaseId: release._id.toString(), chapterKey, page: input.page, quote: input.quote, edition: input.edition ?? null, category: input.category, textBn: input.textBn, attachments: photos },
@@ -90,13 +92,14 @@ export async function fileTeacherReport(auth: AuthPayload, bookId: string, input
 }
 
 /** A photo of the page for a report (≤ 5 MB, kind book_lc_feedback, readable by its reporter). */
-export async function uploadReportPhoto(auth: AuthPayload, bookId: string, input: { name: string; data: Buffer; mime?: string }): Promise<string> {
+export async function uploadReportPhoto(auth: AuthPayload, bookId: string, input: { name: string; data: Buffer; /** ignored */ mime?: string }): Promise<string> {
   requireBookLc(auth, "report");
   const book = await SchoolBook.findById(oid(bookId));
   if (!book || !(await isBookReader(auth.userId, book))) throw new BookLcError("NOT_READER", "এই বই আপনার শ্রেণি/বিষয়ের নয়");
-  const mime = input.mime ?? mimeFromName(input.name);
-  if (!["image/png", "image/jpeg", "image/webp", "application/pdf"].includes(mime)) throw new BookLcError("BAD_TYPE", "ছবি (PNG/JPEG) বা PDF দিন");
-  const f = await storeLcFile({ kind: "book_lc_feedback", name: input.name, mime, data: input.data, bookCode: book.code, version: "reports", role: "teacher-photo", uploadedBy: auth.userId, capOpts: { photo: true } });
+  if (!detectLcMime(input.name, input.data, ["image/png", "image/jpeg", "image/webp", "application/pdf"])) throw new BookLcError("BAD_TYPE", "ছবি (PNG/JPEG) বা PDF দিন");
+  const f = await storeLcFile({ kind: "book_lc_feedback", name: input.name, data: input.data, bookCode: book.code, version: "reports", role: "teacher-photo", uploadedBy: auth.userId, capOpts: { photo: true } });
+  await BookReportPhoto.create({ bookId: book._id, userId: uid(auth), storedFileId: f._id });
+  await lcEvent({ bookId: book._id, kind: "FILE_UPLOADED", actorId: uid(auth), summary: "report photo uploaded" });
   return f._id.toString();
 }
 
@@ -107,12 +110,15 @@ export async function teacherMayRead(auth: AuthPayload, file: { _id: Types.Objec
   if (file.kind === "book_lc_feedback") return !!file.uploadedBy && file.uploadedBy.toString() === auth.userId && requireReportAction(auth);
   if (file.kind !== "book_lc_edition") return false;
   if (!requireReaderAction(auth)) return false;
-  const v = await BookVersion.findOne({ files: { $elemMatch: { storedFileId: file._id, role: "edition", edition: "TEACHER" } } }).select("bookId").lean();
+  // Deterministic: start from the books' CURRENT release versions and ask whether this file is
+  // that version's Teacher edition.
+  const rels = await BookPrintRelease.find({ recordedAt: { $exists: true } }).select("versionId bookId").lean();
+  const v = await BookVersion.findOne({ _id: { $in: rels.map((r) => r.versionId) }, files: { $elemMatch: { storedFileId: file._id, role: "edition", edition: "TEACHER" } } }).select("bookId").lean();
   if (!v) return false;
   const book = await SchoolBook.findById(v.bookId).lean();
   if (!book?.currentReleaseId) return false;
-  const rel = await BookPrintRelease.findById(book.currentReleaseId).select("versionId").lean();
-  if (!rel || !rel.versionId.equals(v._id)) return false;
+  const cur = await BookPrintRelease.findById(book.currentReleaseId).select("versionId").lean();
+  if (!cur || !cur.versionId.equals(v._id)) return false;
   return isBookReader(auth.userId, book);
 }
 

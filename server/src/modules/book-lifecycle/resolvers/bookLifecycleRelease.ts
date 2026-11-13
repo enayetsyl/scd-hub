@@ -11,9 +11,9 @@ import { pageRef } from "../../../pageRef";
 import { queryPage } from "../../../lib/paging";
 import { BookPrintRelease, BookErratum, type IBookErratum, type IBookPrintRelease } from "../models/BookRelease";
 import { BookVersion } from "../models/BookVersion";
-import { assertBookPlane, canBookLc, requireBookLc } from "../services/access";
+import { assertBookPlane, requireBookLcAny, canBookLc, requireBookLc } from "../services/access";
 import { namesOf } from "../services/names";
-import { bookTeachersNow } from "../services/teacherScope";
+import { bookViewersNow } from "../services/teacherScope";
 import { loadBook, vlabel } from "../services/store";
 import * as RS from "../services/releaseService";
 import * as ES from "../services/errataService";
@@ -98,7 +98,7 @@ async function erratumShapes(rows: IBookErratum[], ctx: AppContext): Promise<Err
     const k = r.bookId.toString();
     if (!readerCounts.has(k)) {
       const book = await loadBook(r.bookId);
-      readerCounts.set(k, viewer ? (await bookTeachersNow(book)).size : 0);
+      readerCounts.set(k, viewer ? (await bookViewersNow(book)).size : 0);
     }
   }
   return rows.map((e) => ({
@@ -159,10 +159,10 @@ const MyReportRef = builder.objectRef<MyReportShape>("BookLcMyReport").implement
 builder.queryField("bookLcReleasesPage", (t) =>
   t.field({
     type: ReleasePage,
-    authScopes: { hasPermission: "book_lifecycle:view" },
+    authScopes: { hasAnyPermission: ["book_lifecycle:view", "book_lifecycle:release"] },
     args: { bookId: t.arg.string({ required: true }), page: t.arg.int(), pageSize: t.arg.int() },
     resolve: async (_r, a, ctx) => {
-      requireBookLc(auth(ctx), "view");
+      requireBookLcAny(auth(ctx), ["view", "release"]);
       assertBookPlane();
       return queryPage(BookPrintRelease, { bookId: new Types.ObjectId(a.bookId) }, { releaseNo: -1 }, a, async (docs) => Promise.all(docs.map((d) => releaseShape(BookPrintRelease.hydrate(d)))));
     },
@@ -172,10 +172,10 @@ builder.queryField("bookLcReleasesPage", (t) =>
 builder.queryField("bookLcErrataPage", (t) =>
   t.field({
     type: ErratumPage,
-    authScopes: { hasPermission: "book_lifecycle:view" },
+    authScopes: { hasAnyPermission: ["book_lifecycle:view", "book_lifecycle:release"] },
     args: { bookId: t.arg.string({ required: true }), releaseId: t.arg.string(), page: t.arg.int(), pageSize: t.arg.int() },
     resolve: async (_r, a, ctx) => {
-      requireBookLc(auth(ctx), "view");
+      requireBookLcAny(auth(ctx), ["view", "release"]);
       assertBookPlane();
       const filter: Record<string, unknown> = { bookId: new Types.ObjectId(a.bookId) };
       if (a.releaseId) filter.releaseId = new Types.ObjectId(a.releaseId);

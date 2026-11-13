@@ -35,7 +35,7 @@ export interface IBookPrintRelease extends Document {
   distributedAt?: Date;
   classBookId?: string;
   /** Page → chapter from the engine's pageplan.json (BL-2 report form suggestion). */
-  pagePlan: { page: number; chapterKey: string }[];
+  pagePlan: { edition?: BookEdition; page: number; chapterKey: string }[];
   statusHistory: { status: BookReleaseStatus; by: Types.ObjectId; at: Date }[];
   releasedBy: Types.ObjectId;
   createdAt: Date;
@@ -60,7 +60,7 @@ const BookPrintReleaseSchema = new Schema<IBookPrintRelease>(
     copies: Number,
     distributedAt: Date,
     classBookId: String,
-    pagePlan: { type: [{ page: Number, chapterKey: String, _id: false }], default: [] },
+    pagePlan: { type: [{ edition: String, page: Number, chapterKey: String, _id: false }], default: [] },
     statusHistory: { type: [{ status: { type: String, enum: BOOK_RELEASE_STATUSES }, by: Schema.Types.ObjectId, at: Date, _id: false }], default: [] },
     releasedBy: { type: Schema.Types.ObjectId, required: true },
   },
@@ -68,6 +68,21 @@ const BookPrintReleaseSchema = new Schema<IBookPrintRelease>(
 );
 BookPrintReleaseSchema.index({ bookId: 1, releaseNo: 1 }, { unique: true });
 export const BookPrintRelease = bookConnection.model<IBookPrintRelease>("BookPrintRelease", BookPrintReleaseSchema);
+
+/** Which book a report photo was uploaded for (a photo can only be attached to a report of that book). */
+export interface IBookReportPhoto extends Document {
+  _id: Types.ObjectId;
+  bookId: Types.ObjectId;
+  userId: Types.ObjectId;
+  storedFileId: Types.ObjectId;
+  createdAt: Date;
+}
+const BookReportPhotoSchema = new Schema<IBookReportPhoto>(
+  { bookId: { type: Schema.Types.ObjectId, required: true }, userId: { type: Schema.Types.ObjectId, required: true }, storedFileId: { type: Schema.Types.ObjectId, required: true } },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+BookReportPhotoSchema.index({ storedFileId: 1 }, { unique: true });
+export const BookReportPhoto = bookConnection.model<IBookReportPhoto>("BookReportPhoto", BookReportPhotoSchema);
 
 export interface IBookErratum extends Document {
   _id: Types.ObjectId;

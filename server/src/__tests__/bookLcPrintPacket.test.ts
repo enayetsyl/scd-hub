@@ -66,6 +66,11 @@ describe("page map", () => {
   it("can be set by hand (and refuses an out-of-range or out-of-order page)", async () => {
     const { r2 } = await changedChildRound();
     await detectPageMap(P(), r2._id.toString());
+    // Without poppler no start page is known yet, so the later chapters are set first: the order check can only compare pages that are set.
+    await setPageMap(P(), r2._id.toString(), [
+      { chapterKey: "ch-002", startPage: 6 },
+      { chapterKey: "ch-003", startPage: 9 },
+    ]);
     await expect(setPageMap(P(), r2._id.toString(), [{ chapterKey: "ch-001", startPage: 13 }])).rejects.toThrow(/পৃষ্ঠা/);
     await expect(setPageMap(P(), r2._id.toString(), [{ chapterKey: "ch-001", startPage: 7 }])).rejects.toThrow(/ক্রমে/);
     const r = await setPageMap(P(), r2._id.toString(), [

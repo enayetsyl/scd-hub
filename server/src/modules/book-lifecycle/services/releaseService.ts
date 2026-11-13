@@ -19,11 +19,14 @@ import { BookVersion } from "../models/BookVersion";
 import { requireBookLc, uid, oid } from "./access";
 import { BookLcError } from "./errors";
 import { lcEvent } from "./events";
-import { loadLcFile, mimeFromName, storeLcFile } from "./files";
+import { capFor, capRefusalBn, detectLcMime, loadLcFile, storeLcFile } from "./files";
 import { loadBook, loadVersion, vlabel } from "./store";
 import { pushStatus } from "./versionService";
 import { versionChain } from "./memo";
-import { bookTeachersNow } from "./teacherScope";
+import { createErratumDraft } from "./errataService";
+import { BookFeedback } from "../models/BookFeedback";
+import { updateClassBook } from "../../class-books/services/ClassBookService";
+import { bookViewersNow } from "./teacherScope";
 import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { startClassBookUpload } from "../../class-books/services/ClassBookService";
@@ -37,12 +40,23 @@ export async function loadRelease(id: string | Types.ObjectId): Promise<IBookPri
 
 /** The release rule (§9.4.5): every announced erratum of the current release must be carried into
  *  the version being released (or one of its ancestors). Returns the codes that are not. */
-export async function uncarriedErrata(bookId: Types.ObjectId, currentReleaseId: Types.ObjectId | undefined, versionId: Types.ObjectId): Promise<string[]> {
-  if (!currentReleaseId) return [];
-  const errata = await BookErratum.find({ bookId, releaseId: currentReleaseId, status: "announced" }).lean();
+export async function uncarriedErrata(bookId: Types.ObjectId, _currentReleaseId: Types.ObjectId | undefined, versionId: Types.ObjectId): Promise<string[]> {
+  // EVERY announced erratum of the book counts, whatever release it was filed on (an older final
+  // version released after a newer one must not skip them).
+  const errata = await BookErratum.find({ bookId, status: "announced" }).lean();
   if (!errata.length) return [];
   const chain = new Set((await versionChain(await loadVersion(versionId))).map((v) => v._id.toString()));
   return errata.filter((e) => !e.carriedIntoVersionId || !chain.has(e.carriedIntoVersionId.toString())).map((e) => e.code);
+}
+
+/** A release (or a move of the book's current release) for a version that is an ANCESTOR of the
+ *  current release's version would put an older text in front of the teachers: refused. */
+async function assertNotOlderThanCurrent(book: { currentReleaseId?: Types.ObjectId }, versionId: Types.ObjectId): Promise<void> {
+  if (!book.currentReleaseId) return;
+  const cur = await BookPrintRelease.findById(book.currentReleaseId).select("versionId").lean();
+  if (!cur || cur.versionId.equals(versionId)) return;
+  const chain = await versionChain(await loadVersion(cur.versionId));
+  if (chain.some((v) => v._id.equals(versionId))) throw new BookLcError("OLDER_VERSION", "এই সংস্করণ বর্তমান ছাপার সংস্করণের চেয়ে পুরোনো — তা থেকে নতুন ছাপা করা যায় না");
 }
 
 export async function createRelease(auth: AuthPayload, versionId: string, input: { labelBn: string; pressNameBn?: string | null }): Promise<IBookPrintRelease> {
@@ -51,6 +65,7 @@ export async function createRelease(auth: AuthPayload, versionId: string, input:
   if (v.status !== "final" && v.status !== "print_released") throw new BookLcError("NOT_FINAL", "শুধু চূড়ান্ত সংস্করণ থেকে ছাপা হয়");
   if (!input.labelBn?.trim()) throw new BookLcError("NO_LABEL", "ছাপার নাম দিন (যেমন ২০২৭ প্রথম ছাপা)");
   const book = await loadBook(v.bookId);
+  await assertNotOlderThanCurrent(book, v._id);
   const missing = await uncarriedErrata(book._id, book.currentReleaseId, v._id);
   if (missing.length) {
     throw new BookLcError("ERRATA_NOT_CARRIED", `এই ভুল-সংশোধনী নতুন সংস্করণে নেই: ${missing.join(", ")}`);
@@ -92,20 +107,21 @@ export function parsePagePlan(json: unknown, chapters: { key: string; title: str
 export async function addReleaseFile(
   auth: AuthPayload,
   releaseId: string,
-  input: { edition: BookEdition; kind: BookReleaseFileKind; name: string; data: Buffer; mime?: string },
+  input: { edition: BookEdition; kind: BookReleaseFileKind; name: string; data: Buffer; /** ignored — the server derives the type */ mime?: string },
 ): Promise<IBookPrintRelease> {
   requireBookLc(auth, "release");
   const r = await loadRelease(releaseId);
   if (r.status === "superseded") throw new BookLcError("SUPERSEDED", "পুরোনো ছাপায় ফাইল যোগ করা যায় না");
+  if (r.status !== "prepared") throw new BookLcError("FROZEN", "ছাপাখানায় পাঠানোর পরে ফাইল বদলানো যায় না");
   if (!(BOOK_EDITIONS as readonly string[]).includes(input.edition)) throw new BookLcError("BAD_EDITION", "সংস্করণের ধরন ভুল");
   if (!(BOOK_RELEASE_FILE_KINDS as readonly string[]).includes(input.kind)) throw new BookLcError("BAD_KIND", "ফাইলের ধরন ভুল");
   const book = await loadBook(r.bookId);
   const v = await loadVersion(r.versionId);
-  const mime = input.mime ?? mimeFromName(input.name);
-  const want = input.kind.endsWith("_pdf") ? "application/pdf" : input.kind.endsWith("_zip") ? "zip" : "json";
-  if ((want === "application/pdf" && mime !== "application/pdf") || (want === "zip" && !mime.includes("zip")) || (want === "json" && !mime.includes("json"))) {
-    throw new BookLcError("BAD_TYPE", `${input.kind}: ফাইলের ধরন মেলে না`);
-  }
+  // The type is the server's: extension + magic bytes, exactly one allowed type per kind.
+  const want = input.kind.endsWith("_pdf") ? "application/pdf" : input.kind.endsWith("_zip") ? "application/zip" : "application/json";
+  if (!detectLcMime(input.name, input.data, [want])) throw new BookLcError("BAD_TYPE", `${input.kind}: ফাইলের ধরন মেলে না`);
+  const printCap = capFor("book_lc_print", want);
+  if (input.data.length > printCap) throw new BookLcError("CAP", capRefusalBn(printCap));
   if (input.kind === "pageplan_json") {
     let parsed: unknown;
     try {
@@ -113,9 +129,11 @@ export async function addReleaseFile(
     } catch {
       throw new BookLcError("BAD_JSON", "pageplan.json পড়া যায়নি");
     }
-    r.pagePlan = parsePagePlan(parsed, v.chapters.map((c) => ({ key: c.key, title: c.title })));
+    // One plan per edition: this upload replaces only its own edition's rows.
+    const plan = parsePagePlan(parsed, v.chapters.map((c) => ({ key: c.key, title: c.title }))).map((p) => ({ ...p, edition: input.edition }));
+    r.pagePlan = [...r.pagePlan.filter((p) => p.edition !== input.edition), ...plan];
   }
-  const f = await storeLcFile({ kind: "book_lc_print", name: input.name, mime, data: input.data, bookCode: book.code, version: vlabel(v), role: `print-${r.releaseNo}-${input.edition}`, edition: input.edition, uploadedBy: auth.userId });
+  const f = await storeLcFile({ kind: "book_lc_print", name: input.name, data: input.data, bookCode: book.code, version: vlabel(v), role: `print-${r.releaseNo}-${input.edition}`, edition: input.edition, uploadedBy: auth.userId });
   r.files = [...r.files.filter((x) => !(x.edition === input.edition && x.kind === input.kind)), { edition: input.edition, kind: input.kind, storedFileId: f._id, at: new Date() }];
   await r.save();
   await lcEvent({ bookId: book._id, kind: "FILE_UPLOADED", actorId: uid(auth), summary: `release ${r.releaseNo}: ${input.edition} ${input.kind}`, refs: { releaseId: r._id } });
@@ -132,6 +150,7 @@ export async function recordRelease(auth: AuthPayload, releaseId: string): Promi
   if (!has("idml_zip") || !has("preview_pdf")) throw new BookLcError("MISSING_FILES", "শিক্ষার্থী সংস্করণের IDML zip ও প্রিভিউ PDF দরকার");
   const book = await loadBook(r.bookId);
   const v = await loadVersion(r.versionId);
+  await assertNotOlderThanCurrent(book, v._id);
   const missing = await uncarriedErrata(book._id, book.currentReleaseId, v._id);
   if (missing.length) {
     throw new BookLcError("ERRATA_NOT_CARRIED", `এই ভুল-সংশোধনী নতুন সংস্করণে নেই: ${missing.join(", ")}`);
@@ -140,6 +159,10 @@ export async function recordRelease(auth: AuthPayload, releaseId: string): Promi
   await r.save();
   if (v.status === "final") await pushStatus(v, "print_released", auth, `release ${r.releaseNo} recorded`);
   await SchoolBook.updateOne({ _id: book._id }, { $set: { currentReleaseId: r._id } });
+  // Accepted verbal_errata items that have no erratum yet (triaged before this release existed) get their drafts now.
+  const fresh = await SchoolBook.findById(book._id);
+  const pending = await BookFeedback.find({ bookId: book._id, route: "verbal_errata", status: "accepted", erratumId: { $exists: false } });
+  for (const it of pending) if (fresh) await createErratumDraft(fresh, it, uid(auth));
   await lcEvent({ bookId: book._id, kind: "RELEASE_RECORDED", actorId: uid(auth), summary: `release ${r.releaseNo} recorded (${vlabel(v)})`, refs: { releaseId: r._id, versionId: v._id } });
   await writeAudit({ eventKind: "BOOK_LC_RELEASED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookPrintRelease", targetId: r._id.toString(), meta: { action: "record", bookCode: book.code, version: vlabel(v), releaseNo: r.releaseNo } });
   return r;
@@ -184,7 +207,7 @@ export async function notifyTeachersOfRelease(auth: AuthPayload, releaseId: stri
   const book = await loadBook(r.bookId);
   const v = await loadVersion(r.versionId);
   let told = 0;
-  for (const userId of await bookTeachersNow(book)) {
+  for (const userId of await bookViewersNow(book)) {
     const res = await emit({
       recipientUserId: userId,
       kind: "BOOK_RELEASED",
@@ -197,6 +220,7 @@ export async function notifyTeachersOfRelease(auth: AuthPayload, releaseId: stri
   }
   r.distributedAt = new Date();
   await r.save();
+  await lcEvent({ bookId: book._id, kind: "RELEASE_STATUS", actorId: uid(auth), summary: `release ${r.releaseNo}: teachers told (${told})`, refs: { releaseId: r._id } });
   await writeAudit({ eventKind: "BOOK_LC_RELEASED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookPrintRelease", targetId: r._id.toString(), meta: { action: "tell_teachers", bookCode: book.code, releaseNo: r.releaseNo, told } });
   return { release: r, told };
 }
@@ -206,6 +230,14 @@ export async function setClassBooksSwitch(auth: AuthPayload, bookId: string, on:
   requireBookLc(auth, "finalize");
   const book = await loadBook(bookId);
   await SchoolBook.updateOne({ _id: book._id }, { $set: { publishStudentToClassBooks: on } });
+  // OFF hides what was already published (guardians stop seeing it); turning ON again re-shows it.
+  for (const rel of await BookPrintRelease.find({ bookId: book._id, classBookId: { $exists: true, $ne: "" } }).select("classBookId").lean()) {
+    try {
+      await updateClassBook(auth.userId, rel.classBookId!, { active: on });
+    } catch (err) {
+      console.error("[BookLcRelease] class book visibility:", err);
+    }
+  }
   await lcEvent({ bookId: book._id, kind: "BOOK_LC_UPDATED", actorId: uid(auth), summary: `class-books publish ${on ? "on" : "off"}` });
 }
 
@@ -216,6 +248,9 @@ export async function publishToClassBooks(auth: AuthPayload, releaseId: string):
   const book = await loadBook(r.bookId);
   if (!book.publishStudentToClassBooks) throw new BookLcError("SWITCH_OFF", "এই বইয়ের ক্লাসের বইয়ে দেওয়া বন্ধ আছে");
   if (!r.recordedAt) throw new BookLcError("NOT_RECORDED", "আগে ছাপা লিপিবদ্ধ করুন");
+  if (r.classBookId) throw new BookLcError("ALREADY_PUBLISHED", "এই ছাপা আগেই ক্লাসের বইয়ে দেওয়া হয়েছে");
+  if (r.status === "superseded") throw new BookLcError("SUPERSEDED", "পুরোনো ছাপা ক্লাসের বইয়ে দেওয়া যায় না");
+  // The Student print PDF; when the engine gave only a preview PDF, that is what guardians get.
   const f = r.files.find((x) => x.edition === "STUDENT" && x.kind === "print_pdf") ?? r.files.find((x) => x.edition === "STUDENT" && x.kind === "preview_pdf");
   if (!f) throw new BookLcError("NO_PDF", "শিক্ষার্থী সংস্করণের PDF নেই");
   const { data, file } = await loadLcFile(f.storedFileId);
@@ -223,17 +258,21 @@ export async function publishToClassBooks(auth: AuthPayload, releaseId: string):
   const { book: cb } = await startClassBookUpload({ actorId: auth.userId, classLevel: book.classLevel, title: `${book.titleBn}${v ? ` (${vlabel(v)})` : ""}`, sourceName: file.originalName, pdf: data });
   r.classBookId = String((cb as { id?: string }).id ?? "");
   await r.save();
+  await writeAudit({ eventKind: "BOOK_LC_RELEASED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookPrintRelease", targetId: r._id.toString(), meta: { action: "publish_class_book", bookCode: book.code, releaseNo: r.releaseNo } });
   await lcEvent({ bookId: book._id, kind: "RELEASE_STATUS", actorId: uid(auth), summary: `release ${r.releaseNo}: Student PDF published to class books`, refs: { releaseId: r._id } });
   return r;
 }
 
 /** The report form's chapter suggestion from the current release's page plan. */
-export async function suggestChapterForPage(bookId: Types.ObjectId, page: number): Promise<string | null> {
+export async function suggestChapterForPage(bookId: Types.ObjectId, page: number, edition?: BookEdition | null): Promise<string | null> {
   const book = await SchoolBook.findById(bookId).select("currentReleaseId").lean();
   if (!book?.currentReleaseId) return null;
   const r = await BookPrintRelease.findById(book.currentReleaseId).select("pagePlan").lean();
   if (!r?.pagePlan?.length) return null;
+  // The report's own edition first; else the Student plan (the print package), else any.
+  const plans = [edition, "STUDENT", undefined].map((e) => r.pagePlan.filter((p) => (e === undefined ? true : p.edition === e)));
+  const plan = plans.find((p) => p.length) ?? [];
   let hit: string | null = null;
-  for (const p of r.pagePlan) if (p.page <= page) hit = p.chapterKey;
+  for (const p of [...plan].sort((a, b) => a.page - b.page)) if (p.page <= page) hit = p.chapterKey;
   return hit;
 }

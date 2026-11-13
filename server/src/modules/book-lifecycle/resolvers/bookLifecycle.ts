@@ -30,7 +30,7 @@ import { BookMemoRound, type IBookMemoRound } from "../models/BookMemoRound";
 import { BookFeedback, BookDecision, BookRuleSet, BookInstruction, type IBookFeedback, type IBookDecision, type IBookRuleSet, type IBookInstruction } from "../models/BookFeedback";
 import { BookEditDraft, type IBookEditDraft } from "../models/BookEditDraft";
 import { BookEvent } from "../../support-book/models/BookEvent";
-import { assertBookPlane, canBookLc, requireBookLc } from "../services/access";
+import { assertBookPlane, requireBookLcAny, canBookLc, requireBookLc } from "../services/access";
 import { recordContentRead } from "../services/events";
 import { chapterTextsBySha, loadBook, loadVersion, serverRegionContent, versionChapters, vno } from "../services/store";
 import { rewriteServerRegions } from "../services/markdown";
@@ -426,10 +426,10 @@ const ChapterTextRef = builder.objectRef<ChapterTextShape>("BookLcChapterText").
 builder.queryField("bookLcBooksPage", (t) =>
   t.field({
     type: BookPage,
-    authScopes: { hasPermission: "book_lifecycle:view" },
+    authScopes: { hasAnyPermission: ["book_lifecycle:view", "book_lifecycle:release"] },
     args: { classLevel: t.arg.int(), subject: t.arg.string(), status: t.arg.string(), archived: t.arg.boolean(), page: t.arg.int(), pageSize: t.arg.int() },
     resolve: async (_r, a, ctx) => {
-      requireBookLc(auth(ctx), "view");
+      requireBookLcAny(auth(ctx), ["view", "release"]);
       assertBookPlane();
       const filter: Record<string, unknown> = { archived: a.archived ?? false };
       if (a.classLevel != null) filter.classLevel = a.classLevel;
@@ -444,10 +444,10 @@ builder.queryField("bookLcBooksPage", (t) =>
 builder.queryField("bookLcBook", (t) =>
   t.field({
     type: BookRef,
-    authScopes: { hasPermission: "book_lifecycle:view" },
+    authScopes: { hasAnyPermission: ["book_lifecycle:view", "book_lifecycle:release"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, a, ctx) => {
-      requireBookLc(auth(ctx), "view");
+      requireBookLcAny(auth(ctx), ["view", "release"]);
       assertBookPlane();
       return bookShape(await loadBook(a.id));
     },

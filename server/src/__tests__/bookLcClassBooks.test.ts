@@ -3,7 +3,8 @@
  */
 jest.mock("../modules/platform/services/DriveStore", () => require("./bookLcFixtures").driveMock);
 const startClassBookUpload = jest.fn(async (input: { classLevel: number; title: string; pdf: Buffer }) => ({ book: { id: "classbook-fixture-1", ...input }, done: Promise.resolve() }));
-jest.mock("../modules/class-books/services/ClassBookService", () => ({ startClassBookUpload: (i: never) => startClassBookUpload(i) }));
+const updateClassBook = jest.fn(async () => ({}));
+jest.mock("../modules/class-books/services/ClassBookService", () => ({ startClassBookUpload: (i: never) => startClassBookUpload(i), updateClassBook: (...a: never[]) => (updateClassBook as unknown as (...x: never[]) => unknown)(...a) }));
 import { setupLc, teardownLc, resetBooks, releasedBook, type LcFx } from "./bookLcFixtures";
 import { publishToClassBooks, setClassBooksSwitch } from "../modules/book-lifecycle/services/releaseService";
 import { BookPrintRelease } from "../modules/book-lifecycle/models/BookRelease";

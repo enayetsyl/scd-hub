@@ -126,7 +126,7 @@ describe("resolver gates (static)", () => {
   });
   it.each(fields.map((f) => [f.kind, f.name] as const))("%s %s names one book_lifecycle action and checks the book plane", (_k, name) => {
     const f = fields.find((x) => x.name === name)!;
-    expect(f.body).toMatch(/authScopes:\s*\{\s*hasPermission:\s*"book_lifecycle:[a-z_]+"\s*\}/);
+    expect(f.body).toMatch(/authScopes:\s*\{\s*(hasPermission:\s*"book_lifecycle:[a-z_]+"|hasAnyPermission:\s*\[(\s*"book_lifecycle:[a-z_]+",?)+\s*\])\s*\}/);
     expect(f.body).toContain("assertBookPlane()");
   });
   it("mutations never gate on view; the verdict / direct-fix / final / protected / self-ruling are finalize", () => {

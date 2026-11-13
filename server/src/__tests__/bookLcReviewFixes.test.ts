@@ -318,6 +318,7 @@ describe("11 — small items", () => {
     const r = await roundSent(P(), id);
     await approveOnPaper(P(), r._id.toString());
     expect((await BookFeedback.findById(f._id))?.status).toBe("accepted");
+    await SchoolBook.updateOne({ _id: book._id }, { $set: { currentReleaseId: oid(f._id) } }); // a printed release now exists
     const [out] = await triageFeedback(P(), [f._id.toString()], { kind: "route", route: "verbal_errata" });
     expect(out.route).toBe("verbal_errata");
   });

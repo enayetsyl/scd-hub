@@ -11,14 +11,17 @@
 import { Types } from "mongoose";
 import type { AuthPayload } from "../../../context";
 import { BookErratum, type IBookErratum } from "../models/BookRelease";
-import { BookFeedback } from "../models/BookFeedback";
+import { BookFeedback, type IBookFeedback } from "../models/BookFeedback";
 import { SchoolBook, type ISchoolBook } from "../models/SchoolBook";
 import type { IBookVersion } from "../models/BookVersion";
 import { registerTriageHook, registerVersionCreatedHook } from "./hooks";
 import { requireBookLc, uid, oid } from "./access";
 import { BookLcError } from "./errors";
 import { lcEvent } from "./events";
-import { bookTeachersNow, isBookReader } from "./teacherScope";
+import { bookViewersNow, isBookReader } from "./teacherScope";
+import { BookPrintRelease } from "../models/BookRelease";
+import { versionChain } from "./memo";
+import { loadVersion } from "./store";
 import { emit } from "../../notifications/services/NotificationService";
 
 const DEFAULT_INSTRUCTION = "শিক্ষার্থীদের বইয়ে কলম দিয়ে ঠিক করে দিন";
@@ -30,8 +33,14 @@ async function nextErratumCode(bookId: Types.ObjectId): Promise<string> {
 
 /** Hook: triage verbal_errata → an erratum draft on the current release. */
 registerTriageHook(async (book, item, auth) => {
-  if (item.route !== "verbal_errata" || !book.currentReleaseId) return;
-  if (await BookErratum.exists({ feedbackId: item._id })) return;
+  if (item.route !== "verbal_errata") return;
+  await createErratumDraft(book, item, uid(auth));
+});
+
+/** One erratum draft on the book's current release for an accepted verbal_errata item (idempotent). */
+export async function createErratumDraft(book: ISchoolBook, item: IBookFeedback, actor: Types.ObjectId): Promise<IBookErratum | null> {
+  if (!book.currentReleaseId) return null;
+  if (await BookErratum.exists({ feedbackId: item._id })) return null;
   const e = await BookErratum.create({
     bookId: book._id,
     releaseId: book.currentReleaseId,
@@ -44,10 +53,12 @@ registerTriageHook(async (book, item, auth) => {
     correctText: "",
     instructionBn: DEFAULT_INSTRUCTION,
     status: "draft",
-    createdBy: uid(auth),
+    createdBy: actor,
   });
   await BookFeedback.updateOne({ _id: item._id }, { $set: { erratumId: e._id } });
-});
+  await lcEvent({ bookId: book._id, kind: "ERRATUM_UPDATED", actorId: actor, summary: `${e.code} drafted from ${item.code}`, refs: { erratumId: e._id, feedbackId: item._id } });
+  return e;
+}
 
 /** Hook: a version citing an erratum's item carries it (§9.4 step 4). */
 registerVersionCreatedHook(async (book: ISchoolBook, version: IBookVersion) => {
@@ -79,6 +90,7 @@ export async function updateErratum(
   if (patch.correctText != null) e.correctText = patch.correctText.slice(0, 300);
   if (patch.instructionBn != null) e.instructionBn = patch.instructionBn.slice(0, 500);
   await e.save();
+  await lcEvent({ bookId: e.bookId, kind: "ERRATUM_UPDATED", actorId: uid(auth), summary: `${e.code} edited`, refs: { erratumId: e._id } });
   return e;
 }
 
@@ -88,19 +100,30 @@ export async function announceErratum(auth: AuthPayload, id: string): Promise<IB
   const e = await loadErratum(id);
   if (e.status !== "draft") throw new BookLcError("NOT_DRAFT", "ইতিমধ্যে ঘোষণা হয়েছে");
   if (!e.correctText.trim()) throw new BookLcError("NO_CORRECT", "ঠিক লেখাটি দিন");
+  // Teachers see the errata of the CURRENT release: an erratum drafted on an older release is
+  // re-pointed to it — unless the current release's version already carries the correction.
+  const bk = await SchoolBook.findById(e.bookId);
+  if (bk?.currentReleaseId && !e.releaseId.equals(bk.currentReleaseId)) {
+    const cur = await BookPrintRelease.findById(bk.currentReleaseId).select("versionId").lean();
+    if (cur && e.carriedIntoVersionId) {
+      const chain = await versionChain(await loadVersion(cur.versionId));
+      if (chain.some((v) => v._id.equals(e.carriedIntoVersionId!))) throw new BookLcError("ALREADY_CARRIED", "এই সংশোধন বর্তমান ছাপার সংস্করণেই আছে — ঘোষণার দরকার নেই");
+    }
+    e.releaseId = bk.currentReleaseId;
+  }
   e.status = "announced";
   e.announcedBy = uid(auth);
   e.announcedAt = new Date();
   await e.save();
   const book = await SchoolBook.findById(e.bookId);
   if (book) {
-    for (const userId of await bookTeachersNow(book)) {
+    for (const userId of await bookViewersNow(book)) {
       try {
         await emit({
           recipientUserId: userId,
           kind: "BOOK_ERRATUM",
           titleBn: `ভুল-সংশোধনী: ${book.titleBn}`,
-          bodyBn: `${e.code}${e.page ? ` · পৃ. ${e.page}` : ""}: «${e.wrongText}» → «${e.correctText}». ${e.instructionBn}`,
+          bodyBn: `${e.code}${e.page ? ` · পৃ. ${e.page}` : ""} — আমার বই-তে দেখুন`,
           refs: { bookId: book._id.toString() },
           dedupeKey: `BOOK_ERRATUM:${e._id}:${userId}`,
         });
@@ -119,6 +142,7 @@ export async function withdrawErratum(auth: AuthPayload, id: string): Promise<IB
   if (e.status === "withdrawn") return e;
   e.status = "withdrawn";
   await e.save();
+  await lcEvent({ bookId: e.bookId, kind: "ERRATUM_UPDATED", actorId: uid(auth), summary: `${e.code} withdrawn`, refs: { erratumId: e._id } });
   return e;
 }
 
@@ -129,10 +153,11 @@ export async function ackErratum(auth: AuthPayload, id: string): Promise<IBookEr
   if (e.status !== "announced") throw new BookLcError("NOT_ANNOUNCED", "এই ভুল-সংশোধনী ঘোষণা হয়নি");
   const book = await SchoolBook.findById(e.bookId);
   if (!book || !(await isBookReader(auth.userId, book))) throw new BookLcError("NOT_READER", "এই বই আপনার শ্রেণি/বিষয়ের নয়");
-  if (!e.acks.some((a) => a.userId.toString() === auth.userId)) {
-    e.acks.push({ userId: uid(auth), at: new Date() });
-    await e.save();
+  if (!book.currentReleaseId || !e.releaseId.equals(book.currentReleaseId)) throw new BookLcError("NOT_CURRENT", "এই ভুল-সংশোধনী বর্তমান ছাপার নয়");
+  // Conditional push: two ticks at once cannot both land.
+  const res = await BookErratum.updateOne({ _id: e._id, "acks.userId": { $ne: uid(auth) } }, { $push: { acks: { userId: uid(auth), at: new Date() } } });
+  if (res.modifiedCount) {
     await lcEvent({ bookId: e.bookId, kind: "ERRATUM_ACK", actorId: uid(auth), summary: `${e.code} acknowledged`, refs: { erratumId: e._id } });
   }
-  return e;
+  return loadErratum(id);
 }
