@@ -68,6 +68,15 @@ jest.mock("../modules/trackers/assignmentCalendar", () => ({
 jest.mock("../modules/routine/models/ScheduleWindow", () => ({
   ScheduleWindow: {
     findOne: (f: unknown) => ({ sort: () => ({ select: () => ({ lean: () => mockWindowFindOne(f) }) }) }),
+    // dayStart.regularWindowOn reads every regular window and picks the one covering the day.
+    find: (f: unknown) => ({
+      sort: () => ({
+        lean: async () => {
+          const w = await mockWindowFindOne(f);
+          return w ? [w] : [];
+        },
+      }),
+    }),
   },
 }));
 // D-#290 reconcile alerts — the confirmer-side sources.

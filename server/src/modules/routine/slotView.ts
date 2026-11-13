@@ -12,7 +12,7 @@ import { User } from "../foundation/models/User";
 import { Class } from "../foundation/models/Class";
 import { Section } from "../foundation/models/Section";
 import { PeriodGrid } from "./models/PeriodGrid";
-import { ScheduleWindow } from "./models/ScheduleWindow";
+import { dayStartMinutesOn } from "./dayStart";
 import { SubjectGroup } from "./models/SubjectGroup";
 import { computePeriodTimes } from "./schedule";
 import { currentYearFilter } from "../foundation/services/currentYear";
@@ -89,8 +89,7 @@ export async function enrichRoutineSlots<T extends Enrichable>(slots: T[]): Prom
 
   // 3. Period times per audience from the regular-season grids + window.
   const grids = await PeriodGrid.find({ season: "regular", active: true }).lean();
-  const win = await ScheduleWindow.findOne({ season: "regular", active: true, ...(await currentYearFilter()) }).sort({ fromDate: 1 }).lean();
-  const dayStart = win?.dayStartMinutes ?? 420;
+  const dayStart = await dayStartMinutesOn(new Date());
   const timesByAudience = new Map<string, Map<number, { start: string; end: string }>>();
   for (const g of grids) {
     const computed = computePeriodTimes(dayStart, g.periods);

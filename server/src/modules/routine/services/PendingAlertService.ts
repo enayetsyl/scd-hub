@@ -33,7 +33,7 @@ import { RoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { liveWindow } from "../liveWindow";
 import { ClassNote } from "../models/ClassNote";
-import { ScheduleWindow } from "../models/ScheduleWindow";
+import { dayStartMinutesOn } from "../dayStart";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { unmarkedMarkingDays } from "../../attendance/attendanceBacklog";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
@@ -227,12 +227,10 @@ function deadlineFor(deliveryKey: string, dayStartMinutes: number): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, dayStartMinutes, 0, 0);
 }
 
-async function dayStartMinutes(): Promise<number> {
-  const win = await ScheduleWindow.findOne({ season: "regular", active: true, ...(await currentYearFilter()) })
-    .sort({ fromDate: 1 })
-    .select("dayStartMinutes")
-    .lean();
-  return win?.dayStartMinutes ?? DEFAULT_DAY_START_MINUTES;
+/** The school day's start ON the delivery date — the window in force that day, so a
+ *  mid-year start change (07:00 → 07:30 from 15 Nov 2026) moves the deadline with it. */
+async function dayStartMinutes(deliveryKey: string): Promise<number> {
+  return dayStartMinutesOn(parseDateKey(deliveryKey));
 }
 
 interface AssignmentWork {
@@ -280,8 +278,6 @@ async function assignmentWork(userId: string, today: Date): Promise<AssignmentWo
   const currentWeek = weekNumberFor(new Date(schedule.termStartDate), today);
   if (currentWeek < 1) return none;
 
-  const startMinutes = await dayStartMinutes();
-
   // This week + the previous one. Anything older is a term-level problem the Office
   // chases, not a dashboard nudge. The countdown only ever shows for the delivery week
   // itself, which is why it "appears from the delivery week's start" (D-#280).
@@ -297,12 +293,12 @@ async function assignmentWork(userId: string, today: Date): Promise<AssignmentWo
     if (mine.length === 0) continue; // delivered ⇒ the countdown disappears at once
 
     const deliveryKey = week.deliveryDate.slice(0, 10);
-    const deadline = deadlineFor(deliveryKey, startMinutes);
+    const deadline = deadlineFor(deliveryKey, await dayStartMinutes(deliveryKey));
 
     if (today.getTime() >= deadline.getTime()) {
       overdueCount += mine.length;
       overdueDates.push(deliveryKey);
-    } else if (prep === null || deadline.getTime() < deadlineFor(prep.deliveryDateKey, startMinutes).getTime()) {
+    } else if (prep === null || deadline.getTime() < new Date(prep.dueAt).getTime()) {
       prep = {
         dueAt: deadline.toISOString(),
         deliveryDateKey: deliveryKey,
