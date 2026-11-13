@@ -57,12 +57,12 @@ beforeAll(async () => {
     },
   ]);
 
-  // An OFFICE login whose only daily-report switch came by a share that ended yesterday.
+  // An OFFICE login whose only daily-report switch came by a share that ended two days ago.
   const uid = new Types.ObjectId();
   await User.create([
     { _id: uid, role: "OFFICE", name: "Share Expired", email: "expired@school.test", passwordHash: "x", active: true, grantedPermissions: ["data_assistant:use", "reports:daily_attendance"] },
   ]);
-  await DailyReportShare.create([{ userId: uid, sections: ["ATTENDANCE"], grantedPerms: ["reports:daily_attendance"], untilKey: addDays(fx.today, -1), sharedBy: new Types.ObjectId() }]);
+  await DailyReportShare.create([{ userId: uid, sections: ["ATTENDANCE"], grantedPerms: ["reports:daily_attendance"], untilKey: addDays(fx.today, -2) /* -2, not -1: fx.today is the Dhaka day, the service reads the process-local day (UTC on CI), so -1 is still "today" on CI between 00:00 and 06:00 Dhaka */, sharedBy: new Types.ObjectId() }]);
   expiredShareAuth = { userId: String(uid), role: "OFFICE" };
 
   // A second staff member with a leave of their own, for the staff_id filter.
