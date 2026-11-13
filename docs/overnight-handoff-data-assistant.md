@@ -245,6 +245,18 @@ D-#1535, D-#1536 (PRD rows as built), D-#1575 build details.
   (connect), `-log` (audit), with `-chat` (use) and `-access` (audit) from DA-1/DA-2. Every
   `data_assistant:*` action now has a guide (coverage 315 of 467).
 
+### Verified (executed)
+```
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_help_guides → help guides: 377 file(s), 29 draft(s) … ALL CHECKS PASSED (coverage 315 of 467)
+verify_descriptive_carriers → RESULT: PASS — all 11 descriptive cases gate as intended
+shared build 0; shared typecheck 0; server tsc 0 (Instantiations 8,680,216; Memory used 3,711,589K); app tsc 0
+Targeted: dataAssistantConnections, graphqlDocuments, helpGuides, permissionCatalogueGates,
+  notificationNavCoverage → Test Suites 5 passed; Tests 53 passed
+Full suite (--maxWorkers=2) on 963004f4: Test Suites 462 passed, 462 total; Tests 7468 passed,
+  7468 total (EXIT 0). expo export --platform web → App exported … EXPO_EXIT 0
+```
+
 ### Not done
 - One local UI walk (Expo + Mongo) and the guide pictures: not done in the cloud session (no
   `.env` / DB to sign in against); the guides stay drafts until a walk.
