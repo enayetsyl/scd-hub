@@ -704,12 +704,20 @@ async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Pro
  * if so. Imported lazily (the action service reads diagnosis, which reads this file) and never
  * allowed to fail the save — the next confirmation evaluates again.
  */
-async function afterEvidence(paper: IMasteryPaper): Promise<void> {
+export async function afterEvidence(paper: IMasteryPaper): Promise<void> {
   try {
     const { evaluateSectionTriggers } = await import("./MasteryActionService");
     await evaluateSectionTriggers(paper.sectionId, paper.subject);
   } catch (err) {
     console.error(`[mastery] trigger evaluation failed for ${paper.paperId}:`, err);
+  }
+  // GH-3 (D-#1522): a class-test paper may open / update homework-honesty cases for its children. Office
+  // only, silent; never allowed to fail the save (the nightly sweep catches up).
+  if (paper.source === "CT") {
+    // Fire and forget: the save never waits for it (the nightly sweep catches up on a failure).
+    void import("../../homework-integrity/services/IntegrityService")
+      .then((m) => m.recomputeForPaper(paper._id, paper.academicYearId))
+      .catch((err) => console.error(`[mastery] homework-integrity recompute failed for ${paper.paperId}:`, err));
   }
 }
 

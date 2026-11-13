@@ -63,6 +63,11 @@ jest.mock("../modules/library/services/LibraryReminderService", () => ({
 jest.mock("../modules/hr/services/OffboardingService", () => ({
   runDueOffboardingRevocations: jest.fn().mockResolvedValue(0),
 }));
+// GH-3: the ticker also runs the homework-honesty sweep. Mock it so the scheduler test stays DB-free
+// (the sweep itself is covered in homeworkIntegrity.test.ts).
+jest.mock("../modules/homework-integrity/services/IntegrityService", () => ({
+  sweepYear: jest.fn().mockResolvedValue({ checked: 0, opened: 0, updated: 0, reopened: 0 }),
+}));
 // CO-3: the ticker also runs the observation response-escalation sweep. Mock it so the
 // scheduler test stays DB-free (the sweep itself is covered in observationEscalation.test.ts).
 jest.mock("../modules/classroom-observation/services/ObservationEscalationService", () => ({
@@ -178,6 +183,12 @@ jest.mock("../modules/improvement/services/ImprovementSweepService", () => ({
 }));
 // MC-2 (D-#756) — the 08:00 meeting-comment reminders read real models; stubbed the same way.
 const mockMeetingReminders = jest.fn((_now: Date) => Promise.resolve({ notes: 0, summaries: 0 }));
+// LP-4 (D-#828) / GH-4 — the 13:00 missed-lesson family reads real models; stubbed like the rest.
+const mockLessonMissed = jest.fn(async (_now: Date) => 0);
+jest.mock("../modules/lesson-progress/services/GuardianLessonService", () => ({
+  dispatchLessonMissed: (now: Date) => mockLessonMissed(now),
+  LESSON_MISSED_MINUTES: 13 * 60,
+}));
 jest.mock("../modules/comments/services/MeetingChainService", () => ({
   emitMorningReminders: (now: Date) => mockMeetingReminders(now),
   MEETING_REMINDER_MINUTES: 8 * 60,
@@ -592,6 +603,33 @@ describe("meeting comment 08:00 reminders (D-#756)", () => {
     mockResolveDayType.mockResolvedValue(dayType);
     await runSchedulerTick(at(8, 0));
     expect(mockMeetingReminders).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Missed-lesson guardian notice (LP-4 D-#828; moved to 13:00 by GH-4, D-#1528)
+// ---------------------------------------------------------------------------
+
+describe("missed-lesson 13:00 notice (GH-4)", () => {
+  it("runs at 13:00 on a FULL day and reports the count", async () => {
+    mockLessonMissed.mockResolvedValue(4);
+    const s = await runSchedulerTick(at(13, 0));
+    expect(s.lessonMissedEmitted).toBe(4);
+  });
+
+  it("does not fire at 12:55 or at the old 18:00 hour's start, and reads ONCE per day", async () => {
+    await runSchedulerTick(at(12, 55));
+    expect(mockLessonMissed).not.toHaveBeenCalled();
+    await runSchedulerTick(at(13, 0));
+    await runSchedulerTick(at(13, 10));
+    await runSchedulerTick(at(18, 0));
+    expect(mockLessonMissed).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["OFF", "HOLIDAY", "QURAN_ONLY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    await runSchedulerTick(at(13, 0));
+    expect(mockLessonMissed).not.toHaveBeenCalled();
   });
 });
 

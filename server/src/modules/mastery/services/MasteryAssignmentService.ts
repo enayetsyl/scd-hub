@@ -343,7 +343,8 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     studentsByQid.set(r.qid, s);
   }
   for (const [q, s] of studentsByQid) exposure.set(q, s.size);
-  const bctx: BuilderContext = { outcomes: outcomeInfo, taught: new Set(sec.states.keys()), bank, marksOf: marks, exposure, layout };
+  const unmarkedTypes = new Set((await MasteryQuestionType.find({ classToken: ctx.classToken, subject: input.subject, active: true, marks: null }).select("code").lean()).map((t) => t.code));
+  const bctx: BuilderContext = { outcomes: outcomeInfo, taught: new Set(sec.states.keys()), bank, marksOf: marks, unmarkedTypes, exposure, layout };
 
   const sectionWeak = [...sec.states.entries()].map(([loCode, per]) => ({
     loCode,
@@ -430,11 +431,14 @@ export interface SheetDetail {
   warnings: { code: string; loCode: string | null; labelBn: string | null }[];
   /** Outcomes this student could get a teacher-written question on (locked, question-assessed). */
   outcomeChoices: { loCode: string; labelBn: string; questionTypeCodes: string[] }[];
+  /** PR-K: every active type of the class x subject marks table (with marks) - the add-own chips; the objective's list only orders them. */
+  typeChoices: { code: string; labelBn: string; marks: number }[];
 }
 
 async function sheetDetailOf(a: IMasteryAssignment, sheet: IMasteryAssignmentSheet | (IMasteryAssignmentSheet & object)): Promise<SheetDetail> {
-  const [outcomes, st] = await Promise.all([
+  const [outcomes, types, st] = await Promise.all([
     lockedOutcomes(a.classToken, a.subject),
+    MasteryQuestionType.find({ classToken: a.classToken, subject: a.subject, active: true }).sort({ code: 1 }).select("code labelBn marks").lean(),
     rosterOf(a.sectionId).then((r) => r.find((x) => String(x._id) === String(sheet.studentId))),
   ]);
   const labels = new Map(outcomes.map((o) => [o.code, o.labelBn]));
@@ -452,6 +456,7 @@ async function sheetDetailOf(a: IMasteryAssignment, sheet: IMasteryAssignmentShe
     outcomeChoices: outcomes
       .filter((o) => o.assess === "QUESTION" && isTaggedRow(o))
       .map((o) => ({ loCode: o.code, labelBn: o.labelBn, questionTypeCodes: o.questionTypeCodes ?? [] })),
+    typeChoices: types.filter((x) => typeof x.marks === "number" && x.marks > 0).map((x) => ({ code: x.code, labelBn: x.labelBn, marks: x.marks as number })),
   };
 }
 
@@ -528,7 +533,7 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const o = (await lockedOutcomes(a.classToken, a.subject)).find((x) => x.code === edit.loCode && x.assess === "QUESTION" && isTaggedRow(x));
       if (!o) throw new MasteryWorkError("কোডটি এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।");
       const qt = edit.questionTypeCode ?? "";
-      if (!(o.questionTypeCodes ?? []).includes(qt)) throw new MasteryWorkError(`${qt || "ধরন"} এই কোডের প্রশ্নের ধরন নয়।`);
+      // PR-K: any active type of this class × subject's marks table (the objective's list only suggests).
       const m = (await marksTable(a.classToken, a.subject)).get(qt);
       if (!m) throw new MasteryWorkError(`${qt}-এর নম্বর ঠিক করা নেই।`);
       sheet.items.push({ origin: "TEACHER", textBn: text, loCode: o.code, chapterNumber: o.chapterNumber ?? null, questionTypeCode: qt, marks: m, band: "TEACHER" });

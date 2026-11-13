@@ -178,13 +178,18 @@ import "./modules/mastery/resolvers/masteryGuardian";
 import "./modules/mastery/resolvers/masteryAction";
 import "./modules/mastery/resolvers/masteryReview";
 import "./modules/mastery/resolvers/masteryBankCoverage";
+import "./modules/guardian-help/resolvers/questionHints";
+import "./modules/homework-integrity/resolvers/homeworkIntegrity";
 import "./modules/lesson-progress/resolvers/lessonDelivery";
 import "./modules/lesson-progress/resolvers/lessonProgress";
 import "./modules/lesson-progress/resolvers/studentLessons";
 import "./modules/lesson-progress/resolvers/lessonObjectives";
+import "./modules/lesson-progress/resolvers/guardianLessons";
 import "./modules/worksheets/resolvers/worksheet";
 import "./modules/popup-notices/resolvers/popupNotice";
 import "./modules/class-books/resolvers/classBooks";
 import "./modules/exam-papers/resolvers/examPapers";
 import "./modules/quran-exam/resolvers/quranExam";
 import "./modules/viva/resolvers/viva";
+// Year change YC-5 (docs/prd-year-change.md): the Principal-only face over the YC-4/YC-6 engine.
+import "./modules/year-change/resolvers/yearChange";

@@ -55,6 +55,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { dispatchAttendanceReminders } from "../../attendance/services/AttendanceReminderService";
 import { dispatchLibraryReminders } from "../../library/services/LibraryReminderService";
 import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
+import { sweepYear as sweepHomeworkIntegrity } from "../../homework-integrity/services/IntegrityService";
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
@@ -90,6 +91,7 @@ import {
   emitMorningReminders as emitMeetingCommentReminders,
   MEETING_REMINDER_MINUTES,
 } from "../../comments/services/MeetingChainService";
+import { dispatchLessonMissed, LESSON_MISSED_MINUTES } from "../../lesson-progress/services/GuardianLessonService";
 import {
   dispatchTaskDigest,
   dispatchTaskGivenSummary,
@@ -284,6 +286,8 @@ export interface TickSummary {
   dailyReportEmitted: number;
   /** D-#1054: report shares removed because their end day passed. */
   dailyReportSharesExpired: number;
+  /** 13:00 missed-lesson notices to guardians (LP-4 D-#828; moved from 18:00 by GH-4, D-#1528). */
+  lessonMissedEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -334,6 +338,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     markEscalationEmitted: 0,
     dailyReportEmitted: 0,
     dailyReportSharesExpired: 0,
+    lessonMissedEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -343,6 +348,14 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("observation escalation", async () => {
     summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
       await runObservationEscalation(now);
+    });
+  });
+
+  // --- Homework-honesty sweep (GH-3, D-#1522): once per calendar day, the first tick after midnight.
+  // Idempotent; Office-only cases, NO message to anyone. Best-effort like every family.
+  await family("homework integrity sweep", async () => {
+    await runOnce(dateKey, "HWINT", async () => {
+      await sweepHomeworkIntegrity();
     });
   });
 
@@ -776,6 +789,16 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
         const r = await emitMeetingCommentReminders(now);
         summary.meetingNoteRemindersEmitted = r.notes;
         summary.meetingSummaryRemindersEmitted = r.summaries;
+      });
+    });
+
+    // --- Missed lessons (LP-4 D-#828, GH-4 D-#1528) — 13:00, FULL days: one row per guardian × child naming
+    // the lesson-plan sessions taught today while the child was listed absent, so the family can go
+    // over them at home. runOnce guards the reads; the dedupe key (child, day, guardian) guards rows.
+    await family("lesson missed", async () => {
+      if (!windowOpen(nowMin, LESSON_MISSED_MINUTES)) return;
+      await runOnce(dateKey, "LPMISS", async () => {
+        summary.lessonMissedEmitted = await dispatchLessonMissed(now);
       });
     });
   }

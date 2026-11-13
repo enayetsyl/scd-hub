@@ -45,6 +45,7 @@ import {
 } from "../lib/navArrange";
 import { friendlyError } from "../lib/errors";
 import { Button } from "../components/ui";
+import { useLessonProgressOn } from "../lib/guardianFeatures";
 
 type RouteName = keyof TabParamList;
 type LabelKey = keyof typeof STR;
@@ -77,6 +78,8 @@ type NavLeaf = {
   perms?: string[];
   allOf?: string[];
   hidden?: boolean;
+  /** GH-4: shown only while the school's lesson-progress switch is on (guardian entries). */
+  needsLessonProgress?: boolean;
 };
 type NavSection =
   | ({ type: "item" } & NavLeaf)
@@ -272,6 +275,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "ctDashboardTitle", icon: "🧮", screen: "ClassTestDashboard", perms: REPORT_LEAF_ACTIONS.ClassTestDashboard },
       { route: "ReportsTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: REPORT_LEAF_ACTIONS.StudentProgress },
       { route: "ReportsTab", labelKey: "lpNavTitle", icon: "📗", screen: "LessonProgress", perms: REPORT_LEAF_ACTIONS.LessonProgress },
+      // GH-3 (D-#1522): children whose homework runs 20+ points above their class tests (Office only).
+      { route: "ReportsTab", labelKey: "hiNavTitle", icon: "🔎", screen: "HomeworkIntegrity", perms: REPORT_LEAF_ACTIONS.HomeworkIntegrity },
       { route: "ReportsTab", labelKey: "revDashTitle", icon: "🕌", screen: "RevisionDashboard", perms: REPORT_LEAF_ACTIONS.RevisionDashboard },
       { route: "ReportsTab", labelKey: "qpTitle", icon: "🔍", screen: "QuestionReviewProgress", perms: REPORT_LEAF_ACTIONS.QuestionReviewProgress },
       { route: "ReportsTab", labelKey: "obsReviewerEffTitle", icon: "👁️", screen: "ReviewerEffectiveness", perms: REPORT_LEAF_ACTIONS.ReviewerEffectiveness },
@@ -360,6 +365,8 @@ const STAFF_NAV: NavSection[] = [
     ],
   },
   { type: "item", route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️" },
+  // YC-5: the Principal's year-change screen, one tap from the sidebar (year_change:view is LOCKED).
+  { type: "item", route: "AdminTab", labelKey: "ycTitle", icon: "🔄", screen: "YearChange", perms: ["year_change:view"] },
 ];
 
 const GUARDIAN_NAV: NavSection[] = [
@@ -394,6 +401,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
   // D-#855: every pop-up the school sent this family, to read again.
   { type: "item", route: "GuardianHomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
+  // LP-4 (D-#828): the lessons the child missed (with what was taught that day).
+  { type: "item", route: "GuardianHomeTab", screen: "ChildMissedLessons", labelKey: "gpMissedLessons", icon: "📘", needsLessonProgress: true },
 ];
 
 // prd-help-centre (D-#968): one entry for every login, last in the default order.
@@ -417,15 +426,17 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const insets = useSafeAreaInsets();
   const basket = useBasket();
   const { role, can } = useAuth();
+  const lessonProgressOn = useLessonProgressOn();
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
   /** Route-gate + the optional per-leaf effective-permission gate (see NavLeaf). */
   const visibleLeaf = React.useCallback(
     (leaf: NavLeaf): boolean =>
       !leaf.hidden &&
+      (!leaf.needsLessonProgress || lessonProgressOn) &&
       present.has(leaf.route) &&
       (!leaf.perms || leaf.perms.some(can)) &&
       (leaf.allOf ?? []).every(can),
-    [present, can],
+    [present, can, lessonProgressOn],
   );
   const focusedTab = props.state.routes[props.state.index];
   const activeRoute = focusedTab?.name as RouteName | undefined;

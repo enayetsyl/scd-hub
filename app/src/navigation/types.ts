@@ -262,6 +262,9 @@ export type GuardianHomeStackParamList = {
   ChildMastery: undefined;
   /** D-#855: আমার বার্তা — the pop-ups this guardian received (90 days). Never first. */
   MyPopups: undefined;
+  /** LP-4 (D-#828): the classes the child missed while a lesson-plan session was taught. */
+  /** GH-4: `studentId` = the notice's own child (optional only: this stack's param-less entry stays valid). */
+  ChildMissedLessons: { studentId?: string } | undefined;
 };
 export type GuardianHomeworkStackParamList = {
   // Optional deep-link params (D-#452 weekly digest): preselect the child and
@@ -720,6 +723,7 @@ export type AdminStackParamList = {
   GroupMembers: undefined;
   AcademicYear: undefined;
   SectionConfig: undefined;
+  YearChange: undefined;
   GuardianCredentials: undefined;
   MessageTemplates: undefined;
   MessageTemplateEdit: { key: string; labelBn: string };
@@ -817,6 +821,8 @@ export type ReportsStackParamList = {
   StudentProgressStudent: { studentId: string; name: string };
   RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date?: string } | undefined;
   LessonProgress: undefined;
+  /** GH-3 (D-#1522): the Office homework-honesty queue. */
+  HomeworkIntegrity: undefined;
   QuestionReviewProgress: undefined;
   ReviewerEffectiveness: undefined;
   TeachingNoteOpenComments: undefined;

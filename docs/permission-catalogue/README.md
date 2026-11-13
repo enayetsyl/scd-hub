@@ -115,6 +115,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Teaching & trackers | `homework` | Homework | বাড়ির কাজ | 14 | trackers-homework-assignment |
 | Teaching & trackers | `assignment` | Weekly assignment | সাপ্তাহিক অ্যাসাইনমেন্ট | 15 | trackers-homework-assignment |
 | Teaching & trackers | `assignment_gift` | Weekly gift | সাপ্তাহিক উপহার | 3 | trackers-homework-assignment |
+| Teaching & trackers | `homework_integrity` | Homework honesty check | হোমওয়ার্ক যাচাই | 2 | trackers-homework-assignment |
 | Teaching & trackers | `mark_submission` | Mark submission | জমার হিসাব | 3 | trackers-homework-assignment |
 | Teaching & trackers | `work_claim` | Guardian "done at home" claims | অভিভাবকের জানানো | 5 | trackers-homework-assignment |
 | Teaching & trackers | `set_tracker` | Set tracker (legacy) | সেট ট্র্যাকার | 5 | trackers-classtest |
@@ -168,6 +169,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Content & books | `lesson_plans` | Lesson plans | পাঠ পরিকল্পনা | 3 | content-questions-exams |
 | Content & books | `plan_review` | Plan review | পরিকল্পনা রিভিউ | 3 | content-questions-exams |
 | Content & books | `question_bank` | Question bank | প্রশ্নব্যাংক | 5 | content-questions-exams |
+| Content & books | `question_hint` | Question hints | প্রশ্নের ইঙ্গিত | 1 | content-questions-exams |
 | Content & books | `question_review` | Question review & publishing | প্রশ্ন রিভিউ | 4 | content-questions-exams |
 | Content & books | `book_production` | Book production | বই তৈরি | 10 | content-questions-exams |
 | Content & books | `teaching_notes` | Notes & guides | নোট ও গাইড | 5 | observation-comments-reports |
@@ -237,6 +239,12 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `assignment:remind` | Guardian chase ladder | অভিভাবককে রিমাইন্ডার | Chase list, ladder step, outcome, history, bulk sweep | — | on | | message:dispatch + assertFollowUpAdmin (isAdminStaff) |
 | `assignment:settings` | Rotation schedule | রোটেশন সূচি ঠিক করা | Term anchor, cadence, rotation cells; read schedule / grid / handout board | — | on | | roster:manage |
 | ~~`assignment:view_reports`~~ | RETIRED (D-#846) | — | Replaced by one switch per report: `reports:assignment_load`, `reports:as_declare_pending`, `reports:as_deliver_pending`, `reports:as_print_pending`, `reports:reconciliation` | — | — | | stored grants / role edits translate |
+
+#### `homework_integrity` — হোমওয়ার্ক যাচাই
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `homework_integrity:view` | See homework check cases | হোমওয়ার্ক যাচাইয়ের কেস দেখা | The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it (GH-3, D-#1522) | — | on | | new |
+| `homework_integrity:record` | Record the outcome | যাচাইয়ের ফলাফল লেখা | Close a case with what the Office found and a note; recalculate now (GH-3, D-#1522) | — | on | | new |
 
 #### `assignment_gift` — সাপ্তাহিক উপহার
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -716,6 +724,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `lesson_plans:view` | View lesson plans | পাঠ পরিকল্পনা দেখা | Plan tree, a plan, its PDF | on | — | | content:read |
 | `lesson_plans:view_all` | Every plan | সব পাঠ পরিকল্পনা দেখা | Plans beyond own routine/supervisory scope | — | on | †, 2H, F-27 | contentScope primary-role P/O = all |
 | `lesson_plans:import` | Import lesson plans | পাঠ পরিকল্পনা ইম্পোর্ট করা | Upload a plan pair or envelope | — | on | | content:import |
+| `home_guide:import` | Import home guides | বাড়ির গাইড ইম্পোর্ট করা | Load the per-session guardian home guides (steps + classwork items) from a plan pack file (GH-4, D-#1528) | — | — | | — (new) |
 | `plan_review:assign` | Assign plan reviewers | রিভিউয়ার বরাদ্দ করা | Assign/move/cancel rounds; board, inbox, load; any thread | — | on | F-26 | content:assign_review; isAdminStaff (thread) |
 | `plan_review:review` | Review plans | পরিকল্পনা রিভিউ করা | Verdict on an assigned plan | on | — | DESIGNATION:assigned_reviewer | content:review |
 | `plan_review:approve` | Sign off plans (gold) | চূড়ান্ত অনুমোদন (গোল্ড) দেওয়া | Promote to gold, single or bulk | — | — | | content:promote_gold |
@@ -728,6 +737,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `question_bank:import` | Import question bank | প্রশ্নব্যাংক ইম্পোর্ট করা | Upload a Project-04 collection | — | on | | content:import |
 | `question_bank:edit` | Correct questions | প্রশ্ন ও উত্তর সংশোধন করা | Text, answer, marks; IMPORTANT on any question | — | on | | question:manage |
 | `question_bank:delete` | Retire / restore | প্রশ্ন বাদ দেওয়া ও ফেরত আনা | Soft-delete, restore, retired view | — | on | | question:manage |
+| `question_hint:import` | Load question hints | প্রশ্নের ইঙ্গিত লোড করা | Dry-run or load a hint file (3 steps per question); refused when a step contains the answer (GH-1, D-#1520) | — | — | | new |
 | `question_review:assign` | Assign question reviewers | প্রশ্ন রিভিউ বরাদ্দ করা | Assign by question/chapter, move, clear a condition, picker | — | on | | content:assign_review |
 | `question_review:view_all` | Review progress | রিভিউয়ের অগ্রগতি দেখা | Inbox, progress, drill-downs, coverage, slices, any thread | — | on | | content:assign_review; isAdminStaff (thread) |
 | `question_review:review` | Review questions | প্রশ্ন রিভিউ করা | Verdict (single/bulk); IMPORTANT on own rounds | on | — | DESIGNATION:assigned_reviewer | content:review |
@@ -863,6 +873,9 @@ Guardians read the books of their own children's classes through `guardian:read_
 | `classes_sections:create` | Open a class | নতুন শ্রেণি খোলা | Create a class (+ default শাখা) | — | on | | roster:manage |
 | `classes_sections:merge_split` | Merge / split শাখা | শাখা একত্র করা / আলাদা করা | Combine or reverse; active merges | — | on | | roster:manage |
 | `classes_sections:settings` | Academic years | শিক্ষাবর্ষ যোগ করা | Add a year (switching the current year is `year_change:cut_over`, Principal only) | — | on | | roster:manage |
+| `year_change:view` | See the year change | বছর পরিবর্তনের পরিকল্পনা দেখা | Open the year-change screen and its dry runs (Principal only; YC-5) | — | — | LOCKED | — |
+| `year_change:prepare` | Prepare the year change | বছর পরিবর্তনের প্রস্তুতি | Write next year's classes, sections, planned enrolments, admissions and class teachers (YC-5) | — | — | LOCKED | — |
+| `year_change:undo` | Undo the year change | বছর পরিবর্তন ফিরিয়ে নেওয়া | Cancel the preparation or reverse the cut-over (YC-5) | — | — | LOCKED | — |
 | `year_change:cut_over` | Switch the current year | চালু শিক্ষাবর্ষ বদলানো | Flip the current academic year at the cut-over (D-#1451) | — | — | LOCKED | classes_sections:settings (flip half) |
 | `teaching_assignments:assign_class_teacher` | Assign শ্রেণি শিক্ষক | শ্রেণি শিক্ষক ও সহকারী শিক্ষক বরাদ্দ | Set/clear a শাখা's শ্রেণি শিক্ষক; support teachers; history | — | on | | roster:manage |
 | `teaching_assignments:assign_homework_checker` | Assign homework confirmers | বাড়ির কাজ চূড়ান্ত করার দায়িত্ব বরাদ্দ | Confirm delegate per শাখা; school-wide supervisor flag | — | on | | roster:manage |

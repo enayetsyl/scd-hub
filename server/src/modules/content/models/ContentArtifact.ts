@@ -133,6 +133,8 @@ ContentArtifactSchema.index({ curationTag: 1, current: 1 });
 ContentArtifactSchema.index({ reviewStatus: 1, current: 1 });
 // Question-bank list: newest-first browse + cursor pagination (questions query)
 ContentArtifactSchema.index({ docType: 1, current: 1, importedAt: -1, _id: -1 });
+// Hint loader + guardian hints (GH-1): bank question by qid, current version.
+ContentArtifactSchema.index({ "envelopeJson.payload.qid": 1, current: 1 });
 // Batch traceability: "what did this upload bring in?" (contract v1.1)
 ContentArtifactSchema.index({ importBatchId: 1 }, { sparse: true });
 

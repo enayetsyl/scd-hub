@@ -86,6 +86,7 @@ import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import AllClassNotesScreen from "../screens/classnotes/AllClassNotesScreen";
 import LessonProgressScreen from "../screens/lessonprogress/LessonProgressScreen";
 import LessonTrackerScreen from "../screens/lessonprogress/LessonTrackerScreen";
+import HomeworkIntegrityScreen from "../screens/trackers/HomeworkIntegrityScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
 import TaskDetailScreen from "../screens/workboard/TaskDetailScreen";
@@ -411,6 +412,7 @@ import GroupMembersScreen from "../screens/admin/GroupMembersScreen";
 import AcademicYearScreen from "../screens/admin/AcademicYearScreen";
 import SectionConfigScreen from "../screens/admin/SectionConfigScreen";
 import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
+import YearChangeScreen from "../screens/admin/YearChangeScreen";
 import MessageTemplatesScreen from "../screens/admin/MessageTemplatesScreen";
 import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScreen";
 import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen";
@@ -461,6 +463,7 @@ import PopupNoticeListScreen from "../screens/popup/PopupNoticeListScreen";
 import PopupComposeScreen from "../screens/popup/PopupComposeScreen";
 import PopupReportScreen from "../screens/popup/PopupReportScreen";
 import QuranExamSeenScreen from "../screens/popup/QuranExamSeenScreen";
+import ChildMissedLessonsScreen from "../screens/guardian/ChildMissedLessonsScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -1676,6 +1679,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="StudentProgressStudent" component={StudentProgressStudentScreen} options={{ title: STR.impNavTitle }} />
       <ReportsStack.Screen name="RevisionDashboard" component={RevisionDashboardScreen} options={{ title: STR.revDashTitle }} />
       <ReportsStack.Screen name="LessonProgress" component={LessonProgressScreen} options={{ title: STR.lpNavTitle }} />
+      {/* GH-3 (D-#1522): the Office homework-honesty queue. */}
+      <ReportsStack.Screen name="HomeworkIntegrity" component={HomeworkIntegrityScreen} options={{ title: STR.hiNavTitle }} />
       <ReportsStack.Screen name="QuestionReviewProgress" component={QuestionReviewProgressScreen} options={{ title: STR.qpTitle }} />
       <ReportsStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
       <ReportsStack.Screen name="TeachingNoteOpenComments" component={TeachingNoteOpenCommentsScreen} options={{ title: STR.tnOpenComments }} />
@@ -1717,6 +1722,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="GroupMembers" component={GroupMembersScreen} options={{ title: STR.gmTitle }} />
       <AdminStack.Screen name="AcademicYear" component={AcademicYearScreen} options={{ title: STR.ayManage }} />
       <AdminStack.Screen name="SectionConfig" component={SectionConfigScreen} options={{ title: STR.sectionConfig }} />
+      <AdminStack.Screen name="YearChange" component={YearChangeScreen} options={{ title: STR.ycTitle }} />
       <AdminStack.Screen name="GuardianCredentials" component={GuardianCredentialsScreen} options={{ title: STR.guardianCredentials }} />
       <AdminStack.Screen name="MessageTemplates" component={MessageTemplatesScreen} options={{ title: STR.mtTitle }} />
       <AdminStack.Screen
@@ -1798,6 +1804,7 @@ function GuardianHomeNavigator(): React.ReactElement {
         <GuardianHomeStack.Screen name="ChildRevision" component={ChildRevisionScreen} options={{ title: STR.gpRevision }} />
         <GuardianHomeStack.Screen name="ChildMastery" component={ChildMasteryScreen} options={{ title: STR.gpMsProgress }} />
         <GuardianHomeStack.Screen name="MyPopups" component={MyPopupsScreen} options={{ title: STR.ppMineTitle }} />
+        <GuardianHomeStack.Screen name="ChildMissedLessons" component={ChildMissedLessonsScreen} options={{ title: STR.gpMissedLessons }} />
       </GuardianHomeStack.Navigator>
     );
   }

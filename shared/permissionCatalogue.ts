@@ -111,6 +111,17 @@ export const FEATURE_CATALOGUE = {
       issue: { en: "Mark gift given", bn: "উপহার দেওয়া হয়েছে চিহ্নিত করা", desc: "Tick a handover, undo a mis-tick", teacher: true, office: true, flags: [], designation: "class_teacher" },
     },
   },
+  // GH-3 (D-#1522, docs/prd-guardian-help.md section 4): the homework-honesty flag. Office / Principal only;
+  // a teacher never sees a case and no guardian is told about one.
+  homework_integrity: {
+    group: "teaching_and_trackers",
+    en: "Homework honesty check",
+    bn: "হোমওয়ার্ক যাচাই",
+    actions: {
+      view: { en: "See homework check cases", bn: "হোমওয়ার্ক যাচাইয়ের কেস দেখা", desc: "The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it", teacher: false, office: true, flags: [] },
+      record: { en: "Record the outcome", bn: "যাচাইয়ের ফলাফল লেখা", desc: "Close a case with what the Office found (guardian did it / child did it / unclear) and a note; recalculate now", teacher: false, office: true, flags: [] },
+    },
+  },
   // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md).
   mark_submission: {
     group: "teaching_and_trackers",
@@ -748,6 +759,14 @@ export const FEATURE_CATALOGUE = {
       import: { en: "Import lesson plans", bn: "পাঠ পরিকল্পনা ইম্পোর্ট করা", desc: "Upload a plan pair or envelope", teacher: false, office: true, flags: [] },
     },
   },
+  home_guide: {
+    group: "content_and_books",
+    en: "Missed-lesson home guides",
+    bn: "মিস হওয়া পাঠের বাড়ির গাইড",
+    actions: {
+      import: { en: "Import home guides", bn: "বাড়ির গাইড ইম্পোর্ট করা", desc: "Load the per-session guardian home guides (steps + classwork items) from a plan pack file", teacher: false, office: false, flags: [] },
+    },
+  },
   plan_review: {
     group: "content_and_books",
     en: "Plan review",
@@ -768,6 +787,16 @@ export const FEATURE_CATALOGUE = {
       import: { en: "Import question bank", bn: "প্রশ্নব্যাংক ইম্পোর্ট করা", desc: "Upload a Project-04 collection", teacher: false, office: true, flags: [] },
       edit: { en: "Correct questions", bn: "প্রশ্ন ও উত্তর সংশোধন করা", desc: "Text, answer, marks; IMPORTANT on any question", teacher: false, office: true, flags: [] },
       delete: { en: "Retire / restore", bn: "প্রশ্ন বাদ দেওয়া ও ফেরত আনা", desc: "Soft-delete, restore, retired view", teacher: false, office: true, flags: [] },
+    },
+  },
+  // GH-1 (D-#1520/#1521): guardian question hints. The Principal loads the hint files; guardians
+  // open them one step at a time under guardian:read_child (the guardian plane, not catalogued).
+  question_hint: {
+    group: "content_and_books",
+    en: "Question hints",
+    bn: "প্রশ্নের ইঙ্গিত",
+    actions: {
+      import: { en: "Load question hints", bn: "প্রশ্নের ইঙ্গিত লোড করা", desc: "Dry-run or load a hint file (3 steps per question); refused when a step contains the answer", teacher: false, office: false, flags: [] },
     },
   },
   question_review: {

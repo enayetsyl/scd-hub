@@ -10,13 +10,16 @@
  * form precedent). Once authed, a missing or VANISHED persisted year silently
  * becomes the school's CURRENT year — a fresh phone shows the homework class
  * buttons without anyone ever opening the section picker. A deliberately picked
- * year that still exists is always respected.
+ * year that still exists is respected - until the school's CURRENT year changes (YC-5:
+ * the year-change cut-over): a saved pick of the old year is then dropped, on load and
+ * when the flip arrives while the app is open, so a teacher with a 2026 pick opens on 2027.
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useQuery } from "urql";
 import { ACADEMIC_YEARS_QUERY } from "../graphql/operations";
 import { useAuth } from "../auth/AuthContext";
 import { getItem, setItem } from "../lib/storage";
+import { healSelection } from "../lib/yearHandling";
 
 export interface SectionSelection {
   academicYearId: string | null;
@@ -39,6 +42,8 @@ const EMPTY: SectionSelection = {
 };
 
 const STORAGE_KEY = "scd_section_ctx";
+/** The current-year id this phone last saw (YC-5): a change of it invalidates an old-year pick. */
+const SEEN_CURRENT_KEY = "scd_section_ctx_current_year";
 
 interface SectionContextValue {
   selection: SectionSelection;
@@ -53,10 +58,13 @@ const SectionContext = createContext<SectionContextValue | null>(null);
 export function SectionProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [selection, setSelection] = useState<SectionSelection>(EMPTY);
   const [loaded, setLoaded] = useState(false);
+  const [seenCurrent, setSeenCurrent] = useState<string | null>(null);
   const { status, role } = useAuth();
 
   useEffect(() => {
     (async () => {
+      const seen = await getItem(SEEN_CURRENT_KEY);
+      if (seen) setSeenCurrent(seen);
       const raw = await getItem(STORAGE_KEY);
       if (raw) {
         try {
@@ -81,13 +89,19 @@ export function SectionProvider({ children }: { children: React.ReactNode }): Re
     if (!loaded || !years || years.length === 0) return;
     const current = years.find((y) => y.current) ?? years[0];
     setSelection((prev) => {
-      // A real, still-existing pick wins — heal only null/vanished years.
-      if (prev.academicYearId && years.some((y) => y.id === prev.academicYearId)) return prev;
-      const next = { ...EMPTY, academicYearId: current.id };
+      // A real, still-existing pick of the current year wins; null/vanished years heal, and a
+      // pick of a year that was current when it was saved is dropped once the flip happened.
+      const reset = healSelection(prev, years, seenCurrent);
+      if (!reset) return prev;
+      const next = { ...EMPTY, academicYearId: reset.academicYearId };
       void setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-  }, [yearsQ.data, loaded]);
+    if (seenCurrent !== current.id) {
+      setSeenCurrent(current.id);
+      void setItem(SEEN_CURRENT_KEY, current.id);
+    }
+  }, [yearsQ.data, loaded, seenCurrent]);
 
   const persist = useCallback((next: SectionSelection) => {
     setSelection(next);

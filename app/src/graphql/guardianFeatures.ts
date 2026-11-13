@@ -23,6 +23,13 @@ export const MY_GUARDIAN_FEATURES = gql<{ myGuardianFeatures: string[] }>`
   }
 `;
 
+/** GH-4 (D-#1528): the school's lesson-progress switch, read by guardians (default OFF). */
+export const LESSON_PROGRESS_ON_QUERY = gql<{ lessonProgressOn: boolean }>`
+  query LessonProgressOn {
+    lessonProgressOn
+  }
+`;
+
 const ACCESS_FIELDS = `
   feature
   onForAll

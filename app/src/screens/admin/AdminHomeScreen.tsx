@@ -25,6 +25,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
     can("teaching_assignments:assign_class_teacher") || can("teaching_assignments:assign_homework_checker");
   const canSections = can("classes_sections:merge_split");
   const canYears = can("classes_sections:settings");
+  // YC-5: the year-change screen is Principal-only (year_change:* is LOCKED).
+  const canYearChange = can("year_change:view");
   // PM: the routine card opens subject-group membership (addGroupMember etc. =
   // routine:settings). The screen first lists the groups on routine:view, so the card
   // needs both (owner rule 2026-10-25: no card onto a refusal).
@@ -195,6 +197,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         <Card onPress={() => navigation.navigate("SectionConfig")}>
           <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
           <Muted>{STR.admSubSection}</Muted>
+        </Card>
+      ) : null}
+
+      {canYearChange ? (
+        <Card onPress={() => navigation.navigate("YearChange")}>
+          <Body style={{ fontWeight: "700" }}>{STR.ycTitle}</Body>
+          <Muted>{STR.admSubYearChange}</Muted>
         </Card>
       ) : null}
 

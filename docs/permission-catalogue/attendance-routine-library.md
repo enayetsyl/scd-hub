@@ -461,3 +461,6 @@ Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttenda
 | app AppTabs / DrawerContent | পপ-আপ বার্তা tab | any of `popup_notice:view` / `send_staff` / `send_guardian` |
 | app DrawerContent | আমার বার্তা (HomeTab / GuardianHomeTab → MyPopups) | none — every login |
 | app PopupNoticeListScreen / PopupReportScreen | New, edit, withdraw, copy · remind, add matches | send actions · `popup_notice:follow_up` |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | lessonCatchupSuggestion (LP-4) | `lesson_progress:view_all` |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | createLessonCatchup (LP-4) | `lesson_progress:view_all`; the task itself through createTask (`work_board:assign` to give it to another person) |
+| server/src/modules/lesson-progress/resolvers/guardianLessons.ts | childMissedLessonsPage (LP-4; GH-4 adds `homework` + per-session `guide`) | GUARDIAN `guardian:read_child` + assertGuardianOfStudent — the guide and homework ride the same link gate (content, no extra identity) |

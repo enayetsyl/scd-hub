@@ -120,6 +120,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   ROUTINE_SLOT_REVISED: { bn: "রুটিনের পিরিয়ড সংশোধন করেছেন", en: "Revised a routine slot", group: "ROUTINE" },
   ROUTINE_SLOT_RETIRED: { bn: "রুটিনের পিরিয়ড বাদ দিয়েছেন", en: "Retired a routine slot", group: "ROUTINE" },
   LESSON_PLAN_QUESTION_SET: { bn: "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন চালু/বন্ধ করেছেন", en: "Switched the class note's lesson-plan question", group: "ROUTINE" },
+  HOME_GUIDES_IMPORTED: { bn: "অভিভাবকের বাড়ির গাইড ইম্পোর্ট করেছেন", en: "Imported guardian home guides", group: "ROUTINE" },
 
   // --- Homework -------------------------------------------------------------
   TRACKER_WRITE: { bn: "ট্র্যাকারে লিখেছেন", en: "Tracker write", group: "HOMEWORK" },
@@ -464,6 +465,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   AI_PROJECT_CHANGED: { bn: "এআই কর্মক্ষেত্রের প্রকল্প বদলেছেন", en: "Changed an AI workspace project", group: "ACCESS" },
   AI_PROJECT_FILE_CHANGED: { bn: "এআই প্রকল্পের ফাইল বদলেছেন", en: "Changed an AI workspace project file", group: "ACCESS" },
   AI_DRAFT_CHANGED: { bn: "এআই কর্মক্ষেত্রের খসড়া বদলেছেন", en: "Changed an AI workspace draft", group: "ACCESS" },
+  QUESTION_HINTS_IMPORTED: { bn: "প্রশ্নের ইঙ্গিত লোড করেছেন", en: "Loaded question hints", group: "CONTENT" },
+  HOMEWORK_INTEGRITY_RECORDED: { bn: "হোমওয়ার্ক যাচাইয়ের ফলাফল লিখেছেন", en: "Recorded a homework check outcome", group: "CONTENT" },
   AI_JOB_CHANGED: { bn: "এআই ব্যাচ কাজ শুরু / বাতিল করেছেন", en: "Started or cancelled an AI batch job", group: "ACCESS" },
   AI_MCP_AUTHORIZED: { bn: "Claude-কে এআই কর্মক্ষেত্রে ঢোকার অনুমতি দিয়েছেন", en: "Allowed Claude into the AI workspace", group: "ACCESS" },
   AI_MCP_REVOKED: { bn: "Claude-এর সংযোগ বন্ধ করেছেন", en: "Disconnected Claude from the AI workspace", group: "ACCESS" },

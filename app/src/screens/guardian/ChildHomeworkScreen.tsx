@@ -55,6 +55,7 @@ import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, h
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
+import { ChildQuestionHints } from "../../components/ChildQuestionHints";
 import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -593,9 +594,11 @@ export default function ChildHomeworkScreen({
   }, [refetchHw, refetchPending, refetchAsgn]);
 
   // UX-7: pull-to-refresh.
-  const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () =>
-    refetchHw({ requestPolicy: "network-only" }),
-  );
+  const [hintsTick, setHintsTick] = useState(0);
+  const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () => {
+    setHintsTick((n) => n + 1);
+    refetchHw({ requestPolicy: "network-only" });
+  });
 
   async function onOpenFile(fileId: string): Promise<void> {
     setFileError(null);
@@ -680,7 +683,8 @@ export default function ChildHomeworkScreen({
             ))}
           </Card>
         ) : null}
-
+        {/* GH-1: assigned bank questions with a hint ladder - own query, outside the gate. */}
+        {selected ? <ChildQuestionHints studentId={selected.studentId} sources={["HOMEWORK", "EXTRA_HOMEWORK"]} refreshKey={hintsTick} /> : null}
         <QueryGate
           results={[hwQ, nilQ, routineQ]}
           onRetry={() => {
