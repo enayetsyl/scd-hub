@@ -108,6 +108,7 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
                 <Button title={`${BL.tabFeedback} (${bnNum(book.openFeedback)})`} variant="secondary" onPress={() => navigation.navigate("BookLcFeedback", { bookId })} />
                 <Button title={BL.printTitle} variant="secondary" onPress={() => navigation.navigate("BookLcRelease", { bookId })} />
                 {manage ? <Button title={BL.uploadNewVersion} variant="secondary" loading={busy} onPress={() => void uploadVersion()} /> : null}
+                {manage ? <Button title={BL.bundleOpen} variant="secondary" onPress={() => navigation.navigate("BookLcBundle", { bookId })} /> : null}
                 {manage && book.openRoundId ? <Button title={`${BL.openRound} ${bnNum(book.openRoundMemoNo ?? 0)}`} onPress={() => navigation.navigate("BookLcRound", { roundId: book.openRoundId! })} /> : null}
                 {manage && !book.openRoundId && book.latest?.status === "draft" ? (
                   <Button

@@ -144,6 +144,7 @@ import "./modules/support-book/resolvers/supportBookContent";
 // Book lifecycle (docs/prd-book-lifecycle.md, D-#1590–#1616).
 import "./modules/book-lifecycle/resolvers/bookLifecycle";
 import "./modules/book-lifecycle/resolvers/bookLifecycleRelease";
+import "./modules/book-lifecycle/resolvers/bookLifecycleEdit";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";

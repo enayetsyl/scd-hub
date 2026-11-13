@@ -603,7 +603,7 @@ export async function decideDraftChapter(auth: AuthPayload, draftId: string, cha
   if (accept) {
     const blocking = ch.findings.filter((f) => f.level === "blocking");
     if (blocking.length) throw new BookLcError(blocking[0].code, `${ch.key}: ${blocking[0].messageBn} (${blocking[0].code})`);
-    const unacked = ch.unexplained.filter((u) => !u.ack);
+    const unacked = ch.unexplained.filter((u) => !u.ack?.at);
     if (unacked.length) throw new BookLcError("VR-7", `${ch.key}: ${unacked.length}টি ব্যাখ্যাহীন পরিবর্তন — চূড়ান্তকারীর "আমি দেখেছি" দরকার (VR-7)`);
     if (ch.status === "failed") throw new BookLcError("FAILED", `${ch.key}: ব্যর্থ অধ্যায় গ্রহণ করা যায় না`);
   }

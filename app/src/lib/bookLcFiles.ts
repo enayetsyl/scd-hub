@@ -9,6 +9,7 @@ import { REST_BASE } from "../graphql/client";
 import { getToken } from "./tokenStore";
 import { FileUploadError, rnUploadName } from "./files";
 import { downloadFile } from "./pdf";
+import * as FileSystem from "expo-file-system";
 
 export type BlAsset = DocumentPicker.DocumentPickerAsset;
 
@@ -63,4 +64,46 @@ export function downloadBookLcMaster(versionId: string, filename: string): Promi
 /** Download the round's memo .md (web). */
 export function downloadBookLcMemo(roundId: string, filename: string): Promise<void> {
   return downloadFile(`/files/book-lc/round/${roundId}/memo.md`, filename);
+}
+
+/** Read a picked text file (a result .json / .md / .txt) as UTF-8. */
+export async function readPickedText(asset: BlAsset): Promise<string> {
+  if (Platform.OS === "web") return fetch(asset.uri).then((r) => r.text());
+  return FileSystem.readAsStringAsync(asset.uri);
+}
+
+/** POST /files/book-lc/bundle → the zip is saved (web); returns the bundle's nonce and draft id. */
+export async function downloadBookLcBundle(input: { bookId: string; feedback: string[]; instructionIds: string[]; includeMedia: boolean }): Promise<{ nonce: string; draftId: string }> {
+  if (Platform.OS !== "web") throw new Error("web only");
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/book-lc/bundle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    let message = `bundle failed (${res.status})`;
+    try {
+      message = ((await res.json()) as { error?: string }).error ?? message;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const nonce = res.headers.get("X-Bundle-Nonce") ?? "";
+  const draftId = res.headers.get("X-Draft-Id") ?? "";
+  const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1];
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name ? decodeURIComponent(name) : `bundle_${nonce}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  return { nonce, draftId };
+}
+
+/** The round's return-transcription pack (web). */
+export function downloadBookLcTranscriptionPack(roundId: string, filename: string): Promise<void> {
+  return downloadFile(`/files/book-lc/round/${roundId}/transcription-pack.zip`, filename);
 }
