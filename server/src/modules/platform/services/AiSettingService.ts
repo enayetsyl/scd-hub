@@ -343,6 +343,10 @@ export const AI_FEATURES = [
   { key: "workspace_draft", bn: "কর্মক্ষেত্র: খসড়া সংশোধন", en: "Workspace: revise a draft", dailyPerUser: 100, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
   // W-4: batch jobs (run by the worker process; one call per item, plus validator fixes).
   { key: "workspace_job", bn: "কর্মক্ষেত্র: ব্যাচ কাজ", en: "Workspace: batch jobs", dailyPerUser: 1000, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "deepseek", defaultFallback: false },
+  // Data assistant (docs/prd-data-assistant-mcp.md §8.3, D-#1539/#1545): the in-app data chat.
+  // $5 a month, 300 model calls (rounds) per person per day (owner Q12); Claude Sonnet 5.5 by
+  // default (Q6). OFF at ship; OFF also stops the Claude connector's tools (they answer `off`).
+  { key: "data_assistant", bn: "তথ্য সহকারী", en: "Data assistant", dailyPerUser: 300, monthlyUsd: 5, perSessionTurns: 40, defaultProvider: "anthropic", defaultModel: "claude-sonnet-5-5", defaultFallback: false },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 
@@ -403,7 +407,7 @@ function featureView(f: (typeof AI_FEATURES)[number], row: FeatureRow | null): A
     enabled: row?.enabled ?? false,
     provider,
     modelSaved: row?.modelName || null,
-    model: row?.modelName || providerModel(provider),
+    model: row?.modelName || ("defaultModel" in f && provider === f.defaultProvider ? f.defaultModel : providerModel(provider)),
     fallback: row?.fallback ?? f.defaultFallback,
     providerReady: !!providerKey(provider),
     dailyPerUser: row?.dailyPerUser ?? f.dailyPerUser,

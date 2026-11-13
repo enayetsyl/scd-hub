@@ -55,6 +55,7 @@ import {
   type MonthlyReportConfigShape,
 } from "./MonthlyReportConfigService";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { Section } from "../../foundation/models/Section";
 
 export class MonthlyReportError extends Error {
   constructor(message: string) {
@@ -836,6 +837,22 @@ export function rollupOf(
 }
 
 /** One row per section for a month — the newest revision of each child. */
+/**
+ * Every section's month at once (the `monthlyClassRollups` query's body, moved here unchanged so
+ * the data assistant reuses it — DA-1, D-#1534). The caller gates (`requireMonthly(ctx,
+ * "monthly_report:view_all")`).
+ */
+export async function monthlyClassRollups(periodKey: string): Promise<ClassRollup[]> {
+  const sections = (await Section.find({ active: { $ne: false } })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: { toString(): string } }>;
+  const out: ClassRollup[] = [];
+  for (const s of sections) out.push(await monthlyClassRollup(s._id.toString(), periodKey));
+  // A section with no reports built yet is dropped — an empty row reads as
+  // "this class had no month", which is a different and false claim.
+  return out.filter((r) => r.students > 0);
+}
+
 export async function monthlyClassRollup(sectionId: string, periodKey: string): Promise<ClassRollup> {
   const rows = (await MonthlyReport.find({ sectionId: new Types.ObjectId(sectionId), periodKey })
     .sort({ revision: -1 })

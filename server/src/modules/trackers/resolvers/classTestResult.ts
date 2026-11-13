@@ -53,7 +53,7 @@ import {
 /** Resolve the test's unit + enforce staff read-scope on it (teachers only).
  *  Anchor-aware since D-#507: a group exam is read-scoped by "you teach that
  *  group", since it has no section to hold a grant. */
-async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
+export async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");

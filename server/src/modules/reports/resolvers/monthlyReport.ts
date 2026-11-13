@@ -36,7 +36,6 @@ import {
   requireMonthly,
   seesMonthlyFees,
 } from "../services/monthlyReportGate";
-import { Section } from "../../foundation/models/Section";
 import { Student } from "../../foundation/models/Student";
 import { MonthlyReport, type IMonthlyReport } from "../models/MonthlyReport";
 import {
@@ -50,7 +49,7 @@ import {
   reviewMonthlyReport,
   revokeMonthlyReport,
   revokeReleaseBatch,
-  monthlyClassRollup,
+  monthlyClassRollups,
   type ClassRollup,
 } from "../services/MonthlyReportService";
 import { importComments, parseImportEnvelope } from "../services/MonthlyCommentExchangeService";
@@ -372,14 +371,7 @@ builder.queryField("monthlyClassRollups", (t) =>
       // Whole-school by definition, so it rides the release gate rather than a
       // per-section read: a teacher has no business with other classes' totals.
       requireMonthly(ctx, "monthly_report:view_all");
-      const sections = (await Section.find({ active: { $ne: false } })
-        .select("_id")
-        .lean()) as unknown as Array<{ _id: { toString(): string } }>;
-      const out: ClassRollup[] = [];
-      for (const s of sections) out.push(await monthlyClassRollup(s._id.toString(), args.periodKey));
-      // A section with no reports built yet is dropped — an empty row reads as
-      // "this class had no month", which is a different and false claim.
-      return out.filter((r) => r.students > 0);
+      return monthlyClassRollups(args.periodKey);
     },
   }),
 );

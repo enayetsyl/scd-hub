@@ -260,7 +260,7 @@ function tokenFor(scope: DeidScope): (p: DeidPerson) => string {
   };
 }
 
-const PHONE = /(?:\+?(?:88|৮৮)[\s-]?)?[0০][1১][3-9৩-৯][0-9০-৯]{2}[\s-]?[0-9০-৯]{3}[\s-]?[0-9০-৯]{3}/g;
+export const PHONE_PATTERN = /(?:\+?(?:88|৮৮)[\s-]?)?[0০][1১][3-9৩-৯][0-9০-৯]{2}[\s-]?[0-9০-৯]{3}[\s-]?[0-9০-৯]{3}/g;
 const LONG_NUMBER = /[0-9০-৯]{7,}/g;
 const ROLL_OR_ID = /(roll|রোল|id|আইডি)(\s*(?:নং|নম্বর|no\.?))?[\s:.\-]*[0-9০-৯]+/gi;
 /** Tracker / record ids: HW-C3-BAN-0007, CT-CK-ENG-0002, AS-000231 … */
@@ -295,7 +295,7 @@ export function deidentify(textIn: string, scope: DeidScope): DeidResult {
   }
   const seq = { PHONE: [] as string[], NUM: [] as string[], ID: [] as string[] };
   text = text
-    .replace(PHONE, (m: string) => (seq.PHONE.push(m), "[PHONE]"))
+    .replace(PHONE_PATTERN, (m: string) => (seq.PHONE.push(m), "[PHONE]"))
     .replace(LONG_NUMBER, (m: string) => (seq.NUM.push(m), "[NUM]"))
     .replace(ROLL_OR_ID, (m: string, label: string) => (seq.NUM.push(m.slice(label.length).trim()), `${label} [NUM]`))
     .replace(TRACKER_ID, (m: string) => (seq.ID.push(m), "[ID]"));
