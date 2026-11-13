@@ -206,3 +206,41 @@ npx jest --maxWorkers=2 (full server suite) → Test Suites: 485 passed, 485 tot
 **Questions for the owner**
 1. The comment prompt is shown by the app after a comment is saved (the server cannot push it without
    breaking the wall between comments and the support profile). OK?
+
+---
+
+## CSP-4 — stage C (SYNTHESIS), evidence levels, versions, history
+
+**Commits:** the single `[CSP-4] feat(support-profile): …` commit (see `git log`).
+
+**What was built** (`services/supportVersions.ts`, `resolvers/supportVersions.ts`)
+- Publish: refused while any citation is provisional; every item recomputed from APPROVED citations
+  in its window and frozen; items now below the section minimum dropped and counted; ≥ 1 strength;
+  ≤ 2 goals; the card rebuilt by §16.7 (`buildCard`); the profile's current version, review date
+  (90 days with a concern item or a goal, else 365) and a notice to the current teachers (no name).
+- Rule 16: approving a cited report makes the citation firm; returning / not using / withdrawing /
+  routing removes it, recomputes the draft item (counting still-provisional citations) and drops it.
+- Hand-made version (AI off), draft item edit/delete (a PUBLISHED version is never edited), history
+  page (audited HISTORY), diff of two versions, readers tab, goal progress (decision row).
+- Synthesis drafts themselves come from CSP-2's apply; profile-only batches tested here.
+
+**Verified**
+```
+npm run build --workspace=shared → exit 0
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_descriptive_carriers lo-codes / subjects-2027 / descriptive → RESULT: PASS (22 / 20 / 11 cases)
+verify_help_guides → ALL CHECKS PASSED
+typecheck shared / server / app → exit 0 / exit 0 / exit 0
+npx jest --runInBand support permissionCatalogueGates firewall expectedErrorRegistry notificationsScheduler dataAssistantSupportExcluded
+  → Test Suites: 46 passed, 46 total · Tests: 628 passed, 628 total
+npx jest --maxWorkers=2 (full server suite) → Test Suites: 490 passed, 490 total · Tests: 7743 passed, 7743 total · exit 0
+(app) npx expo export --platform web → "App exported to: …/web-dist" · expo export exit 0 (0 lines matching error)
+```
+
+**Not done in CSP-4**
+- Screens: the draft/publish side-by-side, history, diff and readers tab (CSP-5 list).
+- The "আর কাজ করছে না?" retire prompt is computed (`strategyCounts.lastThreeFailed`) but not yet sent
+  as a notice or shown; strategy retire action not built.
+- "Once a year, within 30 school days of the year cut-over" is simplified to publish + 365 days.
+
+**Decisions:** D-#1555 (CSP-4 part), D-#1556, D-#1557, D-#1562, D-#1563, D-#1565.

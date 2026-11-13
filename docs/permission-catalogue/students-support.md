@@ -46,5 +46,11 @@ Every field `support_profile:process` (LOCKED) and refused in every "view as" se
 | uploadSupportResult / supportImportPreview / applySupportImport / discardSupportImport | `support_profile:process` | the producer needs a passed evaluation for the method version |
 | downloadSupportEvalPack / recordSupportEvaluation / supportMethodInfo | `support_profile:process` | |
 
+## (d2) Versions (CSP-4) — `server/src/modules/support-profile/resolvers/supportVersions.ts`
+| resolver | gate | extra rule |
+|---|---|---|
+| publishSupportVersion / discardSupportVersion / editSupportDraftItem / createHandSupportVersion / markSupportGoalProgress | `support_profile:approve` | never under "view as" |
+| supportVersionsPage / supportVersionDiff / supportReadersPage | `support_profile:view_all` | the history read is audited (HISTORY) |
+
 ## (e) App gates
 Screens arrive with CSP-5 (teacher surfaces) and CSP-2/3 (batch, queue). Each button checks its action with `can("support_profile:…")`.

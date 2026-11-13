@@ -43,6 +43,8 @@ import {
   type SupportTone,
 } from "@scd/shared";
 
+import { reportUsableOnSide, viaGoodThingOf, functionTagKept } from "./supportEvidenceRules";
+
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 export const OTHER_CHILD_MASK = "[অন্য শিশু]";
 
@@ -199,7 +201,7 @@ const otherToken = (s: string): boolean => /\[(?!S\])[^\]]*\]/.test(s);
 /** What a compare `recordFacts` entry may name: the keys of the records pack (+ `ctTrend:<subject>`). */
 const RECORD_FACT_KEYS = new Set(["attendancePct", "attendanceTrend", "homeworkCompletionPct", "assignmentMarksPct", "classTestAvgPct", "classTestTrend", "ctTrend", "comments", "youngForClass"]);
 
-function textProblem(text: string, ctx: ValidationCtx, childCode: string | null): SupportImportReason | null {
+export function textProblem(text: string, ctx: Pick<ValidationCtx, "reports" | "rosterNames">, childCode: string | null): SupportImportReason | null {
   if (LINK_OR_HTML.test(text)) return "LINK_OR_HTML";
   if (safeguardingTermIn(text)) return "SAFEGUARDING_TERM";
   if (blockedTermIn(text)) return "LABEL_TERM";
@@ -464,8 +466,7 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       // E-2: on the positive side a CONCERN report counts only through a concrete good thing.
       const usable = (c: string): boolean => {
         const r = ctx.reports.get(c)!;
-        if (side === "POSITIVE" && r.tone === "CONCERN" && !r.goodThingCounts) return false;
-        return true;
+        return reportUsableOnSide(side, r.tone, r.goodThingCounts);
       };
       const evidence = [...new Set(item.evidence)].filter((c) => allowed(c) && usable(c));
       const counter = [...new Set(item.counterEvidence)].filter((c) => allowed(c));
@@ -475,7 +476,7 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       }
       const evRep = (c: string) => {
         const r = ctx.reports.get(c)!;
-        return toEvidence(r, side === "POSITIVE" && r.tone === "CONCERN" && r.goodThingCounts);
+        return toEvidence(r, viaGoodThingOf(side, r.tone, r.goodThingCounts));
       };
       const isStrategy = section === "works";
       const computed = evidenceLevel({ side: side ?? "POSITIVE", evidence: evidence.map(evRep), counter: counter.map(evRep), isStrategy, todayKey: ctx.todayKey });
@@ -516,10 +517,7 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       // Rule 11: a possible reason needs ≥ 3 observations from ≥ 2 teachers that share it.
       let functionTag = item.functionTag ?? null;
       if (functionTag) {
-        const sharing = evidence.map((c) => ctx.reports.get(c)!).filter((r) => r.gotOrAvoided.includes(functionTag!));
-        const obs = new Set(sharing.map((r) => `${r.occurredOn}|${r.slot}`)).size;
-        const teachers = new Set(sharing.map((r) => r.authorCode)).size;
-        if (!functionTagAllowed(obs, teachers)) functionTag = null;
+        functionTag = functionTagKept(functionTag, evidence.map((c) => ctx.reports.get(c)!).map((r) => ({ authorId: r.authorCode, occurredOn: r.occurredOn, slot: r.slot, gotOrAvoided: r.gotOrAvoided })));
       }
       items.push({
         section,
