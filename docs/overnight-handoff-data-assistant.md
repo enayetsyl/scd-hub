@@ -13,7 +13,7 @@ gates.
 
 ## DA-1 — tool layer, RBAC, contact stripping, untrusted text, limits, `AiDataCall` audit
 
-- **Commits:** see `git log --grep "\[DA-1\]"` (one commit; hash in the CHANGELOG line's commit).
+- **Commits:** first 44bfa828, last = the `[DA-1] fix(test)` commit after it.
 
 ### Built
 - **24 tools** (PRD §7), registry order fixed: `my_access, daily_report, find_students,
@@ -79,8 +79,11 @@ New suites (--runInBand), all green: dataAssistantTools 16, Redaction 6, FreeTex
   SupportExcluded 3, ReadOnly 2, Audit 5, Limits 7, GateParity (one per mirrored mode) + 1, firewall +1 case
 Touched suites: aiFeatureSettings 16/16 (list now includes data_assistant), permissionCatalogueGates green
 Full server suite (--maxWorkers=2): Test Suites 2 failed, 456 passed; Tests 1 failed, 7409 passed
-  - aiWorkspaceW1 "budget screen" expected capsTotalUsd 18 → now 23 (the new $5 cap): test updated,
-    rerun green.
+  - aiWorkspaceW1 "budget screen" expected capsTotalUsd 18 → now 23 (the new $5 cap). **Correction:**
+    the first fix in commit 44bfa828 broke the test (a sed replaced the `const b = …` line) and the
+    rerun's "1 failed" was this file, misread at the time. Fixed in the follow-up `[DA-1] fix(test)`
+    commit (also raises the test's budget 20 → 25 so it still exceeds the caps):
+    `jest aiWorkspaceW1` → Tests 25 passed, 25 total.
   - yearChangeScreens: "jest worker … terminated (SIGTERM)" (heap pressure while tsc + expo ran in
     parallel). Rerun alone: Tests 25 passed, 25 total.
 ```
