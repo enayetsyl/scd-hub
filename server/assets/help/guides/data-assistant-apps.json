@@ -1,0 +1,21 @@
+{
+  "id": "data-assistant-apps",
+  "draft": true,
+  "category": "admin_access",
+  "order": 64,
+  "title": "সংযুক্ত অ্যাপ দেখা ও বন্ধ করা",
+  "intro": "কোন অ্যাপ (যেমন Claude) আপনার হয়ে স্কুলের তথ্য পড়ছে, কবে শেষ ব্যবহার হয়েছে, আর সংযোগ বন্ধ করা। ☰ → তথ্য সহকারী → সংযুক্ত অ্যাপ।",
+  "keywords": ["সংযুক্ত অ্যাপ", "সংযোগ বন্ধ", "Claude", "connected apps"],
+  "perms": ["data_assistant:connect"],
+  "screens": ["DataAssistantTab/DataAssistantHome"],
+  "goTo": { "route": "DataAssistantTab", "screen": "DataAssistantHome" },
+  "rows": [
+    {
+      "heading": "সংযোগ বন্ধ করা",
+      "steps": [
+        { "text": "<b>সংযুক্ত অ্যাপ</b> কার্ডে প্রতিটি অ্যাপের সংযোগের তারিখ, শেষ ব্যবহার, ৩০ দিনে কতবার এবং কবে শেষ হবে দেখা যায়।" },
+        { "text": "<b>সংযোগ বন্ধ করুন</b> চাপুন ও নিশ্চিত করুন। অ্যাপটি আর তথ্য পড়তে পারবে না; আবার চাইলে নতুন করে সংযোগ দিতে হবে।" }
+      ]
+    }
+  ]
+}

@@ -99,9 +99,12 @@ it("C-06: editing or discarding the comment leaves the report unchanged", async 
   expect((await SupportReport.findById(id).lean())?.behaviour).toBe("মূল মন্তব্য");
 });
 
-it("no StudentComment type, guardian feed, meeting brief or monthly report field carries any support field", () => {
+it("no comment / guardian-feed / meeting-brief type carries any support field (and each type really exists)", () => {
   const sdl = printSchema(schema);
   const typeBlock = (name: string) => new RegExp(`type ${name} \\{([^}]*)\\}`).exec(sdl)?.[1] ?? "";
-  for (const t of ["StudentComment", "GuardianComment", "MeetingBrief", "MonthlyReport", "ChildComment"]) expect([t, /support|safeguard/i.test(typeBlock(t))]).toEqual([t, false]);
+  for (const t of ["AuthoredComment", "GuardianStudentComment", "GuardianUnreadComment", "MeetingBrief"]) {
+    expect([t, typeBlock(t).length > 0]).toEqual([t, true]);
+    expect([t, /support|safeguard/i.test(typeBlock(t))]).toEqual([t, false]);
+  }
   void daysAgoKey;
 });

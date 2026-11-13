@@ -4,17 +4,28 @@ import { createHash } from "node:crypto";
 import { SAFEGUARDING_SIGNS, SUPPORT_CATEGORIES, SUPPORT_LEVELS, SUPPORT_AGREEMENT_STATUSES, SUPPORT_AUTHOR_SKEW, SUPPORT_CONFIDENCE, SUPPORT_FUNCTIONS,
   SUPPORT_NEEDS, SUPPORT_REPORT_SOURCES, SUPPORT_REPORT_STATUSES, SUPPORT_RESULTS, SUPPORT_SEVERITIES, SUPPORT_SKILLS, SUPPORT_STARTER_KEYS, SUPPORT_STRATEGY_KINDS,
   SUPPORT_TEXT_READS, SUPPORT_TONES, SUPPORT_VERDICTS } from "@scd/shared";
-import { currentMethodVersion, loadMethod, METHOD_DIR } from "../modules/support-profile/services/methodDoc";
+import { currentMethodVersion, loadMethod, methodVersions, METHOD_DIR } from "../modules/support-profile/services/methodDoc";
 import { validateSupportResult, type CtxReport } from "../modules/support-profile/services/supportResultValidator";
 import { ROSTER } from "./supportFixtures";
 
 const m = loadMethod("v1");
+
+/** A method version is a promise: its text never changes once a chat has been evaluated against it.
+ *  Editing the file changes the hash and fails here — the fix is a NEW method_vN.md, not a new pin. */
+const PINNED_METHOD_HASH: Record<string, string> = {
+  v1: "a07bbd6571ba661828548e8f19c479b892d0eeb9e327682faad3994fe07f5f99",
+};
 
 describe("method_v1.md", () => {
   it("the loader finds it, its version and its SHA-256", () => {
     expect(currentMethodVersion()).toBe("v1");
     expect(m.fileName).toBe("method_v1.md");
     expect(m.sha256).toBe(createHash("sha256").update(fs.readFileSync(`${METHOD_DIR}/method_v1.md`, "utf8"), "utf8").digest("hex"));
+  });
+
+  it("every method version in the repo has its hash pinned, and the pin matches the file", () => {
+    expect(methodVersions()).toEqual(Object.keys(PINNED_METHOD_HASH));
+    for (const v of methodVersions()) expect([v, loadMethod(v).sha256]).toEqual([v, PINNED_METHOD_HASH[v]]);
   });
 
   it("each section marker M-0 … M-13 is present exactly once, in order", () => {

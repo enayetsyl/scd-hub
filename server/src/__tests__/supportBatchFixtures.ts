@@ -44,7 +44,7 @@ export interface BatchSetup {
 }
 
 /** A1 approved (context), R1 clean positive (class teacher), R2 a concern (routine teacher) → batch. */
-export async function setupBatch(run: Run, fx: SupportFx, opts: { skipEval?: boolean } = {}): Promise<BatchSetup> {
+export async function setupBatch(run: Run, fx: SupportFx, opts: { skipEval?: boolean; stages?: string[] } = {}): Promise<BatchSetup> {
   const ct = authOf(fx.classTeacher, "TEACHER");
   const a = await run(SUBMIT, ct, { input: reportInput(fx.child, { behaviour: "দলে অঙ্কের কাজে সে পাশের জনকে দুটি অঙ্ক দেখিয়ে দিয়েছে" }) });
   const a1 = a.data?.submitSupportReport.report.id;
@@ -52,7 +52,7 @@ export async function setupBatch(run: Run, fx: SupportFx, opts: { skipEval?: boo
   const r1 = (await run(SUBMIT, ct, { input: reportInput(fx.child) })).data?.submitSupportReport.report.id;
   const r2 = (await run(SUBMIT, authOf(fx.routineTeacher, "TEACHER"), { input: reportInput(fx.child, { behaviour: R2_BEHAVIOUR, tone: "CONCERN", result: "PARTLY" }) })).data?.submitSupportReport.report.id;
   if (!opts.skipEval) await passEval(fx);
-  const b = await run(CREATE_BATCH, P(fx), {});
+  const b = await run(CREATE_BATCH, P(fx), opts.stages ? { stages: opts.stages } : {});
   if (b.errors) throw new Error(b.errors[0].message);
   return { batchId: b.data?.createSupportBatch.id, a1, r1, r2 };
 }

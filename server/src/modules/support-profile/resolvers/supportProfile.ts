@@ -35,7 +35,7 @@ import {
   type SupportReportInput,
 } from "../services/SupportReportService";
 import { chipStudentIds, openProfile, profilesPage, readProfile, setProfileStatus, setSwitch, type ProfileView } from "../services/SupportProfileService";
-import { getSupportSetting, supportCaller } from "../services/supportAccess";
+import { canSeeSafeguardingBanner, getSupportSetting, supportCaller } from "../services/supportAccess";
 import { evidencePreview, isQuickApprovable } from "../services/supportQueueExtras";
 import { recordsPack } from "../services/supportRecords";
 import { answerSeed, offerSeed, pendingSeeds } from "../services/supportSeed";
@@ -91,7 +91,7 @@ const ReportRef = builder.objectRef<ReportView>("SupportReport").implement({
     status: t.string({ resolve: (v) => v.r.status }),
     source: t.string({ resolve: (v) => v.r.source }),
     authorVia: t.string({ resolve: (v) => v.r.authorVia }),
-    occurredOn: t.string({ resolve: (v) => v.r.occurredOn }),
+    occurredOn: t.string({ resolve: (v) => (v.metaVisible === false ? "" : v.r.occurredOn) }),
     subject: t.string({ nullable: true, resolve: (v) => (v.textVisible ? v.r.subject : null) }),
     periodNo: t.int({ nullable: true, resolve: (v) => (v.textVisible ? v.r.periodNo : null) }),
     context: t.string({ nullable: true, resolve: (v) => (v.textVisible ? v.r.context : null) }),
@@ -112,7 +112,8 @@ const ReportRef = builder.objectRef<ReportView>("SupportReport").implement({
     goodThingNone: t.boolean({ resolve: (v) => !!v.r.goodThing?.none }),
     goodThingReasonKey: t.string({ nullable: true, resolve: (v) => (v.textVisible ? (v.r.goodThing?.reasonKey ?? null) : null) }),
     goodThingReasonBn: t.string({ nullable: true, resolve: (v) => (v.textVisible ? (v.r.goodThing?.reasonBn ?? null) : null) }),
-    tone: t.string({ resolve: (v) => v.r.tone }),
+    tone: t.string({ resolve: (v) => (v.metaVisible === false ? "" : v.r.tone) }),
+    signs: t.stringList({ description: "Draft save only: safeguarding signs found (the app asks the question).", resolve: (v) => v.signs ?? [] }),
     round: t.int({ resolve: (v) => v.r.round }),
     safeguardingHold: t.string({ resolve: (v) => v.r.safeguardingHold }),
     checkSkipped: t.string({ resolve: (v) => v.r.checkSkipped }),
@@ -123,7 +124,7 @@ const ReportRef = builder.objectRef<ReportView>("SupportReport").implement({
     decisionReasonBn: t.string({ nullable: true, resolve: (v) => (v.textVisible ? v.r.decisionReasonBn : null) }),
     // Principal-only (§9.4): the compare panel (incl. author skew), the evidence preview, the open
     // flags, the records pack, quick-approve. Never shown to the author (§10).
-    quickApprovable: t.boolean({ resolve: (v) => !!v.principal && isQuickApprovable(v.r) }),
+    quickApprovable: t.boolean({ resolve: (v) => v.quick ?? (!!v.principal && isQuickApprovable(v.r)) }),
     compareJson: t.string({ nullable: true, resolve: (v) => (v.principal && v.r.compare ? JSON.stringify(v.r.compare) : null) }),
     suggestedLinksJson: t.string({ nullable: true, resolve: (v) => (v.principal ? JSON.stringify(v.r.suggestedLinks ?? []) : null) }),
     openFlags: t.field({ type: [QuestionRef], resolve: (v) => (v.principal ? v.r.openFlags : []) }),
@@ -202,7 +203,7 @@ const ProfileViewRef = builder.objectRef<ProfileView>("SupportProfileView").impl
     status: t.string({ resolve: (v) => v.profile.status }),
     versionNo: t.int({ nullable: true, resolve: (v) => v.version?.versionNo ?? null }),
     publishedAt: t.string({ nullable: true, resolve: (v) => v.version?.publishedAt?.toISOString() ?? null }),
-    safeguardingBanner: t.boolean({ resolve: (v) => !!v.profile.safeguardingBanner }),
+    safeguardingBanner: t.boolean({ description: "SG-6: only for approve / view_all / safeguarding:receive holders; cleared when the referral is seen.", resolve: (v, _a, ctx) => !!v.profile.safeguardingBanner && canSeeSafeguardingBanner(ctx.auth ?? null) }),
     sections: t.field({ type: [SectionRef], resolve: (v) => v.sections }),
     card: t.field({ type: CardRef, nullable: true, resolve: (v) => v.card }),
   }),
@@ -300,7 +301,10 @@ builder.mutationField("saveSupportReportDraft", (t) =>
     description: "খসড়া রাখুন — a draft (≤ 3 open per child).",
     authScopes: { hasPermission: "support_profile:report" },
     args: { input: t.arg({ type: ReportInput, required: true }), reportId: t.arg.string({ required: false }) },
-    resolve: async (_r, a, ctx) => ({ r: await saveSupportDraft(ctx, a.input as SupportReportInput, a.reportId), textVisible: true, studentName: null, authorName: null }),
+    resolve: async (_r, a, ctx) => {
+      const d = await saveSupportDraft(ctx, a.input as SupportReportInput, a.reportId);
+      return { r: d.report, textVisible: true, studentName: null, authorName: null, signs: d.signs };
+    },
   }),
 );
 
@@ -329,7 +333,7 @@ builder.mutationField("withdrawSupportReport", (t) =>
     type: ReportRef,
     authScopes: { hasPermission: "support_profile:report" },
     args: { reportId: t.arg.string({ required: true }) },
-    resolve: async (_r, a, ctx) => ({ r: await withdrawSupportReport(ctx, a.reportId), textVisible: true, studentName: null, authorName: null }),
+    resolve: async (_r, a, ctx) => ({ r: await withdrawSupportReport(ctx, a.reportId), textVisible: false, studentName: null, authorName: null }),
   }),
 );
 
@@ -422,7 +426,7 @@ builder.mutationField("decideSupportReport", (t) =>
         strategyLinks: (a.strategyLinks ?? null) as never,
         sectionHints: a.sectionHints ?? null,
       });
-      return { r, textVisible: true, studentName: null, authorName: null };
+      return { r, textVisible: false, studentName: null, authorName: null };
     },
   }),
 );
@@ -433,7 +437,7 @@ builder.mutationField("resolveSupportSafeguardingHold", (t) =>
     description: "হ্যাঁ, সুরক্ষার বিষয় (YES → referral, report routed) · না, সাধারণ ঘটনা (NO → hold cleared).",
     authScopes: { hasPermission: "support_profile:approve" },
     args: { reportId: t.arg.string({ required: true }), answer: t.arg.string({ required: true }) },
-    resolve: async (_r, a, ctx) => ({ r: await resolveSafeguardingHold(ctx, a.reportId, a.answer === "YES" ? "YES" : "NO"), textVisible: true, studentName: null, authorName: null }),
+    resolve: async (_r, a, ctx) => ({ r: await resolveSafeguardingHold(ctx, a.reportId, a.answer === "YES" ? "YES" : "NO"), textVisible: false, studentName: null, authorName: null }),
   }),
 );
 

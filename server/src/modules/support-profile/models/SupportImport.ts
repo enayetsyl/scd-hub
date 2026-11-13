@@ -10,7 +10,7 @@ export interface ISupportImport extends Document {
   uploadedAt: Date;
   fileHash: string;
   sizeBytes: number;
-  status: "VALIDATED" | "APPLIED" | "DISCARDED";
+  status: "VALIDATED" | "APPLYING" | "APPLIED" | "DISCARDED";
   producer: { kind: "API" | "CHAT"; provider?: string | null; model?: string | null; chatLabel?: string | null };
   valid: unknown;
   rejected: { itemRef: string; reasonCode: string; field?: string | null }[];
@@ -26,7 +26,7 @@ const SupportImportSchema = new Schema<ISupportImport>(
     uploadedAt: { type: Date, required: true },
     fileHash: { type: String, required: true },
     sizeBytes: { type: Number, required: true },
-    status: { type: String, enum: ["VALIDATED", "APPLIED", "DISCARDED"], default: "VALIDATED" },
+    status: { type: String, enum: ["VALIDATED", "APPLYING", "APPLIED", "DISCARDED"], default: "VALIDATED" },
     producer: { type: Schema.Types.Mixed, required: true },
     valid: { type: Schema.Types.Mixed, default: null },
     rejected: { type: [new Schema({ itemRef: String, reasonCode: String, field: { type: String, default: null } }, { _id: false })], default: [] },

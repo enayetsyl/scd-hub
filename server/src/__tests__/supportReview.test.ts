@@ -29,7 +29,7 @@ const processed = async (over: Record<string, unknown> = {}, who = fx.routineTea
 };
 const DECIDE_LINKS = `mutation($id: String!, $d: String!, $links: [SupportStrategyLinkInput!]) {
   decideSupportReport(reportId: $id, decision: $d, strategyLinks: $links) { id status } }`;
-const MINE_EDITS = `query { mySupportReportsPage { rows { id principalEdited edits { field before after } } } }`;
+const READ_EDITS = `query($id: String!) { supportReport(reportId: $id, via: "QUEUE") { id principalEdited edits { field before after } } }`;
 
 it("only `approve` holders decide: a teacher with `report`, Office and the CLASS TEACHER (no approval step — Q-9) are refused", async () => {
   const id = await processed();
@@ -63,8 +63,9 @@ it("APPROVED_EDITED keeps submittedText and approvedText; the author sees before
   const doc = await SupportReport.findById(id).lean();
   expect(doc?.submittedText?.behaviour).toBe(reportInput(fx.child).behaviour);
   expect(doc?.approvedText?.behaviour).toContain("সহপাঠীকে");
-  const mine = await run(MINE_EDITS, authOf(fx.routineTeacher, "TEACHER"));
-  const row = mine.data?.mySupportReportsPage.rows.find((r: { id: string }) => r.id === id);
+  // a list row is metadata only; the before → after comes from the author's one audited read
+  const read = await run(READ_EDITS, authOf(fx.routineTeacher, "TEACHER"), { id });
+  const row = read.data?.supportReport;
   expect(row.principalEdited).toBe(true);
   expect(row.edits.map((e: { field: string }) => e.field)).toEqual(["behaviour"]);
 });
@@ -84,6 +85,8 @@ it("derived strategy counts change only from APPROVED links", async () => {
 
 it("quickApprovable is true only under all conditions of §6.5 and never for GUARDIAN_INFO", async () => {
   const base = await SupportReport.findById(await processed({ tone: "POSITIVE", result: "WORKED" }));
+  expect(isQuickApprovable(base!)).toBe(false); // COMPARE has not run: nothing says it is clear
+  (base as unknown as { compare: unknown }).compare = { agreement: [{ status: "CONSISTENT" }] };
   expect(isQuickApprovable(base!)).toBe(true);
   const variants: [string, (r: typeof base) => void][] = [
     ["a flag left", (r) => r!.openFlags.push({ flagId: "f1", category: "NO_EVIDENCE", field: "behaviour", severity: "ASK", quote: "x", askBn: "?", suggestionBn: null })],
@@ -96,6 +99,7 @@ it("quickApprovable is true only under all conditions of §6.5 and never for GUA
   ];
   for (const [label, mutate] of variants) {
     const r = await SupportReport.findById(base!._id);
+    (r as unknown as { compare: unknown }).compare = { agreement: [{ status: "CONSISTENT" }] };
     mutate(r);
     expect([label, isQuickApprovable(r!)]).toEqual([label, false]);
   }

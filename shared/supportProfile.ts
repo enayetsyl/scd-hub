@@ -403,10 +403,10 @@ export const SUPPORT_SAFEGUARDING_TERMS: readonly SafeguardingTerm[] = [
   ...["বাসায় মারে", "বাড়িতে মারে", "বাসায় মারধর", "বাড়িতে মারধর", "আব্বু মারে", "আম্মু মারে", "বাবা মারে", "মা মারে",
     "মারধর করে", "পেটায়", "গায়ে হাত দেয়", "খারাপভাবে ছোঁয়", "খারাপ জায়গায় হাত", "beaten at home", "beats me", "hits me at home",
     "touches me", "hurts me at home"].map((term) => ({ term, sign: "DISCLOSURE" as const })),
-  ...["পোড়া দাগ", "পোড়ার দাগ", "ছ্যাঁকা", "কালশিটে", "মারের দাগ", "আঘাতের দাগ", "বেল্টের দাগ", "burn mark", "bruise", "belt mark"]
+  ...["পোড়া দাগ", "পোড়ার দাগ", "ছ্যাঁকা", "কালশিটে", "কালসিটে", "কালশিরা", "কালসিরা", "মারের দাগ", "আঘাতের দাগ", "বেল্টের দাগ", "burn mark", "bruise", "bruis", "belt mark"]
     .map((term) => ({ term, sign: "INJURY" as const })),
   ...["মরে যেতে চাই", "মরে যেতে চায়", "মরে যাব", "আত্মহত্যা", "নিজেকে কেটে", "নিজের হাত কেটে", "নিজেকে আঘাত", "নিজের ক্ষতি",
-    "want to die", "wants to die", "kill myself", "suicide", "self-harm", "self harm", "hurt myself"]
+    "want to die", "wants to die", "kill myself", "suicide", "suicid", "self-harm", "self harm", "hurt myself"]
     .map((term) => ({ term, sign: "SELF_HARM" as const })),
   ...["যৌন", "গোপন অঙ্গ", "sexual", "private parts"].map((term) => ({ term, sign: "SEXUALISED" as const })),
   ...["না খেয়ে আসে", "না খেয়ে এসেছে", "খেতে পায় না", "খাবার পায় না", "অপরিচ্ছন্ন", "গোসল করে না", "কেউ নিতে আসে না",
@@ -415,8 +415,51 @@ export const SUPPORT_SAFEGUARDING_TERMS: readonly SafeguardingTerm[] = [
     .map((term) => ({ term, sign: "FEAR" as const })),
   ...["স্যার মেরেছে", "ম্যাডাম মেরেছে", "শিক্ষক মেরেছে", "হুজুর মেরেছে", "আপা মেরেছে", "teacher hit", "a teacher beat"]
     .map((term) => ({ term, sign: "ADULT_HARM" as const })),
-  ...["ছুরি", "অস্ত্র", "knife", "weapon"].map((term) => ({ term, sign: "SERIOUS_PEER_HARM" as const })),
+  ...["ছুরি", "অস্ত্র", "knife", "knives", "weapon"].map((term) => ({ term, sign: "SERIOUS_PEER_HARM" as const })),
 ];
+
+/**
+ * Variant forms a plain phrase cannot hold (past tense, a word in between: "আব্বু ওকে মারে",
+ * "স্যার ওকে পিটিয়ে…"). A pattern fires when a WHO word is followed, within `gap` words in between,
+ * by a DOING stem (any ending after it). A peer ("বন্ধু ওকে মেরেছে") has no WHO word, so it stays
+ * quiet (F-36). English signs also match with the endings s / es / ed / ing / al.
+ */
+export interface SafeguardingPattern {
+  who: readonly string[];
+  doing: readonly string[];
+  sign: SafeguardingSign;
+  gap: number;
+}
+const HIT_STEMS = ["মারে", "মারছে", "মেরে", "মারধো", "মারধর", "পিটিয়ে", "পিটায়", "পেটায়"];
+const PARENT_WHO = ["আব্বু", "আম্মু", "আব্বা", "আম্মা", "বাবা", "মা", "বাবা-মা", "বাপ", "চাচা", "মামা"];
+const STAFF_WHO = ["স্যার", "ম্যাডাম", "শিক্ষক", "শিক্ষিকা", "হুজুর", "আপা", "টিচার", "মাওলানা"];
+export const SUPPORT_SAFEGUARDING_PATTERNS: readonly SafeguardingPattern[] = [
+  { who: PARENT_WHO, doing: HIT_STEMS, sign: "DISCLOSURE", gap: 2 },
+  { who: PARENT_WHO, doing: ["ভয় দেখা", "ভয় দেখি", "হুমকি"], sign: "FEAR", gap: 2 },
+  { who: STAFF_WHO, doing: [...HIT_STEMS, "ভয় দেখা", "ভয় দেখি", "হুমকি"], sign: "ADULT_HARM", gap: 2 },
+];
+const WHO_ENDINGS = ["", "র", "কে", "ও", "ই", "রা", "েরা"];
+const tokensOf = (norm: string): string[] => norm.split(/[^ঀ-৿a-z0-9-]+/).filter(Boolean);
+/** Pattern hits in already-normalised text. */
+function patternHits(norm: string): { term: string; sign: SafeguardingSign }[] {
+  const tk = tokensOf(norm);
+  const out: { term: string; sign: SafeguardingSign }[] = [];
+  for (const p of SUPPORT_SAFEGUARDING_PATTERNS) {
+    const who = p.who.map(normaliseSupportText);
+    const doing = p.doing.map((d) => normaliseSupportText(d).split(" "));
+    for (let i = 0; i < tk.length; i++) {
+      if (!who.some((w) => WHO_ENDINGS.some((e) => tk[i] === w + e))) continue;
+      for (let j = i + 1; j < tk.length && j <= i + 1 + p.gap; j++) {
+        const d = doing.find((words) => words.every((w, k) => tk[j + k]?.startsWith(w)));
+        if (d) {
+          out.push({ term: `${tk[i]} … ${d.join(" ")}`, sign: p.sign });
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
 
 /** SG-5: the five steps the teacher sees (screen + guide). */
 export const SAFEGUARDING_STEPS_BN: readonly string[] = [
@@ -456,7 +499,7 @@ const isLatinTerm = (t: string): boolean => /^[a-z0-9 \-']+$/i.test(t);
 
 /** Where does `term` occur in normalised `text`? Bangla: a left word boundary, any suffix after
  *  (inflections: -কে, -টা, -মি…). English: a word boundary on both sides. */
-export function termOccurs(normText: string, rawTerm: string): boolean {
+export function termOccurs(normText: string, rawTerm: string, latinEndings = false): boolean {
   const term = normaliseSupportText(rawTerm);
   if (!term) return false;
   let from = 0;
@@ -466,7 +509,11 @@ export function termOccurs(normText: string, rawTerm: string): boolean {
     const before = at === 0 ? "" : normText[at - 1];
     const after = normText[at + term.length] ?? "";
     const leftOk = !before || !WORD_CHAR.test(before);
-    const rightOk = !isLatinTerm(term) || !after || !/[a-z0-9]/.test(after);
+    const rightOk =
+      !isLatinTerm(term) ||
+      !after ||
+      !/[a-z0-9]/.test(after) ||
+      (latinEndings && /^(s|es|ed|ing|al)(?![a-z0-9])/.test(normText.slice(at + term.length)));
     if (leftOk && rightOk) return true;
     from = at + 1;
   }
@@ -517,7 +564,8 @@ export function scanSafeguarding(texts: SupportReportTexts): SafeguardingHit[] {
     const raw = texts[field];
     if (!raw) continue;
     const norm = normaliseSupportText(raw);
-    for (const t of SUPPORT_SAFEGUARDING_TERMS) if (termOccurs(norm, t.term)) hits.push({ field, term: t.term, sign: t.sign });
+    for (const t of SUPPORT_SAFEGUARDING_TERMS) if (termOccurs(norm, t.term, true)) hits.push({ field, term: t.term, sign: t.sign });
+    for (const h of patternHits(norm)) hits.push({ field, ...h });
   }
   return hits;
 }
@@ -530,7 +578,7 @@ export const blockedTermIn = (text: string): string | null => {
 /** Any safeguarding term in one free sentence (V-9). */
 export const safeguardingTermIn = (text: string): string | null => {
   const norm = normaliseSupportText(text);
-  return SUPPORT_SAFEGUARDING_TERMS.find((t) => termOccurs(norm, t.term))?.term ?? null;
+  return SUPPORT_SAFEGUARDING_TERMS.find((t) => termOccurs(norm, t.term, true))?.term ?? patternHits(norm)[0]?.term ?? null;
 };
 /** Any frequency word in one profile sentence (§6.6 rule 8). */
 export const bannedProfileWordIn = (text: string): string | null => {
@@ -948,10 +996,10 @@ export function checkMiniSchema(value: unknown, schema: MiniSchema, path = "$"):
     case "object": {
       if (!value || typeof value !== "object" || Array.isArray(value)) return { path, kind: "BAD_VALUE" };
       const v = value as Record<string, unknown>;
-      for (const k of Object.keys(v)) if (!(k in schema.properties)) return { path: `${path}.${k}`, kind: "UNKNOWN_FIELD" };
-      for (const k of schema.required ?? []) if (!(k in v)) return { path: `${path}.${k}`, kind: "BAD_VALUE" };
+      for (const k of Object.keys(v)) if (!Object.hasOwn(schema.properties, k)) return { path: `${path}.${k}`, kind: "UNKNOWN_FIELD" };
+      for (const k of schema.required ?? []) if (!Object.hasOwn(v, k)) return { path: `${path}.${k}`, kind: "BAD_VALUE" };
       for (const [k, s] of Object.entries(schema.properties)) {
-        if (!(k in v)) continue;
+        if (!Object.hasOwn(v, k)) continue;
         const e = checkMiniSchema(v[k], s, `${path}.${k}`);
         if (e) return e;
       }

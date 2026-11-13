@@ -1143,6 +1143,7 @@ export const FEATURE_CATALOGUE = {
     actions: {
       use: { en: "Use the data assistant", bn: "তথ্য সহকারী ব্যবহার", desc: "Ask questions about school data in the app's data chat; answers show only what your own permissions allow", teacher: false, office: false, flags: [] },
       connect: { en: "Connect Claude", bn: "Claude-এর সঙ্গে সংযোগ", desc: "Let an outside chat (Claude) read school data as you, only what your own permissions allow", teacher: false, office: false, flags: [] },
+      individual_pay: { en: "See one person's pay (data assistant)", bn: "ব্যক্তির বেতন দেখা (তথ্য সহকারী)", desc: "Let the data assistant show a named person's pay lines (gross, deductions, net). Needs payroll:view as well; monthly totals need only payroll:view (owner 13 Nov)", teacher: false, office: false, flags: [] },
       audit: { en: "Data assistant log & connections", bn: "তথ্য সহকারীর লগ দেখা", desc: "Read every person's data-assistant tool calls and connections, and disconnect anyone", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },

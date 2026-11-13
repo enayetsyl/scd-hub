@@ -1,5 +1,5 @@
 /**
- * The evaluation pack (docs/prd-child-support-profile.md §16.9, D-#1566) — the owner-run switch-on
+ * The evaluation pack (docs/prd-child-support-profile.md §16.9) — the owner-run switch-on
  * gate. One pack from F-01 … F-39 and the 40 invented reports, with the REAL method file, run through
  * the chat (or, later, the API) exactly like a real batch. The server holds the answer key; the
  * result goes through the same import validator, then it is scored against the pass marks and a
@@ -19,6 +19,7 @@ import { SupportProfileRefusal } from "../services/errors";
 import { supportCaller, type SupportCtx } from "../services/supportAccess";
 import { BIAS_FIXTURES, BLOCK_MARK_IDS, F39_REPORTS, INVENTED_REPORTS, SAFEGUARDING_EVAL, type BiasFixture, type FixtureField } from "./supportEvalFixtures";
 import { Types } from "mongoose";
+import { writeAudit } from "../../platform/services/AuditService";
 
 export const EVAL_BATCH = "B-0000";
 const FILLER = { situation: "ক্লাসের নিয়মিত কাজ চলছিল", tried: "পাশে গিয়ে আস্তে বলেছি", resultNote: "কিছুটা কাজ হয়েছে" };
@@ -164,7 +165,6 @@ export function scoreEvaluation(text: string, version?: string): { outcome: Vali
     (byFixture.get(f) ?? byFixture.set(f, []).get(f)!).push(r);
   }
   const modelFlags = (id: string) => (byFixture.get(id) ?? []).flatMap((r) => r.flags.filter((f) => !f.byServer));
-  const allFlags = (id: string) => (byFixture.get(id) ?? []).flatMap((r) => r.flags);
   const perCategory: EvalMarks["perCategory"] = {};
   const tally = (cat: string, hit: boolean) => {
     perCategory[cat] ??= { hit: 0, miss: 0 };
@@ -177,7 +177,8 @@ export function scoreEvaluation(text: string, version?: string): { outcome: Vali
   let askTotal = 0;
   for (const f of fixtures) {
     for (const cat of f.expect) {
-      const hit = allFlags(f.id).some((x) => x.category === cat);
+      // The model must find it itself: the server's own word-list flags never count towards the marks.
+      const hit = modelFlags(f.id).some((x) => x.category === cat);
       tally(cat, hit);
       if (BLOCK_MARK_IDS.includes(f.id) && cat === f.expect[0]) {
         blockTotal++;
@@ -246,6 +247,13 @@ export async function recordEvaluation(
     passed: autoPassed && input.suggestionsChecked,
     runBy: new Types.ObjectId(auth.userId),
     runAt: new Date(),
+  });
+  await writeAudit({
+    eventKind: "SUPPORT_EVALUATION_RECORDED",
+    actorId: auth.userId,
+    targetId: String(row._id),
+    targetKind: "SupportProducerEval",
+    meta: { kind: input.kind, producer: input.kind === "API" ? `${input.provider ?? "?"}/${input.model ?? "?"}` : `chat:${input.chatLabel!.trim()}`, methodVersion: method.version, methodHash: method.sha256, passed: row.passed },
   });
   return { row, marks };
 }

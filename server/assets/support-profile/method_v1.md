@@ -31,7 +31,7 @@ child is good at, what helps, which situations are hard, and what an adult shoul
 4. **No punishment.** Never suggest a punishment, shaming, a threat, or withholding food, tiffin,
    toilet or prayer breaks.
 5. **Both directions.** Glowing text without an example is questioned like harsh text without one.
-6. **Never question language.** Spelling, grammar, dialect (for example Sylheti spelling), English or
+6. **Never question language.** Spelling, grammar, dialect, English or
    mixed Bangla–English are never questioned. Only the content is checked.
 7. **Use the codes.** Children are `C-…`, teachers `T-…`, reports `R-…`, strategies `S-…`, profile items
    `I-…`. The child a report is about is `[S]`. Never guess or invent a name.

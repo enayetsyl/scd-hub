@@ -15,6 +15,8 @@ import {
   type SupportStrategyKind,
 } from "@scd/shared";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { blockedTermIn, safeguardingTermIn } from "@scd/shared";
+import { writeAudit } from "../../platform/services/AuditService";
 import { SupportStrategy, type ISupportStrategy } from "../models/SupportStrategy";
 import { SupportReport, type ISupportReport } from "../models/SupportReport";
 
@@ -72,7 +74,7 @@ export interface LinkInput {
 }
 
 /** Resolve the Principal's confirmed links: create NEW strategies on this profile, validate the rest. */
-export async function resolveLinks(r: ISupportReport, links: LinkInput[]): Promise<{ strategyId: Types.ObjectId; outcome: LinkInput["outcome"] }[]> {
+export async function resolveLinks(r: ISupportReport, links: LinkInput[], actorId: string | null = null): Promise<{ strategyId: Types.ObjectId; outcome: LinkInput["outcome"] }[]> {
   const out: { strategyId: Types.ObjectId; outcome: LinkInput["outcome"] }[] = [];
   for (const l of links.slice(0, 5)) {
     if (!["WORKED", "PARTLY", "DID_NOT_WORK"].includes(l.outcome)) continue;
@@ -81,19 +83,25 @@ export async function resolveLinks(r: ISupportReport, links: LinkInput[]): Promi
       const starter = SUPPORT_STARTER_STRATEGIES.find((x) => x.key === l.starterKey);
       const title = (starter?.bn ?? l.titleBn ?? "").trim().slice(0, 90);
       if (!title || !r.profileId) continue;
+      // A made-up title never carries a label or a safeguarding term (S-4); the how-to is the approved text.
+      if (blockedTermIn(title) || safeguardingTermIn(title)) continue;
+      const approved = r.approvedText;
+      const rawHow = (approved?.whatWorked || approved?.tried || "").trim().slice(0, 400);
+      const how = blockedTermIn(rawHow) || safeguardingTermIn(rawHow) ? "" : rawHow;
       const existing = starter ? await SupportStrategy.findOne({ profileId: r.profileId, starterKey: starter.key, status: "ACTIVE" }) : null;
       s =
         existing ??
         (await SupportStrategy.create({
           profileId: r.profileId,
           titleBn: title,
-          howBn: (r.whatWorked || r.tried || "").slice(0, 400),
+          howBn: how,
           kind: (starter?.kind ?? "PREVENT") as SupportStrategyKind,
           needTag: starter?.needs?.[0] ?? null,
           starterKey: starter?.key ?? null,
           contextTags: r.subject ? [`SUBJECT:${r.subject}`] : [],
           createdFromReportId: r._id,
         }));
+      if (s && !existing) await writeAudit({ eventKind: "SUPPORT_STRATEGY_CREATED", actorId: actorId ?? undefined, targetId: String(s._id), targetKind: "SupportStrategy", meta: { strategyId: String(s._id), reportId: String(r._id), starterKey: starter?.key ?? null } });
     } else if (Types.ObjectId.isValid(l.strategyId)) {
       s = await SupportStrategy.findOne({ _id: new Types.ObjectId(l.strategyId), profileId: r.profileId });
     }

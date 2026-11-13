@@ -19,6 +19,7 @@ import { startWorkspaceQueue } from "./modules/ai-workspace/services/workspaceQu
 import { failOrphanedDataAnswers } from "./modules/data-assistant/services/DataChatService";
 import { oauthRouter } from "./modules/ai-workspace/mcp/oauth";
 import { mcpRouter } from "./modules/ai-workspace/mcp/mcpRoute";
+import { dataMcpRouter } from "./modules/data-assistant/mcp/dataMcpRoute";
 import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -223,6 +224,9 @@ app.use("/events", eventsRouter);
 // AI Workspace W-5 (D-#1214): the MCP bridge for Claude + its OAuth 2.1 (Hub login, Principal only).
 // Caddy must pass /mcp*, /oauth* and /.well-known/oauth-* to the API.
 app.use(oauthRouter);
+// Data assistant DA-3 (D-#1535): read-only school data for Claude, data-bound tokens. Mounted
+// BEFORE /mcp; Caddy's /mcp* already covers /mcp/data.
+app.use("/mcp/data", dataMcpRouter);
 app.use("/mcp", mcpRouter);
 
 // MON-2: capture faults thrown by the thin REST surface (pdf/files/triggers) + the
