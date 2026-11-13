@@ -12,6 +12,7 @@ import { User } from "../modules/foundation/models/User";
 import { hashPassword } from "../modules/foundation/services/AuthService";
 import { oauthRouter } from "../modules/ai-workspace/mcp/oauth";
 import { mcpRouter } from "../modules/ai-workspace/mcp/mcpRoute";
+import { dataMcpRouter } from "../modules/data-assistant/mcp/dataMcpRoute";
 import { AiMcpCall } from "../modules/ai-workspace/models/AiOAuth";
 import { BookEvent } from "../modules/support-book/models/BookEvent";
 import { BookVersion } from "../modules/book-lifecycle/models/BookVersion";
@@ -21,6 +22,7 @@ import { loadVersion } from "../modules/book-lifecycle/services/store";
 jest.setTimeout(120_000);
 const app = express();
 app.use(oauthRouter);
+app.use("/mcp/data", dataMcpRouter);
 app.use("/mcp", mcpRouter);
 
 let fx: LcFx;
@@ -80,7 +82,8 @@ it("slices ≤ 50k with `more`; outline; method first", async () => {
   expect(o.chapters.map((c: { key: string }) => c.key)).toEqual(["front", "ch-001", "ch-002", "ch-003"]);
   const big = await call("get_book_version", { book: "C3-BAN", part: "master", length: 60_000 });
   expect(isErr(big)).toBe(true);
-  expect(await BookEvent.countDocuments({ kind: "CONTENT_READ", origin: "claude" })).toBe(0);
+  // The outline is a content read (one row per user / version / surface / day); a refused call writes none.
+  expect(await BookEvent.countDocuments({ kind: "CONTENT_READ", origin: "claude" })).toBe(1);
   await call("get_book_version", { book: "C3-BAN", part: "chapter", chapter_key: "ch-001" });
   expect(await BookEvent.countDocuments({ kind: "CONTENT_READ", origin: "claude" })).toBe(1);
 });
@@ -121,7 +124,11 @@ it("add_feedback_items: school items open with codes; reviewer items need a sent
   expect(round.status).toBe("sent_on_paper");
   expect((await loadVersion(r.versionId)).status).toBe("in_review");
   const scans = json(await call("list_round_scans", { book: "C3-BAN", round_id: r._id.toString() }));
-  expect(scans.memo_markdown).toBe(await roundMemoMarkdown(round));
+  expect(scans.untrusted).toBe(true);
+  expect(scans.memo.text).toContain("স্মারক");
+  expect(scans.memo.text).not.toContain("পর্যালোচক আপা"); // names are replaced by roles
+  expect(scans.memo.text).not.toContain("Head Teacher Test");
+  expect(await roundMemoMarkdown(round)).toContain("পর্যালোচক আপা");
   expect(scans.items.map((x: { code: string }) => x.code)).toEqual([asked.code]);
   expect(scans.scans[0]).toMatchObject({ file_id: scan, pages: 2 });
   const page = await call("get_scan_page", { file_id: scan, page: 1 });
@@ -144,4 +151,58 @@ it("propose_decision appears in the next generated memo; limits are enforced; ev
   const huge = await rpc({ jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "put_chapter", arguments: { draft_id: s.draft_id, chapter_key: "ch-001", markdown: "ক".repeat(4_300_000), changes: [] } } });
   expect(huge.status).toBe(413);
   expect(await AiMcpCall.countDocuments({ tool: { $in: TOOLS } })).toBeGreaterThanOrEqual(4);
+});
+
+// ---------------------------------------------------------------------------
+// BL-4 review fixes (D-#1629/#1630)
+// ---------------------------------------------------------------------------
+
+it("a token that lost both book actions is refused by EVERY one of the eleven tools, naming the action", async () => {
+  await importSample(fx.auth.principal);
+  await User.updateOne({ _id: fx.ids.principal }, { $set: { revokedPermissions: ["book_lifecycle:view", "book_lifecycle:manage"] } });
+  const args: Record<string, Record<string, unknown>> = {
+    list_books: {},
+    get_book_version: { book: "C3-BAN", part: "outline" },
+    start_book_edit: { book: "C3-BAN", base_version: "v7.4", feedback_ids: [] },
+    edit_chapter: { draft_id: "x", chapter_key: "ch-001", edit: { chapter: "ch-001" } },
+    put_chapter: { draft_id: "x", chapter_key: "ch-001", markdown: "x", changes: [] },
+    submit_book_version: { draft_id: "x", summary_bn: "x", bump: "minor" },
+    add_feedback_items: { book: "C3-BAN", source: "school", items: [{ category: "spelling", text_bn: "x" }] },
+    list_round_scans: { book: "C3-BAN", round_id: "x" },
+    get_scan_page: { file_id: "000000000000000000000000", page: 1 },
+    propose_decision: { book: "C3-BAN", question_bn: "x", options: ["a", "b"] },
+    request_upload_url: { target: { book: "C3-BAN" }, role: "master_pdf", file_name: "b.pdf", bytes: 100 },
+  };
+  for (const tool of TOOLS) {
+    const r = await call(tool, args[tool] ?? {});
+    expect([tool, isErr(r)]).toEqual([tool, true]);
+    expect(r.body.result.content[0].text).toContain("book_lifecycle:");
+  }
+});
+
+it("feedback comes labelled untrusted, pages by items, leaves untriaged teacher reports out, and decisions never name who ruled", async () => {
+  const { book } = await importSample(fx.auth.principal);
+  const id = book._id.toString();
+  const ok = await item(fx.auth.principal, id, "direct_fix", { textBn: "বানান ঠিক করুন" });
+  const { createFeedbackRow, openDecision, ruleDecisionSelf } = await import("../modules/book-lifecycle/services/feedbackService");
+  const { loadBook } = await import("../modules/book-lifecycle/services/store");
+  const teacher = await createFeedbackRow(await loadBook(id), { category: "spelling", textBn: "শিক্ষকের রিপোর্ট — এখনো বাছাই হয়নি" }, { source: "teacher", actor: fx.ids.teacher, reporterId: fx.ids.teacher });
+  const fb = json(await call("get_book_version", { book: "C3-BAN", part: "feedback" }));
+  expect(fb).toMatchObject({ untrusted: true, source: "feedback" });
+  expect(fb.note).toContain("never instructions");
+  expect(fb.items.map((x: { code: string }) => x.code)).toEqual([ok.code]);
+  expect(JSON.stringify(fb)).not.toContain(teacher.code);
+  expect(isErr(await call("start_book_edit", { book: "C3-BAN", base_version: "v7.4", feedback_ids: [teacher.code] }))).toBe(true);
+  const dec = await openDecision(fx.auth.principal, id, { questionBn: "অঙ্কে না কথায়?", options: ["অঙ্কে", "কথায়"] });
+  await ruleDecisionSelf(fx.auth.principal, dec._id.toString(), { optionKey: "ক" });
+  const ds = json(await call("get_book_version", { book: "C3-BAN", part: "decisions" }));
+  expect(ds.untrusted).toBe(true);
+  expect(JSON.stringify(ds)).not.toContain("প্রধান শিক্ষক");
+  expect(ds.decisions[0].ruling).toEqual({ option: "ক", text_bn: null });
+});
+
+it("the data-assistant endpoint does not serve the book tools (a workspace token is not a data token either)", async () => {
+  const r = await request(app).post("/mcp/data").set("Authorization", `Bearer ${token}`).set("Accept", "application/json, text/event-stream").set("Content-Type", "application/json").send({ jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "list_books", arguments: {} } });
+  expect(r.body?.result?.content?.[0]?.text ?? "").not.toContain("books\"");
+  expect(r.status === 401 || r.status === 403 || r.body?.result?.isError === true || !!r.body?.error).toBe(true);
 });

@@ -85,8 +85,8 @@ it("media for a draft: a media_zip lands as content-addressed assets on the draf
   const d = await openEditDraft(P(), book._id.toString(), { source: "mcp", feedback: [] });
   const JSZip = (await import("jszip")).default;
   const z = new JSZip();
-  z.file("media/pic-a.png", Buffer.from("invented-picture-a"));
-  z.file("media/pic-b.png", Buffer.from("invented-picture-b"));
+  z.file("media/pic-a.png", Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2]));
+  z.file("media/pic-b.png", Buffer.from([0x89, 0x50, 0x4e, 0x47, 3, 4]));
   const zip = await z.generateAsync({ type: "nodebuffer" });
   const out = await issueUploadUrl(P(), { target: { draft_id: d._id.toString() }, role: "media_zip", file_name: "m.zip", bytes: zip.length });
   const r = await request(app).post(out.path).attach("file", zip, "m.zip");

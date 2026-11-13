@@ -33,6 +33,8 @@ import { loadDraft } from "./versionService";
 import { methodText } from "./method";
 import { normaliseMarkdown, parseMaster } from "./markdown";
 import { loadRound, proposeTranscription, roundMemoMarkdown } from "./roundService";
+import { bookMemoMarkdown, buildMemoData } from "./memo";
+import type { IBookMemoRound } from "../models/BookMemoRound";
 import { scopeForSchool } from "../../platform/services/DeidScopeService";
 import { deidentify } from "../../platform/ai/deidentify";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -170,6 +172,31 @@ export async function downloadBundle(
   await lcEvent({ bookId: book._id, kind: "BUNDLE_DOWNLOADED", actorId: uid(auth), summary: `bundle ${draft.bundleNonce} (${kept.length} items, ${excluded.length} left out)`, refs: { draftId: draft._id, versionId: base._id } });
   await writeAudit({ eventKind: "BOOK_LC_BUNDLE_DOWNLOADED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookEditDraft", targetId: draft._id.toString(), meta: { bookCode: book.code, version: vlabel(base), nonce: draft.bundleNonce, items: kept.length, leftOut: excluded.length } });
   return { zip: buf, jszip: cz.zip, filename: `book-bundle_${book.code}_${vlabel(base)}_${draft.bundleNonce}.zip`, nonce: draft.bundleNonce!, draftId: draft._id.toString(), excluded };
+}
+
+/**
+ * The round's memo for Claude (§9.6): rebuilt from its data, never the frozen text — reviewer and assigner
+ * names are replaced by their roles, items that name a student or guardian are left out (listed), and every
+ * free text runs through the same de-identification as the bundle's feedback.
+ */
+export async function deidentifiedMemo(r: IBookMemoRound): Promise<{ markdown: string; leftOut: { code: string; reasonBn: string }[]; items: { code: string; textBn: string; quote: string }[] }> {
+  const data = await buildMemoData(r);
+  const scope = await scopeForSchool();
+  const de = (t: string) => deidentify(t ?? "", scope).text;
+  const raw = await BookFeedback.find({ _id: { $in: r.feedbackIds } }).sort({ createdAt: 1 });
+  const { kept, excluded } = await deidentifiedItems(raw);
+  const keep = new Map(kept.map((k) => [k.item.code, k]));
+  const items = data.items.filter((i) => keep.has(i.code)).map((i) => ({ ...i, where: de(i.where), textBn: de(i.textBn), quote: de(i.quote) }));
+  const markdown = bookMemoMarkdown({
+    ...data,
+    reviewerName: "পর্যালোচক",
+    assignerName: "প্রধান শিক্ষক",
+    items,
+    decisions: data.decisions.map((d) => ({ ...d, questionBn: de(d.questionBn), options: d.options.map((o) => ({ ...o, textBn: de(o.textBn) })) })),
+    rows: data.rows.map((x) => ({ ...x, where: de(x.where), what: de(x.what), reason: de(x.reason) })),
+    extraNotesBn: de(data.extraNotesBn),
+  });
+  return { markdown, leftOut: excluded, items: items.map((i) => ({ code: i.code, textBn: i.textBn, quote: i.quote })) };
 }
 
 /** The raw JSON, or the first fenced block of a .md / .txt answer (≤ 4 MB). */

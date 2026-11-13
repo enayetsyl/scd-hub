@@ -34,7 +34,7 @@ import { addReleaseFile } from "../services/releaseService";
 import { teacherMayRead, uploadReportPhoto } from "../services/teacherService";
 import type { BookReleaseFileKind } from "@scd/shared";
 import { downloadBundle, downloadTranscriptionPack, uploadBundleWhole } from "../services/bundle";
-import { consumeUploadUrl } from "../services/uploadUrl";
+import { consumeUploadUrl, peekUploadToken } from "../services/uploadUrl";
 
 const upload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.printBytes + 1, files: 2 } });
 
@@ -259,11 +259,26 @@ export function registerBookLcFileRoutes(router: Router): void {
 
   // BL-4: a single-use upload link for Claude Code (`curl -F file=@<path> <url>`). No session: the
   // hashed, 10-minute, size-bound token is the credential; its user is re-read and must hold manage.
-  router.post("/book-lc/upload/:token", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
+  // The link is checked BEFORE a byte of the body is read, and the upload limit is the declared size (+1%).
+  const uploadLinkParse: RequestHandler = async (req, res, next) => {
     try {
-      const f = await take(req, "file");
+      const { bytes } = await peekUploadToken(String(req.params.token));
+      multer({ dest: tmpdir(), limits: { fileSize: Math.ceil(bytes * 1.01) + 1, files: 1 } }).fields([{ name: "file", maxCount: 1 }])(req, res, (err: unknown) => {
+        if (err) {
+          res.status(422).json({ error: "file too large for this link / ফাইল এই লিঙ্কের মাপের চেয়ে বড়" });
+          return;
+        }
+        next();
+      });
+    } catch (e) {
+      fail(res, e);
+    }
+  };
+  router.post("/book-lc/upload/:token", uploadLinkParse, async (req, res) => {
+    try {
+      const f = await take(req, "file", () => Number.MAX_SAFE_INTEGER);
       if (!f) throw new BookLcError("NO_FILE", "file missing (multipart field: file)");
-      res.json(await consumeUploadUrl(String(req.params.token), { name: f.name, data: f.data, mime: f.mime }));
+      res.json(await consumeUploadUrl(String(req.params.token), { name: f.name, data: f.data }));
     } catch (e) {
       fail(res, e);
     } finally {
