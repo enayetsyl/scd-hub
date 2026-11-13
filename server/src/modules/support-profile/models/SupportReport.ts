@@ -110,6 +110,10 @@ export interface ISupportReport extends Document {
   safeguardingHoldSource: "TERM_LIST" | "BATCH_LOW" | "BATCH_HIGH" | null;
   checkSkipped: SupportCheckSkipped;
   compareRunId: Types.ObjectId | null;
+  /** The validated COMPARE output (codes mapped back, [S] re-identified) — Principal-only (§6.4). */
+  compare: unknown | null;
+  /** The batch's strategy matches, waiting for the Principal to confirm at approval. */
+  suggestedLinks: { strategyId: string; starterKey: string | null; outcome: string }[];
   submittedText: SupportTexts | null;
   approvedText: SupportTexts | null;
   principalEdited: boolean;
@@ -198,6 +202,8 @@ const SupportReportSchema = new Schema<ISupportReport>(
     safeguardingHoldSource: { type: String, enum: ["TERM_LIST", "BATCH_LOW", "BATCH_HIGH", null], default: null },
     checkSkipped: { type: String, enum: SUPPORT_CHECK_SKIPPED, default: "NONE" },
     compareRunId: { type: Schema.Types.ObjectId, default: null },
+    compare: { type: Schema.Types.Mixed, default: null },
+    suggestedLinks: { type: Schema.Types.Mixed, default: () => [] },
     submittedText: { type: TextsSchema, default: null },
     approvedText: { type: TextsSchema, default: null },
     principalEdited: { type: Boolean, default: false },

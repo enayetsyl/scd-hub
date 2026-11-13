@@ -53,6 +53,8 @@ import { notifyHolders, notifyUser } from "./supportNotify";
 import { readerOf } from "./supportScope";
 import { loadMethod } from "./methodDoc";
 import { textsOf } from "./SupportReportService";
+import { recordsPack } from "./supportRecords";
+import { raiseReferral } from "../../platform/safeguarding/SafeguardingService";
 import { validateSupportResult, type CtxReport, type ValidationCtx, type ValidationOutcome } from "./supportResultValidator";
 
 export const PROCESS = "support_profile:process" as Permission;
@@ -164,7 +166,7 @@ async function buildCodeMap(childIds: Types.ObjectId[], fresh: ISupportReport[])
   const allReps = [...fresh.map((r) => ({ r, isNew: true })), ...ctxReps.map((r) => ({ r, isNew: false }))];
   const authors = [...new Set(allReps.map((x) => String(x.r.authorId)))];
   const profiles = await SupportProfile.find({ studentId: { $in: childIds } }).select("_id currentVersionId studentId").lean();
-  const strategies = await SupportStrategy.find({ profileId: { $in: profiles.map((p) => p._id) }, status: "ACTIVE" }).select("_id").lean();
+  const strategies = await SupportStrategy.find({ profileId: { $in: profiles.map((p) => p._id) }, status: "ACTIVE" }).select("_id profileId").lean();
   const versions = await SupportProfileVersion.find({ _id: { $in: profiles.map((p) => p.currentVersionId).filter(Boolean) } }).lean();
   const itemRows: { itemId: string; studentId: Types.ObjectId }[] = [];
   for (const v of versions) {
@@ -180,7 +182,11 @@ async function buildCodeMap(childIds: Types.ObjectId[], fresh: ISupportReport[])
     children: childIds.map((id, i) => ({ code: c[i], studentId: id })),
     teachers: authors.map((id, i) => ({ code: t[i], userId: oid(id) })),
     reports: allReps.map((x, i) => ({ code: rc[i], reportId: x.r._id, isNew: x.isNew })),
-    strategies: strategies.map((s, i) => ({ code: sc[i], strategyId: s._id as Types.ObjectId })),
+    strategies: strategies.map((s, i) => ({
+      code: sc[i],
+      strategyId: s._id as Types.ObjectId,
+      studentId: profiles.find((p) => String(p._id) === String(s.profileId))?.studentId as Types.ObjectId,
+    })),
     items: itemRows.map((x, i) => ({ code: ic[i], itemId: x.itemId, studentId: x.studentId })),
   };
 }
@@ -422,7 +428,7 @@ async function buildPackContent(b: ISupportBatch): Promise<Built & { leakReport:
       child: child.code,
       classLevel: levelOf.get(sid) ?? null,
       ageBand: ageBand(levelOf.get(sid)),
-      records: {},
+      records: await recordsPack(sid),
       publishedProfile: items,
       strategies: strategies
         .filter((s) => prof && String(s.profileId) === String(prof._id))
@@ -537,6 +543,7 @@ export async function validationCtxOf(b: ISupportBatch): Promise<{ ctx: Validati
       reports: ctxReports,
       children: new Set(map?.children.map((c) => c.code) ?? []),
       strategies: new Set(map?.strategies.map((s) => s.code) ?? []),
+      strategyChildren: new Map(map?.strategies.map((s) => [s.code, map.children.find((c) => String(c.studentId) === String(s.studentId))?.code ?? ""]) ?? []),
       items: new Set(map?.items.map((i) => i.code) ?? []),
       rosterNames,
     },
@@ -663,6 +670,7 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
   const summary = { valid: { reports: 0, returns: 0, drafts: 0 }, rejected: {} as Record<string, number>, backToQueue: 0 };
   for (const r of imp.rejected) summary.rejected[r.reasonCode] = (summary.rejected[r.reasonCode] ?? 0) + 1;
   const handled = new Set<string>();
+  const patternRaised = new Set<string>();
 
   for (const res of valid.reports) {
     const entry = repByCode.get(res.code);
@@ -692,6 +700,40 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
     r.markModified("aiChecks");
     r.rewriteRounds += 1;
     r.batchId = null;
+    if (res.compare) {
+      const cmp = res.compare as {
+        agreement: { otherReportIds: string[]; noteBn: string; claim: string }[];
+        functionHint: { reportIds: string[]; noteBn: string };
+        safeguardingPattern: { present: boolean; signs: string[]; reportIds: string[]; noteBn: string };
+        strategyMatches: { strategyId: string; starterKey: string | null; outcome: string }[];
+        sectionHints: string[];
+        skillHints: string[];
+        authorSkew: { status: string; noteBn: string };
+        principalSummaryBn: string;
+      };
+      const idOf = (c: string) => String(repByCode.get(c)?.reportId ?? "");
+      const sidOf = (c: string) => (c === "NEW" ? "NEW" : String(map.strategies.find((x) => x.code === c)?.strategyId ?? ""));
+      r.compare = {
+        agreement: cmp.agreement.map((a) => ({ ...a, claim: back(a.claim), noteBn: back(a.noteBn), otherReportIds: a.otherReportIds.map(idOf) })),
+        authorSkew: { status: cmp.authorSkew.status, noteBn: back(cmp.authorSkew.noteBn) },
+        functionHint: { ...cmp.functionHint, noteBn: back(cmp.functionHint.noteBn), reportIds: cmp.functionHint.reportIds.map(idOf) },
+        echoOfProfile: (cmp as unknown as { echoOfProfile: boolean }).echoOfProfile,
+        safeguardingPattern: { ...cmp.safeguardingPattern, noteBn: back(cmp.safeguardingPattern.noteBn), reportIds: cmp.safeguardingPattern.reportIds.map(idOf) },
+        principalSummaryBn: back(cmp.principalSummaryBn),
+        producer: label,
+      };
+      r.sectionHints = cmp.sectionHints;
+      r.skillHints = cmp.skillHints;
+      r.suggestedLinks = cmp.strategyMatches.map((m) => ({ strategyId: sidOf(m.strategyId), starterKey: m.starterKey, outcome: m.outcome }));
+      // SG-6: a build-up across the child's reports → the child is pinned with a banner and a
+      // SUPPORT_COMPARE referral is raised (once per child per batch).
+      if (cmp.safeguardingPattern.present && !patternRaised.has(String(r.studentId))) {
+        patternRaised.add(String(r.studentId));
+        await SupportProfile.updateOne({ studentId: r.studentId }, { $set: { safeguardingBanner: true } });
+        await raiseReferral({ studentId: String(r.studentId), raisedBy: auth.userId, source: "SUPPORT_COMPARE", signs: cmp.safeguardingPattern.signs as never, textBn: back(cmp.safeguardingPattern.noteBn) ?? "" });
+      }
+      r.markModified("compare");
+    }
     const questions = res.flags.map((f) => ({ flagId: f.id, category: f.category, field: f.field, severity: f.severity, quote: back(f.quote) ?? "", askBn: back(f.askBn) ?? "", suggestionBn: back(f.suggestionBn) }));
     if (res.safeguarding.present) {
       // SG-9: the teacher is not asked — the Principal is; the report is neither approved nor returned.

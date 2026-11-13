@@ -11,6 +11,8 @@ import { renotifyUnseenReferrals } from "../../platform/safeguarding/Safeguardin
 import { sweepNotUsedText } from "./SupportReportService";
 import { sweepBatches } from "./SupportBatchService";
 import { batchReminders, sweepRewrites } from "./supportRewriteSweeps";
+import { dailyDigest } from "./supportQueueExtras";
+import { sweepSeedPrompts } from "./supportSeed";
 
 export type RunOnce = (key: string, fn: () => Promise<void>) => Promise<boolean>;
 
@@ -21,6 +23,14 @@ export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Prom
     n += await sweepBatches(now);
     n += await sweepRewrites(now);
     n += await batchReminders(now);
+    n += await sweepSeedPrompts(now);
   });
+  // §9.7: the approvers' digest at 16:00 Dhaka, once a day.
+  const hour = Number(now.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hour12: false }));
+  if (hour >= 16) {
+    await runOnce("SUPPORT_DIGEST", async () => {
+      n += await dailyDigest(now);
+    });
+  }
   return n;
 }

@@ -23,6 +23,7 @@ import {
   SUPPORT_TONES,
   SUPPORT_EDITABLE_STATUSES,
   SUPPORT_DECIDABLE_STATUSES,
+  SUPPORT_SECTIONS,
   daysBetweenKeys,
   scanSafeguarding,
   scanSupportTerms,
@@ -45,6 +46,8 @@ import { SupportProfileRefusal } from "./errors";
 import { accessToChild, holdsApprove, holdsViewAll, supportCaller, type SupportCtx } from "./supportAccess";
 import { notifyHolders, notifyUser } from "./supportNotify";
 import { readerOf } from "./supportScope";
+import { resolveLinks, type LinkInput } from "./supportStrategies";
+import { isQuickApprovable } from "./supportQueueExtras";
 
 export interface SupportReportInput {
   studentId: string;
@@ -458,6 +461,9 @@ export interface DecisionInput {
   decision: "APPROVED" | "APPROVED_EDITED" | "RETURNED" | "NOT_USED";
   reasonBn?: string | null;
   edited?: Partial<SupportTexts> | null;
+  /** Confirmed at approval (§6.5 "কোথায় যাবে"): existing strategy ids or NEW with a starter / title. */
+  strategyLinks?: LinkInput[] | null;
+  sectionHints?: string[] | null;
 }
 
 export async function decideSupportReport(ctx: SupportCtx, d: DecisionInput): Promise<ISupportReport> {
@@ -475,7 +481,18 @@ export async function decideSupportReport(ctx: SupportCtx, d: DecisionInput): Pr
   const wasWaiting = r.status === "TO_PROCESS";
   if (wasWaiting) r.checkSkipped = "DECIDED_DIRECTLY";
   const now = new Date();
-  const submitted = r.submittedText ?? textsOf(r);
+  // A stored SupportTexts is a Mongoose subdocument: copy its eight fields, never spread it.
+  const plain = (t: SupportTexts): SupportTexts => ({
+    situation: t.situation ?? "",
+    settingNote: t.settingNote ?? "",
+    behaviour: t.behaviour ?? "",
+    tried: t.tried ?? "",
+    resultNote: t.resultNote ?? "",
+    exception: t.exception ?? "",
+    whatWorked: t.whatWorked ?? "",
+    goodThing: t.goodThing ?? "",
+  });
+  const submitted = plain(r.submittedText ?? textsOf(r));
   if (d.decision === "APPROVED" || d.decision === "APPROVED_EDITED") {
     const approved: SupportTexts = { ...submitted };
     if (d.decision === "APPROVED_EDITED") {
@@ -487,6 +504,8 @@ export async function decideSupportReport(ctx: SupportCtx, d: DecisionInput): Pr
     r.approvedText = approved;
     r.principalEdited = d.decision === "APPROVED_EDITED" && JSON.stringify(approved) !== JSON.stringify(submitted);
     r.status = "APPROVED";
+    if (d.strategyLinks?.length) r.strategyLinks = await resolveLinks(r, d.strategyLinks);
+    if (d.sectionHints) r.sectionHints = d.sectionHints.filter((x) => (SUPPORT_SECTIONS as readonly string[]).includes(x));
   } else if (d.decision === "RETURNED") {
     r.status = "RETURNED";
     r.returnedAt = now;
@@ -552,6 +571,8 @@ export interface ReportView {
   textVisible: boolean;
   studentName: string | null;
   authorName: string | null;
+  /** The viewer is the Principal (approve / view_all): compare notes, skew, preview may show. */
+  principal?: boolean;
 }
 
 async function studentNames(ids: Types.ObjectId[]): Promise<Map<string, string>> {
@@ -587,24 +608,27 @@ export async function queuePage(
 ): Promise<PageOut<ReportView> & { waiting: number; oldestDays: number | null; held: number }> {
   const auth = await supportCaller(ctx);
   if (!holdsApprove(auth)) throw new SupportProfileRefusal("অনুমতি নেই।");
-  const { page, pageSize, skip } = paging(args);
-  const statuses = args.status === "PROCESSED" ? ["PROCESSED"] : args.status === "TO_PROCESS" ? ["TO_PROCESS"] : ["TO_PROCESS", "PROCESSED", "IN_BATCH"];
-  const filter = { status: { $in: statuses } };
-  const [rows, total, waiting, oldest, held] = await Promise.all([
-    SupportReport.find(filter).sort({ safeguardingHold: -1, waitingSince: 1, createdAt: 1 }).skip(skip).limit(pageSize),
-    SupportReport.countDocuments(filter),
+  const { page, pageSize } = paging(args);
+  const quick = args.status === "QUICK";
+  const statuses = args.status === "PROCESSED" || quick ? ["PROCESSED"] : args.status === "TO_PROCESS" ? ["TO_PROCESS"] : ["TO_PROCESS", "PROCESSED", "IN_BATCH"];
+  const [all, waiting, oldest, held, bannerProfiles] = await Promise.all([
+    SupportReport.find({ status: { $in: statuses } }).sort({ waitingSince: 1, createdAt: 1 }).limit(2000),
     SupportReport.countDocuments({ status: "TO_PROCESS" }),
     SupportReport.findOne({ status: "TO_PROCESS" }).sort({ waitingSince: 1 }).select("waitingSince").lean(),
     SupportReport.countDocuments({ safeguardingHold: "OPEN", status: { $in: ["TO_PROCESS", "PROCESSED", "NEEDS_REWRITE"] } }),
+    SupportProfile.find({ safeguardingBanner: true }).select("studentId").lean(),
   ]);
-  // "OPEN" > "NONE" > "CLEARED" alphabetically is not the order we want: pin holds explicitly.
-  rows.sort((a, b) => Number(b.safeguardingHold === "OPEN") - Number(a.safeguardingHold === "OPEN"));
+  // Pinned on top: an open safeguarding question, then a child with a safeguarding banner (SG-4, SG-6).
+  const banner = new Set(bannerProfiles.map((p) => String(p.studentId)));
+  const rank = (r: ISupportReport) => (r.safeguardingHold === "OPEN" ? 0 : banner.has(String(r.studentId)) ? 1 : 2);
+  const sorted = (quick ? all.filter(isQuickApprovable) : all).sort((a, b) => rank(a) - rank(b));
+  const rows = sorted.slice((page - 1) * pageSize, page * pageSize);
   const names = await studentNames(rows.map((r) => r.studentId));
   const authors = new Map((await User.find({ _id: { $in: rows.map((r) => r.authorId) } }).select("name").lean()).map((u) => [String(u._id), u.name]));
   const oldestDays = oldest?.waitingSince ? Math.floor((Date.now() - new Date(oldest.waitingSince).getTime()) / 86_400_000) : null;
   return {
-    rows: rows.map((r) => ({ r, textVisible: true, studentName: names.get(String(r.studentId)) ?? null, authorName: authors.get(String(r.authorId)) ?? null })),
-    total,
+    rows: rows.map((r) => ({ r, textVisible: true, studentName: names.get(String(r.studentId)) ?? null, authorName: authors.get(String(r.authorId)) ?? null, principal: true })),
+    total: sorted.length,
     page,
     pageSize,
     waiting,
@@ -637,7 +661,7 @@ export async function readReport(ctx: SupportCtx, reportId: string, via: string)
   });
   const names = await studentNames([r.studentId]);
   const author = principal ? ((await User.findById(r.authorId).select("name").lean())?.name ?? null) : null;
-  return { r, textVisible: true, studentName: names.get(String(r.studentId)) ?? null, authorName: author };
+  return { r, textVisible: true, studentName: names.get(String(r.studentId)) ?? null, authorName: author, principal };
 }
 
 /** §2.4: a NOT_USED report's text is deleted after 30 days; the decision row stays. */

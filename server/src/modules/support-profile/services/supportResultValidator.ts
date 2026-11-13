@@ -74,6 +74,8 @@ export interface ValidationCtx {
   reports: Map<string, CtxReport>;
   children: Set<string>;
   strategies: Set<string>;
+  /** Strategy code → child code (COMPARE strategy ids must be this child's, §6.4). */
+  strategyChildren?: Map<string, string>;
   items: Set<string>;
   /** Every roster name (children, guardians, staff): none may sit in a model sentence (V-11). */
   rosterNames: string[];
@@ -297,6 +299,41 @@ function validateReport(
       flags.push({ id: `s${flags.length + 1}`, category: "OTHER_CHILD", severity: "BLOCK", field: field === "resultNote" ? "result" : field, quote: OTHER_CHILD_MASK, whyBn: "অন্য শিশুর পরিচয় রিপোর্টে থাকবে না।", askBn: "নামটি বাদ দিয়ে 'এক সহপাঠী' লিখুন।", suggestionBn: null, byServer: true });
     }
   }
+  // COMPARE (§6.4, V-5): every report / strategy id must be this child's and in this batch's map.
+  let compare = (raw.compare as Record<string, unknown> | null) ?? null;
+  if (compare) {
+    const cmp = compare as {
+      agreement: { otherReportIds: string[]; noteBn: string; claim: string }[];
+      functionHint: { reportIds: string[] };
+      safeguardingPattern: { reportIds: string[] };
+      strategyMatches: { strategyId: string }[];
+      authorSkew: { status: string; noteBn: string };
+      principalSummaryBn: string;
+    };
+    const ids = [...cmp.agreement.flatMap((a) => a.otherReportIds), ...cmp.functionHint.reportIds, ...cmp.safeguardingPattern.reportIds];
+    const badReport = ids.some((x) => ctx.reports.get(x)?.childCode !== rep.childCode);
+    const badStrategy = cmp.strategyMatches.some(
+      (m) => m.strategyId !== "NEW" && (!ctx.strategies.has(m.strategyId) || (ctx.strategyChildren && ctx.strategyChildren.get(m.strategyId) !== rep.childCode)),
+    );
+    if (badReport || badStrategy) {
+      out.rejected.push({ itemRef: ref, reasonCode: "UNKNOWN_CODE", field: "compare" });
+      return null;
+    }
+    // authorSkew only with ≥ 3 reports from this author and ≥ 3 from others on this child (§6.4).
+    const childReps = [...ctx.reports.values()].filter((x) => x.childCode === rep.childCode);
+    const mine = childReps.filter((x) => x.authorCode === rep.authorCode).length;
+    const others = childReps.length - mine;
+    if (mine < 3 || others < 3) cmp.authorSkew = { status: "TOO_FEW", noteBn: "" };
+    // V-10 on the model's notes: a label / diagnosis or a link drops that note.
+    const clean = (t: string) => (blockedTermIn(t) || LINK_OR_HTML.test(t) ? "" : t);
+    for (const a of cmp.agreement) {
+      a.noteBn = clean(a.noteBn);
+      a.claim = clean(a.claim);
+    }
+    cmp.authorSkew.noteBn = clean(cmp.authorSkew.noteBn);
+    cmp.principalSummaryBn = clean(cmp.principalSummaryBn);
+    compare = cmp as unknown as Record<string, unknown>;
+  }
   const anyBlock = flags.some((f) => f.severity === "BLOCK");
   return {
     code,
@@ -305,7 +342,7 @@ function validateReport(
     toneCheck: c.toneCheck,
     strategyCandidate: c.strategyCandidate.present && !blockedTermIn(c.strategyCandidate.titleBn) && !safeguardingTermIn(c.strategyCandidate.titleBn) && !c.strategyCandidate.punitive ? c.strategyCandidate : null,
     safeguarding: { present: c.safeguarding.present, signs: c.safeguarding.signs, confidence: c.safeguarding.confidence },
-    compare: (raw.compare as unknown) ?? null,
+    compare,
   };
 }
 
