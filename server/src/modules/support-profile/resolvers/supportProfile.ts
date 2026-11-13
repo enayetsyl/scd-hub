@@ -16,8 +16,11 @@
  * refused unless the real person holds view_all) and the per-child reader check (§8.2).
  */
 import { builder } from "../../../schema";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { Student } from "../../foundation/models/Student";
+import { studentsReadBy } from "../services/supportScope";
 import { pageRef } from "../../../pageRef";
-import { SUPPORT_TEXT_FIELDS, type SupportTextField } from "@scd/shared";
+import { SUPPORT_TEXT_FIELDS, callerHasPermission, type Permission, type SupportTextField } from "@scd/shared";
 import type { ISupportReport } from "../models/SupportReport";
 import type { SupportItem } from "../models/SupportProfileVersion";
 import {
@@ -34,8 +37,8 @@ import {
   type SubmitOutcome,
   type SupportReportInput,
 } from "../services/SupportReportService";
-import { chipStudentIds, openProfile, profilesPage, readProfile, setProfileStatus, setSwitch, type ProfileView } from "../services/SupportProfileService";
-import { canSeeSafeguardingBanner, getSupportSetting, supportCaller } from "../services/supportAccess";
+import { chipStudentIds, openProfile, profilesPage, readProfile, reportableStudents, setProfileStatus, setSwitch, type ProfileView } from "../services/SupportProfileService";
+import { canSeeSafeguardingBanner, getSupportSetting, holdsApprove, holdsViewAll, isSwitchedOn, supportCaller } from "../services/supportAccess";
 import { evidencePreview, isQuickApprovable } from "../services/supportQueueExtras";
 import { recordsPack } from "../services/supportRecords";
 import { answerSeed, offerSeed, pendingSeeds } from "../services/supportSeed";
@@ -210,7 +213,7 @@ const ProfileViewRef = builder.objectRef<ProfileView>("SupportProfileView").impl
 });
 
 const ProfileRowRef = builder
-  .objectRef<{ id: string; studentId: string; studentName: string; classId: string; status: string; published: boolean; nextReviewDueKey: string | null }>("SupportProfileRow")
+  .objectRef<{ id: string; studentId: string; studentName: string; classId: string; status: string; published: boolean; nextReviewDueKey: string | null; safeguardingBanner: boolean }>("SupportProfileRow")
   .implement({
     fields: (t) => ({
       id: t.exposeString("id"),
@@ -220,6 +223,7 @@ const ProfileRowRef = builder
       status: t.exposeString("status"),
       published: t.exposeBoolean("published"),
       nextReviewDueKey: t.string({ nullable: true, resolve: (r) => r.nextReviewDueKey }),
+      safeguardingBanner: t.exposeBoolean("safeguardingBanner", { description: "Principal side only (SG-6): this resolver needs view_all." }),
     }),
   });
 const ProfileRowPageRef = pageRef("SupportProfileRowPage", ProfileRowRef);
@@ -473,6 +477,31 @@ builder.mutationField("reopenSupportProfile", (t) =>
   }),
 );
 
+builder.queryField("supportProfileEnabled", (t) =>
+  t.boolean({
+    description: "Is the drawer entry shown to this caller? Teachers: only once the switch is ON. The Principal side always (to set up). No settings detail.",
+    authScopes: { hasAnyPermission: ["support_profile:report", "support_profile:view", "support_profile:view_all", "support_profile:approve", "support_profile:manage", "safeguarding:receive"] },
+    resolve: async (_r, _a, ctx) => {
+      const auth = await supportCaller(ctx);
+      if (holdsViewAll(auth) || holdsApprove(auth) || callerHasPermission(auth, "support_profile:manage" as Permission) || callerHasPermission(auth, "safeguarding:receive" as Permission)) return true;
+      return isSwitchedOn();
+    },
+  }),
+);
+
+const ReportableStudentRef = builder.objectRef<{ id: string; name: string }>("SupportReportableStudent").implement({
+  fields: (t) => ({ id: t.exposeString("id"), name: t.exposeString("name") }),
+});
+builder.queryField("supportReportableStudents", (t) =>
+  t.field({
+    type: [ReportableStudentRef],
+    description: "The child picker (§9.3): students the caller teaches today, matched by name; no profile needed.",
+    authScopes: { hasPermission: "support_profile:report" },
+    args: { search: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => reportableStudents(ctx, a.search),
+  }),
+);
+
 builder.queryField("supportProfileSetting", (t) =>
   t.field({
     type: SettingRef,
@@ -498,21 +527,31 @@ builder.mutationField("setSupportProfileSwitch", (t) =>
 // ---------------------------------------------------------------------------------------------
 
 const SeedOfferRef = builder
-  .objectRef<{ offered: boolean; safeguardingFirst: boolean; praise: boolean; state: string | null }>("SupportSeedOffer")
+  .objectRef<{ offered: boolean; safeguardingFirst: boolean; praise: boolean; state: string | null; studentId?: string }>("SupportSeedOffer")
   .implement({
     fields: (t) => ({
       offered: t.exposeBoolean("offered"),
       safeguardingFirst: t.exposeBoolean("safeguardingFirst"),
       praise: t.exposeBoolean("praise"),
       state: t.string({ nullable: true, resolve: (o) => o.state }),
+      studentId: t.string({ nullable: true, resolve: (o) => (o.offered ? (o.studentId ?? null) : null) }),
     }),
   });
 const SeedAnswerRef = builder
   .objectRef<{ state: string; draft: ReportView | null }>("SupportSeedAnswer")
   .implement({ fields: (t) => ({ state: t.exposeString("state"), draft: t.field({ type: ReportRef, nullable: true, resolve: (a) => a.draft }) }) });
 const SeedPromptRef = builder
-  .objectRef<{ commentId: string; studentId: string; state: string; expiresKey: string }>("SupportSeedPrompt")
-  .implement({ fields: (t) => ({ commentId: t.exposeString("commentId"), studentId: t.exposeString("studentId"), state: t.exposeString("state"), expiresKey: t.exposeString("expiresKey") }) });
+  .objectRef<{ commentId: string; studentId: string; state: string; expiresKey: string; studentName: string | null; offeredOn: string }>("SupportSeedPrompt")
+  .implement({
+    fields: (t) => ({
+      commentId: t.exposeString("commentId"),
+      studentId: t.exposeString("studentId"),
+      state: t.exposeString("state"),
+      expiresKey: t.exposeString("expiresKey"),
+      studentName: t.exposeString("studentName", { nullable: true, description: "Null once the author no longer teaches the child." }),
+      offeredOn: t.exposeString("offeredOn"),
+    }),
+  });
 
 builder.mutationField("offerSupportSeed", (t) =>
   t.field({
@@ -541,7 +580,19 @@ builder.queryField("mySupportSeedPrompts", (t) =>
     type: [SeedPromptRef],
     description: "'লেখা বাকি' — open prompts, at most 50, gone by themselves after the comment day + 7.",
     authScopes: { hasPermission: "support_profile:report" },
-    resolve: async (_r, _a, ctx) =>
-      (await pendingSeeds(ctx)).map((p) => ({ commentId: String(p.commentId), studentId: String(p.studentId), state: p.state, expiresKey: p.expiresKey })),
+    resolve: async (_r, _a, ctx) => {
+      const rows = await pendingSeeds(ctx);
+      const auth = await supportCaller(ctx);
+      const mine = await studentsReadBy(auth.userId, rows.map((p) => String(p.studentId)));
+      const names = new Map((await Student.find({ _id: { $in: rows.map((p) => p.studentId) } }).select("name nameBn").lean()).map((x) => [String(x._id), x.nameBn || x.name]));
+      return rows.map((p) => ({
+        commentId: String(p.commentId),
+        studentId: String(p.studentId),
+        state: p.state,
+        expiresKey: p.expiresKey,
+        studentName: mine.has(String(p.studentId)) ? (names.get(String(p.studentId)) ?? null) : null,
+        offeredOn: dhakaDayKey(p.createdAt),
+      }));
+    },
   }),
 );
