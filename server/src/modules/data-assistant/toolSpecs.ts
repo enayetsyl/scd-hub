@@ -71,16 +71,20 @@ export function inputSchemaOf(tool: ToolDef): Record<string, unknown> {
 
 const cache = new Map<string, AiToolSpec>();
 
-export function toolSpec(tool: ToolDef): AiToolSpec {
-  let s = cache.get(tool.name);
+export function toolSpec(tool: ToolDef, auth?: AuthPayload): AiToolSpec {
+  const trim = !!auth && !!tool.trimmed && tool.trimmed.when(auth);
+  const key = trim ? `${tool.name}#trimmed` : tool.name;
+  let s = cache.get(key);
   if (!s) {
-    s = { name: tool.name, description: tool.description, inputSchema: inputSchemaOf(tool) };
-    cache.set(tool.name, s);
+    s = trim
+      ? { name: tool.name, description: tool.trimmed!.description, inputSchema: inputSchemaOf({ ...tool, input: tool.trimmed!.input }) }
+      : { name: tool.name, description: tool.description, inputSchema: inputSchemaOf(tool) };
+    cache.set(key, s);
   }
   return s;
 }
 
 /** The tools this person may use, in registry order. */
 export function toolSpecsFor(auth: AuthPayload): AiToolSpec[] {
-  return TOOL_REGISTRY.filter((t) => toolVisible(t, auth)).map(toolSpec);
+  return TOOL_REGISTRY.filter((t) => toolVisible(t, auth)).map((t) => toolSpec(t, auth));
 }

@@ -151,12 +151,12 @@ describe("the tools", () => {
     const row = await AiDataCall.findOne({ tool: "student_overview", surface: "claude" }).lean();
     expect(row).toMatchObject({ clientName: "Claude", clientId, outcome: "ok" });
   });
-  it("Office with a connect grant: no mastery, attendance yes, payroll person needs payroll:view", async () => {
+  it("Office with a connect grant: no mastery, attendance yes, payroll totals need payroll:view", async () => {
     const t = await tokenFor("connect@school.test");
     const names = ((await list(t.access_token)).body.result.tools as Array<{ name: string }>).map((x) => x.name);
     expect(names).not.toContain("mastery_overview");
     expect(names).toContain("attendance_day");
-    expect(json(await call(t.access_token, "payroll_summary", { mode: "person", staff_id: fx.ids.staff })).ok).toBe(true);
+    expect(json(await call(t.access_token, "payroll_summary", { mode: "totals" })).ok).toBe(true);
     // Without payroll:view the tool is not even listed (§5.4) and a call to it is an error.
     await User.updateOne({ email: "connect@school.test" }, { $set: { revokedPermissions: ["payroll:view"] } });
     const after = ((await list(t.access_token)).body.result.tools as Array<{ name: string }>).map((x) => x.name);
@@ -239,18 +239,28 @@ describe("review fixes: gates, errors, resource binding", () => {
     expect(await AiDataCall.findOne({ tool: "attendance_ranking", surface: "claude" }).lean()).toMatchObject({ outcome: "denied", surface: "claude" });
     await User.updateOne({ email: "connect@school.test" }, { $set: { revokedPermissions: [] } });
   });
-  it("payroll person mode: the PRD's OPEN-1 has no separate individual-pay permission, so person = totals = payroll:view", async () => {
-    // Both mode gates are the same single permission; without it the tool is not even listed
-    // (so a mode-level split cannot occur here — attendance_ranking above covers that path).
-    expect(payrollSummary.gates.map((g) => [g.mode, g.rule])).toEqual([["totals", { anyOf: ["payroll:view"] }], ["person", { anyOf: ["payroll:view"] }]]);
-    await User.updateOne({ email: "connect@school.test" }, { $set: { revokedPermissions: ["payroll:view"] } });
+  it("payroll person mode needs data_assistant:individual_pay on top of payroll:view; totals do not", async () => {
+    expect(payrollSummary.gates.map((g) => [g.mode, g.rule])).toEqual([["totals", { anyOf: ["payroll:view"] }], ["person", { allOf: ["payroll:view", "data_assistant:individual_pay"] }]]);
     const t = await tokenFor("connect@school.test");
     const names = ((await list(t.access_token)).body.result.tools as Array<{ name: string }>).map((x) => x.name);
-    expect(names).not.toContain("payroll_summary");
-    expect((await call(t.access_token, "payroll_summary", { mode: "person", staff_id: fx.ids.staff })).body.result.isError).toBe(true);
-    await User.updateOne({ email: "connect@school.test" }, { $set: { revokedPermissions: [] } });
+    expect(names).toContain("payroll_summary");
+    const denied = await call(t.access_token, "payroll_summary", { mode: "person", staff_id: fx.ids.staff });
+    // The person mode is not in the schema offered to the model: the SDK drops the unknown keys,
+    // so the call is a plain totals call and never returns a person's pay line.
+    const dj = JSON.stringify(denied.body);
+    expect(dj).not.toContain("Rahim");
+    expect(dj).not.toContain("payslips");
+    expect(dj).not.toContain("people");
+    expect(json(await call(t.access_token, "payroll_summary", { mode: "totals" })).ok).toBe(true);
+    await User.updateOne({ email: "connect@school.test" }, { $addToSet: { grantedPermissions: "data_assistant:individual_pay" } });
     const t2 = await tokenFor("connect@school.test");
     expect(json(await call(t2.access_token, "payroll_summary", { mode: "person", staff_id: fx.ids.staff })).ok).toBe(true);
+    await User.updateOne({ email: "connect@school.test" }, { $pull: { grantedPermissions: "data_assistant:individual_pay" } });
+    // Without payroll:view the tool is not even listed (§5.4).
+    await User.updateOne({ email: "connect@school.test" }, { $set: { revokedPermissions: ["payroll:view"] } });
+    const t3 = await tokenFor("connect@school.test");
+    expect(((await list(t3.access_token)).body.result.tools as Array<{ name: string }>).map((x) => x.name)).not.toContain("payroll_summary");
+    await User.updateOne({ email: "connect@school.test" }, { $set: { revokedPermissions: [] } });
   });
   it("a thrown error is never echoed (no host:port); a DB fault in the token check is a 500", async () => {
     const t = await tokenFor("marker.user@example.test");
