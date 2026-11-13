@@ -246,6 +246,10 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
   // D-#870: class books (staff read every class's; the Office uploads).
   { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
+  // Book lifecycle (D-#1590): বই ও সংস্করণ — the school's own books, versions and paper review.
+  { type: "item", route: "BookLcTab", labelKey: "blNavTitle", icon: "📗" },
+  // Book lifecycle for teachers: আমার বই (released Teacher edition, errata, report an error).
+  { type: "item", route: "BookLcTeacherTab", labelKey: "blMyBooks", icon: "📘" },
   // D-#1620: winter-holiday booklet review (a named reviewer + the Principal).
   { type: "item", route: "WinterTaskTab", labelKey: "wtNav", icon: "❄️", perms: ["winter_task:review", "winter_task:manage"] },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },

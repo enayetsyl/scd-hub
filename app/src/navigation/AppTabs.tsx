@@ -55,6 +55,8 @@ import type {
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
+  BookLcStackParamList,
+  BookLcTeacherStackParamList,
   WinterTaskStackParamList,
   ExamPapersStackParamList,
   StorybooksStackParamList,
@@ -137,6 +139,18 @@ import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
 import ClassBooksScreen from "../screens/classbooks/ClassBooksScreen";
+import BookLcListScreen from "../screens/booklifecycle/BookLcListScreen";
+import BookLcImportScreen from "../screens/booklifecycle/BookLcImportScreen";
+import BookLcBookScreen from "../screens/booklifecycle/BookLcBookScreen";
+import BookLcVersionScreen from "../screens/booklifecycle/BookLcVersionScreen";
+import BookLcRoundScreen from "../screens/booklifecycle/BookLcRoundScreen";
+import BookLcFeedbackScreen from "../screens/booklifecycle/BookLcFeedbackScreen";
+import BookLcDraftScreen from "../screens/booklifecycle/BookLcDraftScreen";
+import BookLcRuleSetsScreen from "../screens/booklifecycle/BookLcRuleSetsScreen";
+import BookLcReleaseScreen from "../screens/booklifecycle/BookLcReleaseScreen";
+import BookLcMyBooksScreen from "../screens/booklifecycle/BookLcMyBooksScreen";
+import BookLcReportScreen from "../screens/booklifecycle/BookLcReportScreen";
+import { BL as BLS } from "../screens/booklifecycle/blStrings";
 import ExamPapersHomeScreen from "../screens/exampapers/ExamPapersHomeScreen";
 import ExamPaperDraftScreen from "../screens/exampapers/ExamPaperDraftScreen";
 import ReferencePapersScreen from "../screens/exampapers/ReferencePapersScreen";
@@ -1979,6 +1993,37 @@ function ExamPapersNavigator(): React.ReactElement {
   );
 }
 
+// Book lifecycle (docs/prd-book-lifecycle.md §8). BookLcList is param-free (initial slot).
+const BookLcStack = createNativeStackNavigator<BookLcStackParamList>();
+function BookLcNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <BookLcStack.Navigator screenOptions={stackOptions}>
+      <BookLcStack.Screen name="BookLcList" component={BookLcListScreen} options={{ title: BLS.navTitle }} />
+      <BookLcStack.Screen name="BookLcImport" component={BookLcImportScreen} options={{ title: BLS.importTitle }} />
+      <BookLcStack.Screen name="BookLcRuleSets" component={BookLcRuleSetsScreen} options={{ title: BLS.ruleSets }} />
+      <BookLcStack.Screen name="BookLcBook" component={BookLcBookScreen} options={{ title: BLS.navTitle }} />
+      <BookLcStack.Screen name="BookLcVersion" component={BookLcVersionScreen} options={{ title: BLS.tabVersions }} />
+      <BookLcStack.Screen name="BookLcRound" component={BookLcRoundScreen} options={{ title: BLS.roundTitle }} />
+      <BookLcStack.Screen name="BookLcFeedback" component={BookLcFeedbackScreen} options={{ title: BLS.triageTitle }} />
+      <BookLcStack.Screen name="BookLcDraft" component={BookLcDraftScreen} options={{ title: BLS.draftTitle }} />
+      <BookLcStack.Screen name="BookLcRelease" component={BookLcReleaseScreen} options={{ title: BLS.printTitle }} />
+    </BookLcStack.Navigator>
+  );
+}
+
+// Book lifecycle for teachers (§8 S8/S9): আমার বই is param-free (initial slot).
+const BookLcTeacherStack = createNativeStackNavigator<BookLcTeacherStackParamList>();
+function BookLcTeacherNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <BookLcTeacherStack.Navigator screenOptions={stackOptions}>
+      <BookLcTeacherStack.Screen name="BookLcMyBooks" component={BookLcMyBooksScreen} options={{ title: BLS.myBooksTitle }} />
+      <BookLcTeacherStack.Screen name="BookLcReport" component={BookLcReportScreen} options={{ title: BLS.reportTitle }} />
+    </BookLcTeacherStack.Navigator>
+  );
+}
+
 const ClassBooksStack = createNativeStackNavigator<ClassBooksStackParamList>();
 function ClassBooksNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -2289,6 +2334,10 @@ export function AppTabs(): React.ReactElement {
   const guardianFeatures = useGuardianFeatures();
   // D-#870: class books — staff by action; guardians get their own tab (GuardianBooksTab).
   const canClassBooks = any("class_books:view", "class_books:manage");
+  // Book lifecycle (D-#1596): ships Principal-only; `view` opens the list, each screen gates its own actions.
+  const canBookLc = any("book_lifecycle:view", "book_lifecycle:manage", "book_lifecycle:finalize", "book_lifecycle:release");
+  // Teachers (switched on by the owner): আমার বই + ভুল জানান.
+  const canBookLcTeacher = any("book_lifecycle:teacher_view", "book_lifecycle:report");
   // D-#1620: winter-task booklet review — a named reviewer, and the Principal.
   const canWinterTask = any("winter_task:review", "winter_task:manage");
   // D-#1030–#1033: exam paper bank — every staff member may be given a paper to review
@@ -2314,7 +2363,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canWinterTask || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
+    canSupportBook || canBookLc || canBookLcTeacher || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canWinterTask || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2411,7 +2460,11 @@ export function AppTabs(): React.ReactElement {
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
         {canReports ? <Drawer.Screen name="ReportsTab" component={ReportsNavigator} /> : null}
         {/* SB-2..SB-4 — effective-permission gate, see canSupportBook above. */}
+        {/* D-#1611: the old lesson-JSON module stays registered but has no sidebar entry (its
+            drawer group is hidden); S1's footer link opens it for book_production holders. */}
         {canSupportBook ? <Drawer.Screen name="SupportBookTab" component={SupportBookNavigator} /> : null}
+        {canBookLc ? <Drawer.Screen name="BookLcTab" component={BookLcNavigator} /> : null}
+        {canBookLcTeacher ? <Drawer.Screen name="BookLcTeacherTab" component={BookLcTeacherNavigator} /> : null}
         {canAdmin ? <Drawer.Screen name="AdminTab" component={AdminNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} /> : null}
