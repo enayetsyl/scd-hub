@@ -48,6 +48,7 @@ import { notifyHolders, notifyUser } from "./supportNotify";
 import { readerOf } from "./supportScope";
 import { resolveLinks, type LinkInput } from "./supportStrategies";
 import { isQuickApprovable } from "./supportQueueExtras";
+import { reconcileDrafts } from "./supportVersions";
 
 export interface SupportReportInput {
   studentId: string;
@@ -429,6 +430,7 @@ export async function routeToSafeguarding(r: ISupportReport, raisedBy: string, s
     safeguardingHold: "NONE",
   });
   await r.save();
+  await reconcileDrafts(r._id, "REMOVED");
   return r;
 }
 
@@ -438,6 +440,7 @@ export async function withdrawSupportReport(ctx: SupportCtx, reportId: string): 
   const r = await ownEditable(auth, reportId);
   r.status = "WITHDRAWN";
   await r.save();
+  await reconcileDrafts(r._id, "REMOVED");
   await writeAudit({ eventKind: "SUPPORT_REPORT_WITHDRAWN", actorId: auth.userId, targetId: reportId, targetKind: "SupportReport", meta: { reportId, studentId: String(r.studentId), source: r.source } });
   return r;
 }
@@ -518,6 +521,8 @@ export async function decideSupportReport(ctx: SupportCtx, d: DecisionInput): Pr
   r.decisionReasonBn = reason || null;
   await r.save();
   await SupportReview.create({ profileId: r.profileId, kind: "REPORT_DECISION", reportId: r._id, decision: d.decision, reasonBn: reason, by: new Types.ObjectId(auth.userId), at: now });
+  // Rule 16: a draft citing this report follows the decision.
+  await reconcileDrafts(r._id, r.status === "APPROVED" ? "APPROVED" : "REMOVED");
   await writeAudit({ eventKind: "SUPPORT_REPORT_DECIDED", actorId: auth.userId, targetId: d.reportId, targetKind: "SupportReport", meta: { reportId: d.reportId, decision: d.decision, direct: wasWaiting } });
   const body =
     d.decision === "RETURNED"
