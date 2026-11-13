@@ -1,6 +1,6 @@
 # STATUS
 
-- 2026-11-13: **BUILT — book lifecycle BL-1…BL-6 (D-#1590–#1632 (D-#1620 and D-#1621 belong to other features))** on `claude/new-session-6juppd`, NOT merged, no PR (the cloud session's handoff note was folded into this STATUS and the DECISIONS rows when the last book-lifecycle PR merged). Everything ships OFF. **Owner switch-on checklist (BL-6):**
+- 2026-11-13: **BUILT — book lifecycle BL-1…BL-6 (D-#1590–#1632 (D-#1620 and D-#1621 belong to other features))** MERGED to dev 14 Nov via #1536 (BL-1+2), #1537 (BL-3), #1538 (BL-4) and the BL-5/6 PR, each after a fresh review + fixes (the cloud session's handoff note was folded into this STATUS and the DECISIONS rows when the last book-lifecycle PR merged). Everything ships OFF. **Owner switch-on checklist (BL-6):**
   1. Read and approve the editing method `server/assets/book-lifecycle/edit_method_v1.md` (one file; the AI job, the Claude connector and the bundle all use it word for word).
   2. BL-0 is DONE in the repo (`scripts/backup.sh` dumps the book plane `scdhub_books_prod` daily and hourly, the weekly restore check restores it, `/readyz` reports "[book] plane connected"). Before the first real book, deploy it to the VM, set `BOOK_MONGODB_URI` in `/opt/scdhub/prod/.env`, run `backup.sh hourly` once and `backup.sh restorecheck`, and see the book-plane lines in `/opt/scdhub/backup.log`.
   3. Import the first pilot book: **a printed book that already has post-print fixes waiting** (owner Q11) — বই ও সংস্করণ → নতুন বই / পুরোনো বই আনুন, state "print_released" (needs the Principal).
