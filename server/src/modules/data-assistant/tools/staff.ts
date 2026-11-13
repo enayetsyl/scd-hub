@@ -3,9 +3,11 @@
  * tools 16–19). StaffProfile contact, NID and bank fields are never selected; the payroll
  * `person` mode reads payslips (which carry no bank/NID) — never the payment-export rows.
  *
- * OPEN-1 (settled from the code): the payroll screens have NO separate individual-pay switch.
- * `staffPayslips` and `payslipsForRun` (the per-person pay lines) are gated `payroll:view`, the
- * same as `payrollRuns`. So `person` = `payroll:view` exactly (no new switch invented, D-#1544).
+ * OPEN-1: the payroll screens have NO separate individual-pay switch (`staffPayslips` and
+ * `payslipsForRun` are `payroll:view`, as `payrollRuns`). Owner decision 13 Nov: the assistant is
+ * stricter than the screens — `person` also needs `data_assistant:individual_pay` (Principal by
+ * default), so Office's `payroll:view` never reaches the assistant's per-person pay. The screens
+ * are unchanged; `totals` stays `payroll:view` only.
  */
 import { Types } from "mongoose";
 import { z } from "zod";
@@ -17,7 +19,7 @@ import { listLeavePage } from "../../hr/services/StaffLeaveService";
 import { balancesForStaff } from "../../hr/services/LeaveEntitlementService";
 import { payrollRuns, payslipsForRun, payslipsForStaff } from "../../hr/services/PayrollService";
 import { skeleton } from "../../platform/ai/deidentify";
-import { assertRule, gateOf } from "../gates";
+import { assertRule, gateOf, passes } from "../gates";
 import { LONG_TEXT_CAP, wrapUntrusted } from "../untrusted";
 import { ToolInvalid, type ToolDef } from "../types";
 import { addDays, cap, checkDay, checkRange, currentYearIdOrThrow, DATE_KEY, limitArg, MONTH_KEY, NAME_QUERY, OBJECT_ID } from "./common";
@@ -184,7 +186,7 @@ export const staffLeave: ToolDef = {
 // ---------------------------------------------------------------------------
 
 const PAY_TOTALS = { anyOf: ["payroll:view"] } as const;
-const PAY_PERSON = { anyOf: ["payroll:view"] } as const;
+const PAY_PERSON = { allOf: ["payroll:view", "data_assistant:individual_pay"] } as const;
 
 type Slip = Awaited<ReturnType<typeof payslipsForRun>>[number];
 
@@ -204,8 +206,15 @@ export const payrollSummary: ToolDef = {
   },
   gates: [
     { mode: "totals", rule: PAY_TOTALS, resolver: { file: "modules/hr/resolvers/payroll.ts", field: "payrollRuns" } },
-    { mode: "person", rule: PAY_PERSON, resolver: { file: "modules/hr/resolvers/payroll.ts", field: "staffPayslips" } },
+    { mode: "person", rule: PAY_PERSON, resolver: { file: "modules/hr/resolvers/payroll.ts", field: "staffPayslips" }, alsoChecked: ["data_assistant:individual_pay"], note: "Stricter than the screen (owner 13 Nov): also needs data_assistant:individual_pay." },
   ],
+  trimmed: {
+    when: (auth) => !passes(auth, PAY_PERSON),
+    description:
+      "Salaries (বেতন, বেতন শিট, মোট বেতন, কর্তন). Monthly totals only: per month — status, staff count, gross, deductions, net, by category " +
+      "(month = YYYY-MM, or last_n months ≤ 24, default 6). Individual people's pay is not available to this person. Never returns bank accounts or NID.",
+    input: { month: MONTH_KEY.optional(), last_n: z.number().int().min(1).max(24).optional() },
+  },
   maxRows: 100,
   async run(ctx, a) {
     const args = a as { mode?: "totals" | "person"; month?: string; last_n?: number; staff_id?: string };
