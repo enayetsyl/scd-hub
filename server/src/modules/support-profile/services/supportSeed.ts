@@ -26,6 +26,8 @@ const addDays = (key: string, n: number): string => {
 };
 
 export interface SeedOffer {
+  /** Only when offered: the child, so the app can raise a safety concern before the report. */
+  studentId?: string;
   offered: boolean;
   /** SERIOUS_MATTER: the safeguarding question comes first (§7.4). */
   safeguardingFirst: boolean;
@@ -55,7 +57,7 @@ export async function offerSeed(ctx: SupportCtx, commentId: string): Promise<See
   // Only the comment's own author is ever offered it (the unique key is on the comment).
   if (String(p.authorId) !== auth.userId) return NO;
   const open = (p.state === "OFFERED" || p.state === "LATER") && p.expiresKey >= dhakaDayKey(new Date());
-  return { offered: open, safeguardingFirst: c.type === "SERIOUS_MATTER", praise: c.sentiment === "POSITIVE", state: p.state };
+  return { offered: open, safeguardingFirst: c.type === "SERIOUS_MATTER", praise: c.sentiment === "POSITIVE", state: p.state, studentId: String(c.studentId) };
 }
 
 export async function answerSeed(ctx: SupportCtx, commentId: string, choice: "NOW" | "LATER" | "NO"): Promise<{ prompt: ISupportSeedPrompt; draft: ISupportReport | null }> {
