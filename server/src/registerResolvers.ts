@@ -194,3 +194,5 @@ import "./modules/quran-exam/resolvers/quranExam";
 import "./modules/viva/resolvers/viva";
 // Year change YC-5 (docs/prd-year-change.md): the Principal-only face over the YC-4/YC-6 engine.
 import "./modules/year-change/resolvers/yearChange";
+import "./modules/support-profile/resolvers/supportProfile";
+import "./modules/platform/safeguarding/safeguardingResolvers";

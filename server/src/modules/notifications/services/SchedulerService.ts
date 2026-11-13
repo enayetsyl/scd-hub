@@ -111,6 +111,7 @@ import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
 import { settleOverdueMistakes } from "../../staff-mistakes/services/StaffMistakeService";
 import { dispatchStaffMistakeDaily, STAFF_MISTAKE_DAILY_MINUTES } from "../../staff-mistakes/services/StaffMistakeDailyService";
+import { runSupportProfileSweeps } from "../../support-profile/services/supportSweeps";
 import { getSettings as getDailyReportSettings, runDailyReport } from "../../daily-report/services/DailyReportService";
 import { sweepExpiredShares } from "../../daily-report/services/DailyReportShareService";
 
@@ -274,6 +275,8 @@ export interface TickSummary {
   taskGivenSummaryEmitted: number;
   /** D-#1020: 18:00 end-of-day staff mistake reports sent. */
   staffMistakeDailySent: number;
+  /** Support profile (D-#1564, D-#1558): hourly safeguarding re-notices + the daily sweeps. */
+  supportProfileSweeps: number;
   /** 11:00 improvement sweep (SP-4, D-#738): Office/Principal digests + class-teacher guardian alerts. */
   improvementPendingEmitted: number;
   improvementMissedEmitted: number;
@@ -331,6 +334,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     taskOverdueEmitted: 0,
     taskGivenSummaryEmitted: 0,
     staffMistakeDailySent: 0,
+    supportProfileSweeps: 0,
     improvementPendingEmitted: 0,
     improvementMissedEmitted: 0,
     meetingNoteRemindersEmitted: 0,
@@ -368,6 +372,11 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   // D-#1020: the end-of-day report — who made which mistake today — once, at 18:00, any day.
   // minutesOfDay(now), not `nowMin`: this runs before the school-day gate where `nowMin` is
   // declared, and reading it here threw (TDZ) on every tick — family() swallowed it.
+  // Support profile (docs/prd-child-support-profile.md §9.7, §2.4): an unseen safeguarding referral
+  // is re-noticed hourly in school hours (throttled inside); the daily sweeps run once a day. Any day.
+  await family("support profile", async () => {
+    summary.supportProfileSweeps += await runSupportProfileSweeps(now, (key, fn) => runOnce(dateKey, key, fn));
+  });
   await family("staff mistake daily", async () => {
     if (!windowOpen(minutesOfDay(now), STAFF_MISTAKE_DAILY_MINUTES)) return;
     await runOnce(dateKey, "SMDAILY", async () => {

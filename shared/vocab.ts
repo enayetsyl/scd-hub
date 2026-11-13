@@ -1664,6 +1664,11 @@ export const NOTIFICATION_KINDS = [
   "EXAM_RESULT_SUBMITTED",
   "EXAM_RESULT_PUBLISHED",
   "LESSON_MISSED",
+  // Student support profile (docs/prd-child-support-profile.md §9.7, D-#1546–#1566). App-native.
+  // SUPPORT_PROFILE: every notice of the feature; SAFEGUARDING: a referral to the receiver
+  // (safeguarding:receive). Title and body never carry a child's name or any detail.
+  "SUPPORT_PROFILE",
+  "SAFEGUARDING",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1757,6 +1762,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   EXAM_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
   EXAM_RESULT_PUBLISHED: "পরীক্ষার ফলাফল প্রকাশিত",
   LESSON_MISSED: "ক্লাসের পাঠ মিস হয়েছে",
+  SUPPORT_PROFILE: "শিক্ষার্থী সহায়তা",
+  SAFEGUARDING: "শিশু সুরক্ষা",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1848,6 +1855,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   EXAM_RESULT_SUBMITTED: "Report cards await approval",
   EXAM_RESULT_PUBLISHED: "Exam results published",
   LESSON_MISSED: "Missed a lesson",
+  SUPPORT_PROFILE: "Student support",
+  SAFEGUARDING: "Safeguarding",
 };
 
 /**

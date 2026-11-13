@@ -421,6 +421,32 @@ export const FEATURE_CATALOGUE = {
       export: { en: "Profile PDF", bn: "প্রোফাইল PDF ডাউনলোড", desc: "Print the profile sheet", teacher: true, office: true, flags: [] },
     },
   },
+  // Student support profile (docs/prd-child-support-profile.md §8.1, D-#1547/#1548). Office can
+  // never hold view/report: every resolver also refuses an OFFICE or GUARDIAN caller whatever is
+  // stored (a role check that protects a target — ROLE_CHECK_BASELINE). view_all/approve/process/
+  // manage are LOCKED (owner O-1/O-5 made structural).
+  support_profile: {
+    group: "students_and_families",
+    en: "Student support profile",
+    bn: "শিক্ষার্থী সহায়তা প্রোফাইল",
+    actions: {
+      view: { en: "View a support profile", bn: "সহায়তা প্রোফাইল দেখা", desc: "The card and the full profile of a child the holder teaches now (class teacher, teaching, Quran/Arabic, cover on the cover day)", teacher: true, office: false, flags: [] },
+      report: { en: "Write a support report", bn: "সহায়তা রিপোর্ট লেখা", desc: "Write, save, edit and withdraw own reports on a child the holder teaches now; answer the comment prompt; raise a safeguarding concern", teacher: true, office: false, flags: [] },
+      view_all: { en: "Any child's support profile", bn: "সব সহায়তা প্রোফাইল দেখা", desc: "Any child's profile, history, reports and readers list", teacher: false, office: false, flags: ["LOCKED"] },
+      approve: { en: "Approve reports, publish profiles", bn: "রিপোর্ট অনুমোদন ও প্রোফাইল প্রকাশ", desc: "The review queue; approve / edit / return / not used (also directly on a waiting report); publish or discard versions", teacher: false, office: false, flags: ["LOCKED"] },
+      process: { en: "Run batches, packs and results", bn: "ব্যাচ চালানো, প্যাক নামানো ও ফলাফল আপলোড", desc: "Make a batch, download the de-identified analysis pack, upload and apply a result, run the evaluation pack, set the mode", teacher: false, office: false, flags: ["LOCKED"] },
+      manage: { en: "Open/close profiles and settings", bn: "প্রোফাইল খোলা/বন্ধ ও নিয়ম", desc: "Open, close, reopen profiles; switch the feature on; review dates, strategies, goals", teacher: false, office: false, flags: ["LOCKED"] },
+    },
+  },
+  // Safeguarding referral (§16.5, D-#1564): the smallest possible route out of the support profile.
+  safeguarding: {
+    group: "students_and_families",
+    en: "Safeguarding",
+    bn: "শিশু সুরক্ষা",
+    actions: {
+      receive: { en: "Receive safeguarding referrals", bn: "শিশু সুরক্ষা বিষয় গ্রহণ", desc: "Read referrals, mark seen, add one note, mark handled outside the app", teacher: false, office: false, flags: ["LOCKED"] },
+    },
+  },
   student_comments: {
     group: "students_and_families",
     en: "Daily comments",

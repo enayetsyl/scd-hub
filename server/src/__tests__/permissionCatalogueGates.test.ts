@@ -96,13 +96,21 @@ const OPEN_FIELDS: Record<string, string> = {
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
-const DECLARED_AHEAD: Record<string, string> = {};
+const DECLARED_AHEAD: Record<string, string> = {
+  // Catalogued at CSP-1 with the rest of the feature (D-#1548); its batch / pack / result
+  // resolvers arrive in CSP-2 (docs/prd-child-support-profile.md §12). Leaves this list then.
+  "support_profile:process": "CSP-2 — batches, the analysis pack, result upload",
+};
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):
  *  target-protection guards (whose login is touched), recipient routing splits, the book
  *  self-review stamp, and the pre-matrix fallback inside the scope helpers (used only when
  *  a call site passes no reach). */
 const ROLE_CHECK_BASELINE: Record<string, number> = {
+  // Support profile (D-#1548, docs/prd-child-support-profile.md §8.1): Office and guardians are
+  // refused on every support-profile resolver WHATEVER is stored — a target-protection guard, so a
+  // stale or mistaken grant can never leak a child's profile. The only role check in the feature.
+  "modules/support-profile/services/supportAccess.ts": 1,
   "middleware/authz.ts": 6,
   "modules/attendance/services/AttendanceReminderService.ts": 1,
   "modules/foundation/services/ImpersonationService.ts": 2,
