@@ -445,6 +445,14 @@ import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
 import AuditLogScreen from "../screens/admin/AuditLogScreen";
 import PersonActivityScreen from "../screens/admin/PersonActivityScreen";
 import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
+import SupportHomeScreen from "../screens/support/SupportHomeScreen";
+import SupportCardScreen from "../screens/support/SupportCardScreen";
+import SupportReportFormScreen from "../screens/support/SupportReportFormScreen";
+import MySupportReportsScreen from "../screens/support/MySupportReportsScreen";
+import SupportQueueScreen from "../screens/support/SupportQueueScreen";
+import SupportReviewScreen from "../screens/support/SupportReviewScreen";
+import SupportBatchScreen from "../screens/support/SupportBatchScreen";
+import SafeguardingReferralsScreen from "../screens/support/SafeguardingReferralsScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
 import AiUsageReportScreen from "../screens/reports/AiUsageReportScreen";
@@ -851,6 +859,15 @@ function HomeNavigator(): React.ReactElement {
       {/* D-#850: the comment guideline — from the write screens and the daily reminder. */}
       <HomeStack.Screen name="MeetingCommentGuide" component={MeetingCommentGuideScreen} options={{ title: STR.mcGuideTitle }} />
       <HomeStack.Screen name="MyPopups" component={MyPopupsScreen} options={{ title: STR.ppMineTitle }} />
+      {/* Student support profile (D-#1546–#1566): never first — Today stays the initial route. */}
+      <HomeStack.Screen name="SupportHome" component={SupportHomeScreen} options={{ title: STR.supTitle }} />
+      <HomeStack.Screen name="SupportCard" component={SupportCardScreen} options={{ title: STR.supCardTitle }} />
+      <HomeStack.Screen name="SupportReportForm" component={SupportReportFormScreen} options={{ title: STR.supReportTitle }} />
+      <HomeStack.Screen name="MySupportReports" component={MySupportReportsScreen} options={{ title: STR.supMyReports }} />
+      <HomeStack.Screen name="SupportQueue" component={SupportQueueScreen} options={{ title: STR.supQueueTitle }} />
+      <HomeStack.Screen name="SupportReview" component={SupportReviewScreen} options={{ title: STR.supReviewTitle }} />
+      <HomeStack.Screen name="SupportBatch" component={SupportBatchScreen} options={{ title: STR.supBatchTitle }} />
+      <HomeStack.Screen name="SafeguardingReferrals" component={SafeguardingReferralsScreen} options={{ title: STR.supRefTitle }} />
     </HomeStack.Navigator>
   );
 }

@@ -44,6 +44,7 @@ import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { useAuth } from "../../auth/AuthContext";
 import { useFileOpen } from "../../lib/useFileOpen";
+import { SupportProfileButton } from "../../components/SupportProfileButton";
 import { space } from "../../theme/tokens";
 import { useColors } from "../../theme";
 import type { StudentProfileParams } from "../../navigation/types";
@@ -242,7 +243,11 @@ export default function StudentProfileScreen(): React.ReactElement {
   ) : headerQ.fetching && !header ? (
     <Loader label={STR.loading} />
   ) : (
-    <IdentityCard header={header} fallbackName={studentName} narrowed={narrowed} footer={printButton} />
+    <>
+      <IdentityCard header={header} fallbackName={studentName} narrowed={narrowed} footer={printButton} />
+      {/* D-#1557: the support-profile card — only for a current reader of a published profile. */}
+      <SupportProfileButton studentId={studentId} via="STUDENT_PAGE" />
+    </>
   );
 
   // YC-2: the year picker — only when the child was enrolled in more than one year.
