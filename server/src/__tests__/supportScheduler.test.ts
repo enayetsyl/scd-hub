@@ -1,10 +1,12 @@
 /** CSP-5 — the notices (docs/prd-child-support-profile.md §7.3, §7.6, §9.7). */
 import mongoose from "mongoose";
+
 import { MongoMemoryServer } from "mongodb-memory-server";
 import "../registerResolvers";
 import { builder } from "../schema";
 import { SupportProfile } from "../modules/support-profile/models/SupportProfile";
 import { SupportProfileVersion } from "../modules/support-profile/models/SupportProfileVersion";
+import { SupportSetting } from "../modules/support-profile/models/SupportSetting";
 import { Notification } from "../modules/notifications/models/Notification";
 import { monthlyNudge, newClassAndCoverNotices, reviewNotices } from "../modules/support-profile/services/supportLifecycle";
 import { authOf, daysAgoKey, reportInput, runner, seedSupport, SUBMIT, todayKey, type SupportFx } from "./supportFixtures";
@@ -56,4 +58,37 @@ it("review due: 90 days when the profile has a concern item or a goal, else a ye
   await reviewNotices();
   expect(await notes(fx.principal, /পর্যালোচনা বাকি/)).toBe(1);
   // the publish rule itself (90 vs 365) is asserted in supportSynthesis
+});
+
+it("review due is ONE notice with a count, and reminders for a 90-day or yearly cut-over come from nextReviewDueKey", async () => {
+  const p = await SupportProfile.findOne({ studentId: fx.child });
+  p!.nextReviewDueKey = daysAgoKey(1);
+  await p!.save();
+  const before = await notes(fx.principal, /টি প্রোফাইলের পর্যালোচনা বাকি/);
+  await reviewNotices(new Date(Date.now() + 86_400_000));
+  await reviewNotices(new Date(Date.now() + 86_400_000));
+  expect(await notes(fx.principal, /টি প্রোফাইলের পর্যালোচনা বাকি/)).toBe(before + 1);
+  p!.nextReviewDueKey = daysAgoKey(-90); // not due yet
+  await p!.save();
+  const n = await notes(fx.principal, /টি প্রোফাইলের পর্যালোচনা বাকি/);
+  await reviewNotices(new Date(Date.now() + 2 * 86_400_000));
+  expect(await notes(fx.principal, /টি প্রোফাইলের পর্যালোচনা বাকি/)).toBe(n);
+});
+
+describe("CSP-5 blocker: nothing reaches a teacher while the switch is OFF", () => {
+  afterAll(async () => {
+    await SupportSetting.updateOne({ key: "main" }, { $set: { switchedOnKey: daysAgoKey(1) } });
+  });
+  it("no new-class, cover, monthly or review notice is written", async () => {
+    await SupportSetting.updateOne({ key: "main" }, { $set: { switchedOnKey: null } });
+    await Notification.deleteMany({});
+    const month = todayKey().slice(0, 7);
+    const p = await SupportProfile.findOne({ studentId: fx.child });
+    p!.nextReviewDueKey = daysAgoKey(1);
+    await p!.save();
+    expect(await newClassAndCoverNotices(new Date())).toBe(0);
+    expect(await monthlyNudge(new Date(`${month}-25T10:00:00+06:00`))).toBe(0);
+    expect(await reviewNotices(new Date())).toBe(0);
+    expect(await Notification.countDocuments({ kind: "SUPPORT_PROFILE" })).toBe(0);
+  });
 });

@@ -26,6 +26,7 @@ export type HomeStackParamList = {
   SupportReportForm: { studentId: string; reportId?: string; source?: string };
   MySupportReports: undefined;
   SupportQueue: undefined;
+  SupportReview: { reportId: string };
   SupportBatch: undefined;
   SafeguardingReferrals: undefined;
   /** D-#710: the claim queue for a teacher the Principal added to the 10:30 digest

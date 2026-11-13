@@ -18,6 +18,7 @@ import { Pressable, Text, View } from "react-native";
 import { DrawerContentScrollView, type DrawerContentComponentProps } from "@react-navigation/drawer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "urql";
+import { SUPPORT_ENABLED } from "../graphql/supportProfile";
 import type { Role } from "@scd/shared";
 
 import { STR } from "../lib/labels";
@@ -80,6 +81,8 @@ type NavLeaf = {
   hidden?: boolean;
   /** GH-4: shown only while the school's lesson-progress switch is on (guardian entries). */
   needsLessonProgress?: boolean;
+  /** Support profile (CSP-5 review): shown only while the server says the feature is on for this caller (teachers: switch ON). */
+  needsSupportSwitch?: boolean;
   /** Data assistant (D-#1570): also shown while the Principal uses "View as" (the server decides). */
   orViewAs?: boolean;
 };
@@ -249,7 +252,7 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "PopupNoticesTab", labelKey: "ppTitleNav", icon: "📣" },
   { type: "item", route: "HomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
   // Student support profile (D-#1546): teachers who teach, the Principal; never Office (no action).
-  { type: "item", route: "HomeTab", screen: "SupportHome", labelKey: "supTitle", icon: "🌱", perms: ["support_profile:report", "support_profile:view_all", "safeguarding:receive"] },
+  { type: "item", route: "HomeTab", screen: "SupportHome", labelKey: "supTitle", icon: "🌱", needsSupportSwitch: true, perms: ["support_profile:report", "support_profile:view_all", "safeguarding:receive"] },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
   { type: "item", route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
   {
@@ -433,16 +436,20 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const basket = useBasket();
   const { role, can, viewAs } = useAuth();
   const lessonProgressOn = useLessonProgressOn();
+  const supportAny = can("support_profile:report") || can("support_profile:view_all") || can("safeguarding:receive");
+  const [supportQ] = useQuery<{ supportProfileEnabled: boolean }>({ query: SUPPORT_ENABLED, pause: !supportAny, requestPolicy: "cache-and-network" });
+  const supportOn = supportQ.data?.supportProfileEnabled === true;
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
   /** Route-gate + the optional per-leaf effective-permission gate (see NavLeaf). */
   const visibleLeaf = React.useCallback(
     (leaf: NavLeaf): boolean =>
       !leaf.hidden &&
       (!leaf.needsLessonProgress || lessonProgressOn) &&
+      (!leaf.needsSupportSwitch || supportOn) &&
       present.has(leaf.route) &&
       (!leaf.perms || leaf.perms.some(can) || (!!leaf.orViewAs && !!viewAs)) &&
       (leaf.allOf ?? []).every(can),
-    [present, can, lessonProgressOn, viewAs],
+    [present, can, lessonProgressOn, supportOn, viewAs],
   );
   const focusedTab = props.state.routes[props.state.index];
   const activeRoute = focusedTab?.name as RouteName | undefined;

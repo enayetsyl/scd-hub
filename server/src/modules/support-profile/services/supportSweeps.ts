@@ -35,12 +35,8 @@ export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Prom
     await runOnce("SUPPORT_REMIND", async () => {
       n += await sweepRewrites(now, { states: false });
       n += await batchReminders(now);
-    });
-  }
-  // 9.7 morning notices (from 07:00 Dhaka, once a day): new class, the cover morning, the monthly
-  // nudge (the 25th), review due and the approval-load review day. All are no-ops while the switch is OFF.
-  if (dhakaHour(now) >= 7) {
-    await runOnce("SUPPORT_MORNING", async () => {
+      // 9.7 notices to teachers and the approvers (new class, cover day, monthly nudge on the 25th, review
+      // due, approval-load day): daytime only, under the same key; each is a no-op while the switch is OFF.
       n += await newClassAndCoverNotices(now);
       n += await monthlyNudge(now);
       n += await reviewNotices(now);

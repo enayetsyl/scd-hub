@@ -26,7 +26,10 @@ import { SupportSetting } from "../models/SupportSetting";
 import { SupportStrategy } from "../models/SupportStrategy";
 import { SupportReview } from "../models/SupportReview";
 import { SupportProfileRefusal } from "./errors";
-import { supportCaller, type SupportCtx } from "./supportAccess";
+import { isSwitchedOn, supportCaller, type SupportCtx } from "./supportAccess";
+import { studentsReadBy } from "./supportScope";
+import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
+import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
 import { notifyHolders, notifyUser } from "./supportNotify";
 import { strategyCounts } from "./supportStrategies";
 
@@ -74,49 +77,81 @@ async function sectionsWithPublishedProfiles(): Promise<Map<string, number>> {
   return m;
 }
 
-/** §9.7: the first day a teacher teaches a section with profiles; the cover morning. */
+/** §9.7: the first day a teacher teaches a section with profiles; the cover morning. Nothing while the switch is OFF. */
 export async function newClassAndCoverNotices(now: Date = new Date()): Promise<number> {
+  if (!(await isSwitchedOn())) return 0;
   const today = dhakaDayKey(now);
   const counts = await sectionsWithPublishedProfiles();
-  if (!counts.size) return 0;
+  const groupCounts = await groupsWithPublishedProfiles();
+  if (!counts.size && !groupCounts.size) return 0;
   const bn = (k: number) => k.toLocaleString("bn-BD");
   let n = 0;
   const dayStart = new Date(`${today}T00:00:00+06:00`);
-  const slots = await RoutineSlot.find({ groupType: "section", groupId: { $in: [...counts.keys()].map((x) => new Types.ObjectId(x)) }, active: true, effectiveFrom: { $gte: dayStart, $lt: new Date(dayStart.getTime() + DAY) } })
-    .select("teacherId groupId")
+  const dayEnd = new Date(dayStart.getTime() + DAY);
+  const groupKeys = [...counts.keys(), ...groupCounts.keys()].map((x) => new Types.ObjectId(x));
+  const slots = await RoutineSlot.find({ groupType: { $in: ["section", "subjectgroup"] }, groupId: { $in: groupKeys }, active: true, effectiveFrom: { $gte: dayStart, $lt: dayEnd } })
+    .select("teacherId groupId groupType")
     .lean();
   for (const s of slots) {
     if (!s.teacherId) continue;
-    const c = counts.get(String(s.groupId)) ?? 0;
+    const c = (s.groupType === "subjectgroup" ? groupCounts : counts).get(String(s.groupId)) ?? 0;
+    if (!c) continue;
     if (await notifyUser(String(s.teacherId), `আপনার নতুন ক্লাসে ${bn(c)} জন শিক্ষার্থীর সহায়তা প্রোফাইল আছে — ক্লাসের আগে পড়ে নিন`, `support-newclass:${s.groupId}`)) n++;
   }
-  const covers = await ScopeGrant.find({ kind: "proxy", proxyStatus: "active", sectionId: { $in: [...counts.keys()].map((x) => new Types.ObjectId(x)) }, startDate: { $gte: dayStart, $lt: new Date(dayStart.getTime() + DAY) } }).lean();
+  const covers = await ScopeGrant.find({ kind: "proxy", proxyStatus: "active", sectionId: { $in: [...counts.keys()].map((x) => new Types.ObjectId(x)) }, startDate: { $gte: dayStart, $lt: dayEnd } }).lean();
   for (const g of covers as unknown as { coveringTeacherId: Types.ObjectId; _id: Types.ObjectId }[]) {
     if (await notifyUser(String(g.coveringTeacherId), "আজকের কভার ক্লাসের সহায়তা প্রোফাইল দেখে নিন", `support-cover:${g._id}:${today}`)) n++;
+  }
+  // a cover for one period (Quran / Arabic groups included)
+  const subs = await RoutineSubstitution.find({ active: true, date: { $gte: dayStart, $lt: dayEnd } }).select("slotId coverTeacherId").lean();
+  if (subs.length) {
+    const subSlots = await RoutineSlot.find({ _id: { $in: subs.map((x) => x.slotId) } }).select("groupType groupId").lean();
+    const slotOf = new Map(subSlots.map((x) => [String(x._id), x]));
+    for (const sub of subs) {
+      const sl = slotOf.get(String(sub.slotId));
+      if (!sl || !sub.coverTeacherId) continue;
+      const c = (sl.groupType === "subjectgroup" ? groupCounts : counts).get(String(sl.groupId)) ?? 0;
+      if (c && (await notifyUser(String(sub.coverTeacherId), "আজকের কভার ক্লাসের সহায়তা প্রোফাইল দেখে নিন", `support-coverperiod:${sub.slotId}:${today}`))) n++;
+    }
   }
   return n;
 }
 
+async function groupsWithPublishedProfiles(): Promise<Map<string, number>> {
+  const ps = await SupportProfile.find({ status: "OPEN", currentVersionId: { $ne: null } }).select("studentId").lean();
+  const m = new Map<string, number>();
+  if (!ps.length) return m;
+  const mem = await SubjectGroupMembership.find({ studentId: { $in: ps.map((p) => p.studentId) } }).select("groupId").lean();
+  for (const x of mem) m.set(String(x.groupId), (m.get(String(x.groupId)) ?? 0) + 1);
+  return m;
+}
+
 /** §7.6: on the 25th, a gentle nudge to each report holder who wrote nothing this month. No count. */
 export async function monthlyNudge(now: Date = new Date()): Promise<number> {
+  if (!(await isSwitchedOn())) return 0;
   const today = dhakaDayKey(now);
   if (!today.endsWith("-25")) return 0;
   const month = today.slice(0, 7);
   const wrote = new Set((await SupportReport.find({ occurredOn: { $gte: `${month}-01` }, status: { $ne: "DRAFT" } }).distinct("authorId")).map(String));
   let n = 0;
+  // only a teacher who currently reads at least one child with an open profile (§7.6)
+  const openIds = (await SupportProfile.find({ status: "OPEN" }).select("studentId").lean()).map((p) => String(p.studentId));
   for (const uid of await holderIdsOf("support_profile:report" as Permission)) {
     if (wrote.has(uid)) continue;
+    if (!openIds.length || !(await studentsReadBy(uid, openIds, now)).size) continue;
     if (await notifyUser(uid, "এ মাসে কোন শিক্ষার্থীর সাথে কী কাজ করেছে? ছোট করে লিখে দিন", `support-monthly:${month}`)) n++;
   }
   return n;
 }
 
-/** §7.3 review due; §7.8 the approval-load review day. */
+/** §7.3 review due (ONE notice with a count); §7.8 the approval-load review day. Nothing while the switch is OFF. */
 export async function reviewNotices(now: Date = new Date()): Promise<number> {
+  if (!(await isSwitchedOn())) return 0;
   const today = dhakaDayKey(now);
   let n = 0;
-  for (const p of await SupportProfile.find({ status: "OPEN", nextReviewDueKey: { $lte: today } }).select("_id nextReviewDueKey").lean()) {
-    n += await notifyHolders("support_profile:approve" as Permission, "প্রোফাইল পর্যালোচনা বাকি — শিক্ষার্থী সহায়তা খুলে দেখুন", `support-review:${p._id}:${p.nextReviewDueKey}`);
+  const due = await SupportProfile.countDocuments({ status: "OPEN", nextReviewDueKey: { $lte: today } });
+  if (due > 0) {
+    n += await notifyHolders("support_profile:approve" as Permission, `${due.toLocaleString("bn-BD")} টি প্রোফাইলের পর্যালোচনা বাকি — শিক্ষার্থী সহায়তা খুলে দেখুন`, `support-review:${today}`);
   }
   const s = await SupportSetting.findOne({ key: "main" }).lean();
   if (s?.approvalLoadReviewDueKey && s.approvalLoadReviewDueKey <= today) {
@@ -195,7 +230,7 @@ export async function computeApprovalLoad(now: Date = new Date()): Promise<Appro
     largest: Math.max(0, ...weeks.map((w) => w.waitingForDecision)),
     medianDaysToDecision: med,
     longestDaysToDecision: days.length ? Math.max(...days) : null,
-    quickApprovableShare: processed.length ? Math.round((processed.filter(isQuickApprovable).length / processed.length) * 100) : null,
+    quickApprovableShare: processed.length ? Math.round((processed.filter((x) => isQuickApprovable(x)).length / processed.length) * 100) : null,
     waitingToProcess: waiting,
     oldestWaitingDays: oldest?.waitingSince ? Math.floor((now.getTime() - new Date(oldest.waitingSince).getTime()) / DAY) : null,
     tooHeavy: (ends.length === 2 && ends.every((w) => w.waitingForDecision > 25)) || (med != null && med > 7),

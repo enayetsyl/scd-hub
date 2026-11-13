@@ -16,6 +16,9 @@ import { space } from "../../theme/tokens";
 
 interface Ref { id: string; studentName: string; raisedAt: string; source: string; signs: string[]; textBn: string; status: string; noteBn: string | null }
 
+/** The referral date in Dhaka time (a UTC slice shows the wrong day after 18:00 UTC). */
+const dhakaDay = (iso: string): string => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+
 export default function SafeguardingReferralsScreen(): React.ReactElement {
   const toast = useToast();
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -33,8 +36,8 @@ export default function SafeguardingReferralsScreen(): React.ReactElement {
         {q.error ? <Notice message={friendlyError(q.error)} tone="danger" /> : null}
         {q.data?.safeguardingReferralsPage.rows.map((r) => (
           <Card key={r.id}>
-            <Badge text={r.status} />
-            <Body style={{ fontWeight: "700" }}>{`${r.studentName} · ${r.raisedAt.slice(0, 10)}`}</Body>
+            <Badge text={r.status === "RAISED" ? STR.supRefRaised : r.status === "SEEN" ? STR.supRefSeenS : r.status === "CLOSED_OUTSIDE_APP" ? STR.supRefClosedS : r.status} />
+            <Body style={{ fontWeight: "700" }}>{`${r.studentName} · ${dhakaDay(r.raisedAt)}`}</Body>
             <Muted>{r.signs.map((s) => SAFEGUARDING_SIGN_LABELS_BN[s as SafeguardingSign] ?? s).join(" · ")}</Muted>
             <Body>{r.textBn}</Body>
             {r.noteBn ? <Muted>{r.noteBn}</Muted> : null}

@@ -13,6 +13,7 @@ import {
   SAFEGUARDING_STEPS_BN,
   SUPPORT_ANTECEDENTS,
   SUPPORT_ANTECEDENT_LABELS_BN,
+  SUPPORT_FLAG_FIELDS,
   SUPPORT_FUNCTIONS,
   SUPPORT_FUNCTION_LABELS_BN,
   SUPPORT_GOOD_NONE_REASONS,
@@ -37,7 +38,7 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
   const { studentId, reportId, source } = route.params;
   const toast = useToast();
   const guardian = source === "GUARDIAN_INFO";
-  const [existing] = useQuery<{ supportReport: SupportReportT }>({ query: SUPPORT_REPORT, variables: { reportId: reportId ?? "", via: "QUEUE" }, pause: !reportId });
+  const [existing] = useQuery<{ supportReport: SupportReportT }>({ query: SUPPORT_REPORT, variables: { reportId: reportId ?? "", via: "MY_REPORTS" }, pause: !reportId });
   const [occurredOn, setOccurredOn] = useState(dateKey());
   const [periodNo, setPeriodNo] = useState("");
   const [subject, setSubject] = useState("");
@@ -115,10 +116,11 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
     goodThingNone: goodNone,
     goodThingReasonKey: goodNone ? (goodReason ?? undefined) : undefined,
     goodThingReasonBn: goodNone ? goodReasonBn : undefined,
-    tone: tone ?? "MIXED",
+    tone: tone ?? "MIXED", // never reached without a choice: doSubmit / draft check it first
   });
 
   const doSubmit = async (sg?: "YES" | "NO") => {
+    if (!tone) return toast.show(STR.supToneRequired, "danger");
     const questionAnswers = Object.entries(answers).map(([flagId, a]) => ({ flagId, answer: a.answer, reasonBn: a.reasonBn }));
     const res = await submit({ input: input(), reportId: reportId ?? null, safeguardingAnswer: sg ?? null, questionAnswers: questionAnswers.length ? questionAnswers : null });
     if (res.error) return toast.show(friendlyError(res.error), "danger");
@@ -134,31 +136,40 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
   };
 
   const questionsFor = (field: string) => (rep?.status === "NEEDS_REWRITE" ? rep.questions.filter((q) => q.field === field) : []);
-  const QuestionBlock = ({ field, set }: { field: string; set?: (v: string) => void }) => (
-    <>
-      {questionsFor(field).map((q) => (
-        <Card key={q.flagId}>
-          <Body>{`“${q.quote}” — ${q.askBn}`}</Body>
-          <ChipRow>
-            {q.suggestionBn && set ? (
-              <Chip label={STR.supUseSuggestion} selected={answers[q.flagId]?.answer === "USED_SUGGESTION"} onPress={() => (set(q.suggestionBn!), setAnswers({ ...answers, [q.flagId]: { answer: "USED_SUGGESTION" } }))} />
-            ) : null}
-            {q.severity !== "BLOCK" ? <Chip label={STR.supDisagree} selected={answers[q.flagId]?.answer === "DISAGREE"} onPress={() => setAnswers({ ...answers, [q.flagId]: { answer: "DISAGREE", reasonBn: "" } })} /> : null}
-            <Chip label={STR.supDontRemember} selected={answers[q.flagId]?.answer === "DONT_REMEMBER"} onPress={() => setAnswers({ ...answers, [q.flagId]: { answer: "DONT_REMEMBER" } })} />
-          </ChipRow>
-          {answers[q.flagId]?.answer === "DISAGREE" ? (
-            <Field label={STR.supDisagreeReason} value={answers[q.flagId]?.reasonBn ?? ""} onChangeText={(t) => setAnswers({ ...answers, [q.flagId]: { answer: "DISAGREE", reasonBn: t } })} />
+  /** A plain render function (NOT a component defined in render — that would remount the field and lose focus). */
+  const renderQuestions = (field: string, set?: (v: string) => void) =>
+    questionsFor(field).map((q) => (
+      <Card key={q.flagId}>
+        <Body>{`“${q.quote}” — ${q.askBn}`}</Body>
+        <ChipRow>
+          {q.suggestionBn && set ? (
+            <Chip label={STR.supUseSuggestion} selected={answers[q.flagId]?.answer === "USED_SUGGESTION"} onPress={() => (set(q.suggestionBn!), setAnswers({ ...answers, [q.flagId]: { answer: "USED_SUGGESTION" } }))} />
           ) : null}
-        </Card>
-      ))}
-    </>
-  );
+          {q.severity !== "BLOCK" ? <Chip label={STR.supDisagree} selected={answers[q.flagId]?.answer === "DISAGREE"} onPress={() => setAnswers({ ...answers, [q.flagId]: { answer: "DISAGREE", reasonBn: "" } })} /> : null}
+          <Chip label={STR.supDontRemember} selected={answers[q.flagId]?.answer === "DONT_REMEMBER"} onPress={() => setAnswers({ ...answers, [q.flagId]: { answer: "DONT_REMEMBER" } })} />
+        </ChipRow>
+        {answers[q.flagId]?.answer === "DISAGREE" ? (
+          <Field label={STR.supDisagreeReason} value={answers[q.flagId]?.reasonBn ?? ""} onChangeText={(t) => setAnswers({ ...answers, [q.flagId]: { answer: "DISAGREE", reasonBn: t } })} />
+        ) : null}
+      </Card>
+    ));
+  // A question about a field this form does not show is listed at the top, never lost.
+  const unmatched = rep?.status === "NEEDS_REWRITE" ? rep.questions.filter((q) => !(SUPPORT_FLAG_FIELDS as readonly string[]).includes(q.field)) : [];
 
   if (reportId && existing.fetching) return <Loader />;
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         {rep?.status === "NEEDS_REWRITE" ? <Notice message={STR.supQuestions} tone="info" /> : null}
+        {unmatched.length ? <Body style={{ fontWeight: "700" }}>{STR.supUnmatchedQs}</Body> : null}
+        {unmatched.map((q) => (
+          <Card key={q.flagId}>
+            <Body>{`“${q.quote}” — ${q.askBn}`}</Body>
+            <ChipRow>
+              <Chip label={STR.supDontRemember} selected={answers[q.flagId]?.answer === "DONT_REMEMBER"} onPress={() => setAnswers({ ...answers, [q.flagId]: { answer: "DONT_REMEMBER" } })} />
+            </ChipRow>
+          </Card>
+        ))}
         {rep?.status === "RETURNED" && rep.decisionReasonBn ? <Notice message={`${STR.supReturnedReason}: ${rep.decisionReasonBn}`} tone="warn" /> : null}
         <Field label={STR.supFieldDate} value={occurredOn} onChangeText={setOccurredOn} />
         {!guardian ? (
@@ -174,12 +185,13 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
           </>
         ) : null}
         <Field label={STR.supFieldSituation} value={situation} onChangeText={setSituation} multiline />
-        <QuestionBlock field="situation" set={setSituation} />
+        {renderQuestions("situation", setSituation)}
         {!guardian ? (
           <>
             <Field label={STR.supFieldSettingNote} helper={STR.supFieldSettingHelp} value={settingNote} onChangeText={setSettingNote} multiline />
+            {renderQuestions("settingNote", setSettingNote)}
             <Field label={STR.supFieldBehaviour} helper={STR.supFieldBehaviourHelp} value={behaviour} onChangeText={setBehaviour} multiline />
-            <QuestionBlock field="behaviour" set={setBehaviour} />
+            {renderQuestions("behaviour", setBehaviour)}
             <Body>{STR.supFieldHowOften}</Body>
             <ChipRow>
               {[["ONCE", STR.supOftenOnce], ["TWO_THREE", STR.supOften23], ["MORE", STR.supOftenMore]].map(([k, l]) => (
@@ -187,7 +199,7 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
               ))}
             </ChipRow>
             <Field label={STR.supFieldTried} value={tried} onChangeText={setTried} multiline />
-            <QuestionBlock field="tried" set={setTried} />
+            {renderQuestions("tried", setTried)}
             <Body>{STR.supFieldStarters}</Body>
             <ChipRow>
               {SUPPORT_STARTER_STRATEGIES.map((s) => (
@@ -201,6 +213,7 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
               ))}
             </ChipRow>
             <Field label={STR.supFieldResultNote} value={resultNote} onChangeText={setResultNote} />
+            {renderQuestions("result", setResultNote)}
             <Body>{STR.supFieldGot}</Body>
             <ChipRow>
               {SUPPORT_FUNCTIONS.map((f) => (
@@ -208,13 +221,15 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
               ))}
             </ChipRow>
             <Field label={STR.supFieldException} value={exception} onChangeText={setException} multiline />
+            {renderQuestions("exception", setException)}
           </>
         ) : null}
         <Field label={STR.supFieldWhatWorked} value={whatWorked} onChangeText={setWhatWorked} multiline />
-        <QuestionBlock field="whatWorked" set={setWhatWorked} />
+        {renderQuestions("whatWorked", setWhatWorked)}
         {!guardian ? (
           <>
             <Field label={STR.supFieldGood} helper={STR.supFieldGoodHelp} value={good} onChangeText={(t) => (setGood(t), setGoodNone(false))} editable={!goodNone} />
+            {renderQuestions("goodThing", setGood)}
             <ChipRow>
               <Chip label={STR.supGoodNone} selected={goodNone} onPress={() => setGoodNone(!goodNone)} />
             </ChipRow>
@@ -255,8 +270,11 @@ export default function SupportReportFormScreen({ route, navigation }: Props): R
                 title={STR.supSaveDraft}
                 variant="secondary"
                 onPress={async () => {
-                  const r = await saveDraft({ input: input(), reportId: reportId ?? null });
+                  const r = await saveDraft({ input: { ...input(), tone: tone ?? "MIXED" }, reportId: reportId ?? null });
                   toast.show(r.error ? friendlyError(r.error) : STR.supDraftSaved, r.error ? "danger" : "ok");
+                  // a safety sign in the draft: ask the question now, before anything else
+                  const signs = r.data?.saveSupportReportDraft?.signs ?? [];
+                  if (!r.error && signs.length) setSgSigns(signs);
                 }}
               />
             ) : null}

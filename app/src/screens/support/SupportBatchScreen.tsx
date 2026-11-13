@@ -7,6 +7,7 @@
 import React, { useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as Clipboard from "expo-clipboard";
 import { useMutation, useQuery } from "urql";
 import {
   APPLY_SUPPORT_IMPORT,
@@ -48,9 +49,25 @@ function saveFile(fileName: string, content: string): boolean {
   a.href = url;
   a.download = fileName;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
   return true;
 }
+
+/** Web only: read the result from a .json / .txt file the Principal saved from the chat. */
+function pickFile(onText: (t: string) => void): void {
+  if (typeof document === "undefined") return;
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,.txt,application/json,text/plain";
+  input.onchange = () => {
+    const f = input.files?.[0];
+    if (!f) return;
+    void f.text().then(onText);
+  };
+  input.click();
+}
+
+const BATCH_STATUS_BN: Record<string, string> = { OPEN: STR.supBatchOpen, RESULT_PENDING: STR.supBatchOpen, CLOSED: STR.supBatchDone, DONE: STR.supBatchDone, CANCELLED: STR.supBatchCancelled, EXPIRED: STR.supBatchExpired };
 
 export default function SupportBatchScreen(_props: Props): React.ReactElement {
   const toast = useToast();
@@ -107,7 +124,25 @@ export default function SupportBatchScreen(_props: Props): React.ReactElement {
               }}
             />
             {shown ? <Field value={shown} onChangeText={() => undefined} multiline editable={false} /> : null}
+            <Button
+              title={STR.supCopyPack}
+              variant="ghost"
+              onPress={async () => {
+                const r = await download({ batchId: open.id });
+                if (err(r.error)) return;
+                await Clipboard.setStringAsync(r.data?.downloadSupportPack.content ?? "");
+                toast.show(STR.supCopied, "ok");
+              }}
+            />
             <Body>{`2. ${STR.supChatLine}`}</Body>
+            <Button
+              title={STR.supCopyChat}
+              variant="ghost"
+              onPress={async () => {
+                await Clipboard.setStringAsync(STR.supChatLine);
+                toast.show(STR.supCopied, "ok");
+              }}
+            />
             <Muted>{STR.supPrivacy}</Muted>
             <Body>{`3. ${STR.supUpload}`}</Body>
             <ChipRow>
@@ -117,6 +152,7 @@ export default function SupportBatchScreen(_props: Props): React.ReactElement {
             </ChipRow>
             <Field label={STR.supChatLabel} value={chat} onChangeText={setChat} />
             <Field label={STR.supPasteResult} value={text} onChangeText={setText} multiline />
+            {Platform.OS === "web" ? <Button title={STR.supUploadFile} variant="ghost" onPress={() => pickFile((t) => setText(t))} /> : null}
             <Button
               title={STR.supUpload}
               loading={upState.fetching}
@@ -189,7 +225,7 @@ export default function SupportBatchScreen(_props: Props): React.ReactElement {
           />
         </Card>
         {batches.data?.supportBatchesPage.rows.map((b) => (
-          <Muted key={b.id}>{`${b.code} · ${b.status} · ${bnNum(b.reportCount)} · ${b.methodVersion}${b.producer ? ` · ${b.producer}` : ""}`}</Muted>
+          <Muted key={b.id}>{`${b.code} · ${BATCH_STATUS_BN[b.status] ?? b.status} · ${bnNum(b.reportCount)} · ${b.methodVersion}${b.producer ? ` · ${b.producer}` : ""}`}</Muted>
         ))}
       </ScrollView>
     </Screen>

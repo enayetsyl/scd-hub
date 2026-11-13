@@ -433,6 +433,7 @@ import SupportCardScreen from "../screens/support/SupportCardScreen";
 import SupportReportFormScreen from "../screens/support/SupportReportFormScreen";
 import MySupportReportsScreen from "../screens/support/MySupportReportsScreen";
 import SupportQueueScreen from "../screens/support/SupportQueueScreen";
+import SupportReviewScreen from "../screens/support/SupportReviewScreen";
 import SupportBatchScreen from "../screens/support/SupportBatchScreen";
 import SafeguardingReferralsScreen from "../screens/support/SafeguardingReferralsScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
@@ -847,6 +848,7 @@ function HomeNavigator(): React.ReactElement {
       <HomeStack.Screen name="SupportReportForm" component={SupportReportFormScreen} options={{ title: STR.supReportTitle }} />
       <HomeStack.Screen name="MySupportReports" component={MySupportReportsScreen} options={{ title: STR.supMyReports }} />
       <HomeStack.Screen name="SupportQueue" component={SupportQueueScreen} options={{ title: STR.supQueueTitle }} />
+      <HomeStack.Screen name="SupportReview" component={SupportReviewScreen} options={{ title: STR.supReviewTitle }} />
       <HomeStack.Screen name="SupportBatch" component={SupportBatchScreen} options={{ title: STR.supBatchTitle }} />
       <HomeStack.Screen name="SafeguardingReferrals" component={SafeguardingReferralsScreen} options={{ title: STR.supRefTitle }} />
     </HomeStack.Navigator>

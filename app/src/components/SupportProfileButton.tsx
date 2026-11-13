@@ -6,7 +6,7 @@
 import React from "react";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { SUPPORT_CHIPS } from "../graphql/supportProfile";
+import { SUPPORT_CHIPS, SUPPORT_ENABLED } from "../graphql/supportProfile";
 import { useAuth } from "../auth/AuthContext";
 import { Button, Chip, ChipRow } from "./ui";
 import { STR } from "../lib/labels";
@@ -17,13 +17,24 @@ export function SupportProfileButton({ studentId, via, compact = false }: { stud
   const { can } = useAuth();
   const allowed = can("support_profile:view") || can("support_profile:view_all");
   const nav = useNavigation();
+  const canReport = can("support_profile:report");
   const [q] = useQuery<{ supportProfileChips: string[] }>({ query: SUPPORT_CHIPS, variables: { studentIds: [studentId] }, pause: !allowed || !studentId });
-  if (!allowed || !q.data?.supportProfileChips.includes(studentId)) return null;
-  const open = () => {
+  const [en] = useQuery<{ supportProfileEnabled: boolean }>({ query: SUPPORT_ENABLED, pause: !canReport || !studentId });
+  const go = (screen: string, params: unknown) => {
     const parent = nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined;
-    (parent ?? (nav as unknown as { navigate: (r: string, p: unknown) => void })).navigate("HomeTab", { screen: "SupportCard", params: { studentId, via } });
+    (parent ?? (nav as unknown as { navigate: (r: string, p: unknown) => void })).navigate("HomeTab", { screen, params });
   };
-  return <Button title={compact ? "🌱" : STR.supTitle} variant="secondary" onPress={open} />;
+  const hasCard = allowed && !!q.data?.supportProfileChips.includes(studentId);
+  // §9.3: a teacher can start a report on any child they teach, with or without a published profile.
+  const showWrite = canReport && en.data?.supportProfileEnabled === true && !compact;
+  if (!hasCard && !showWrite) return null;
+  return (
+    <>
+      {hasCard ? <Button title={compact ? "🌱" : STR.supTitle} variant="secondary" onPress={() => go("SupportCard", { studentId, via })} /> : null}
+      {showWrite ? <Button title={STR.supStartReport} variant="secondary" onPress={() => go("SupportReportForm", { studentId })} /> : null}
+      {showWrite ? <Button title={STR.supGuardianInfo} variant="ghost" onPress={() => go("SupportReportForm", { studentId, source: "GUARDIAN_INFO" })} /> : null}
+    </>
+  );
 }
 
 /** A roster row (attendance, class-test entry): ONE chip query for the whole list, then a small button

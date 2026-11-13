@@ -65,6 +65,8 @@ export interface SupportReportT {
   goodThingText: string | null;
   goodThingNone: boolean;
   goodThingReasonKey: string | null;
+  goodThingReasonBn: string | null;
+  signs: string[];
   tone: string;
   round: number;
   safeguardingHold: string;
@@ -78,7 +80,7 @@ export interface SupportReportT {
 
 const ITEM = `itemId textBn level obsCount teachersCount settings lastEvidenceKey hasGuardianInfo mixed kind functionTag insteadText stale dormant`;
 const REPORT = `id studentId studentName authorName textVisible status source occurredOn subject periodNo antecedentTags situation settingNote behaviour
-  howOften tried starterKeys result resultNote gotOrAvoided exception whatWorked goodThingText goodThingNone goodThingReasonKey tone round
+  howOften tried starterKeys result resultNote gotOrAvoided exception whatWorked goodThingText goodThingNone goodThingReasonKey goodThingReasonBn signs tone round
   safeguardingHold checkSkipped questions { flagId field severity quote askBn suggestionBn } principalEdited edits { field before after }
   decisionReasonBn createdAt`;
 
@@ -109,7 +111,7 @@ export const SUBMIT_SUPPORT_REPORT = gql`
 
 export const SAVE_SUPPORT_DRAFT = gql`
   mutation SaveSupportReportDraft($input: SupportReportInput!, $reportId: String) {
-    saveSupportReportDraft(input: $input, reportId: $reportId) { id status }
+    saveSupportReportDraft(input: $input, reportId: $reportId) { id status signs }
   }
 `;
 
@@ -136,19 +138,20 @@ export const SUPPORT_REPORT = gql`
     supportReport(reportId: $reportId, via: $via) {
       ${REPORT}
       quickApprovable compareJson openFlags { flagId field severity quote askBn suggestionBn } disagreements dontRememberCount sectionHints
+      evidencePreviewJson recordsJson
     }
   }
 `;
 
 export const MY_SUPPORT_SEED_PROMPTS = gql`
   query MySupportSeedPrompts {
-    mySupportSeedPrompts { commentId studentId state expiresKey }
+    mySupportSeedPrompts { commentId studentId state expiresKey studentName offeredOn }
   }
 `;
 
 export const OFFER_SUPPORT_SEED = gql`
   mutation OfferSupportSeed($commentId: String!) {
-    offerSupportSeed(commentId: $commentId) { offered safeguardingFirst praise state }
+    offerSupportSeed(commentId: $commentId) { offered safeguardingFirst praise state studentId }
   }
 `;
 
@@ -162,7 +165,7 @@ export const SUPPORT_QUEUE = gql`
   query SupportQueuePage($status: String, $page: Int, $pageSize: Int) {
     supportQueuePage(status: $status, page: $page, pageSize: $pageSize) {
       total page pageSize waiting oldestDays held
-      rows { id studentId studentName authorName status source occurredOn tone safeguardingHold checkSkipped behaviour goodThingText quickApprovable }
+      rows { id studentId studentName authorName status source occurredOn tone safeguardingHold checkSkipped quickApprovable }
     }
   }
 `;
@@ -282,7 +285,7 @@ export const DISCARD_SUPPORT_VERSION = gql`
 export const SUPPORT_PROFILES = gql`
   query SupportProfilesPage($status: String, $page: Int, $pageSize: Int) {
     supportProfilesPage(status: $status, page: $page, pageSize: $pageSize) {
-      total page pageSize rows { id studentId studentName classId status published nextReviewDueKey }
+      total page pageSize rows { id studentId studentName classId status published nextReviewDueKey safeguardingBanner }
     }
   }
 `;
@@ -296,5 +299,29 @@ export const SUPPORT_SETTING = gql`
 export const SET_SUPPORT_SWITCH = gql`
   mutation SetSupportProfileSwitch($on: Boolean!) {
     setSupportProfileSwitch(on: $on) { switchedOn switchedOnKey approvalLoadReviewDueKey }
+  }
+`;
+
+export const SUPPORT_ENABLED = gql`
+  query SupportProfileEnabled {
+    supportProfileEnabled
+  }
+`;
+
+export const SUPPORT_REPORTABLE_STUDENTS = gql`
+  query SupportReportableStudents($search: String!) {
+    supportReportableStudents(search: $search) { id name }
+  }
+`;
+
+export const SUPPORT_APPROVAL_LOAD = gql`
+  query SupportApprovalLoadJson {
+    supportApprovalLoadJson
+  }
+`;
+
+export const RECORD_APPROVAL_LOAD_CHOICE = gql`
+  mutation RecordSupportApprovalLoadChoice($choice: String!, $nextInDays: Int) {
+    recordSupportApprovalLoadChoice(choice: $choice, nextInDays: $nextInDays)
   }
 `;

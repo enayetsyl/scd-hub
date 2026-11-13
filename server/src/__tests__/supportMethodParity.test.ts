@@ -106,30 +106,20 @@ describe("MD-7 parity — the real pack", () => {
     await mongo.stop();
   });
 
-  it("the downloaded pack's METHOD part is the file, byte for byte, and its header carries the file's hash", async () => {
-    const s = await setupBatch(run, fx);
+  it("one batch: the pack's METHOD part is the file byte for byte, it holds the hash and the result schema, and the batch row is stamped with the file's methodVersion and methodHash", async () => {
+    const s = await setupBatch(run, fx); // only one batch may be open at a time
     const d = await run(DOWNLOAD, P(fx), { b: s.batchId });
     expect(d.errors).toBeUndefined();
     const pack: string = d.data?.downloadSupportPack.content;
-    const part = methodPart(pack);
-    expect(part.startsWith(fileLf())).toBe(true);
+    expect(methodPart(pack).startsWith(fileLf())).toBe(true);
     expect(pack).toContain(loadMethod(version).sha256);
-  });
-
-  it("the batch row is stamped with the file's methodVersion and methodHash (methodHash pin)", async () => {
-    const s = await setupBatch(run, fx);
+    expect(pack.includes(m.text)).toBe(true);
+    expect(pack).toContain(JSON.stringify(SUPPORT_RESULT_SCHEMA));
+    // methodHash pin: the stored stamp is the file's own
     const { SupportBatch } = await import("../modules/support-profile/models/SupportBatch");
     const row = await SupportBatch.findById(s.batchId).lean();
     expect(row?.methodVersion).toBe(version);
     expect(row?.methodHash).toBe(loadMethod(version).sha256);
-  });
-
-  it("the pack holds the whole method file, its version and hash, and prints the same result schema", async () => {
-    const s = await setupBatch(run, fx);
-    const pack = (await run(DOWNLOAD, P(fx), { b: s.batchId })).data?.downloadSupportPack.content as string;
-    expect(pack.includes(m.text)).toBe(true);
-    expect(pack).toContain(m.sha256);
-    expect(pack).toContain(JSON.stringify(SUPPORT_RESULT_SCHEMA));
   });
 
   it("method_v2 → a new version and hash; an evaluation passed for v1 is not valid for v2; a result stamped v1 is WRONG_METHOD when the batch expects v2", async () => {
@@ -141,8 +131,10 @@ describe("MD-7 parity — the real pack", () => {
     const v2 = loadMethod("v2", dir);
     expect(v2.sha256).not.toBe(m.sha256);
     // the evaluation passed in setupBatch was for v1
-    await expect(assertProducerPassed({ kind: "CHAT", chatLabel: "claude.ai" }, "v1")).resolves.toBeUndefined();
-    await expect(assertProducerPassed({ kind: "CHAT", chatLabel: "claude.ai" }, "v2")).rejects.toThrow(/মূল্যায়ন প্যাক/);
+    await expect(assertProducerPassed({ kind: "CHAT", chatLabel: "claude.ai" }, "v1", m.sha256)).resolves.toBeUndefined();
+      // methodHash pin: the same version with a different file hash is NOT passed
+      await expect(assertProducerPassed({ kind: "CHAT", chatLabel: "claude.ai" }, "v1", "0".repeat(64))).rejects.toThrow(/মূল্যায়ন প্যাক/);
+    await expect(assertProducerPassed({ kind: "CHAT", chatLabel: "claude.ai" }, "v2", v2.sha256)).rejects.toThrow(/মূল্যায়ন প্যাক/);
     const out = validateSupportResult(JSON.stringify({ schema: "support-result/v1", batch: "B-0002", nonce: "N", methodVersion: "v1", complete: true, reports: [], children: [], selfCheck: { reportsDone: 0, childrenDone: 0, everySentenceCited: true, noNamesOrCodesInSentences: true, noNewFacts: true, safeguardingMarked: true } }), {
       batchCode: "B-0002", nonce: "N", methodVersion: "v2", open: true, todayKey: "2026-11-13", reports: new Map(), children: new Set(), strategies: new Set(), items: new Set(), rosterNames: [],
     });
