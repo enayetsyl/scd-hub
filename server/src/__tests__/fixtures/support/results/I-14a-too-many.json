@@ -1,0 +1,965 @@
+{
+ "schema": "support-result/v1",
+ "batch": "{{BATCH}}",
+ "nonce": "{{NONCE}}",
+ "methodVersion": "{{METHOD}}",
+ "complete": true,
+ "reports": [
+  {
+   "report": "{{R1}}",
+   "check": {
+    "verdict": "READY",
+    "flags": [],
+    "toneCheck": {
+     "teacherTone": "POSITIVE",
+     "textReads": "POSITIVE"
+    },
+    "strategyCandidate": {
+     "present": false,
+     "titleBn": "",
+     "starterKey": null,
+     "punitive": false
+    },
+    "safeguarding": {
+     "present": false,
+     "signs": [],
+     "confidence": "LOW",
+     "quote": ""
+    }
+   },
+   "compare": null
+  },
+  {
+   "report": "{{R2}}",
+   "check": {
+    "verdict": "READY",
+    "flags": [],
+    "toneCheck": {
+     "teacherTone": "CONCERN",
+     "textReads": "CONCERN"
+    },
+    "strategyCandidate": {
+     "present": false,
+     "titleBn": "",
+     "starterKey": null,
+     "punitive": false
+    },
+    "safeguarding": {
+     "present": false,
+     "signs": [],
+     "confidence": "LOW",
+     "quote": ""
+    }
+   },
+   "compare": null
+  }
+ ],
+ "children": [
+  {
+   "child": "{{C1}}",
+   "profileDraft": {
+    "sections": {
+     "strengths": [
+      {
+       "ref": "n1",
+       "textBn": "{{DATE:{{A1}}}} দলে অঙ্কের কাজে [S] পাশের জনকে দুটি অঙ্ক দেখিয়ে দিয়েছে।",
+       "evidence": [
+        "{{A1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n2",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] নিজের অংশ শেষ করে সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n3",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n4",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n5",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n6",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n7",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n8",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n9",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n10",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n11",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n12",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n13",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n14",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n15",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n16",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n17",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n18",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n19",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n20",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n21",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n22",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n23",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n24",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n25",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n26",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n27",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n28",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n29",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n30",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n31",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n32",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n33",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n34",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n35",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n36",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n37",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n38",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n39",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n40",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      }
+     ]
+    },
+    "card": {
+     "doItems": [],
+     "avoidItems": [],
+     "strengthItems": [
+      "n1"
+     ],
+     "goalItem": null
+    },
+    "changeNoteBn": "শক্তির দিক যোগ হলো।"
+   }
+  }
+ ],
+ "selfCheck": {
+  "reportsDone": 2,
+  "childrenDone": 1,
+  "everySentenceCited": true,
+  "noNamesOrCodesInSentences": true,
+  "noNewFacts": true,
+  "safeguardingMarked": true
+ }
+}

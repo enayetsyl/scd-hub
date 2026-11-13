@@ -23,7 +23,7 @@ General notes for every slice
 
 ## CSP-1 — model, permissions, scope, continuous intake (no AI), safeguarding route
 
-**Commits:** first and last = the single `[CSP-1] feat(support-profile): …` commit (see `git log`).
+**Commits:** first and last = `700010fa` `[CSP-1] feat(support-profile): model, permissions, scope, continuous intake, safeguarding route` (pushed).
 
 **What was built**
 - `shared/supportProfile.ts`: sections, statuses, sources, chips (antecedents, functions, skills,
@@ -92,3 +92,69 @@ come from RoutineSlots, `Enrolment` statuses are ACTIVE/CLOSED (an enrolment cov
 2. নষ্ট is not on the block list by itself (it is an ordinary word for things); only "নষ্ট ছেলে/মেয়ে".
    OK?
 3. The re-notice hours for an unseen safeguarding referral are 07:00–17:00 Dhaka, every day. Change?
+
+---
+
+## CSP-2 — method document, batches, Mode B round-trip (stage A), asynchronous rewrite loop
+
+**Commits:** first `99d27da6` `[CSP-2] feat(support-profile): method document, batches, Mode B round-trip, async rewrite loop`; last = the `[CSP-2] docs(support-profile): gate tails` commit that filled in the full-suite and expo lines below.
+
+**What was built**
+- `server/assets/support-profile/method_v1.md` (M-0 … M-13 with section markers; written from §16;
+  invented examples only) and `methodDoc.ts` (version, SHA-256, sections that cover the file byte for
+  byte, `stagePrompt()` ready for CSP-7). **The owner must read and approve v1 (MD-8).**
+- `SUPPORT_RESULT_SCHEMA` (`support-result/v1`) in shared with a small schema checker; the import
+  validator `supportResultValidator.ts` (pure; V-1 … V-14 and §6.6 rules 1–16) — one module for both modes.
+- Models SupportBatch (with the per-batch code map), SupportImport, SupportProducerEval, SupportAiRun.
+- `SupportBatchService.ts`: create (oldest first, a child's reports together, budget, never held/
+  routed/withdrawn), cancel, expiry (14 days), code-map deletion (30 days after closing), the pack
+  (DE-1 … DE-10 masking + the fail-closed scan; built in memory; hash + download entry + audit only),
+  upload → validate → preview, apply (reports to the queue or back to their teachers with questions;
+  drafts as DRAFT versions with provisional citations; `[S]` and `{{DATE:…}}` mapped back), discard.
+- The asynchronous loop: questions per field (all BLOCK + ≤ 3 others), rewrite / suggestion / disagree
+  (ASK only, with a reason) / "মনে নেই", answers carried into the next pack, ≤ 3 checks, the Principal's
+  untick, author-no-longer-reader, 7-day reminder, 21-day hand-over. Safeguarding found in a batch →
+  the Principal's question (LOW: no notice; HIGH: same-day notice). Batch reminder (oldest 7 days /
+  25 waiting / Thursday — Q-18) once a day; "result not uploaded" notice at 10 days.
+- The evaluation pack: fixtures (`eval/supportEvalFixtures.ts`: F-01 … F-39 + 40 invented reports),
+  `buildEvalPack()`, `scoreEvaluation()` against the server-held key with the §16.9 pass marks,
+  `recordSupportEvaluation` (stores SupportProducerEval; `passed` also needs the owner's reading of
+  the 20 suggestions), and `npx tsx server/scripts/support-eval-pack.ts [--out f.md] [--score r.json]`.
+  An upload is refused for a chat with no passed evaluation for the method version in use.
+- Resolvers `supportBatch.ts` (all LOCKED `process`, never under "view as"); catalogue docs updated;
+  `support_profile:process` removed from `DECLARED_AHEAD` (it now gates the batch resolvers).
+
+**Verified**
+```
+npm run build --workspace=shared → exit 0
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_descriptive_carriers lo-codes / subjects-2027 / descriptive → RESULT: PASS (22 / 20 / 11 cases)
+verify_help_guides → ALL CHECKS PASSED
+typecheck shared / server / app → exit 0 / exit 0 / exit 0
+npx jest --runInBand support permissionCatalogueGates firewall expectedErrorRegistry notificationsScheduler dataAssistantSupportExcluded
+  → Test Suites: 36 passed, 36 total · Tests: 553 passed, 553 total
+  (the `support` pattern also matched the existing supportBook* suites — all green)
+npx tsx server/scripts/support-eval-pack.ts --out …/evalpack.md → wrote … (114237 bytes, sha256 14111791…)
+npx jest --maxWorkers=2 (full server suite) → Test Suites: 480 passed, 480 total · Tests: 7668 passed, 7668 total · exit 0
+(app) npx expo export --platform web → "App exported to: …/web-dist" · expo export exit 0 (0 lines matching error)
+```
+
+**Not done in CSP-2**
+- **The AI pass marks are NOT claimed.** No real chat or model was run; `supportEvalPack.test.ts`
+  only proves the harness (a perfect canned answer passes, a weak one fails). The owner runs the pack
+  through his chat (Q-20, training off) and records it — the switch-on gate (§16.9, CSP-6 step 4).
+- No app screens: the batch screen (§9.8), the import preview, the teacher's question/rewrite screen,
+  the evaluation screen. Every server path exists and is tested; the screens are listed for CSP-5.
+- The pack is returned by a GraphQL mutation as text (the app would save it as a file); there is no
+  REST stream. Nothing is written server-side either way.
+- Mode A (CSP-7): not built (Q-21). `stagePrompt()` exists; `supportMethodParity` belongs to CSP-7.
+
+**Decisions:** D-#1584, D-#1585, D-#1586, D-#1587, D-#1552, D-#1588, D-#1553.
+
+**Questions for the owner**
+1. Please read and approve `server/assets/support-profile/method_v1.md` (MD-8), and have the Qur'an /
+   hadith lines of M-10 checked (Q-17).
+2. The fail-closed scan treats any child's first name (≥ 3 letters) found anywhere in the data as a
+   leak and refuses the download. A child whose name is also an everyday word could block a pack
+   until the report is reworded. Keep it strict (recommended), or scan full names only?
+3. Codes are new for every batch (DE-8 build default). Keep?
