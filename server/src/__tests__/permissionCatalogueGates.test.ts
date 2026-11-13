@@ -97,9 +97,6 @@ const OPEN_FIELDS: Record<string, string> = {
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
 const DECLARED_AHEAD: Record<string, string> = {
-  // Catalogued at CSP-1 with the rest of the feature (D-#1548); its batch / pack / result
-  // resolvers arrive in CSP-2 (docs/prd-child-support-profile.md §12). Leaves this list then.
-  "support_profile:process": "CSP-2 — batches, the analysis pack, result upload",
   // Book lifecycle (docs/prd-book-lifecycle.md §19): gated by BL-2 (release, teacher_view, report) and BL-5 (ai_edit).
   "book_lifecycle:release": "BL-2 print releases",
   "book_lifecycle:teacher_view": "BL-2 teacher surfaces",

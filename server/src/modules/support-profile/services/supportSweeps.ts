@@ -2,18 +2,35 @@
  * The support profile's scheduler work (docs/prd-child-support-profile.md §9.7, §2.4, §16.5 SG-3).
  *  - every tick: an unseen safeguarding referral is re-noticed hourly in school hours (throttled by
  *    `lastNotifiedAt`, so calling it each tick is safe);
- *  - once a day: a NOT_USED report's text is deleted after 30 days (the decision row stays).
+ *  - once a day: a NOT_USED report's text is deleted after 30 days (the decision row stays); batches
+ *    expire after 14 days and their code maps go 30 days after closing; the rewrite timers; the
+ *    batch reminder (CSP-2).
  * No purge of profiles and no AiExchange delete in v1 (owner Q-2, Q-3).
  */
 import { renotifyUnseenReferrals } from "../../platform/safeguarding/SafeguardingService";
 import { sweepNotUsedText } from "./SupportReportService";
+import { sweepBatches } from "./SupportBatchService";
+import { batchReminders, sweepRewrites } from "./supportRewriteSweeps";
 
 export type RunOnce = (key: string, fn: () => Promise<void>) => Promise<boolean>;
+
+/** Reminders (the teacher's gentle one, the Principal's batch and Thursday ones) are sent by day only. */
+export const REMINDER_FROM_HOUR_DHAKA = 9;
+const dhakaHour = (d: Date): number => Number(d.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hour12: false })) % 24;
 
 export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Promise<number> {
   let n = await renotifyUnseenReferrals(now);
   await runOnce("SUPPORT_DAILY", async () => {
     n += await sweepNotUsedText(now);
+    n += await sweepBatches(now);
+    n += await sweepRewrites(now, { reminders: false });
   });
+  // Its own key and window: the first tick after 09:00 Dhaka (a restart before then loses nothing).
+  if (dhakaHour(now) >= REMINDER_FROM_HOUR_DHAKA) {
+    await runOnce("SUPPORT_REMIND", async () => {
+      n += await sweepRewrites(now, { states: false });
+      n += await batchReminders(now);
+    });
+  }
   return n;
 }

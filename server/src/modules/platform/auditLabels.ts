@@ -103,6 +103,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SUPPORT_RESULT_UPLOADED: { bn: "ব্যাচের ফলাফল আপলোড করেছেন", en: "Uploaded a batch result", group: "ROSTER" },
   SUPPORT_RESULT_APPLIED: { bn: "ব্যাচের ফলাফল প্রয়োগ করেছেন", en: "Applied a batch result", group: "ROSTER" },
   SUPPORT_RESULT_DISCARDED: { bn: "ব্যাচের ফলাফল বাতিল করেছেন", en: "Discarded a batch result", group: "ROSTER" },
+  SUPPORT_EVALUATION_RECORDED: { bn: "মূল্যায়ন ফল সংরক্ষণ করেছেন", en: "Recorded a support-method evaluation", group: "ROSTER" },
   SUPPORT_PROFILE_OPENED: { bn: "সহায়তা প্রোফাইল খোলা হয়েছে", en: "Opened a support profile", group: "ROSTER" },
   SUPPORT_PROFILE_CLOSED: { bn: "সহায়তা প্রোফাইল বন্ধ হয়েছে", en: "Closed a support profile", group: "ROSTER" },
   SUPPORT_PROFILE_REOPENED: { bn: "সহায়তা প্রোফাইল আবার খুলেছেন", en: "Reopened a support profile", group: "ROSTER" },
