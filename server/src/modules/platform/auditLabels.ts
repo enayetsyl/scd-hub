@@ -94,6 +94,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SUPPORT_REPORT_SUBMITTED: { bn: "সহায়তা রিপোর্ট জমা দিয়েছেন", en: "Submitted a support report", group: "ROSTER" },
   SUPPORT_REPORT_WITHDRAWN: { bn: "সহায়তা রিপোর্ট তুলে নিয়েছেন", en: "Withdrew a support report", group: "ROSTER" },
   SUPPORT_REPORT_DECIDED: { bn: "সহায়তা রিপোর্টে সিদ্ধান্ত দিয়েছেন", en: "Decided a support report", group: "ROSTER" },
+  SUPPORT_STRATEGY_CREATED: { bn: "সহায়তার কৌশল যুক্ত করেছেন", en: "Added a support strategy", group: "ROSTER" },
   SUPPORT_VERSION_PUBLISHED: { bn: "সহায়তা প্রোফাইল প্রকাশ করেছেন", en: "Published a support profile", group: "ROSTER" },
   SUPPORT_VERSION_DISCARDED: { bn: "সহায়তা প্রোফাইলের খসড়া বাতিল করেছেন", en: "Discarded a support-profile draft", group: "ROSTER" },
   SUPPORT_BATCH_CREATED: { bn: "সহায়তা ব্যাচ তৈরি করেছেন", en: "Created a support batch", group: "ROSTER" },
