@@ -1,5 +1,16 @@
 # STATUS
 
+- 2026-11-13: **BUILT — student support profile CSP-6 (D-#1566)**, same branch. Nine help guides (drafts, hidden until their pictures are taken and the Islamic references are checked), glossary, the switch-on checklist below. **The feature stays OFF until the owner completes it.** CSP-7 (Mode A, the instant check) is not built (owner Q-21: after switch-on). Handoff: `docs/overnight-handoff-support-profile.md`.
+  - **Switch-on checklist (CSP-6, owner — the feature is OFF until all are done):**
+    1. The Principal reads and approves `server/assets/support-profile/method_v1.md` (MD-8).
+    2. The Qur'an / hadith references in M-10 and in the `support-report-write` guide are checked (Q-17), and the guides lose `"draft": true` once their pictures are taken.
+    3. The chat account for Mode B is the Principal's own (Q-20), **"use my chats for training" is OFF**, and a private or temporary chat is used (§6.13).
+    4. The owner runs the **evaluation pack** (`npx tsx server/scripts/support-eval-pack.ts --out pack.md`, or ব্যাচ প্রক্রিয়া → মূল্যায়ন প্যাক) through that chat and records it; **every pass mark of §16.9 is met** for `method_v1` (not yet run — this session ran no real model).
+    5. One real round-trip on the dev site: batch → pack → chat → upload → apply.
+    6. The safeguarding contact(s) are set (Q-16 — the second contact is not built) and one test referral is raised and seen.
+    7. The batch day is Thursday (Q-18, reminder built); the instant check stays OFF (Q-19); Mode A is not used (Q-21).
+    8. Switch on for all classes and teachers (শিক্ষার্থী সহায়তা → চালু করুন) — this sets the approval-load review to 30 days later.
+    9. A short staff briefing with the guides.
 - 2026-11-13: **BUILT — student support profile CSP-5 (D-#1557–#1559, #1589)**, same branch. App screens (Home → 🌱 শিক্ষার্থী সহায়তা; the card from the student page and the attendance roster; the comment prompt), lifecycle sweeps and notices, approval-load card, measures. Feature still OFF. Next: CSP-6 (help guides — drafts — and the switch-on checklist).
 - 2026-11-13: **BUILT — student support profile CSP-4 (D-#1555–#1557, #1562, #1563, #1565)**, same branch. Publishing (the second Principal check), rule 16, hand-made versions, history / diff / readers, review dates, goal progress. Server only. Feature still OFF. Next: CSP-5 (teacher surfaces and the app screens).
 - 2026-11-13: **BUILT — student support profile CSP-3 (D-#1554, #1555, #1560, #1561)**, same branch. Compare + records pack, the Principal's review (quick-approve list, strategy links, before → after), comment → report seed (offered by the app after a comment is saved), guardian information, 16:00 digest. Server only; screens still to come. Feature still OFF. Next: CSP-4 (synthesis publish gate, hand-made versions, history).

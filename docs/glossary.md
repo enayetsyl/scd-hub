@@ -34,3 +34,9 @@ source docs disagree, the docs win — fix this file.
 | **Provenance / pinned_to** | (see above) — carried on every imported artifact for traceability and re-conformance. |
 | **import_batches** | The audit row written on a successful import (R-IMP3). |
 | **RBAC / PoLP / row-scope** | Default-deny action grants (`shared/vocab.ts`), least-privilege, and row-level scoping — enforced in resolvers (ADR-004). |
+| **Support profile (শিক্ষার্থী সহায়তা প্রোফাইল)** | One per child: strengths, what helps, hard situations, what to avoid and the current goals — built only from approved, dated reports by the child's current teachers. Not a diagnosis, never for punishment. Never "psychological profile" (no মানসিক / মনস্তাত্ত্বিক). See `docs/prd-child-support-profile.md`. |
+| **Support report (সহায়তা রিপোর্ট)** | One observation: before → what the child did → after, plus one good thing (আজ এই শিশুর একটি ভালো দিক). Saved as TO_PROCESS (প্রক্রিয়ার অপেক্ষায়) with no AI. |
+| **Batch (ব্যাচ) / analysis pack (বিশ্লেষণ প্যাক)** | The Principal's weekly processing run. Mode B: one de-identified Markdown pack (codes, not names) → his chat → the result uploaded and validated (support-result/v1). Mode A (API) is CSP-7, not built. |
+| **Method document (পদ্ধতি-নথি)** | `server/assets/support-profile/method_vN.md` — the single standard every model follows; versioned, hashed, stamped on every result. |
+| **Evidence level** | SINGLE (একবার দেখা গেছে) · EMERGING (কয়েকবার দেখা গেছে) · ESTABLISHED (নিয়মিত দেখা যায়) · STRONG (বিভিন্ন ক্লাসে দেখা যায়) — computed by the server from the cited approved reports (§16.4). |
+| **Safeguarding referral (শিশু সুরক্ষা)** | The route OUT of the support profile for a sign of abuse, self-harm or neglect; Principal-only (`safeguarding:receive`); never profile evidence. |

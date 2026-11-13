@@ -292,3 +292,60 @@ npx jest --maxWorkers=2 (full server suite) → Test Suites: 495 passed, 495 tot
 - Enum labels (chips) show Bangla in both languages (they come from `shared`).
 
 **Decisions:** D-#1557 (CSP-5 part), D-#1558, D-#1559, D-#1589.
+
+---
+
+## CSP-6 — help guides and switch-on (full swing)
+
+**Commits:** the single `[CSP-6] docs(support-profile): …` commit (see `git log`).
+
+**What was built**
+- Nine help guides (`server/assets/help/guides/support-*.json`), Bangla reading guides, all
+  `"draft": true` (hidden): support-card-read, support-report-write (with the adab paragraph — Qur'an
+  49:11–12 — marked for the Q-17 check), support-report-from-comment, support-safeguarding (the five
+  steps, 1098), support-review-queue, support-profile-publish, support-profile-open-close,
+  support-report-questions ("মনে নেই"), support-batch-chat (the eight Mode B steps, the privacy
+  settings, the evaluation pack). Each names its `support_profile:*` / `safeguarding:*` permission.
+  No screenshots (they need the live screens) — hence drafts, per D-#973.
+- Glossary rows; the switch-on checklist in STATUS; D-#1566.
+- `supportMethodParity.test.ts` — the Revision 3 parity test, minus its Mode A half (CSP-7, `it.todo`).
+
+**Verified**
+```
+npm run build --workspace=shared → exit 0
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_descriptive_carriers lo-codes / subjects-2027 / descriptive → RESULT: PASS (22 / 20 / 11 cases)
+node skills/_tools/verify_help_guides.mjs → help guides: 383 file(s), 35 draft(s), 16 categories · ALL CHECKS PASSED
+typecheck shared / server / app → exit 0 / exit 0 / exit 0
+npx jest --runInBand supportMethodParity help support permissionCatalogueGates firewall
+  → Test Suites: 51 passed, 51 total · Tests: 1 todo, 586 passed, 587 total
+npx jest --maxWorkers=2 (full server suite) → Test Suites: 496 passed, 496 total · Tests: 1 todo, 7762 passed, 7763 total · exit 0
+(app) npx expo export --platform web → expo export exit 0 (0 lines matching error)
+```
+
+**Not done in CSP-6**
+- The owner-run items of the checklist (method approval, Islamic references, chat account, the
+  evaluation pass marks on a real chat, the round-trip on the dev site, the safeguarding contact,
+  the switch, the staff briefing). **The feature is OFF.**
+- Screenshots for the guides; the guides stay drafts until then.
+
+**Decisions:** D-#1566 (CSP-6 part).
+
+---
+
+## Overall — what is where, and what is not done
+
+- Slices CSP-1 … CSP-6 are on `claude/new-session-amfdao`, each gated and pushed. CSP-7 (Mode A, the
+  instant check) is not built (owner Q-21: after switch-on).
+- Every test the PRD lists exists and passes, except: `supportMethodParity`'s Mode A half and the CSP-7
+  suites (`aiRouterConfiguredFallback`, `supportModeA`, `supportInstantCheck`) — CSP-7; and the
+  PRD's "one local UI walk" (CSP-5) — not run.
+- **The AI pass marks (§16.9) are not claimed.** The harness, fixtures and scorer exist; no real
+  chat or model was run in this session.
+- Open owner items (not built): retention after a child leaves (Q-2 — nothing is auto-deleted), the
+  budget Q-15 (Mode B costs nothing), the second safeguarding contact Q-16, who checks the Qur'an /
+  hadith references and the Bangla wording Q-17.
+- Contract files touched: `shared/vocab.ts` (two notification kinds + labels) and its verifier; no
+  import-schema change. `shared/permissionCatalogue.ts` + docs. Check for a parallel branch editing
+  `NOTIFICATION_KINDS` before merging.
+- The decision rows used: D-#1546–#1566 and D-#1582–#1589 (all free on origin/dev at each commit).
