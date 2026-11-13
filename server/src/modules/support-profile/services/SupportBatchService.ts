@@ -882,6 +882,7 @@ async function applyClaimed(auth: AuthPayload, imp: ISupportImport, untick: stri
     if (res.safeguarding.present) {
       // SG-9: the teacher is not asked — the Principal is; the report is neither approved nor returned.
       r.status = "PROCESSED";
+      r.processedAt = now;
       r.safeguardingHold = "OPEN";
       r.safeguardingHoldSource = res.safeguarding.confidence === "HIGH" ? "BATCH_HIGH" : "BATCH_LOW";
       r.openFlags = questions;
@@ -902,6 +903,7 @@ async function applyClaimed(auth: AuthPayload, imp: ISupportImport, untick: stri
       summary.valid.returns++;
     } else {
       r.status = "PROCESSED";
+      r.processedAt = now;
       // Only a report that is neither held, routed nor returned keeps what COMPARE said (§2.4).
       r.compare = keep.compare;
       r.suggestedLinks = keep.suggestedLinks;

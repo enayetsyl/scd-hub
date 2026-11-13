@@ -128,6 +128,8 @@ export interface ISupportReport extends Document {
   /** When it last became TO_PROCESS (the oldest-waiting reminder, §6.10 B-1). */
   waitingSince: Date | null;
   returnedAt: Date | null;
+  /** When it last reached the Principal's queue (PROCESSED) — the approval-load measure (§7.8). */
+  processedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -216,6 +218,7 @@ const SupportReportSchema = new Schema<ISupportReport>(
     submittedAt: { type: Date, default: null },
     waitingSince: { type: Date, default: null },
     returnedAt: { type: Date, default: null },
+    processedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
