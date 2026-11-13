@@ -20,6 +20,15 @@ export type HwEditItemParam = {
 /** Staff landing dashboard (UX-4, D-#265) — registered FIRST so staff land here. */
 export type HomeStackParamList = {
   Today: undefined;
+  /** Student support profile (docs/prd-child-support-profile.md §9; D-#1546). Never first. */
+  SupportHome: undefined;
+  SupportCard: { studentId: string; via: string; full?: boolean };
+  SupportReportForm: { studentId: string; reportId?: string; source?: string };
+  MySupportReports: undefined;
+  SupportQueue: undefined;
+  SupportReview: { reportId: string };
+  SupportBatch: undefined;
+  SafeguardingReferrals: undefined;
   /** D-#710: the claim queue for a teacher the Principal added to the 10:30 digest
    *  (teachers have no Admin tab). Registered AFTER Today, so Today stays initial. */
   WorkClaimQueue: undefined;

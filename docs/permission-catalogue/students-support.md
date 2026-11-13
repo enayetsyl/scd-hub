@@ -52,5 +52,17 @@ Every field `support_profile:process` (LOCKED) and refused in every "view as" se
 | publishSupportVersion / discardSupportVersion / editSupportDraftItem / createHandSupportVersion / markSupportGoalProgress | `support_profile:approve` | never under "view as" |
 | supportVersionsPage / supportVersionDiff / supportReadersPage | `support_profile:view_all` | the history read is audited (HISTORY) |
 
-## (e) App gates
-Screens arrive with CSP-5 (teacher surfaces) and CSP-2/3 (batch, queue). Each button checks its action with `can("support_profile:…")`.
+## (d3) Measures (CSP-5) — `server/src/modules/support-profile/resolvers/supportLifecycle.ts`
+| resolver | gate |
+|---|---|
+| supportApprovalLoadJson | `support_profile:approve` |
+| recordSupportApprovalLoadChoice | `support_profile:manage` |
+| supportChildIndicatorsJson / supportSchoolTotalsJson | `support_profile:view_all` |
+
+## (e) App gates (CSP-5) — `app/src/screens/support/`, `components/SupportProfileButton.tsx`, `components/SupportSeedPrompt.tsx`
+| place | gate |
+|---|---|
+| drawer "শিক্ষার্থী সহায়তা" | any of `support_profile:report` / `view_all` / `safeguarding:receive` |
+| SupportHome buttons | আমার রিপোর্ট `report` · queue `approve` · batches `process` · referrals `safeguarding:receive` · switch `manage` |
+| card button (student page) / roster row (attendance) | `support_profile:view` or `view_all` (server narrows to readers) |
+| comment prompt after a saved comment | `support_profile:report` |

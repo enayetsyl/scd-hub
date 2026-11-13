@@ -28,7 +28,7 @@ import { studentsReadBy } from "./supportScope";
 import { callerHasPermission, type Permission } from "@scd/shared";
 
 export const SUPPORT_SURFACES = ["CARD", "FULL", "HISTORY", "REPORT"] as const;
-export const SUPPORT_VIA = ["ROUTINE", "ATTENDANCE", "CLASS_NOTE", "CLASS_TEST", "STUDENT_PAGE", "QUEUE"] as const;
+export const SUPPORT_VIA = ["ROUTINE", "ATTENDANCE", "CLASS_NOTE", "CLASS_TEST", "STUDENT_PAGE", "QUEUE", "MY_REPORTS"] as const;
 
 /** The audit row carries only known values: a made-up `via` / `surface` is refused. */
 export function assertSurfaceVia(surface: string, via: string): void {
@@ -163,6 +163,21 @@ export async function chipStudentIds(ctx: SupportCtx, studentIds: string[]): Pro
   return withProfile.map((p) => String(p.studentId)).filter((id) => mine.has(id));
 }
 
+/** §9.3 child picker: the students this caller may write a report about (search by name; max 20). No profile needed. */
+export async function reportableStudents(ctx: SupportCtx, search: string): Promise<{ id: string; name: string }[]> {
+  const auth = await supportCaller(ctx);
+  if (!callerHasPermission(auth, "support_profile:report" as Permission)) throw new SupportProfileRefusal("অনুমতি নেই।");
+  if (!holdsViewAll(auth) && !(await isSwitchedOn())) return [];
+  const q = search.trim().slice(0, 40).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (q.length < 2) return [];
+  const found = await Student.find({ active: { $ne: false }, $or: [{ name: { $regex: q, $options: "i" } }, { nameBn: { $regex: q, $options: "i" } }] })
+    .select("name nameBn")
+    .limit(60)
+    .lean();
+  const mine = holdsViewAll(auth) ? new Set(found.map((x) => String(x._id))) : await studentsReadBy(auth.userId, found.map((x) => String(x._id)));
+  return found.filter((x) => mine.has(String(x._id))).slice(0, 20).map((x) => ({ id: String(x._id), name: x.nameBn || x.name }));
+}
+
 /** The Principal's list (§9.5): by class and name — never by concern count. */
 export async function profilesPage(ctx: SupportCtx, args: { status?: string | null; page?: number | null; pageSize?: number | null }) {
   const auth = await supportCaller(ctx);
@@ -170,14 +185,14 @@ export async function profilesPage(ctx: SupportCtx, args: { status?: string | nu
   const page = Math.max(1, args.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, args.pageSize ?? 50));
   const filter = args.status ? { status: args.status } : {};
-  const all = await SupportProfile.find(filter).select("studentId status currentVersionId nextReviewDueKey openedAt").lean();
+  const all = await SupportProfile.find(filter).select("studentId status currentVersionId nextReviewDueKey openedAt safeguardingBanner").lean();
   const students = new Map(
     (await Student.find({ _id: { $in: all.map((p) => p.studentId) } }).select("name nameBn classId").lean()).map((s) => [String(s._id), s]),
   );
   const rows = all
     .map((p) => {
       const s = students.get(String(p.studentId)) as { name?: string; nameBn?: string; classId?: Types.ObjectId } | undefined;
-      return { id: String(p._id), studentId: String(p.studentId), studentName: s?.nameBn || s?.name || "", classId: s?.classId ? String(s.classId) : "", status: p.status, published: !!p.currentVersionId, nextReviewDueKey: p.nextReviewDueKey ?? null };
+      return { id: String(p._id), studentId: String(p.studentId), studentName: s?.nameBn || s?.name || "", classId: s?.classId ? String(s.classId) : "", status: p.status, published: !!p.currentVersionId, nextReviewDueKey: p.nextReviewDueKey ?? null, safeguardingBanner: !!p.safeguardingBanner };
     })
     .sort((a, b) => a.classId.localeCompare(b.classId) || a.studentName.localeCompare(b.studentName, "bn"));
   return { rows: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length, page, pageSize };
