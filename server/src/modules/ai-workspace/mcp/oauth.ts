@@ -25,12 +25,16 @@ import { User } from "../../foundation/models/User";
 import { clientIpFrom } from "../../../clientIp";
 import { writeAudit } from "../../platform/services/AuditService";
 import type { AuthPayload } from "../../../context";
-import { AiOAuthClient, AiOAuthCode, AiOAuthToken } from "../models/AiOAuth";
+import { AiOAuthClient, AiOAuthCode, AiOAuthToken, type OAuthResource } from "../models/AiOAuth";
 
 export const ACCESS_TTL_S = 3600;
 export const REFRESH_TTL_S = 30 * 86400;
 const CODE_TTL_MS = 10 * 60 * 1000;
 export const MCP_SCOPE = "mcp";
+/** Data assistant (DA-3, D-#1536): the second protected resource, `/mcp/data`. */
+export const DATA_SCOPE = "data.read";
+/** Owner Q10: a data connection lives 90 days at most from the first sign-in. */
+export const DATA_MAX_AGE_MS = 90 * 86_400_000;
 
 export const sha256 = (s: string): string => createHash("sha256").update(s).digest("hex");
 const token = (): string => randomBytes(32).toString("base64url");
@@ -48,6 +52,10 @@ export function protectedResourceMetadata(base: string): Record<string, unknown>
   return { resource: `${base}/mcp`, authorization_servers: [base], scopes_supported: [MCP_SCOPE], bearer_methods_supported: ["header"], resource_name: "SCD Hub AI Workspace" };
 }
 
+export function dataProtectedResourceMetadata(base: string): Record<string, unknown> {
+  return { resource: `${base}/mcp/data`, authorization_servers: [base], scopes_supported: [DATA_SCOPE], bearer_methods_supported: ["header"], resource_name: "SCD Hub data" };
+}
+
 export function authorizationServerMetadata(base: string): Record<string, unknown> {
   return {
     issuer: base,
@@ -58,7 +66,7 @@ export function authorizationServerMetadata(base: string): Record<string, unknow
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
-    scopes_supported: [MCP_SCOPE],
+    scopes_supported: [MCP_SCOPE, DATA_SCOPE],
   };
 }
 
@@ -80,7 +88,15 @@ export function pkceS256(verifier: string): string {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+/** Which resource an authorise request is for (RFC 8707 `resource`, else the scope; default workspace). */
+export function resourceOf(params: Record<string, string>): OAuthResource {
+  const r = (params.resource ?? "").trim().replace(/\/+$/, "");
+  if (r) return /\/mcp\/data$/.test(r) ? "data" : "workspace";
+  return (params.scope ?? "").split(/\s+/).includes(DATA_SCOPE) ? "data" : "workspace";
+}
+
 function loginPage(params: Record<string, string>, clientName: string, error: string | null): string {
+  const data = resourceOf(params) === "data";
   const hidden = Object.entries(params)
     .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
     .join("");
@@ -89,9 +105,15 @@ function loginPage(params: Record<string, string>, clientName: string, error: st
 <style>body{font-family:system-ui,"Noto Sans Bengali",sans-serif;background:#f4f6f8;margin:0;padding:24px}main{max-width:420px;margin:40px auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 4px #0002}
 label{display:block;margin-top:12px;font-size:14px}input[type=text],input[type=password]{width:100%;box-sizing:border-box;padding:10px;margin-top:4px;border:1px solid #bbb;border-radius:8px;font-size:16px}
 button{margin-top:18px;width:100%;padding:12px;border:0;border-radius:8px;background:#0b6e4f;color:#fff;font-size:16px}.err{background:#fde8e8;color:#8a1c1c;padding:10px;border-radius:8px;margin-top:12px}.muted{color:#555;font-size:14px}</style></head>
-<body><main><h2>SCD Hub — এআই কর্মক্ষেত্র</h2>
+<body><main>${
+    data
+      ? `<h2>SCD Hub — তথ্য সহকারী</h2>
+<p><b>${esc(clientName)}</b> আপনার অনুমতি অনুযায়ী SCD Hub-এর তথ্য শুধু পড়তে পারবে। ফোন নম্বর ও ঠিকানা কখনো পাঠানো হয় না।</p>
+<p class="muted">${esc(clientName)} will read SCD Hub data as you, only what your permissions allow. Phone numbers and addresses are never shared. The connection ends after 90 days at most.</p>`
+      : `<h2>SCD Hub — এআই কর্মক্ষেত্র</h2>
 <p><b>${esc(clientName)}</b> এআই কর্মক্ষেত্রে ঢোকার অনুমতি চাইছে।</p>
-<p class="muted">${esc(clientName)} is asking to use the SCD Hub AI Workspace. Only the Principal can allow this.</p>
+<p class="muted">${esc(clientName)} is asking to use the SCD Hub AI Workspace. Only the Principal can allow this.</p>`
+  }
 ${error ? `<div class="err">${esc(error)}</div>` : ""}
 <form method="post" action="/oauth/authorize">${hidden}
 <label>ইমেইল বা ফোন / Email or phone<input type="text" name="email" autocomplete="username" required></label>
@@ -99,12 +121,20 @@ ${error ? `<div class="err">${esc(error)}</div>` : ""}
 <button type="submit">অনুমতি দিন / Allow</button></form></main></body></html>`;
 }
 
+/** The two resource URLs this server protects (RFC 8707 `resource` must be one of them). */
+const resourceUrl = (base: string, r: OAuthResource): string => (r === "data" ? `${base}/mcp/data` : `${base}/mcp`);
+const normResource = (v: string): string => v.trim().replace(/\/+$/, "");
+
 const AUTH_PARAMS = ["response_type", "client_id", "redirect_uri", "code_challenge", "code_challenge_method", "state", "scope", "resource"] as const;
 
-async function checkAuthorizeParams(q: Record<string, unknown>): Promise<{ ok: true; params: Record<string, string>; clientName: string } | { ok: false; status: number; error: string }> {
+async function checkAuthorizeParams(q: Record<string, unknown>, base: string): Promise<{ ok: true; params: Record<string, string>; clientName: string } | { ok: false; status: number; error: string }> {
   const params: Record<string, string> = {};
   for (const k of AUTH_PARAMS) if (typeof q[k] === "string") params[k] = q[k] as string;
   if (params.response_type !== "code") return { ok: false, status: 400, error: "unsupported_response_type" };
+  if (params.resource !== undefined && params.resource !== "") {
+    const r = normResource(params.resource);
+    if (r !== resourceUrl(base, "workspace") && r !== resourceUrl(base, "data")) return { ok: false, status: 400, error: "invalid_target" };
+  }
   const client = params.client_id ? await AiOAuthClient.findOne({ clientId: params.client_id }).lean() : null;
   if (!client) return { ok: false, status: 400, error: "invalid_client" };
   if (!params.redirect_uri || !client.redirectUris.includes(params.redirect_uri)) return { ok: false, status: 400, error: "invalid_redirect_uri" };
@@ -119,20 +149,26 @@ function redirectWith(res: Response, uri: string, q: Record<string, string>): vo
 }
 
 /** Issues a fresh access + refresh token pair (only hashes are stored). */
-async function issueTokens(clientId: string, clientName: string, userId: Types.ObjectId): Promise<Record<string, unknown>> {
+async function issueTokens(clientId: string, clientName: string, userId: Types.ObjectId, resource: OAuthResource = "workspace", grantedAtIn?: Date | null): Promise<Record<string, unknown>> {
   const access = token();
   const refresh = token();
   const now = Date.now();
+  // A data connection never outlives 90 days from its first sign-in (owner Q10).
+  const grantedAt = resource === "data" ? grantedAtIn ?? new Date(now) : null;
+  const cap = grantedAt ? grantedAt.getTime() + DATA_MAX_AGE_MS : Infinity;
+  const accessAt = Math.min(now + ACCESS_TTL_S * 1000, cap);
   await AiOAuthToken.create({
     accessHash: sha256(access),
     refreshHash: sha256(refresh),
     clientId,
     clientName,
     userId,
-    accessExpiresAt: new Date(now + ACCESS_TTL_S * 1000),
-    refreshExpiresAt: new Date(now + REFRESH_TTL_S * 1000),
+    resource,
+    grantedAt,
+    accessExpiresAt: new Date(accessAt),
+    refreshExpiresAt: new Date(Math.min(now + REFRESH_TTL_S * 1000, cap)),
   });
-  return { access_token: access, token_type: "Bearer", expires_in: ACCESS_TTL_S, refresh_token: refresh, scope: MCP_SCOPE };
+  return { access_token: access, token_type: "Bearer", expires_in: Math.max(1, Math.round((accessAt - now) / 1000)), refresh_token: refresh, scope: resource === "data" ? DATA_SCOPE : MCP_SCOPE };
 }
 
 /** The Principal check every token use repeats: an active login still holding ai_workspace:admin. */
@@ -143,15 +179,45 @@ export async function workspaceAdminAuth(userId: Types.ObjectId | string): Promi
   return callerHasPermission(auth, "ai_workspace:admin") ? auth : null;
 }
 
-/** Bearer token → the Principal's auth (and the client), or null. Touches lastUsedAt. */
-export async function verifyAccessToken(raw: string | null | undefined): Promise<{ auth: AuthPayload; clientName: string } | null> {
+/**
+ * The data-connection check every use repeats (D-#1536): an active STAFF login (never GUARDIAN)
+ * holding `data_assistant:connect` — the permission, not the role, so a later per-person grant
+ * works with no code change. Rebuilt from the User row on every call.
+ */
+export async function dataConnectAuth(userId: Types.ObjectId | string): Promise<AuthPayload | null> {
+  const u = await User.findOne({ _id: userId, active: true }).select("role additionalTemplates grantedPermissions revokedPermissions").lean();
+  if (!u || u.role === "GUARDIAN") return null;
+  const auth = { userId: String(userId), role: u.role, additionalTemplates: u.additionalTemplates ?? [], grantedPermissions: u.grantedPermissions ?? [], revokedPermissions: u.revokedPermissions ?? [] } as AuthPayload;
+  return callerHasPermission(auth, "data_assistant:connect") ? auth : null;
+}
+
+const authFor = (resource: OAuthResource, userId: Types.ObjectId | string) => (resource === "data" ? dataConnectAuth(userId) : workspaceAdminAuth(userId));
+/** Rows written before DA-3 have no resource: they are workspace tokens. */
+const resourceFilter = (resource: OAuthResource) => (resource === "data" ? { resource: "data" } : { resource: { $ne: "data" } });
+
+/** Set by the data assistant (DataConnectionService) — cuts a person's data tokens with a reason. */
+let onDataAccessLost: ((userId: string) => Promise<unknown>) | null = null;
+export function setDataAccessLostHandler(fn: (userId: string) => Promise<unknown>): void {
+  onDataAccessLost = fn;
+}
+
+/**
+ * Bearer token → the caller's auth (and the client), or null. Touches lastUsedAt. The token must
+ * be of the asked resource: `/mcp` passes "workspace", `/mcp/data` passes "data". A data token
+ * whose person lost `data_assistant:connect` or was deactivated is revoked on the spot.
+ */
+export async function verifyAccessToken(raw: string | null | undefined, resource: OAuthResource = "workspace"): Promise<{ auth: AuthPayload; clientName: string; clientId: string } | null> {
   if (!raw) return null;
-  const t = await AiOAuthToken.findOne({ accessHash: sha256(raw), revokedAt: null, accessExpiresAt: { $gt: new Date() } }).lean();
+  const t = await AiOAuthToken.findOne({ accessHash: sha256(raw), revokedAt: null, accessExpiresAt: { $gt: new Date() }, ...resourceFilter(resource) }).lean();
   if (!t) return null;
-  const auth = await workspaceAdminAuth(t.userId);
-  if (!auth) return null;
+  if (resource === "data" && Date.now() >= new Date(t.grantedAt ?? t.createdAt).getTime() + DATA_MAX_AGE_MS) return null;
+  const auth = await authFor(resource, t.userId);
+  if (!auth) {
+    if (resource === "data" && onDataAccessLost) await onDataAccessLost(String(t.userId)).catch(() => undefined);
+    return null;
+  }
   void AiOAuthToken.updateOne({ _id: t._id }, { $set: { lastUsedAt: new Date() } }).catch(() => undefined);
-  return { auth, clientName: t.clientName };
+  return { auth, clientName: t.clientName, clientId: t.clientId };
 }
 
 export const oauthRouter: Router = express.Router();
@@ -163,6 +229,9 @@ oauthRouter.get("/.well-known/oauth-protected-resource", (req, res) => {
 });
 oauthRouter.get("/.well-known/oauth-protected-resource/mcp", (req, res) => {
   res.json(protectedResourceMetadata(baseUrlOf(req)));
+});
+oauthRouter.get("/.well-known/oauth-protected-resource/mcp/data", (req, res) => {
+  res.json(dataProtectedResourceMetadata(baseUrlOf(req)));
 });
 oauthRouter.get("/.well-known/oauth-authorization-server", (req, res) => {
   res.json(authorizationServerMetadata(baseUrlOf(req)));
@@ -182,7 +251,7 @@ oauthRouter.post("/oauth/register", json, async (req: Request, res: Response) =>
 });
 
 oauthRouter.get("/oauth/authorize", async (req: Request, res: Response) => {
-  const c = await checkAuthorizeParams(req.query as Record<string, unknown>);
+  const c = await checkAuthorizeParams(req.query as Record<string, unknown>, baseUrlOf(req));
   if (!c.ok) {
     res.status(c.status).type("text/plain").send(c.error);
     return;
@@ -192,7 +261,7 @@ oauthRouter.get("/oauth/authorize", async (req: Request, res: Response) => {
 
 oauthRouter.post("/oauth/authorize", form, async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const c = await checkAuthorizeParams(body);
+  const c = await checkAuthorizeParams(body, baseUrlOf(req));
   if (!c.ok) {
     res.status(c.status).type("text/plain").send(c.error);
     return;
@@ -210,9 +279,11 @@ oauthRouter.post("/oauth/authorize", form, async (req: Request, res: Response) =
     res.status(401).type("html").send(loginPage(c.params, c.clientName, "ইমেইল/ফোন বা পাসওয়ার্ড মেলেনি / Wrong login"));
     return;
   }
-  const auth = await workspaceAdminAuth(login.userId);
+  const resource = resourceOf(c.params);
+  const auth = await authFor(resource, login.userId);
   if (!auth) {
-    res.status(403).type("html").send(loginPage(c.params, c.clientName, "শুধু প্রধান শিক্ষক এই সংযোগের অনুমতি দিতে পারেন / Only the Principal can allow this"));
+    const refusal = resource === "data" ? "এই সংযোগের অনুমতি আপনার নেই / You don't have permission to connect." : "শুধু প্রধান শিক্ষক এই সংযোগের অনুমতি দিতে পারেন / Only the Principal can allow this";
+    res.status(403).type("html").send(loginPage(c.params, c.clientName, refusal));
     return;
   }
   const code = token();
@@ -222,10 +293,11 @@ oauthRouter.post("/oauth/authorize", form, async (req: Request, res: Response) =
     userId: new Types.ObjectId(login.userId),
     redirectUri: c.params.redirect_uri,
     codeChallenge: c.params.code_challenge,
-    scope: MCP_SCOPE,
+    scope: resource === "data" ? DATA_SCOPE : MCP_SCOPE,
+    resource,
     expiresAt: new Date(Date.now() + CODE_TTL_MS),
   });
-  await writeAudit({ eventKind: "AI_MCP_AUTHORIZED", actorId: login.userId, actorRole: login.role, targetKind: "AiOAuthClient", meta: { client: c.clientName, clientId: c.params.client_id } });
+  await writeAudit({ eventKind: resource === "data" ? "DATA_MCP_AUTHORIZED" : "AI_MCP_AUTHORIZED", actorId: login.userId, actorRole: login.role, targetKind: "AiOAuthClient", meta: { client: c.clientName, clientId: c.params.client_id } });
   redirectWith(res, c.params.redirect_uri, { code, ...(c.params.state ? { state: c.params.state } : {}) });
 });
 
@@ -239,21 +311,32 @@ oauthRouter.post("/oauth/token", form, json, async (req: Request, res: Response)
     const code = await AiOAuthCode.findOneAndUpdate({ codeHash: sha256(b.code), usedAt: null, expiresAt: { $gt: new Date() } }, { $set: { usedAt: new Date() } }, { new: true }).lean();
     if (!code || code.clientId !== b.client_id || code.redirectUri !== b.redirect_uri) return void bad("invalid_grant");
     if (pkceS256(b.code_verifier) !== code.codeChallenge) return void bad("invalid_grant");
-    if (!(await workspaceAdminAuth(code.userId))) return void bad("invalid_grant");
+    const resource: OAuthResource = code.resource === "data" ? "data" : "workspace";
+    if (b.resource && normResource(b.resource) !== resourceUrl(baseUrlOf(req), resource)) return void bad("invalid_target");
+    if (!(await authFor(resource, code.userId))) return void bad("invalid_grant");
     const client = await AiOAuthClient.findOne({ clientId: code.clientId }).lean();
-    res.json(await issueTokens(code.clientId, client?.name ?? "MCP client", code.userId));
+    res.json(await issueTokens(code.clientId, client?.name ?? "MCP client", code.userId, resource));
     return;
   }
   if (b.grant_type === "refresh_token") {
     if (!b.refresh_token) return void bad("invalid_request");
+    if (b.resource) {
+      // A `resource` that is not the token's bound one is refused BEFORE anything is rotated.
+      const cur = await AiOAuthToken.findOne({ refreshHash: sha256(b.refresh_token) }).select("resource").lean();
+      if (cur && normResource(b.resource) !== resourceUrl(baseUrlOf(req), cur.resource === "data" ? "data" : "workspace")) return void bad("invalid_target");
+    }
     // Rotation: the old pair is revoked as the new one is issued.
     const old = await AiOAuthToken.findOneAndUpdate(
       { refreshHash: sha256(b.refresh_token), revokedAt: null, refreshExpiresAt: { $gt: new Date() }, ...(b.client_id ? { clientId: b.client_id } : {}) },
       { $set: { revokedAt: new Date() } },
       { new: true },
     ).lean();
-    if (!old || !(await workspaceAdminAuth(old.userId))) return void bad("invalid_grant");
-    res.json(await issueTokens(old.clientId, old.clientName, old.userId));
+    const resource: OAuthResource = old?.resource === "data" ? "data" : "workspace";
+    if (!old || !(await authFor(resource, old.userId))) return void bad("invalid_grant");
+    // The 90-day limit holds across rotations: past it, the person signs in again.
+    const firstSignIn = old.grantedAt ?? old.createdAt;
+    if (resource === "data" && Date.now() >= new Date(firstSignIn).getTime() + DATA_MAX_AGE_MS) return void bad("invalid_grant");
+    res.json(await issueTokens(old.clientId, old.clientName, old.userId, resource, resource === "data" ? firstSignIn : null));
     return;
   }
   bad("unsupported_grant_type");

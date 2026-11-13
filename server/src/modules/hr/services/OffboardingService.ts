@@ -33,6 +33,7 @@ import { settleOnExit, assertNoUnlockedProbationCharge } from "./ProbationDebtSe
 import { exitDues } from "./ExitPayService";
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { resolveUserIdForStaff } from "./staffMatch";
+import { revokeDataTokensForUser } from "../../data-assistant/services/DataConnectionService";
 import {
   OffboardingError,
   employmentStatusForTrigger,
@@ -162,6 +163,10 @@ export async function revokeOffboardingAccess(input: RevokeAccessInput): Promise
   if (userId) {
     await User.findByIdAndUpdate(userId, { active: false });
     loginDisabled = true;
+    // Data assistant (D-#1536): the person's Claude data connections end with the login. Not
+    // awaited: the offboarding must not wait on it, and /mcp/data refuses an inactive login on
+    // its next call anyway (and cuts the tokens then).
+    void revokeDataTokensForUser(userId, "deactivated", { userId: actorId, role: null }).catch(() => undefined);
   }
   const grantsRevoked = userId ? await revokeAllGrantsForUser(userId, actorId) : 0;
 
