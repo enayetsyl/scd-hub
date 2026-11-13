@@ -50,5 +50,10 @@ const WinterBookletChangeSchema = new Schema<IWinterBookletChange>(
 
 WinterBookletChangeSchema.index({ bookletId: 1, pageN: 1, status: 1 });
 WinterBookletChangeSchema.index({ bookletId: 1, by: 1 });
+// One live OPEN suggestion per person per block (a double tap must not make two).
+WinterBookletChangeSchema.index(
+  { bookletId: 1, blockId: 1, by: 1 },
+  { unique: true, partialFilterExpression: { status: "OPEN", stale: false, blockId: { $type: "string" } } },
+);
 
 export const WinterBookletChange = model<IWinterBookletChange>("WinterBookletChange", WinterBookletChangeSchema);

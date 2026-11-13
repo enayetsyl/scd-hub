@@ -139,8 +139,9 @@ builder.mutationField("decideWinterChange", (t) =>
   t.field({
     type: ChangeRef,
     authScopes: MANAGE,
-    args: { id: t.arg.string({ required: true }), accept: t.arg.boolean({ required: true }) },
-    resolve: (_r, a, ctx) => decideWinterChange(ctx, a.id, a.accept),
+    // seenVersion = the editedAt the Principal saw ("" if never edited); refused if it moved.
+    args: { id: t.arg.string({ required: true }), accept: t.arg.boolean({ required: true }), seenVersion: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => decideWinterChange(ctx, a.id, a.accept, a.seenVersion),
   }),
 );
 

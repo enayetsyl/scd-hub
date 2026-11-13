@@ -107,9 +107,9 @@ export const DELETE_WINTER_CHANGE = gql<{ deleteWinterChange: boolean }, { id: s
   mutation DeleteWinterChange($id: String!) { deleteWinterChange(id: $id) }
 `;
 
-export const DECIDE_WINTER_CHANGE = gql<{ decideWinterChange: WinterChangeT }, { id: string; accept: boolean }>`
-  mutation DecideWinterChange($id: String!, $accept: Boolean!) {
-    decideWinterChange(id: $id, accept: $accept) { ${CHANGE} }
+export const DECIDE_WINTER_CHANGE = gql<{ decideWinterChange: WinterChangeT }, { id: string; accept: boolean; seenVersion: string }>`
+  mutation DecideWinterChange($id: String!, $accept: Boolean!, $seenVersion: String!) {
+    decideWinterChange(id: $id, accept: $accept, seenVersion: $seenVersion) { ${CHANGE} }
   }
 `;
 

@@ -109,7 +109,8 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Msg | null>(null);
-  const [showAccepted, setShowAccepted] = useState(false);
+  const [showAccepted, setShowAccepted] = useState(true);
+  const [exportJson, setExportJson] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteEditId, setNoteEditId] = useState<string | null>(null);
 
@@ -123,6 +124,8 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
   }, [book]);
   const changes = cq.data?.winterChanges ?? [];
   const page = pages.find((p) => p.n === pageN) ?? pages[0];
+  const pageIdx = page ? pages.indexOf(page) : -1;
+  const locked = book?.status === "APPROVED";
   const pageChanges = changes.filter((c) => c.pageN === (page?.n ?? 0));
   const openByPage = useMemo(() => {
     const m = new Map<number, number>();
@@ -143,6 +146,9 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
       if (ok) setMsg({ tone: "ok", text: ok });
       reload();
       return true;
+    } catch (e) {
+      setMsg({ tone: "danger", text: e instanceof Error ? e.message : String(e) });
+      return false;
     } finally {
       setBusy(false);
     }
@@ -177,9 +183,25 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
     await run(async () => {
       const r = await client.query(EXPORT_WINTER_BOOKLET_QUERY, { id: bookletId }, { requestPolicy: "network-only" }).toPromise();
       if (r.error || !r.data) return { error: r.error ?? new CombinedError({ networkError: new Error(STR.wtEmpty) }) };
-      await Clipboard.setStringAsync(r.data.exportWinterBooklet);
+      const json = r.data.exportWinterBooklet;
+      setExportJson(null);
+      try {
+        await Clipboard.setStringAsync(json);
+      } catch {
+        // No clipboard here: show the text to select and copy by hand.
+        setExportJson(json);
+        throw new Error(STR.wtCopyFailed);
+      }
       return {};
     }, STR.wtExported);
+  };
+
+  /** Go to a page (by its real number), leaving any half-written edit behind. */
+  const gotoPage = (n: number): void => {
+    setPageN(n);
+    setEditing(null);
+    setNoteEditId(null);
+    setNoteText("");
   };
 
   return (
@@ -192,6 +214,8 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
               <Badge text={winterStatusLabel(book.status)} tone={book.status === "APPROVED" ? "ok" : "info"} />
             </View>
             {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
+            {locked ? <Notice tone="warn" message={STR.wtApprovedLocked} /> : null}
+            {exportJson ? <Field label={STR.wtExportBox} value={exportJson} onChangeText={() => undefined} editable={false} multiline /> : null}
 
             {manage ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginBottom: space(3) }}>
@@ -219,12 +243,7 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                     key={p.n}
                     label={open > 0 ? `${bnNum(p.n)} •` : bnNum(p.n)}
                     selected={p.n === page.n}
-                    onPress={() => {
-                      setPageN(p.n);
-                      setEditing(null);
-                      setNoteEditId(null);
-                      setNoteText("");
-                    }}
+                    onPress={() => gotoPage(p.n)}
                   />
                 );
               })}
@@ -247,7 +266,7 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                   <View key={b.id} style={{ marginBottom: space(3) }}>
                     {b.labelBn ? <Muted>{b.labelBn}</Muted> : null}
                     <Pressable
-                      disabled={isLine}
+                      disabled={isLine || locked}
                       onPress={() => setEditing(editing === b.id ? null : b.id)}
                       style={{
                         paddingVertical: space(1),
@@ -270,8 +289,8 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                     </Pressable>
                     {editing === b.id ? (
                       <BlockEditor
-                        key={`${b.id}:${mine?.id ?? "new"}:${mine?.editedAt ?? ""}`}
-                        block={b}
+                        key={`${b.id}:${mine?.id ?? "new"}:${mine?.editedAt ?? ""}:${b.acceptedBn ?? ""}`}
+                        block={{ ...b, textBn: b.acceptedBn ?? b.textBn }}
                         mine={mine}
                         busy={busy}
                         onSave={(after, note) => void saveBlock(b, after, note)}
@@ -314,8 +333,8 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
                       {manage ? (
                         <>
-                          <Button title={STR.wtAccept} disabled={busy || c.stale} onPress={() => void run(() => decide({ id: c.id, accept: true }))} />
-                          <Button title={STR.wtReject} variant="danger" disabled={busy} onPress={() => void run(() => decide({ id: c.id, accept: false }))} />
+                          <Button title={STR.wtAccept} disabled={busy || c.stale || locked} onPress={() => void run(() => decide({ id: c.id, accept: true, seenVersion: c.editedAt ?? "" }))} />
+                          <Button title={STR.wtReject} variant="danger" disabled={busy || locked} onPress={() => void run(() => decide({ id: c.id, accept: false, seenVersion: c.editedAt ?? "" }))} />
                         </>
                       ) : null}
                       {c.mine ? (
@@ -324,7 +343,7 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                             <Button
                               title={STR.wtEdit}
                               variant="secondary"
-                              disabled={busy}
+                              disabled={busy || locked}
                               onPress={() => {
                                 if (c.blockId) setEditing(c.blockId);
                                 else {
@@ -334,7 +353,7 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                               }}
                             />
                           ) : null}
-                          <Button title={STR.wtDelete} variant="ghost" disabled={busy} onPress={() => void removeChange(c)} />
+                          <Button title={STR.wtDelete} variant="ghost" disabled={busy || locked} onPress={() => void removeChange(c)} />
                         </>
                       ) : null}
                     </View>
@@ -343,6 +362,7 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
               );
             })}
 
+            {locked ? null : (
             <Card style={{ marginTop: space(2) }}>
               <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.wtPageNote}</Body>
               <Field value={noteText} onChangeText={setNoteText} placeholder={STR.wtPageNotePh} multiline autoCapitalize="sentences" />
@@ -360,25 +380,20 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                 ) : null}
               </View>
             </Card>
+            )}
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(4) }}>
               <Button
                 title={STR.wtPrev}
                 variant="secondary"
-                disabled={page.n <= pages[0].n}
-                onPress={() => {
-                  setPageN(page.n - 1);
-                  setEditing(null);
-                }}
+                disabled={pageIdx <= 0}
+                onPress={() => gotoPage(pages[pageIdx - 1].n)}
               />
               <Button
                 title={STR.wtNext}
                 variant="secondary"
-                disabled={page.n >= pages[pages.length - 1].n}
-                onPress={() => {
-                  setPageN(page.n + 1);
-                  setEditing(null);
-                }}
+                disabled={pageIdx >= pages.length - 1}
+                onPress={() => gotoPage(pages[pageIdx + 1].n)}
               />
             </View>
           </View>
