@@ -53,6 +53,10 @@ export async function supportCaller(ctx: SupportCtx, opts: { noViewAs?: boolean 
 export const holdsViewAll = (auth: AuthPayload): boolean => has(auth, "support_profile:view_all");
 export const holdsApprove = (auth: AuthPayload): boolean => has(auth, "support_profile:approve");
 
+/** SG-6: the banner is for the Principal side and the safeguarding receivers, never a teacher. */
+export const canSeeSafeguardingBanner = (auth: AuthPayload | null): boolean =>
+  !!auth && (holdsApprove(auth) || holdsViewAll(auth) || has(auth, "safeguarding:receive"));
+
 export async function getSupportSetting() {
   return (await SupportSetting.findOne({ key: "main" })) ?? (await SupportSetting.create({ key: "main" }));
 }
