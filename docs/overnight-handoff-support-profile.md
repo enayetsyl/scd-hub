@@ -97,7 +97,7 @@ come from RoutineSlots, `Enrolment` statuses are ACTIVE/CLOSED (an enrolment cov
 
 ## CSP-2 — method document, batches, Mode B round-trip (stage A), asynchronous rewrite loop
 
-**Commits:** first and last = the single `[CSP-2] feat(support-profile): …` commit (see `git log`).
+**Commits:** first `99d27da6` `[CSP-2] feat(support-profile): method document, batches, Mode B round-trip, async rewrite loop`; last = the `[CSP-2] docs(support-profile): gate tails` commit that filled in the full-suite and expo lines below.
 
 **What was built**
 - `server/assets/support-profile/method_v1.md` (M-0 … M-13 with section markers; written from §16;
@@ -135,8 +135,8 @@ npx jest --runInBand support permissionCatalogueGates firewall expectedErrorRegi
   → Test Suites: 36 passed, 36 total · Tests: 553 passed, 553 total
   (the `support` pattern also matched the existing supportBook* suites — all green)
 npx tsx server/scripts/support-eval-pack.ts --out …/evalpack.md → wrote … (114237 bytes, sha256 14111791…)
-npx jest --maxWorkers=2 (full server suite) → was still running when this commit was made; its tail is added in the next docs commit
-(app) npx expo export --platform web → runs after the full suite; tail in the next docs commit (no app file changed since CSP-1)
+npx jest --maxWorkers=2 (full server suite) → Test Suites: 480 passed, 480 total · Tests: 7668 passed, 7668 total · exit 0
+(app) npx expo export --platform web → "App exported to: …/web-dist" · expo export exit 0 (0 lines matching error)
 ```
 
 **Not done in CSP-2**
