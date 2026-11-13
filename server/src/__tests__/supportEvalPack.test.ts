@@ -1,5 +1,5 @@
 /**
- * CSP-2 — the evaluation pack harness (docs/prd-child-support-profile.md §16.9; D-#1566). This tests the
+ * CSP-2 — the evaluation pack harness (docs/prd-child-support-profile.md §16.9). This tests the
  * HARNESS ONLY with canned answers: a perfect answer key passes, a weak one fails. The real pass marks
  * are the owner's switch-on gate and need a real chat/model — NOT claimed here.
  */
@@ -53,6 +53,8 @@ it("a perfect answer passes every automatic mark", () => {
 
 it("a weak answer (no flags, no signs) fails, and an incomplete answer fails", () => {
   expect(scoreEvaluation(answer(true)).autoPassed).toBe(false);
+  // the server's own word-list flags never earn the model a mark
+  expect(scoreEvaluation(answer(true)).marks).toMatchObject({ blockFound: 0, askFound: 0 });
   const cut = JSON.parse(answer(false));
   cut.reports = cut.reports.slice(1);
   expect(scoreEvaluation(JSON.stringify(cut)).marks.completeAndValid).toBe(false);

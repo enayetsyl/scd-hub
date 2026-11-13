@@ -439,6 +439,7 @@ export type AuditEventKind =
   | "SUPPORT_REPORT_SUBMITTED" // a support report saved for processing — reportId, studentId, source, checkSkipped, flag counts (D-#1582)
   | "SUPPORT_REPORT_WITHDRAWN" // a teacher withdrew their own waiting support report (D-#1582)
   | "SUPPORT_REPORT_DECIDED" // the Principal decided a support report — reportId, decision (D-#1555)
+  | "SUPPORT_STRATEGY_CREATED" // a strategy made at report approval — strategyId, reportId, starterKey; never text (CSP-3)
   | "SUPPORT_VERSION_PUBLISHED" // a support-profile version published — versionNo, item counts per level (D-#1555)
   | "SUPPORT_VERSION_DISCARDED" // a support-profile draft discarded (D-#1555)
   | "SUPPORT_BATCH_CREATED" // a support processing batch made — batchId, mode, methodVersion, counts (D-#1585)
@@ -448,12 +449,13 @@ export type AuditEventKind =
   | "SUPPORT_RESULT_UPLOADED" // a batch result uploaded and validated — fileHash, producer, valid/rejected counts (D-#1587)
   | "SUPPORT_RESULT_APPLIED" // a validated batch result applied (D-#1587)
   | "SUPPORT_RESULT_DISCARDED" // an uploaded batch result discarded before apply (D-#1587)
+  | "SUPPORT_EVALUATION_RECORDED" // a chat/model evaluation scored and stored — producer, methodVersion, passed; never text (§16.9)
   | "SUPPORT_PROFILE_OPENED" // a support profile opened — first report or by the Principal (D-#1546)
   | "SUPPORT_PROFILE_CLOSED" // a support profile closed by the Principal, or LEFT by the leaver sweep (D-#1558)
   | "SUPPORT_PROFILE_REOPENED" // a support profile reopened by the Principal (D-#1558)
   | "SUPPORT_ACCESS_REFUSED" // an authenticated staff read of a support profile refused by scope or role — studentId, reason (D-#1548)
   | "SAFEGUARDING_REFERRAL_RAISED" // a safeguarding referral raised — referralId, studentId, source, signs; never text (D-#1564)
-  | "SAFEGUARDING_REFERRAL_SEEN" // the receiver marked a safeguarding referral seen (D-#1564);
+  | "SAFEGUARDING_REFERRAL_SEEN"; // the receiver marked a safeguarding referral seen (D-#1564)
 
 export interface IAudit extends Document {
   _id: Types.ObjectId;

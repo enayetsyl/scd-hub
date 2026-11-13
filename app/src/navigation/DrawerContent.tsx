@@ -173,7 +173,7 @@ const STAFF_NAV: NavSection[] = [
   // AI Workspace (docs/prd-ai-workspace.md, D-#1208): projects + files + instructions; the Principal at launch.
   { type: "item", route: "AiWorkspaceTab", labelKey: "awNav", icon: "🧠", perms: ["ai_workspace:use", "ai_workspace:admin"] },
   // Data assistant (docs/prd-data-assistant-mcp.md, D-#1537): read-only answers from school data.
-  { type: "item", route: "DataAssistantTab", labelKey: "daNav", icon: "📊", perms: ["data_assistant:use"], orViewAs: true },
+  { type: "item", route: "DataAssistantTab", labelKey: "daNav", icon: "📊", perms: ["data_assistant:use", "data_assistant:connect", "data_assistant:audit"], orViewAs: true },
   // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
   {
     type: "group",

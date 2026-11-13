@@ -10,6 +10,7 @@ import { Audit, type IAudit } from "../models/Audit";
 import { User } from "../../foundation/models/User";
 import { Guardian } from "../../foundation/models/Guardian";
 import { auditKindLabel, type ActivityGroup } from "../auditLabels";
+import { auditVisibilityClause, type AuditVisibility } from "../auditPrivacy";
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -49,6 +50,8 @@ export interface AuditLogInput {
    *  the cursor still pages WITHIN the window. */
   from?: string | null;
   to?: string | null;
+  /** Which support / safeguarding rows the caller may see; absent = none (fail closed). */
+  visibility?: AuditVisibility | null;
 }
 
 export async function auditLog(input: AuditLogInput = {}): Promise<AuditRowShape[]> {
@@ -70,6 +73,9 @@ export async function auditLog(input: AuditLogInput = {}): Promise<AuditRowShape
   }
   if (Object.keys(eventAt).length > 0) q.eventAt = eventAt;
   if (input.eventKind) q.eventKind = input.eventKind;
+  // SUPPORT_* / SAFEGUARDING_* rows only for holders of support_profile:view_all (+ safeguarding:receive).
+  const hide = auditVisibilityClause(input.visibility);
+  if (hide) q.$and = [hide];
   if (input.actorRole) q.actorRole = input.actorRole;
   if (input.actorId && Types.ObjectId.isValid(input.actorId)) {
     const id = new Types.ObjectId(input.actorId);

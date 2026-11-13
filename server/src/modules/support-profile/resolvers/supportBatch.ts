@@ -25,6 +25,7 @@ import {
 import type { ValidationOutcome } from "../services/supportResultValidator";
 import { buildEvalPack, recordEvaluation } from "../eval/supportEvaluation";
 import { loadMethod } from "../services/methodDoc";
+import { writeAudit } from "../../platform/services/AuditService";
 
 const BatchRef = builder.objectRef<ISupportBatch>("SupportBatch").implement({
   fields: (t) => ({
@@ -224,9 +225,19 @@ builder.queryField("supportImportPreview", (t) =>
     authScopes: { hasPermission: "support_profile:process" },
     args: { importId: t.arg.string({ required: true }) },
     resolve: async (_r, a, ctx) => {
-      await assertProcess(ctx);
+      const auth = await assertProcess(ctx);
       const imp = await SupportImport.findById(a.importId);
       if (!imp) throw new Error("ফলাফল পাওয়া যায়নি।");
+      // The preview shows children's names and what was said about them: a read, so it is logged
+      // (ids and counts only, never text).
+      const b = await SupportBatch.findById(imp.batchId).select("code codeMap").lean();
+      await writeAudit({
+        eventKind: "SUPPORT_PROFILE_VIEWED",
+        actorId: auth.userId,
+        targetId: String(imp.batchId),
+        targetKind: "SupportBatch",
+        meta: { surface: "PREVIEW", via: "BATCH", batchId: String(imp.batchId), importId: String(imp._id), studentIds: (b?.codeMap?.children ?? []).map((c) => String(c.studentId)) },
+      });
       return previewOf(imp);
     },
   }),

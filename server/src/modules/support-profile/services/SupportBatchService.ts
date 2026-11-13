@@ -54,7 +54,8 @@ import { readerOf } from "./supportScope";
 import { loadMethod } from "./methodDoc";
 import { textsOf } from "./SupportReportService";
 import { recordsPack } from "./supportRecords";
-import { raiseReferral } from "../../platform/safeguarding/SafeguardingService";
+import { SafeguardingReferral } from "../../platform/safeguarding/SafeguardingReferral";
+import { onReferralSeen, raiseReferral } from "../../platform/safeguarding/SafeguardingService";
 import { validateSupportResult, type CtxReport, type ValidationCtx, type ValidationOutcome } from "./supportResultValidator";
 
 export const PROCESS = "support_profile:process" as Permission;
@@ -73,9 +74,11 @@ export async function assertProcess(ctx: SupportCtx): Promise<AuthPayload> {
   return auth;
 }
 
-/** Random distinct numbers → codes, new for every batch (DE-8). */
-function codes(prefix: string, n: number, width: number): string[] {
+/** Random distinct numbers → codes, new for every batch (DE-8). The code space is `width` digits
+ *  (^R-\d{3}$, ^S-\d{2,3}$ …): asking for more codes than exist is refused, never looped on. */
+export function codes(prefix: string, n: number, width: number): string[] {
   const max = 10 ** width - 1;
+  if (n > max) throw new SupportProfileRefusal(`এই ব্যাচে ${prefix}-কোড (${n}টি) সর্বোচ্চ সীমা (${max}) ছাড়িয়ে গেছে — ব্যাচ ছোট করুন।`);
   const seen = new Set<number>();
   while (seen.size < n) seen.add(randomInt(1, max + 1));
   return [...seen].map((x) => `${prefix}-${String(x).padStart(width, "0")}`);
@@ -104,6 +107,7 @@ export async function createBatch(
 
   let chosen: ISupportReport[] = [];
   let childIds: Types.ObjectId[] = [];
+  const batchOid = new Types.ObjectId();
   if (profileOnly) {
     // B-6: a profile-only batch for chosen children (after approvals, or at a review).
     childIds = (opts.childIds ?? []).filter((x) => Types.ObjectId.isValid(x)).map(oid);
@@ -120,6 +124,14 @@ export async function createBatch(
       if (chosen.length >= budget) break;
     }
     if (!chosen.length) throw new SupportProfileRefusal("প্রক্রিয়ার অপেক্ষায় কোনো রিপোর্ট নেই।");
+    // Claim atomically: only a report still waiting, not in another batch and with no open
+    // safeguarding question moves to IN_BATCH; whatever was taken meanwhile is dropped from the batch.
+    await SupportReport.updateMany(
+      { _id: { $in: chosen.map((r) => r._id) }, status: "TO_PROCESS", batchId: null, safeguardingHold: { $ne: "OPEN" } },
+      { $set: { status: "IN_BATCH", batchId: batchOid } },
+    );
+    chosen = await SupportReport.find({ batchId: batchOid, status: "IN_BATCH" }).sort({ waitingSince: 1, createdAt: 1 });
+    if (!chosen.length) throw new SupportProfileRefusal("প্রক্রিয়ার অপেক্ষায় কোনো রিপোর্ট নেই।");
     childIds = [...new Set(chosen.map((r) => String(r.studentId)))].map(oid);
   }
 
@@ -127,23 +139,30 @@ export async function createBatch(
   const batchNo = (last?.batchNo ?? 0) + 1;
   const today = dhakaDayKey(new Date());
   const [y, m, d] = today.split("-").map(Number);
-  const batch = await SupportBatch.create({
-    batchNo,
-    code: `B-${String(batchNo).padStart(4, "0")}`,
-    mode: opts.mode === "API" ? "API" : setting.defaultMode === "API" && opts.mode !== "MANUAL" ? "API" : "MANUAL",
-    stages,
-    status: "OPEN",
-    reportIds: chosen.map((r) => r._id),
-    childIds,
-    methodVersion: method.version,
-    methodHash: method.sha256,
-    packNonce: nonce(),
-    dayZeroKey: today,
-    codeMap: await buildCodeMap(childIds, chosen),
-    createdBy: oid(auth.userId),
-    expiresKey: new Date(Date.UTC(y, m - 1, d + 14)).toISOString().slice(0, 10),
-  });
-  await SupportReport.updateMany({ _id: { $in: chosen.map((r) => r._id) } }, { $set: { status: "IN_BATCH", batchId: batch._id } });
+  let batch: ISupportBatch;
+  try {
+    batch = await SupportBatch.create({
+      _id: batchOid,
+      batchNo,
+      code: `B-${String(batchNo).padStart(4, "0")}`,
+      mode: opts.mode === "API" ? "API" : setting.defaultMode === "API" && opts.mode !== "MANUAL" ? "API" : "MANUAL",
+      stages,
+      status: "OPEN",
+      reportIds: chosen.map((r) => r._id),
+      childIds,
+      methodVersion: method.version,
+      methodHash: method.sha256,
+      packNonce: nonce(),
+      dayZeroKey: today,
+      codeMap: await buildCodeMap(childIds, chosen),
+      createdBy: oid(auth.userId),
+      expiresKey: new Date(Date.UTC(y, m - 1, d + 14)).toISOString().slice(0, 10),
+    });
+  } catch (e) {
+    // e.g. the code space is full: nothing may stay claimed by a batch that does not exist
+    await backToQueue(chosen.map((r) => r._id));
+    throw e;
+  }
   await writeAudit({
     eventKind: "SUPPORT_BATCH_CREATED",
     actorId: auth.userId,
@@ -218,6 +237,7 @@ export async function sweepBatches(now: Date = new Date()): Promise<number> {
     b.closedAt = now;
     await b.save();
     await backToQueue(b.reportIds);
+    await SupportImport.updateMany({ batchId: b._id, status: { $in: ["VALIDATED", "APPLYING"] } }, { $set: { status: "DISCARDED", previewText: null, valid: null } });
     await writeAudit({ eventKind: "SUPPORT_BATCH_EXPIRED", targetId: b._id.toString(), targetKind: "SupportBatch", meta: { batchId: b._id.toString(), mode: b.mode, reports: b.reportIds.length } });
     n++;
   }
@@ -300,8 +320,9 @@ export function packLeak(pack: string, roster: PackRoster): string | null {
   PHONE_PATTERN.lastIndex = 0;
   if (PHONE_PATTERN.test(pack)) return "phone";
   if (/\b\d{4}-\d{2}-\d{2}\b/.test(pack)) return "date";
+  if (dateIn(pack)) return "date";
   if (/\b[0-9a-f]{24}\b/.test(pack)) return "id";
-  for (const s of roster.students) if (s.schoolId && pack.includes(s.schoolId)) return "schoolId";
+  if (roster.students.some((s) => schoolIdIn(pack, s.schoolId))) return "schoolId";
   const words = pack.split(/[\s,.;:!?।()"'“”‘’[\]{}<>/\\]+/).filter(Boolean);
   const loose = words.map(looseWord);
   for (const p of [...roster.students, ...roster.guardians, ...roster.staff]) {
@@ -317,8 +338,59 @@ export function packLeak(pack: string, roster: PackRoster): string | null {
         if (parts.every((pt, j) => loose[i + j] === pt)) return name;
       }
     }
+    // DE-10: the first-name part alone — of a child (classmates too), a guardian or a staff member —
+    // must not survive either, unless it is an honorific or an ordinary word (the STOP list).
+    for (const name of p.names) {
+      const first = firstNamePart(name);
+      if (first && (termOccurs(norm, first) || (!/[a-z]/i.test(first) && words.some((w) => skeleton(w) === skeleton(first))))) return first;
+    }
   }
   return null;
+}
+
+const BN_DIGIT_CHARS = "০১২৩৪৫৬৭৮৯";
+const asciiDigits = (s: string): string => s.replace(/[০-৯]/g, (d) => String(BN_DIGIT_CHARS.indexOf(d)));
+
+/** Words that are honorifics, titles or ordinary words, never a person's identifying first name. */
+export const NAME_STOP = new Set(
+  [
+    "md", "mohammad", "mohammed", "muhammad", "mohammod", "muhammed", "mst", "mosammat", "musammat", "mosa", "sheikh", "shaikh", "syed", "sayed", "abdul", "abdur", "abu", "umme", "ummu", "mr", "mrs", "ms", "miss", "madam", "sir", "begum", "khatun", "akter", "akhter", "the", "and",
+    "মোহাম্মদ", "মুহাম্মদ", "মোঃ", "মো", "মোছাঃ", "মোসাম্মৎ", "মোছাম্মৎ", "শেখ", "সৈয়দ", "আব্দুল", "আবদুল", "আব্দুর", "আবু", "উম্মে", "মিস", "মিসেস", "আপা", "স্যার", "ম্যাডাম", "ভাই", "বোন", "বেগম", "খাতুন", "আক্তার", "আখতার",
+  ].map((w) => w.toLowerCase()),
+);
+
+/** The first identifying word of a name (skipping honorific prefixes); null if none ≥ 3 letters. */
+export function firstNamePart(name: string): string | null {
+  for (const w of name.trim().split(/\s+/)) {
+    const bare = w.replace(/[.,]/g, "");
+    if (!bare || NAME_STOP.has(bare.toLowerCase())) continue;
+    return [...bare].length >= 3 ? bare : null;
+  }
+  return null;
+}
+
+const EN_MONTHS = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
+const BN_MONTHS_RX = "জানুয়ারি|জানুয়ারী|ফেব্রুয়ারি|ফেব্রুয়ারী|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|আগষ্ট|অগাস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর";
+/** A calendar date in text: 12/11/2026, 12 Nov, Nov 12, ১২ নভেম্বর (Bangla or English digits). */
+export function dateIn(pack: string): boolean {
+  const t = asciiDigits(pack);
+  if (/(?<![\d.])\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*(?:\d{2}|\d{4})(?!\d)/.test(t)) return true;
+  if (new RegExp(`(?<!\\d)\\d{1,2}(?:st|nd|rd|th)?\\s*(?:of\\s+)?(?:${EN_MONTHS})(?![a-z])`, "i").test(t)) return true;
+  if (new RegExp(`(?<![a-z])(?:${EN_MONTHS})\\.?\\s*\\d{1,2}(?:st|nd|rd|th)?(?!\\d)`, "i").test(t)) return true;
+  return new RegExp(`(?<!\\d)\\d{1,2}\\s*(?:${BN_MONTHS_RX})(?![ঀ-৿])`).test(t);
+}
+
+/** A school id as a standalone number in the pack: not after "-" (codes R-103, day -103), not inside
+ *  a longer number or word; compared numerically ("0059" = "59"); Bangla digits count. JSON number
+ *  values (days, minutes, periods) are not text and are skipped. */
+export function schoolIdIn(pack: string, schoolId: string | null | undefined): boolean {
+  const id = asciiDigits(String(schoolId ?? "")).trim();
+  if (!id) return false;
+  const text = asciiDigits(pack).replace(/"\s*:\s*-?\d+(?:\.\d+)?/g, '":0');
+  if (!/^\d+$/.test(id)) return text.toLowerCase().includes(id.toLowerCase());
+  const want = id.replace(/^0+(?=\d)/, "");
+  for (const m of text.matchAll(/(?<![A-Za-z0-9_\-])(\d+)(?![A-Za-z0-9_])/g)) if (m[1].replace(/^0+(?=\d)/, "") === want) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -391,7 +463,7 @@ async function buildPackContent(b: ISupportBatch): Promise<Built & { leakReport:
         report: code,
         author: staffCodes.get(String(r.authorId)) ?? STAFF_MASK,
         ...day(r.occurredOn),
-        subject: r.subject || r.context || "",
+        subject: maskForPack(r.subject || r.context || "", sid, roster, staffCodes),
         period: r.periodNo,
         source: r.source,
         tone: r.tone,
@@ -560,10 +632,10 @@ export interface ProducerInput {
 
 export const producerLabel = (p: ProducerInput): string => (p.kind === "API" ? `${p.provider ?? "?"}/${p.model ?? "?"}` : `chat:${p.chatLabel ?? "?"}`);
 
-/** §16.9 / D-#1566: only a producer with a passed evaluation for this method version. */
-export async function assertProducerPassed(p: ProducerInput, methodVersion: string): Promise<void> {
+/** §16.9: only a producer with a passed evaluation for this method version AND this exact text (hash). */
+export async function assertProducerPassed(p: ProducerInput, methodVersion: string, methodHash: string): Promise<void> {
   const q = p.kind === "API" ? { kind: "API", provider: p.provider, modelKey: p.model } : { kind: "CHAT", chatLabel: (p.chatLabel ?? "").trim() };
-  const ok = await SupportProducerEval.exists({ ...q, methodVersion, passed: true });
+  const ok = await SupportProducerEval.exists({ ...q, methodVersion, methodHash, passed: true });
   if (!ok) throw new SupportProfileRefusal("আগে মূল্যায়ন প্যাক চালান — এই চ্যাট/মডেল এই পদ্ধতি-সংস্করণে এখনো পাস করেনি।");
 }
 
@@ -583,7 +655,7 @@ export interface UploadOutcome {
 export async function uploadResult(ctx: SupportCtx, batchId: string, text: string, producer: ProducerInput): Promise<UploadOutcome> {
   const auth = await assertProcess(ctx);
   const b = await batchForUpload(batchId);
-  await assertProducerPassed(producer, b.methodVersion);
+  await assertProducerPassed(producer, b.methodVersion, b.methodHash);
   const { ctx: vctx } = await validationCtxOf(b);
   const out = validateSupportResult(text, vctx);
   if (out.fileError) throw new SupportProfileRefusal(`ফাইলটি নেওয়া গেল না: ${SUPPORT_IMPORT_REASONS[out.fileError]}`);
@@ -641,14 +713,61 @@ export function reidentifySentence(text: string, firstName: string, reportDate: 
   return text.replace(/\{\{DATE:(R-\d{3})\}\}/g, (_m, code: string) => reportDate(code) ?? "").replace(/\[S\]/g, firstName || "শিক্ষার্থী").replace(/\s{2,}/g, " ").trim();
 }
 
-const firstNameOf = (s: { name?: string; nameBn?: string } | null | undefined): string => (s?.nameBn || s?.name || "").trim().split(/\s+/)[0] || "শিক্ষার্থী";
+const countBy = (xs: string[]): Record<string, number> => xs.reduce<Record<string, number>>((m, x) => ((m[x] = (m[x] ?? 0) + 1), m), {});
+
+/**
+ * A model sentence or a quote, back to words a person reads: [S] → the child's first name; the
+ * author's own T-code → "আপনি" (only when `authorCode` is given — the teacher's own copy); every other
+ * mask, bracket token or batch code → a neutral Bangla word. Never a raw code.
+ */
+export function teacherView(text: string, firstName: string, authorCode: string | null): string {
+  return text
+    .replace(/\[S\]/g, firstName || "শিক্ষার্থী")
+    .replace(/\[অন্য শিশু\]/g, "অন্য একজন শিক্ষার্থী")
+    .replace(/\[অভিভাবক\]/g, "একজন অভিভাবক")
+    .replace(/\[শিক্ষক\]/g, "অন্য একজন শিক্ষক")
+    .replace(/\[PHONE\]/g, "ফোন নম্বর")
+    .replace(/\[(?:NUM|ID)\]/g, "একটি সংখ্যা")
+    .replace(/\[[^\]]*\]/g, "অন্য একজন")
+    .replace(/\b([CTRSIB])-\d{2,4}\b/g, (m: string, kind: string) => {
+      if (kind === "T") return authorCode && m === authorCode ? "আপনি" : "অন্য একজন শিক্ষক";
+      return kind === "C" ? "একজন শিক্ষার্থী" : kind === "R" ? "একটি রিপোর্ট" : "একটি বিষয়";
+    })
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+const firstNameOf =(s: { name?: string; nameBn?: string } | null | undefined): string => (s?.nameBn || s?.name || "").trim().split(/\s+/)[0] || "শিক্ষার্থী";
+
+// SG-6: the banner clears when no pattern referral for the child is still waiting (seen or actioned).
+onReferralSeen(async ({ studentId, source }) => {
+  if (source !== "SUPPORT_COMPARE" && source !== "SUPPORT_BATCH") return;
+  if (await SafeguardingReferral.exists({ studentId: new Types.ObjectId(studentId), source, status: "RAISED" })) return;
+  await SupportProfile.updateOne({ studentId: new Types.ObjectId(studentId) }, { $set: { safeguardingBanner: false } });
+});
 
 /** প্রয়োগ করুন — V-14: only now does anything change. `untick` = reports the Principal keeps for
  *  his own queue instead of returning them to the teacher (§6.12 step 2). */
 export async function applyImport(ctx: SupportCtx, importId: string, untick: string[] = []): Promise<ISupportBatch> {
   const auth = await assertProcess(ctx);
-  const imp = await SupportImport.findById(oid(importId));
-  if (!imp || imp.status !== "VALIDATED") throw new SupportProfileRefusal("ফলাফল পাওয়া যায়নি বা আগেই প্রয়োগ হয়েছে।");
+  // Claim the import atomically: of two simultaneous applies exactly one gets it. A claim older than
+  // 10 minutes (a crashed run) may be taken again; the work below is safe to run twice.
+  const stale = new Date(Date.now() - 10 * 60_000);
+  const imp = await SupportImport.findOneAndUpdate(
+    { _id: oid(importId), $or: [{ status: "VALIDATED" }, { status: "APPLYING", updatedAt: { $lt: stale } }] },
+    { $set: { status: "APPLYING" } },
+    { new: true },
+  );
+  if (!imp) throw new SupportProfileRefusal("ফলাফল পাওয়া যায়নি বা আগেই প্রয়োগ হয়েছে।");
+  try {
+    return await applyClaimed(auth, imp, untick);
+  } catch (e) {
+    await SupportImport.updateOne({ _id: imp._id, status: "APPLYING" }, { $set: { status: "VALIDATED" } });
+    throw e;
+  }
+}
+
+async function applyClaimed(auth: AuthPayload, imp: ISupportImport, untick: string[]): Promise<ISupportBatch> {
   const b = await SupportBatch.findById(imp.batchId);
   if (!b || !["OPEN", "RESULT_PENDING"].includes(b.status) || !b.codeMap) throw new SupportProfileRefusal("ব্যাচটি বন্ধ হয়ে গেছে।");
   const valid = imp.valid as Pick<ValidationOutcome, "reports" | "children" | "noResult">;
@@ -679,7 +798,11 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
     if (!r || r.status !== "IN_BATCH" || String(r.batchId) !== String(b._id)) continue;
     handled.add(res.code);
     const first = firstNameOf(students.get(String(r.studentId)));
-    const back = (s: string | null) => (s == null ? null : s.replace(/\[S\]/g, first));
+    // Texts shown to the teacher: [S] → the child's first name, the teacher's own T-code → "আপনি",
+    // every other token → a neutral Bangla word. Never a raw code. The Principal's copy (a hold, a
+    // keep) uses the same words but never "you".
+    const authorCode = map.teachers.find((t) => String(t.userId) === String(r.authorId))?.code ?? null;
+    const back = (s: string | null, forTeacher = false) => (s == null ? null : teacherView(s, first, forTeacher ? authorCode : null));
     const flagCounts: Record<string, number> = {};
     for (const f of res.flags) flagCounts[f.category] = (flagCounts[f.category] ?? 0) + 1;
     const run = await SupportAiRun.create({
@@ -692,7 +815,14 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
       methodVersion: b.methodVersion,
       methodHash: b.methodHash,
       status: "DONE",
-      outputJson: { verdict: res.verdict, flags: res.flags.map((f) => ({ ...f, quote: back(f.quote), askBn: back(f.askBn), suggestionBn: back(f.suggestionBn) })), toneCheck: res.toneCheck },
+      // Categories, severities and counts only — never a quote, a question or a suggestion: those
+      // are the teacher's words and live on the report while it is open (§2.4).
+      outputJson: {
+        verdict: res.verdict,
+        flags: res.flags.map((f) => ({ id: f.id, category: f.category, severity: f.severity, field: f.field, byServer: f.byServer })),
+        counts: { flags: res.flags.length, bySeverity: countBy(res.flags.map((f) => f.severity)), byCategory: flagCounts },
+        toneCheck: res.toneCheck,
+      },
       startedAt: now,
       endedAt: now,
     });
@@ -700,41 +830,55 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
     r.markModified("aiChecks");
     r.rewriteRounds += 1;
     r.batchId = null;
-    if (res.compare) {
-      const cmp = res.compare as {
-        agreement: { otherReportIds: string[]; noteBn: string; claim: string }[];
-        functionHint: { reportIds: string[]; noteBn: string };
-        safeguardingPattern: { present: boolean; signs: string[]; reportIds: string[]; noteBn: string };
-        strategyMatches: { strategyId: string; starterKey: string | null; outcome: string }[];
-        sectionHints: string[];
-        skillHints: string[];
-        authorSkew: { status: string; noteBn: string };
-        principalSummaryBn: string;
-      };
+    const cmp = res.compare && b.stages.includes("COMPARE")
+      ? (res.compare as unknown as {
+          agreement: { otherReportIds: string[]; noteBn: string; claim: string }[];
+          functionHint: { reportIds: string[]; noteBn: string };
+          safeguardingPattern: { present: boolean; signs: string[]; reportIds: string[]; noteBn: string };
+          strategyMatches: { strategyId: string; starterKey: string | null; outcome: string }[];
+          sectionHints: string[];
+          skillHints: string[];
+          authorSkew: { status: string; noteBn: string };
+          principalSummaryBn: string;
+          echoOfProfile: boolean;
+        })
+      : null;
+    // §2.4 / SG-3: nothing the compare said is kept on a report that is held or routed, nor on one
+    // that goes back to the teacher (the teacher never sees it), nor on an old text.
+    r.compare = null;
+    r.suggestedLinks = [];
+    r.sectionHints = [];
+    r.skillHints = [];
+    r.markModified("compare");
+    const keep: { compare: unknown; suggestedLinks: ISupportReport["suggestedLinks"]; sectionHints: string[]; skillHints: string[] } = { compare: null, suggestedLinks: [], sectionHints: [], skillHints: [] };
+    if (cmp) {
       const idOf = (c: string) => String(repByCode.get(c)?.reportId ?? "");
       const sidOf = (c: string) => (c === "NEW" ? "NEW" : String(map.strategies.find((x) => x.code === c)?.strategyId ?? ""));
-      r.compare = {
-        agreement: cmp.agreement.map((a) => ({ ...a, claim: back(a.claim), noteBn: back(a.noteBn), otherReportIds: a.otherReportIds.map(idOf) })),
+      // SG-6: a build-up across the child's reports → the child is pinned with a banner and a
+      // SUPPORT_COMPARE referral is raised, once per child (a retry of a half-applied import finds
+      // the open one and raises nothing more). The referral keeps its own notice text.
+      if (cmp.safeguardingPattern.present && !patternRaised.has(String(r.studentId))) {
+        patternRaised.add(String(r.studentId));
+        await SupportProfile.updateOne({ studentId: r.studentId }, { $set: { safeguardingBanner: true } });
+        const open = await SafeguardingReferral.exists({ studentId: r.studentId, source: "SUPPORT_COMPARE", status: "RAISED" });
+        if (!open) await raiseReferral({ studentId: String(r.studentId), raisedBy: auth.userId, source: "SUPPORT_COMPARE", signs: cmp.safeguardingPattern.signs as never, textBn: back(cmp.safeguardingPattern.noteBn) ?? "" });
+      }
+      keep.compare = {
+        agreement: cmp.agreement.map((x) => ({ ...x, claim: back(x.claim), noteBn: back(x.noteBn), otherReportIds: x.otherReportIds.map(idOf) })),
         authorSkew: { status: cmp.authorSkew.status, noteBn: back(cmp.authorSkew.noteBn) },
         functionHint: { ...cmp.functionHint, noteBn: back(cmp.functionHint.noteBn), reportIds: cmp.functionHint.reportIds.map(idOf) },
-        echoOfProfile: (cmp as unknown as { echoOfProfile: boolean }).echoOfProfile,
+        echoOfProfile: cmp.echoOfProfile,
         safeguardingPattern: { ...cmp.safeguardingPattern, noteBn: back(cmp.safeguardingPattern.noteBn), reportIds: cmp.safeguardingPattern.reportIds.map(idOf) },
         principalSummaryBn: back(cmp.principalSummaryBn),
         producer: label,
       };
-      r.sectionHints = cmp.sectionHints;
-      r.skillHints = cmp.skillHints;
-      r.suggestedLinks = cmp.strategyMatches.map((m) => ({ strategyId: sidOf(m.strategyId), starterKey: m.starterKey, outcome: m.outcome }));
-      // SG-6: a build-up across the child's reports → the child is pinned with a banner and a
-      // SUPPORT_COMPARE referral is raised (once per child per batch).
-      if (cmp.safeguardingPattern.present && !patternRaised.has(String(r.studentId))) {
-        patternRaised.add(String(r.studentId));
-        await SupportProfile.updateOne({ studentId: r.studentId }, { $set: { safeguardingBanner: true } });
-        await raiseReferral({ studentId: String(r.studentId), raisedBy: auth.userId, source: "SUPPORT_COMPARE", signs: cmp.safeguardingPattern.signs as never, textBn: back(cmp.safeguardingPattern.noteBn) ?? "" });
-      }
-      r.markModified("compare");
+      keep.sectionHints = cmp.sectionHints;
+      keep.skillHints = cmp.skillHints;
+      keep.suggestedLinks = cmp.strategyMatches.map((m) => ({ strategyId: sidOf(m.strategyId), starterKey: m.starterKey, outcome: m.outcome }));
     }
-    const questions = res.flags.map((f) => ({ flagId: f.id, category: f.category, field: f.field, severity: f.severity, quote: back(f.quote) ?? "", askBn: back(f.askBn) ?? "", suggestionBn: back(f.suggestionBn) }));
+    const questionsFor = (forTeacher: boolean) =>
+      res.flags.map((f) => ({ flagId: f.id, category: f.category, field: f.field, severity: f.severity, quote: back(f.quote, forTeacher) ?? "", askBn: back(f.askBn, forTeacher) ?? "", suggestionBn: back(f.suggestionBn, forTeacher) }));
+    const questions = questionsFor(false);
     if (res.safeguarding.present) {
       // SG-9: the teacher is not asked — the Principal is; the report is neither approved nor returned.
       r.status = "PROCESSED";
@@ -750,7 +894,7 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
     const toTeacher = res.verdict === "NEEDS_REWRITE" && !untick.includes(res.code) && authorReads && r.rewriteRounds < 3;
     if (toTeacher) {
       r.status = "NEEDS_REWRITE";
-      r.returnQuestions = flagsForRound(questions);
+      r.returnQuestions = flagsForRound(questionsFor(true));
       r.openFlags = [];
       r.returnedAt = now;
       await r.save();
@@ -758,6 +902,12 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
       summary.valid.returns++;
     } else {
       r.status = "PROCESSED";
+      // Only a report that is neither held, routed nor returned keeps what COMPARE said (§2.4).
+      r.compare = keep.compare;
+      r.suggestedLinks = keep.suggestedLinks;
+      r.sectionHints = keep.sectionHints;
+      r.skillHints = keep.skillHints;
+      r.markModified("compare");
       r.openFlags = questions;
       r.returnQuestions = [];
       await r.save();
@@ -767,12 +917,14 @@ export async function applyImport(ctx: SupportCtx, importId: string, untick: str
 
   // Profile drafts (stage C) — DRAFT versions; publishing is the Principal's (CSP-4).
   for (const ch of valid.children) {
-    if (!ch.draft) continue;
+    if (!ch.draft || !b.stages.includes("SYNTHESIS")) continue;
     const child = map.children.find((c) => c.code === ch.code);
     if (!child) continue;
     const sid = String(child.studentId);
     let profile = await SupportProfile.findOne({ studentId: child.studentId });
     if (!profile) continue;
+    // a re-run of a half-applied import never makes a second draft for the same batch
+    if (await SupportProfileVersion.exists({ profileId: profile._id, batchId: b._id })) continue;
     if (ch.safeguardingBanner) {
       profile.safeguardingBanner = true;
       await profile.save();

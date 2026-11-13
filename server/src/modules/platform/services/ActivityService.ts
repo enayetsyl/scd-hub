@@ -45,6 +45,7 @@ import { Guardian } from "../../foundation/models/Guardian";
 import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentRecord";
 import { AssignmentStudentRecord } from "../../trackers/models/AssignmentStudentRecord";
 import { auditKindLabel, kindsInGroup, type ActivityGroup, ACTIVITY_GROUPS } from "../auditLabels";
+import { auditVisibilityClause, type AuditVisibility } from "../auditPrivacy";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 
@@ -111,6 +112,8 @@ export interface PersonActivityResult {
 
 export interface PersonActivityInput {
   personId: string;
+  /** Which support / safeguarding audit rows the caller may see; absent = none (fail closed). */
+  visibility?: AuditVisibility | null;
   /** Dhaka calendar days, inclusive, "YYYY-MM-DD". */
   from: string;
   to: string;
@@ -378,6 +381,7 @@ function auditFilter(
   end: Date,
   kind?: string | null,
   group?: string | null,
+  visibility?: AuditVisibility | null,
 ): Record<string, unknown> {
   const q: Record<string, unknown> = {
     // A "View as" row names the Principal as actor and the borrowed account in
@@ -391,6 +395,8 @@ function auditFilter(
   } else if (group && isActivityGroup(group)) {
     q.eventKind = { $in: kindsInGroup(group) };
   }
+  const hide = auditVisibilityClause(visibility);
+  if (hide) q.$and = [hide];
   return q;
 }
 
@@ -401,8 +407,9 @@ async function auditRows(
   limit: number,
   kind?: string | null,
   group?: string | null,
+  visibility?: AuditVisibility | null,
 ): Promise<ActivityRowShape[]> {
-  const q = auditFilter(actorId, start, end, kind, group);
+  const q = auditFilter(actorId, start, end, kind, group, visibility);
   // `_id` breaks ties so a page boundary never reshuffles (D-#761).
   const rows = (await Audit.find(q).sort({ eventAt: -1, _id: -1 }).limit(limit).lean()) as unknown as IAudit[];
   return rows.map((r) => {
@@ -438,7 +445,7 @@ export async function personActivity(input: PersonActivityInput): Promise<Person
   const limit = Math.min(Math.max(input.limit ?? ACTIVITY_LIMIT_DEFAULT, 1), ACTIVITY_LIMIT_MAX);
 
   const [audit, homework, assignment] = await Promise.all([
-    wantAudit ? auditRows(actorId, start, end, limit, kind, group) : Promise.resolve([]),
+    wantAudit ? auditRows(actorId, start, end, limit, kind, group, input.visibility) : Promise.resolve([]),
     wantHomework ? homeworkRows(actorId, start, end, limit) : Promise.resolve([]),
     wantAssignment ? assignmentRows(actorId, start, end, limit) : Promise.resolve([]),
   ]);
@@ -471,10 +478,10 @@ export async function personActivityPage(
   const need = skip + pageSize;
 
   const [audit, homework, assignment, auditN, homeworkN, assignmentN] = await Promise.all([
-    wantAudit ? auditRows(actorId, start, end, need, kind, group) : Promise.resolve([]),
+    wantAudit ? auditRows(actorId, start, end, need, kind, group, input.visibility) : Promise.resolve([]),
     wantHomework ? homeworkRows(actorId, start, end, need) : Promise.resolve([]),
     wantAssignment ? assignmentRows(actorId, start, end, need) : Promise.resolve([]),
-    wantAudit ? Audit.countDocuments(auditFilter(actorId, start, end, kind, group)) : Promise.resolve(0),
+    wantAudit ? Audit.countDocuments(auditFilter(actorId, start, end, kind, group, input.visibility)) : Promise.resolve(0),
     wantHomework
       ? trackerFoldCount(HomeworkStudentRecord, actorId, start, end, "hwItemId", "hwId")
       : Promise.resolve(0),
@@ -549,6 +556,7 @@ export async function personActivityDays(input: {
   personId: string;
   from: string;
   to: string;
+  visibility?: AuditVisibility | null;
 }): Promise<ActivityDayShape[]> {
   if (!Types.ObjectId.isValid(input.personId)) return [];
   const actorId = new Types.ObjectId(input.personId);
@@ -560,7 +568,7 @@ export async function personActivityDays(input: {
 
   const [auditDays, hwDays, asDays] = await Promise.all([
     Audit.aggregate([
-      { $match: { $or: [{ actorId }, { onBehalfOf: actorId }], eventAt: range } },
+      { $match: { $or: [{ actorId }, { onBehalfOf: actorId }], eventAt: range, ...(auditVisibilityClause(input.visibility) ?? {}) } },
       { $group: { _id: dayKey("$eventAt"), n: { $sum: 1 } } },
     ]) as unknown as Promise<Array<{ _id: string; n: number }>>,
     HomeworkStudentRecord.aggregate([

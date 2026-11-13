@@ -8,6 +8,7 @@
  *  - The feature ships OFF: until it is switched on, only a view_all holder gets in (CSP-6).
  *  - A refused read by authenticated staff writes SUPPORT_ACCESS_REFUSED (no text).
  */
+import { Types } from "mongoose";
 import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AuthPayload } from "../../../context";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -52,6 +53,10 @@ export async function supportCaller(ctx: SupportCtx, opts: { noViewAs?: boolean 
 export const holdsViewAll = (auth: AuthPayload): boolean => has(auth, "support_profile:view_all");
 export const holdsApprove = (auth: AuthPayload): boolean => has(auth, "support_profile:approve");
 
+/** SG-6: the banner is for the Principal side and the safeguarding receivers, never a teacher. */
+export const canSeeSafeguardingBanner = (auth: AuthPayload | null): boolean =>
+  !!auth && (holdsApprove(auth) || holdsViewAll(auth) || has(auth, "safeguarding:receive"));
+
 export async function getSupportSetting() {
   return (await SupportSetting.findOne({ key: "main" })) ?? (await SupportSetting.create({ key: "main" }));
 }
@@ -72,6 +77,7 @@ export interface ChildAccess {
  */
 export async function accessToChild(ctx: SupportCtx, studentId: string, need: "view" | "report"): Promise<ChildAccess & { auth: AuthPayload }> {
   const auth = await supportCaller(ctx);
+  if (!Types.ObjectId.isValid(studentId)) throw new SupportProfileRefusal("ভুল আইডি।");
   if (holdsViewAll(auth)) return { auth, mode: "ALL", readerVia: "PRINCIPAL" };
   const refuse = async (reason: string): Promise<never> => {
     await writeAudit({ eventKind: "SUPPORT_ACCESS_REFUSED", actorId: auth.userId, actorRole: auth.role, targetId: studentId, targetKind: "Student", meta: { studentId, reason } });

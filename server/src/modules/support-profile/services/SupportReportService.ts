@@ -43,6 +43,7 @@ import { SupportProfile } from "../models/SupportProfile";
 import { SupportReport, type ISupportReport, type SupportTexts } from "../models/SupportReport";
 import { SupportReview } from "../models/SupportReview";
 import { SupportProfileRefusal } from "./errors";
+import { assertSurfaceVia } from "./SupportProfileService";
 import { accessToChild, holdsApprove, holdsViewAll, supportCaller, type SupportCtx } from "./supportAccess";
 import { notifyHolders, notifyUser } from "./supportNotify";
 import { readerOf } from "./supportScope";
@@ -121,20 +122,26 @@ export function textsOf(r: Pick<ISupportReport, "situation" | "settingNote" | "b
 }
 
 /** Normalise + size-check an input into the report's fields. `complete` = the submit rules. */
-function normaliseInput(input: SupportReportInput, complete: boolean, todayKey: string) {
+function normaliseInput(input: SupportReportInput, complete: boolean, todayKey: string, storedOn: string | null = null) {
   const L = SUPPORT_FIELD_LIMITS;
   const source = oneOf(input.source ?? "TEACHER", SUPPORT_REPORT_SOURCES, "উৎস") ?? "TEACHER";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.occurredOn ?? "")) throw new SupportProfileRefusal("তারিখ ঠিক নেই।");
-  if (input.occurredOn > todayKey) throw new SupportProfileRefusal("ভবিষ্যতের তারিখে রিপোর্ট লেখা যায় না।");
-  if (daysBetweenKeys(input.occurredOn, todayKey) > SUPPORT_THRESHOLDS.reportBackDays)
-    throw new SupportProfileRefusal("রিপোর্ট সর্বোচ্চ ৭ দিন আগের ঘটনার হতে পারে।");
+  // The 7-day back-date window is for the FIRST submission only; a rewrite / edit of a stored report
+  // keeps its stored date (a returned report must not be locked out by the days it waited).
+  let occurredOn = storedOn;
+  if (!occurredOn) {
+    occurredOn = input.occurredOn;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn ?? "")) throw new SupportProfileRefusal("তারিখ ঠিক নেই।");
+    if (occurredOn > todayKey) throw new SupportProfileRefusal("ভবিষ্যতের তারিখে রিপোর্ট লেখা যায় না।");
+    if (daysBetweenKeys(occurredOn, todayKey) > SUPPORT_THRESHOLDS.reportBackDays)
+      throw new SupportProfileRefusal("রিপোর্ট সর্বোচ্চ ৭ দিন আগের ঘটনার হতে পারে।");
+  }
   const antecedentTags = (input.antecedentTags ?? []).map((a) => oneOf(a, SUPPORT_ANTECEDENTS, "ঠিক আগে কী চলছিল")!);
   const starterKeys = (input.starterKeys ?? []).map((a) => oneOf(a, SUPPORT_STARTER_KEYS as readonly string[], "চেনা কৌশল")!);
   const gotOrAvoided = (input.gotOrAvoided ?? []).map((a) => oneOf(a, SUPPORT_FUNCTIONS, "কী পেল বা এড়াল")!);
   const tone = oneOf(input.tone, SUPPORT_TONES, "রিপোর্টটি কেমন");
   const f = {
     source,
-    occurredOn: input.occurredOn,
+    occurredOn,
     groupType: (["section", "subjectgroup", "other"].includes(input.groupType ?? "") ? input.groupType : "section") as "section" | "subjectgroup" | "other",
     groupId: input.groupId && Types.ObjectId.isValid(input.groupId) ? new Types.ObjectId(input.groupId) : null,
     subject: trimTo(input.subject, 40, "বিষয়"),
@@ -232,6 +239,9 @@ async function ownEditable(auth: AuthPayload, reportId: string): Promise<ISuppor
   if (!r || String(r.authorId) !== auth.userId) throw new SupportProfileRefusal("রিপোর্টটি পাওয়া যায়নি।");
   if (r.status === "IN_BATCH") throw new SupportProfileRefusal("রিপোর্টটি এখন প্রক্রিয়া চলছে — ব্যাচ শেষ হলে বদলানো যাবে।");
   if (!SUPPORT_EDITABLE_STATUSES.includes(r.status)) throw new SupportProfileRefusal("এই অবস্থায় রিপোর্টটি বদলানো যায় না।");
+  // SG-4: while the safeguarding question is open the author can neither edit nor withdraw — the
+  // Principal answers it first.
+  if (r.safeguardingHold === "OPEN") throw new SupportProfileRefusal("এই রিপোর্টে সুরক্ষা-প্রশ্ন খোলা — প্রধান শিক্ষকের উত্তরের আগে বদলানো বা তুলে নেওয়া যাবে না।");
   return r;
 }
 
@@ -276,17 +286,29 @@ async function openFor(ctx: SupportCtx, input: SupportReportInput) {
   return { ...acc, todayKey, authorVia: authorVia as ISupportReport["authorVia"] };
 }
 
+/** Only `answerSeed` (the author's own SupportSeedPrompt) makes a COMMENT_SEED report. A client-sent
+ *  seedCommentId is dropped, a client-sent COMMENT_SEED source becomes TEACHER, and a stored seed
+ *  report keeps its source. */
+function sanitiseSeed(input: SupportReportInput, existing: ISupportReport | null): SupportReportInput {
+  const source = existing?.source === "COMMENT_SEED" ? "COMMENT_SEED" : input.source === "COMMENT_SEED" ? "TEACHER" : input.source;
+  return { ...input, source, seedCommentId: null };
+}
+
 /** খসড়া রাখুন — a draft (no checks beyond sizes; ≤ 3 open drafts per child per author). */
-export async function saveSupportDraft(ctx: SupportCtx, input: SupportReportInput, reportId?: string | null): Promise<ISupportReport> {
-  const o = await openFor(ctx, input);
-  const f = normaliseInput(input, false, o.todayKey);
-  if (reportId) {
-    const r = await ownEditable(o.auth, reportId);
-    if (String(r.studentId) !== input.studentId) throw new SupportProfileRefusal("রিপোর্টটি অন্য শিক্ষার্থীর।");
+export async function saveSupportDraft(ctx: SupportCtx, rawInput: SupportReportInput, reportId?: string | null): Promise<{ report: ISupportReport; signs: SafeguardingSign[] }> {
+  const o = await openFor(ctx, rawInput);
+  const existing = reportId ? await ownEditable(o.auth, reportId) : null;
+  const input = sanitiseSeed(rawInput, existing);
+  if (existing && String(existing.studentId) !== input.studentId) throw new SupportProfileRefusal("রিপোর্টটি অন্য শিক্ষার্থীর।");
+  const f = normaliseInput(input, false, o.todayKey, existing && existing.status !== "DRAFT" ? existing.occurredOn : null);
+  // A draft is scanned too: a sign opens the question now, not only at submit (SG-4).
+  const signsOf = (): SafeguardingSign[] => [...new Set(scanSafeguarding(textsOf(f as never)).map((h) => h.sign))];
+  if (existing) {
+    const r = existing;
     if (r.status !== "DRAFT") throw new SupportProfileRefusal("জমা দেওয়া রিপোর্ট খসড়া হিসেবে রাখা যায় না — আবার জমা দিন।");
     applyFields(r, f);
     await r.save();
-    return r;
+    return { report: r, signs: signsOf() };
   }
   const open = await SupportReport.countDocuments({ authorId: oid(o.auth.userId), studentId: oid(input.studentId), status: "DRAFT" });
   if (open >= SUPPORT_THRESHOLDS.maxOpenDrafts) throw new SupportProfileRefusal("এই শিক্ষার্থীর ৩টি খসড়া আগেই আছে — আগে সেগুলো শেষ করুন।");
@@ -294,13 +316,13 @@ export async function saveSupportDraft(ctx: SupportCtx, input: SupportReportInpu
     studentId: oid(input.studentId),
     authorId: oid(o.auth.userId),
     authorVia: o.authorVia,
-    seedCommentId: input.seedCommentId && Types.ObjectId.isValid(input.seedCommentId) ? new Types.ObjectId(input.seedCommentId) : null,
+    seedCommentId: null, // only answerSeed ever sets it
     status: "DRAFT",
     tone: f.tone,
   });
   applyFields(r, f);
   await r.save();
-  return r;
+  return { report: r, signs: signsOf() };
 }
 
 /**
@@ -309,11 +331,14 @@ export async function saveSupportDraft(ctx: SupportCtx, input: SupportReportInpu
  */
 export async function submitSupportReport(
   ctx: SupportCtx,
-  input: SupportReportInput,
+  rawInput: SupportReportInput,
   opts: { reportId?: string | null; safeguardingAnswer?: SafeguardingAnswer | null; questionAnswers?: { flagId: string; answer: string; reasonBn?: string | null }[] | null } = {},
 ): Promise<SubmitOutcome> {
-  const o = await openFor(ctx, input);
-  const f = normaliseInput(input, true, o.todayKey);
+  const o = await openFor(ctx, rawInput);
+  const existing = opts.reportId ? await ownEditable(o.auth, opts.reportId) : null;
+  const input = sanitiseSeed(rawInput, existing);
+  if (existing && String(existing.studentId) !== input.studentId) throw new SupportProfileRefusal("রিপোর্টটি অন্য শিক্ষার্থীর।");
+  const f = normaliseInput(input, true, o.todayKey, existing && existing.status !== "DRAFT" ? existing.occurredOn : null);
   const base: SubmitOutcome = { outcome: "SAVED", report: null, blocked: [], askHits: [], signs: [], balanceNudge: false };
 
   // (2) word lists + (3) another child's name — refuse at once, no AI.
@@ -329,16 +354,15 @@ export async function submitSupportReport(
 
   let r: ISupportReport;
   let wasStatus: SupportReportStatus | null = null;
-  if (opts.reportId) {
-    r = await ownEditable(o.auth, opts.reportId);
-    if (String(r.studentId) !== input.studentId) throw new SupportProfileRefusal("রিপোর্টটি অন্য শিক্ষার্থীর।");
+  if (existing) {
+    r = existing;
     wasStatus = r.status;
   } else {
     r = new SupportReport({
       studentId: oid(input.studentId),
       authorId: oid(o.auth.userId),
       authorVia: o.authorVia,
-      seedCommentId: input.seedCommentId && Types.ObjectId.isValid(input.seedCommentId) ? new Types.ObjectId(input.seedCommentId) : null,
+      seedCommentId: null, // only answerSeed ever sets it
       tone: f.tone,
     });
   }
@@ -369,6 +393,13 @@ export async function submitSupportReport(
     r.rewriteRounds = 0; // a fresh count of 3 checks (§6.5)
   }
   r.askHits = asksOf(termHits);
+  // New text, new check: whatever an earlier batch said about the old text goes (§2.4).
+  r.compare = null;
+  r.suggestedLinks = [];
+  r.sectionHints = [];
+  r.skillHints = [];
+  r.openFlags = [];
+  r.markModified("compare");
   r.status = "TO_PROCESS";
   r.waitingSince = now;
   r.submittedAt = r.submittedAt ?? now;
@@ -408,7 +439,7 @@ async function balanceNudge(authorId: string, studentId: string): Promise<boolea
 /** SG-3: the text moves to the referral; the report keeps no text and is final. */
 export async function routeToSafeguarding(r: ISupportReport, raisedBy: string, signs: SafeguardingSign[], source: "SUPPORT_REPORT" | "SUPPORT_BATCH"): Promise<ISupportReport> {
   const t = textsOf(r);
-  const text = [t.situation, t.settingNote, t.behaviour, t.tried, t.resultNote, t.exception, t.whatWorked].filter(Boolean).join("\n");
+  const text = [t.situation, t.settingNote, t.behaviour, t.tried, t.resultNote, t.exception, t.whatWorked, t.goodThing].filter(Boolean).join("\n");
   await raiseReferral({ studentId: String(r.studentId), raisedBy, source, signs, textBn: text });
   Object.assign(r, {
     situation: "",
@@ -425,9 +456,15 @@ export async function routeToSafeguarding(r: ISupportReport, raisedBy: string, s
     openFlags: [],
     askHits: [],
     batchId: null,
+    // §2.4: nothing the AI said about this report stays — no compare, no hints, no links.
+    compare: null,
+    suggestedLinks: [],
+    sectionHints: [],
+    skillHints: [],
     status: "SAFEGUARDING_ROUTED",
     safeguardingHold: "NONE",
   });
+  r.markModified("compare");
   await r.save();
   return r;
 }
@@ -499,16 +536,30 @@ export async function decideSupportReport(ctx: SupportCtx, d: DecisionInput): Pr
       for (const [k, v] of Object.entries(d.edited ?? {})) if (k in approved && typeof v === "string") (approved as unknown as Record<string, string>)[k] = v.trim();
       const blocked = blockedOf(scanSupportTerms(approved));
       if (blocked.length) throw new SupportProfileRefusal(`এই শব্দটি রাখা যাবে না: ${blocked[0].term}`);
+      // The edited wording is scanned again: a new safeguarding sign opens the question instead of
+      // approving (the Principal answers it through the hold, SG-4).
+      if (d.decision === "APPROVED_EDITED" && scanSafeguarding(approved).length && !scanSafeguarding(submitted).length) {
+        r.safeguardingHold = "OPEN";
+        r.safeguardingHoldSource = "TERM_LIST";
+        await r.save();
+        throw new SupportProfileRefusal("বদলানো লেখায় সুরক্ষার চিহ্ন আছে — আগে সুরক্ষা-প্রশ্নের সিদ্ধান্ত দিন।");
+      }
     }
     r.submittedText = submitted;
     r.approvedText = approved;
     r.principalEdited = d.decision === "APPROVED_EDITED" && JSON.stringify(approved) !== JSON.stringify(submitted);
     r.status = "APPROVED";
-    if (d.strategyLinks?.length) r.strategyLinks = await resolveLinks(r, d.strategyLinks);
+    if (d.strategyLinks?.length) r.strategyLinks = await resolveLinks(r, d.strategyLinks, auth.userId);
     if (d.sectionHints) r.sectionHints = d.sectionHints.filter((x) => (SUPPORT_SECTIONS as readonly string[]).includes(x));
   } else if (d.decision === "RETURNED") {
     r.status = "RETURNED";
     r.returnedAt = now;
+    // Back to the author: whatever COMPARE said about the old text goes (§2.4).
+    r.compare = null;
+    r.suggestedLinks = [];
+    r.sectionHints = [];
+    r.skillHints = [];
+    r.markModified("compare");
   } else {
     r.status = "NOT_USED";
   }
@@ -527,7 +578,7 @@ export async function decideSupportReport(ctx: SupportCtx, d: DecisionInput): Pr
         : r.principalEdited
           ? "আপনার রিপোর্ট প্রোফাইলে যুক্ত হয়েছে — প্রধান শিক্ষক ভাষা সামান্য বদলেছেন, দেখে নিন"
           : "আপনার রিপোর্ট প্রোফাইলে যুক্ত হয়েছে, ধন্যবাদ";
-  if (body && String(r.authorId) !== auth.userId) await notifyUser(String(r.authorId), body, `support-decided:${r._id}:${d.decision}`);
+  if (body && String(r.authorId) !== auth.userId) await notifyUser(String(r.authorId), body, `support-decided:${r._id}:${r.round}:${d.decision}`);
   return r;
 }
 
@@ -567,12 +618,19 @@ const paging = (a: { page?: number | null; pageSize?: number | null }) => {
 
 export interface ReportView {
   r: ISupportReport;
-  /** False when the author is no longer a reader: status only, no text (§8.2 rule 5). */
+  /** False on every list row and mutation payload (§6.9: metadata only) and when the author is no
+   *  longer a reader (§8.2 rule 5). Text comes only from the audited `readReport`. */
   textVisible: boolean;
+  /** False when the author is no longer a reader: status only — no child, date or tone either. */
+  metaVisible?: boolean;
+  /** Safeguarding signs found by a draft save: the app shows the question (SG-4). */
+  signs?: string[];
   studentName: string | null;
   authorName: string | null;
   /** The viewer is the Principal (approve / view_all): compare notes, skew, preview may show. */
   principal?: boolean;
+  /** A queue row's only Principal-side flag: computed on the server, no compare text goes out (§9.4). */
+  quick?: boolean;
 }
 
 async function studentNames(ids: Types.ObjectId[]): Promise<Map<string, string>> {
@@ -593,7 +651,8 @@ export async function myReportsPage(ctx: SupportCtx, args: { page?: number | nul
   return {
     rows: rows.map((r) => {
       const vis = readable.get(String(r.studentId)) ?? false;
-      return { r, textVisible: vis, studentName: vis ? (names.get(String(r.studentId)) ?? null) : null, authorName: null };
+      // A list row is metadata only (child, date, tone, status); the text is one audited read away.
+      return { r, textVisible: false, metaVisible: vis, studentName: vis ? (names.get(String(r.studentId)) ?? null) : null, authorName: null };
     }),
     total,
     page,
@@ -611,23 +670,36 @@ export async function queuePage(
   const { page, pageSize } = paging(args);
   const quick = args.status === "QUICK";
   const statuses = args.status === "PROCESSED" || quick ? ["PROCESSED"] : args.status === "TO_PROCESS" ? ["TO_PROCESS"] : ["TO_PROCESS", "PROCESSED", "IN_BATCH"];
-  const [all, waiting, oldest, held, bannerProfiles] = await Promise.all([
-    SupportReport.find({ status: { $in: statuses } }).sort({ waitingSince: 1, createdAt: 1 }).limit(2000),
+  // A report with an open safeguarding question is always listed, whatever its status or filter.
+  const filter = { $or: [{ status: { $in: statuses } }, { safeguardingHold: "OPEN" }] };
+  // One light pass (no texts) ranks and counts the whole list; only the page's own rows are loaded in full.
+  const [light, waiting, oldest, held, bannerProfiles] = await Promise.all([
+    SupportReport.find(filter)
+      .select("studentId status tone result openFlags teacherDisagreements compare safeguardingAsked safeguardingHold checkSkipped source waitingSince createdAt")
+      .lean(),
     SupportReport.countDocuments({ status: "TO_PROCESS" }),
     SupportReport.findOne({ status: "TO_PROCESS" }).sort({ waitingSince: 1 }).select("waitingSince").lean(),
-    SupportReport.countDocuments({ safeguardingHold: "OPEN", status: { $in: ["TO_PROCESS", "PROCESSED", "NEEDS_REWRITE"] } }),
+    SupportReport.countDocuments({ safeguardingHold: "OPEN" }),
     SupportProfile.find({ safeguardingBanner: true }).select("studentId").lean(),
   ]);
   // Pinned on top: an open safeguarding question, then a child with a safeguarding banner (SG-4, SG-6).
   const banner = new Set(bannerProfiles.map((p) => String(p.studentId)));
-  const rank = (r: ISupportReport) => (r.safeguardingHold === "OPEN" ? 0 : banner.has(String(r.studentId)) ? 1 : 2);
-  const sorted = (quick ? all.filter(isQuickApprovable) : all).sort((a, b) => rank(a) - rank(b));
-  const rows = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const rank = (r: { safeguardingHold?: string; studentId: Types.ObjectId }) => (r.safeguardingHold === "OPEN" ? 0 : banner.has(String(r.studentId)) ? 1 : 2);
+  const at = (r: { waitingSince?: Date | null; createdAt?: Date }) => new Date(r.waitingSince ?? r.createdAt ?? 0).getTime();
+  const quickOk = (r: (typeof light)[number]) => isQuickApprovable(r as unknown as ISupportReport, { banner: banner.has(String(r.studentId)) });
+  const sorted = (quick ? light.filter(quickOk) : light).sort((a, b) => rank(a) - rank(b) || at(a) - at(b));
+  const pageIds = sorted.slice((page - 1) * pageSize, page * pageSize).map((r) => r._id);
+  const full = new Map((await SupportReport.find({ _id: { $in: pageIds } })).map((r) => [String(r._id), r]));
+  const rows: ISupportReport[] = [];
+  for (const id of pageIds) {
+    const r = full.get(String(id));
+    if (r) rows.push(r);
+  }
   const names = await studentNames(rows.map((r) => r.studentId));
   const authors = new Map((await User.find({ _id: { $in: rows.map((r) => r.authorId) } }).select("name").lean()).map((u) => [String(u._id), u.name]));
   const oldestDays = oldest?.waitingSince ? Math.floor((Date.now() - new Date(oldest.waitingSince).getTime()) / 86_400_000) : null;
   return {
-    rows: rows.map((r) => ({ r, textVisible: true, studentName: names.get(String(r.studentId)) ?? null, authorName: authors.get(String(r.authorId)) ?? null, principal: true })),
+    rows: rows.map((r) => ({ r, textVisible: false, studentName: names.get(String(r.studentId)) ?? null, authorName: authors.get(String(r.authorId)) ?? null, principal: false, quick: quickOk(r as never) })),
     total: sorted.length,
     page,
     pageSize,
@@ -639,6 +711,7 @@ export async function queuePage(
 
 /** One report: its author while a reader, or an approve / view_all holder. Audited as REPORT. */
 export async function readReport(ctx: SupportCtx, reportId: string, via: string): Promise<ReportView> {
+  assertSurfaceVia("REPORT", via);
   const auth = await supportCaller(ctx);
   const r = await SupportReport.findById(oid(reportId));
   if (!r) throw new SupportProfileRefusal("রিপোর্টটি পাওয়া যায়নি।");
@@ -648,7 +721,7 @@ export async function readReport(ctx: SupportCtx, reportId: string, via: string)
     if (String(r.authorId) !== auth.userId) throw new SupportProfileRefusal("রিপোর্টটি পাওয়া যায়নি।");
     const rd = await readerOf(String(r.studentId), auth.userId);
     if (!rd) {
-      return { r, textVisible: false, studentName: null, authorName: null };
+      return { r, textVisible: false, metaVisible: false, studentName: null, authorName: null };
     }
     readerVia = rd.via;
   }
@@ -668,7 +741,7 @@ export async function readReport(ctx: SupportCtx, reportId: string, via: string)
 export async function sweepNotUsedText(now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - SUPPORT_THRESHOLDS.notUsedTextDays * 86_400_000);
   const res = await SupportReport.updateMany(
-    { status: "NOT_USED", decidedAt: { $lte: cutoff }, $or: [{ behaviour: { $ne: "" } }, { situation: { $ne: "" } }, { submittedText: { $ne: null } }] },
+    { status: "NOT_USED", decidedAt: { $lte: cutoff }, $or: [{ behaviour: { $ne: "" } }, { situation: { $ne: "" } }, { submittedText: { $ne: null } }, { compare: { $ne: null } }] },
     {
       $set: {
         situation: "",
@@ -683,6 +756,10 @@ export async function sweepNotUsedText(now: Date = new Date()): Promise<number> 
         approvedText: null,
         returnQuestions: [],
         openFlags: [],
+        compare: null,
+        suggestedLinks: [],
+        sectionHints: [],
+        skillHints: [],
       },
     },
   );
