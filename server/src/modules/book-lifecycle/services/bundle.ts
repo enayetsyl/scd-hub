@@ -71,16 +71,34 @@ export const NAME_LEFT_OUT_BN = "নাম আছে — বাছাইয়�
  * whose text or quote names a student or guardian is LEFT OUT with the reason (fail-closed per item);
  * staff names and phone/number runs are replaced by tokens. Reporter names are never included.
  */
-export async function deidentifiedItems(items: IBookFeedback[]): Promise<{ kept: { item: IBookFeedback; textBn: string; quote: string }[]; excluded: { code: string; reasonBn: string }[] }> {
+export async function deidentifiedItems(items: IBookFeedback[]): Promise<{ kept: { item: IBookFeedback; textBn: string; quote: string; where: string; noteBn: string }[]; excluded: { code: string; reasonBn: string }[] }> {
   const scope = await scopeForSchool();
-  const kept: { item: IBookFeedback; textBn: string; quote: string }[] = [];
+  const kept: { item: IBookFeedback; textBn: string; quote: string; where: string; noteBn: string }[] = [];
   const excluded: { code: string; reasonBn: string }[] = [];
   for (const item of items) {
+    // Every free-text field an item carries is checked, fail-closed: its text, its quote, where it sits
+    // and the reviewer's note on it.
     const t = deidentify(item.textBn, scope);
     const q = deidentify(item.anchor?.quote ?? "", scope);
-    const named = [...Object.keys(t.map), ...Object.keys(q.map)].some((k) => /^\[(S|G)/.test(k));
+    const w = deidentify(item.anchor?.where ?? "", scope);
+    const n = deidentify(item.reviewerRuling?.noteBn ?? "", scope);
+    const named = [t, q, w, n].some((x) => Object.keys(x.map).some((k) => /^\[(S|G)/.test(k)));
     if (named) excluded.push({ code: item.code, reasonBn: NAME_LEFT_OUT_BN });
-    else kept.push({ item, textBn: t.text, quote: q.text });
+    else kept.push({ item, textBn: t.text, quote: q.text, where: w.text, noteBn: n.text });
+  }
+  return { kept, excluded };
+}
+
+/** The same fail-closed check for other free texts (instructions I-n, ruled decisions D-n): a text that
+ *  names a student or guardian is left out and listed; the rest comes back de-identified. */
+export async function deidentifiedTexts(rows: { code: string; texts: string[] }[]): Promise<{ kept: Map<string, string[]>; excluded: { code: string; reasonBn: string }[] }> {
+  const scope = await scopeForSchool();
+  const kept = new Map<string, string[]>();
+  const excluded: { code: string; reasonBn: string }[] = [];
+  for (const r of rows) {
+    const out = r.texts.map((t) => deidentify(t ?? "", scope));
+    if (out.some((x) => Object.keys(x.map).some((k) => /^\[(S|G)/.test(k)))) excluded.push({ code: r.code, reasonBn: NAME_LEFT_OUT_BN });
+    else kept.set(r.code, out.map((x) => x.text));
   }
   return { kept, excluded };
 }

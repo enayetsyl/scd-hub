@@ -29,6 +29,7 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
   const { can } = useAuth();
   const manage = can("book_lifecycle:manage");
   const finalize = can("book_lifecycle:finalize");
+  const aiEdit = can("book_lifecycle:ai_edit");
   const [tab, setTab] = useState<Tab>("versions");
   const [page, setPage] = useState(1);
   useEffect(() => setPage(1), [tab]);
@@ -109,6 +110,7 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
                 <Button title={BL.printTitle} variant="secondary" onPress={() => navigation.navigate("BookLcRelease", { bookId })} />
                 {manage ? <Button title={BL.uploadNewVersion} variant="secondary" loading={busy} onPress={() => void uploadVersion()} /> : null}
                 {manage ? <Button title={BL.bundleOpen} variant="secondary" onPress={() => navigation.navigate("BookLcBundle", { bookId })} /> : null}
+                {aiEdit && manage ? <Button title={BL.aiEditOpen} variant="secondary" onPress={() => navigation.navigate("BookLcAiEdit", { bookId })} /> : null}
                 {manage && book.openRoundId ? <Button title={`${BL.openRound} ${bnNum(book.openRoundMemoNo ?? 0)}`} onPress={() => navigation.navigate("BookLcRound", { roundId: book.openRoundId! })} /> : null}
                 {manage && !book.openRoundId && book.latest?.status === "draft" ? (
                   <Button

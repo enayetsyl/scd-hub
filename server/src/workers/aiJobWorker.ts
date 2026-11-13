@@ -16,12 +16,13 @@
  * VM: a systemd unit next to the API's (ops/systemd/scdhub-ai-worker-{prod,dev}.service).
  */
 import "dotenv/config";
-import { connectDb, disconnectDb } from "../db";
+import { disconnectDb } from "../db";
+import { disconnectBookDb } from "../bookDb";
+import { aiWorkerPass, drainBookJobs, openWorkerPlanes } from "./aiWorkerPlanes";
 import { refreshAiConfig } from "../modules/platform/services/AiSettingService";
 import { loadRoleTemplateOverrides } from "../modules/access-control/services/RoleTemplateService";
 import { registerExpoPushChannel } from "../modules/notifications/services/pushChannel";
 import { registerWebPushChannel } from "../modules/notifications/services/webPushChannel";
-import { workerTick } from "../modules/ai-workspace/services/JobService";
 
 const TICK_MS = Number(process.env.AI_JOB_TICK_MS ?? 10_000);
 const CONCURRENCY = Number(process.env.AI_JOB_CONCURRENCY ?? 2);
@@ -29,24 +30,29 @@ const CONCURRENCY = Number(process.env.AI_JOB_CONCURRENCY ?? 2);
 let stopping = false;
 
 async function main(): Promise<void> {
-  await connectDb();
+  // Book lifecycle (D-#1603): the book plane too — the AI edit job reads and writes book text there.
+  const planes = await openWorkerPlanes();
   await loadRoleTemplateOverrides();
   await refreshAiConfig(true).catch((err) => console.error("[ai-worker] AI settings load failed — using .env:", err));
   // A finished job notifies its starter: this process must push too (the API registers its own).
   registerExpoPushChannel();
   registerWebPushChannel();
-  console.log(`[ai-worker] up (concurrency ${CONCURRENCY}, tick ${TICK_MS} ms)`);
+  console.log(`[ai-worker] up (concurrency ${CONCURRENCY}, tick ${TICK_MS} ms, book plane ${planes.book ? "open" : "off"})`);
   const inFlight = new Set<string>();
+  const bookInFlight = new Set<string>();
   while (!stopping) {
     try {
       await refreshAiConfig();
-      const started = await workerTick(CONCURRENCY, {}, inFlight);
+      const started = await aiWorkerPass(CONCURRENCY, inFlight, bookInFlight);
       if (started > 0) continue; // more may be waiting
     } catch (err) {
       console.error("[ai-worker] tick failed:", err);
     }
     await new Promise((r) => setTimeout(r, TICK_MS));
   }
+  // Shutting down: let a running book job finish its call (a minute at most), else hand it back to the queue.
+  const drained = await drainBookJobs(bookInFlight);
+  if (drained.requeued) console.log(`[ai-worker] ${drained.requeued} book job(s) handed back to the queue`);
 }
 
 for (const sig of ["SIGINT", "SIGTERM"] as const) {
@@ -60,6 +66,7 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
 main()
   .then(async () => {
     await disconnectDb();
+    await disconnectBookDb().catch(() => undefined);
     console.log("[ai-worker] stopped");
     process.exit(0);
   })
