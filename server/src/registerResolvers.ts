@@ -196,4 +196,5 @@ import "./modules/viva/resolvers/viva";
 import "./modules/year-change/resolvers/yearChange";
 import "./modules/support-profile/resolvers/supportProfile";
 import "./modules/support-profile/resolvers/supportBatch";
+import "./modules/support-profile/resolvers/supportVersions";
 import "./modules/platform/safeguarding/safeguardingResolvers";
