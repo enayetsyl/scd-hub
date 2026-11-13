@@ -73,7 +73,7 @@ export async function readPickedText(asset: BlAsset): Promise<string> {
 }
 
 /** POST /files/book-lc/bundle → the zip is saved (web); returns the bundle's nonce and draft id. */
-export async function downloadBookLcBundle(input: { bookId: string; feedback: string[]; instructionIds: string[]; includeMedia: boolean }): Promise<{ nonce: string; draftId: string }> {
+export async function downloadBookLcBundle(input: { bookId: string; feedback: string[]; instructionIds: string[]; includeMedia: boolean }): Promise<{ nonce: string; draftId: string; leftOut: { code: string; reasonBn: string }[] }> {
   if (Platform.OS !== "web") throw new Error("web only");
   const token = getToken();
   const res = await fetch(`${REST_BASE}/files/book-lc/bundle`, {
@@ -100,7 +100,13 @@ export async function downloadBookLcBundle(input: { bookId: string; feedback: st
   document.body.appendChild(a);
   a.click();
   a.remove();
-  return { nonce, draftId };
+  let leftOut: { code: string; reasonBn: string }[] = [];
+  try {
+    leftOut = JSON.parse(decodeURIComponent(res.headers.get("X-Left-Out") ?? "[]"));
+  } catch {
+    // no list
+  }
+  return { nonce, draftId, leftOut };
 }
 
 /** The round's return-transcription pack (web). */

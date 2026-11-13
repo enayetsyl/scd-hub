@@ -14,8 +14,8 @@ export const BL_SUBMIT_DRAFT = gql<{ submitBookLcDraft: BlSubmitT }, { draftId: 
     submitBookLcDraft(draftId: $draftId, summaryBn: $summaryBn, bump: $bump) { status blocking { code level messageBn } warnings { code level messageBn } }
   }
 `;
-export const BL_ACK_UNEXPLAINED = gql<{ ackBookLcUnexplained: boolean }, { draftId: string; chapterKey: string; index: number }>`
-  mutation AckBookLcUnexplained($draftId: String!, $chapterKey: String!, $index: Int!) { ackBookLcUnexplained(draftId: $draftId, chapterKey: $chapterKey, index: $index) }
+export const BL_ACK_UNEXPLAINED = gql<{ ackBookLcUnexplained: boolean }, { draftId: string; chapterKey: string; index: number; runHash?: string | null }>`
+  mutation AckBookLcUnexplained($draftId: String!, $chapterKey: String!, $index: Int!, $runHash: String) { ackBookLcUnexplained(draftId: $draftId, chapterKey: $chapterKey, index: $index, runHash: $runHash) }
 `;
 export const BL_UPLOAD_RESULT = gql<{ uploadBookLcBundleResult: { draftId: string; chapters: { key: string; status: string; blocking: number; unexplained: number }[] } }, { bookId: string; text: string }>`
   mutation UploadBookLcBundleResult($bookId: String!, $text: String!) { uploadBookLcBundleResult(bookId: $bookId, text: $text) { draftId chapters { key status blocking unexplained } } }

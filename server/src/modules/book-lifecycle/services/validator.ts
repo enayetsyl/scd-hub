@@ -7,6 +7,7 @@
  * VR-8 pictures, VR-9 regions, VR-10 characters, VR-11 size, VR-12 sacred text, VR-13 rules lexicon.
  * Messages are Bangla, one line, with the chapter key and op number (codes in BOOK_EDIT_REASONS).
  */
+import { createHash } from "crypto";
 import { BOOK_EDIT_REASONS, BOOK_LC_LIMITS, diffLines, foldWhitespace } from "@scd/shared";
 import type { IBookEditDraft, DraftFinding } from "../models/BookEditDraft";
 import type { IBookFeedback, IBookInstruction, IBookDecision, IBookRuleSet } from "../models/BookFeedback";
@@ -23,6 +24,8 @@ export interface ValidationContext {
   ruleSets: IBookRuleSet[];
   /** media/… paths present in the base version or uploaded to the draft. */
   mediaPaths: Set<string>;
+  /** The book's chapter heading level (default 2) — VR-6 counts these outside code fences. */
+  headingLevel?: number;
 }
 
 export interface ChangeRow {
@@ -43,8 +46,11 @@ export interface ChapterCheck {
 
 export interface ChapterResult {
   findings: DraftFinding[];
-  unexplained: { index: number; beforeText: string; afterText: string }[];
+  unexplained: { index: number; beforeText: string; afterText: string; runHash?: string; context?: string }[];
   sacredTouched: boolean;
+  /** Whole mode: indexes (into the chapter's rows) of rows that cover a run touching sacred text.
+   *  Ops mode: the 1-based numbers of the applied ops that touch sacred text. */
+  sacredRows: number[];
 }
 
 const f = (code: string, level: "blocking" | "warning", messageBn: string, op?: number, ref?: string): DraftFinding => ({ code, level, messageBn, op, ref });
@@ -58,19 +64,21 @@ export function knownRefs(ctx: ValidationContext): Map<string, "item" | "instruc
   return m;
 }
 
-/** Texts a sacred change may copy from, per qualifying ref (VR-12). */
-function sacredSources(ctx: ValidationContext): Map<string, string[]> {
-  const out = new Map<string, string[]>();
+/** Texts a sacred change may copy from, per qualifying ref (VR-12). `item` sources may also be
+ *  cited for a deletion (an empty insertion); decision sources only for text they actually give. */
+function sacredSources(ctx: ValidationContext): Map<string, { texts: string[]; item: boolean }> {
+  const out = new Map<string, { texts: string[]; item: boolean }>();
+  const fold = (t: string) => foldWhitespace(t.normalize("NFC"));
   for (const i of ctx.items) {
     if (i.category !== "sacred_text" || i.route !== "needs_reviewer") continue;
     const v = i.reviewerRuling?.verdict;
     if (v !== "agree" && v !== "modify") continue;
-    out.set(i.code, [i.textBn, i.reviewerRuling?.noteBn ?? ""].filter(Boolean).map((t) => t.normalize("NFC")));
+    out.set(i.code, { texts: [i.textBn, i.reviewerRuling?.noteBn ?? ""].filter(Boolean).map(fold), item: true });
   }
   for (const d of ctx.decisions) {
     if (d.status !== "ruled" || !d.ruling) continue;
     const opt = d.options.find((o) => o.key === d.ruling?.optionKey)?.textBn ?? "";
-    out.set(d.code, [d.ruling.textBn ?? "", opt].filter(Boolean).map((t) => t.normalize("NFC")));
+    out.set(d.code, { texts: [d.ruling.textBn ?? "", opt].filter(Boolean).map(fold), item: false });
   }
   return out;
 }
@@ -89,8 +97,35 @@ export function lexicon(ruleSets: IBookRuleSet[]): { key: string; wrong: string;
   return out;
 }
 
+const SACRED_MARKER_G = /<!--\s*bl:sacred (?:start|end)[^>]*-->/g;
+/** Chapter markers and every `bl:sacred start/end` marker (they are immutable like the others). */
 function markers(t: string): string[] {
-  return t.split("\n").filter((l) => MARKER_RE.test(l));
+  return [...t.split("\n").filter((l) => MARKER_RE.test(l)), ...(t.match(SACRED_MARKER_G) ?? [])];
+}
+
+/** Chapter-level headings outside code fences. */
+function headingCount(t: string, level: number): number {
+  let fence = false;
+  let n = 0;
+  for (const line of t.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) fence = !fence;
+    else if (!fence && new RegExp(`^#{${level}}\\s+\\S`).test(line)) n++;
+  }
+  return n;
+}
+
+const LETTER = /[\p{L}\p{M}\p{N}]/u;
+/** `needle` occurs in `hay` as whole words (no letter/mark/digit touching either end). */
+function hasWord(hay: string, needle: string): boolean {
+  if (!needle) return false;
+  let i = hay.indexOf(needle);
+  while (i >= 0) {
+    const before = i > 0 ? hay[i - 1] : "";
+    const after = i + needle.length < hay.length ? hay[i + needle.length] : "";
+    if ((!before || !LETTER.test(before) || !LETTER.test(needle[0])) && (!after || !LETTER.test(after) || !LETTER.test(needle[needle.length - 1]))) return true;
+    i = hay.indexOf(needle, i + 1);
+  }
+  return false;
 }
 
 function multiset(list: string[]): Map<string, number> {
@@ -106,38 +141,21 @@ function sameMultiset(a: string[], b: string[]): boolean {
   return true;
 }
 
-/** A hunk is explained when a declared change's before/after excerpts appear in its removed/added
- *  text after whitespace folding (VR-7). */
-export function hunkCovered(removed: string, added: string, rows: ChangeRow[]): boolean {
-  const R = foldWhitespace(removed);
-  const A = foldWhitespace(added);
-  return rows.some((c) => {
+/** A row is usable only when its excerpts really are in the texts: the before excerpt in the base,
+ *  the after excerpt in the new text (whitespace-folded). A row naming text that is not there explains nothing. */
+export function validRows(rows: ChangeRow[], base: string, next: string): ChangeRow[] {
+  const B = foldWhitespace(base);
+  const N = foldWhitespace(next);
+  return rows.filter((c) => {
     const b = foldWhitespace(c.beforeExcerpt);
     const a = foldWhitespace(c.afterExcerpt);
     if (!b && !a) return false;
-    return (!b || R.includes(b)) && (!a || A.includes(a)) && (b ? true : !R || A.length > 0) && (a ? true : !A || R.length > 0);
+    return (!b || B.includes(b)) && (!a || N.includes(a));
   });
 }
 
-/** Consecutive non-equal word segments of a hunk, as (removed, added) pairs; whitespace-only runs drop out. */
-export function changeRuns(words: { op: string; text: string }[]): { removed: string; added: string }[] {
-  const out: { removed: string; added: string }[] = [];
-  let cur: { removed: string; added: string } | null = null;
-  for (const w of words) {
-    if (w.op === "eq") {
-      if (cur) out.push(cur);
-      cur = null;
-      continue;
-    }
-    cur ??= { removed: "", added: "" };
-    if (w.op === "del") cur.removed += w.text;
-    else cur.added += w.text;
-  }
-  if (cur) out.push(cur);
-  return out.filter((r) => foldWhitespace(r.removed) || foldWhitespace(r.added));
-}
-
-/** A change run is explained when one row's before excerpt holds its removed words and the after excerpt its added words. */
+/** A change run is explained when one row's before excerpt holds its removed words and the after
+ *  excerpt its added words, as whole words (a short insertion cannot hide inside a longer word). */
 export function runCovered(removed: string, added: string, rows: ChangeRow[]): boolean {
   const R = foldWhitespace(removed);
   const A = foldWhitespace(added);
@@ -145,7 +163,7 @@ export function runCovered(removed: string, added: string, rows: ChangeRow[]): b
     const b = foldWhitespace(c.beforeExcerpt);
     const a = foldWhitespace(c.afterExcerpt);
     if (!b && !a) return false;
-    return (!R || b.includes(R)) && (!A || a.includes(A));
+    return (!R || hasWord(b, R)) && (!A || hasWord(a, A));
   });
 }
 
@@ -154,6 +172,48 @@ function sacredSpans(t: string): { start: number; end: number }[] {
   const re = new RegExp(`${ARABIC_RE.source}+(?:[\\s\\u064B-\\u065F]*${ARABIC_RE.source}+)*`, "g");
   for (const m of t.matchAll(re)) spans.push({ start: m.index!, end: m.index! + m[0].length });
   return spans;
+}
+
+export interface Run {
+  removed: string;
+  added: string;
+  /** The run touches sacred text of the BASE (a bl:sacred region or Arabic-script text), or adds Arabic. */
+  sacred: boolean;
+  /** The whole changed lines the run sits in (what the person is shown). */
+  lineBefore: string;
+  lineAfter: string;
+}
+
+/** Word-level change runs of base → next, each judged against the BASE text's sacred spans. */
+export function runsOf(base: string, next: string): Run[] {
+  const spans = sacredSpans(base);
+  const lineStart = (line: number) => base.split("\n").slice(0, line).join("\n").length + (line > 0 ? 1 : 0);
+  const out: Run[] = [];
+  for (const h of diffLines(base, next)) {
+    let pos = lineStart(h.aStart);
+    let cur: Run | null = null;
+    const flush = () => {
+      if (cur && (foldWhitespace(cur.removed) || foldWhitespace(cur.added))) out.push(cur);
+      cur = null;
+    };
+    for (const w of h.words) {
+      if (w.op === "eq") {
+        flush();
+        pos += w.text.length;
+      } else if (w.op === "del") {
+        cur ??= { removed: "", added: "", sacred: false, lineBefore: h.removed.join("\n"), lineAfter: h.added.join("\n") };
+        cur.removed += w.text;
+        if (ARABIC_RE.test(w.text) || spans.some((sp) => pos < sp.end && sp.start < pos + w.text.length)) cur.sacred = true;
+        pos += w.text.length;
+      } else {
+        cur ??= { removed: "", added: "", sacred: false, lineBefore: h.removed.join("\n"), lineAfter: h.added.join("\n") };
+        cur.added += w.text;
+        if (ARABIC_RE.test(w.text) || spans.some((sp) => pos >= sp.start && pos <= sp.end)) cur.sacred = true;
+      }
+    }
+    flush();
+  }
+  return out;
 }
 
 export function validateChapter(ctx: ValidationContext, c: ChapterCheck): ChapterResult {
@@ -170,7 +230,7 @@ export function validateChapter(ctx: ValidationContext, c: ChapterCheck): Chapte
     if (it && (it.status === "rejected" || it.status === "duplicate")) findings.push(f("VR-3", "blocking", tag(`${BOOK_EDIT_REASONS.VR3_DEAD_REF} ${r}`), undefined, r));
   }
   const changed = c.base !== c.next;
-  if (!changed) return { findings, unexplained: [], sacredTouched: false };
+  if (!changed) return { findings, unexplained: [], sacredTouched: false, sacredRows: [] };
 
   // VR-5 scope
   if (ctx.draft.scopeChapterKeys.length && !ctx.draft.scopeChapterKeys.includes(c.key)) findings.push(f("VR-5", "blocking", tag(BOOK_EDIT_REASONS.VR5_SCOPE)));
@@ -184,20 +244,25 @@ export function validateChapter(ctx: ValidationContext, c: ChapterCheck): Chapte
     return m < 0 ? "" : t.split("\n").slice(0, m + 1).join("\n");
   };
   if (mb.join("\n") !== mn.join("\n") || headOf(c.base) !== headOf(c.next)) findings.push(f("VR-6", "blocking", tag(BOOK_EDIT_REASONS.VR6_MARKER)));
+  if (c.key !== "front") {
+    const lvl = ctx.headingLevel ?? 2;
+    if (headingCount(c.base, lvl) === 1 && headingCount(c.next, lvl) !== 1) findings.push(f("VR-6", "blocking", tag(BOOK_EDIT_REASONS.VR6_MARKER)));
+  }
 
-  // VR-7 explained (whole-text replacements only; ops are explained by construction)
+  // Rows that explain edits: ops mode builds them from the applied ops, whole mode takes the change list.
+  const opRows: ChangeRow[] = (c.applied ?? []).map((a) => ({ chapterKey: c.key, beforeExcerpt: a.removed || (a.op.op === "insert_after" ? a.op.anchor : ""), afterExcerpt: a.inserted, refs: a.op.refs }));
+  const rawRows = c.mode === "ops" ? opRows : c.changes.filter((x) => x.chapterKey === c.key);
+  const rows = validRows(rawRows, c.base, c.next);
+  const runs = runsOf(c.base, c.next);
+
+  // VR-7 explained (whole-text replacements only; ops are explained by construction). Each word-level
+  // change run must be explained by a row on its own, so two edits on one line cannot hide behind one row.
   const unexplained: ChapterResult["unexplained"] = [];
-  const hunks = diffLines(c.base, c.next);
   if (c.mode === "whole") {
-    const rows = c.changes.filter((x) => x.chapterKey === c.key);
-    // Each word-level change run inside a line hunk must be explained by a row on its own, so two edits
-    // on one line cannot hide behind one row (a run is covered when a row's excerpts contain both sides).
-    for (const h of hunks) {
-      const removed = h.removed.join("\n");
-      const added = h.added.join("\n");
-      for (const run of changeRuns(h.words)) {
-        if (!runCovered(run.removed, run.added, rows)) unexplained.push({ index: unexplained.length, beforeText: removed.slice(0, 600), afterText: added.slice(0, 600) });
-      }
+    for (const run of runs) {
+      if (runCovered(run.removed, run.added, rows)) continue;
+      const hash = createHash("sha256").update(`${foldWhitespace(run.removed)}\u0001${foldWhitespace(run.added)}`).digest("hex").slice(0, 16);
+      unexplained.push({ index: unexplained.length, beforeText: run.lineBefore.slice(0, 2000), afterText: run.lineAfter.slice(0, 2000), runHash: hash, context: `${c.key}` });
     }
     if (unexplained.length) findings.push(f("VR-7", "warning", tag(`${unexplained.length}টি ${BOOK_EDIT_REASONS.VR7_UNEXPLAINED}`)));
   }
@@ -206,8 +271,11 @@ export function validateChapter(ctx: ValidationContext, c: ChapterCheck): Chapte
   const pb = mediaRefs(c.base);
   const pn = mediaRefs(c.next);
   if (!sameMultiset(pb, pn)) {
-    const pictureCited = refsUsed.some((r) => itemsByCode.get(r)?.category === "picture");
-    if (!pictureCited) findings.push(f("VR-8", "blocking", tag(BOOK_EDIT_REASONS.VR8_PICTURE)));
+    const isPic = (refs: string[]) => refs.some((r) => itemsByCode.get(r)?.category === "picture");
+    if (c.mode === "ops") {
+      // Per op: an op that adds or drops a picture must itself cite a picture item.
+      for (const a of c.applied ?? []) if (!sameMultiset(mediaRefs(a.removed), mediaRefs(a.inserted)) && !isPic(a.op.refs)) findings.push(f("VR-8", "blocking", tag(BOOK_EDIT_REASONS.VR8_PICTURE, a.index)));
+    } else if (!isPic(refsUsed)) findings.push(f("VR-8", "blocking", tag(BOOK_EDIT_REASONS.VR8_PICTURE)));
     for (const p of pn) if (!pb.includes(p) && !ctx.mediaPaths.has(p)) findings.push(f("VR-8", "blocking", tag(`${BOOK_EDIT_REASONS.VR8_MISSING_MEDIA}: ${p}`)));
   }
 
@@ -222,50 +290,43 @@ export function validateChapter(ctx: ValidationContext, c: ChapterCheck): Chapte
   // VR-11 size
   if (c.next.length > BOOK_LC_LIMITS.chapterChars) findings.push(f("VR-11", "blocking", tag(BOOK_EDIT_REASONS.VR11_MAX)));
   else if (c.base.length > 0 && c.next.length > 1.5 * c.base.length) {
-    const asks = refsUsed.some((r) => r.startsWith("I-") || ["exercise", "instruction"].includes(itemsByCode.get(r)?.category ?? ""));
+    // Growth is expected only when a cited instruction (or an exercise item) asks for new material.
+    const asks = refsUsed.some((r) => r.startsWith("I-") || itemsByCode.get(r)?.category === "exercise");
     findings.push(f("VR-11", asks ? "warning" : "blocking", tag(BOOK_EDIT_REASONS.VR11_GROWTH)));
   }
 
-  // VR-12 sacred text
+  // VR-12 sacred text — judged against the BASE text's sacred spans, in BOTH modes. A run that touches
+  // sacred text needs ONE row that covers it AND whose refs give exactly the text it adds (verbatim,
+  // from a ruled sacred_text item or a ruled decision); a deletion needs a ruled sacred_text item.
   const sources = sacredSources(ctx);
   let sacredTouched = false;
-  const verbatim = (refs: string[], inserted: string) => {
-    const ins = inserted.normalize("NFC").trim();
-    return refs.some((r) => sources.has(r) && (ins === "" || sources.get(r)!.some((s) => s.includes(ins))));
+  let sacredBad = false;
+  const sacredRows = new Set<number>();
+  const verbatim = (refs: string[], added: string) => {
+    const A = foldWhitespace(added.normalize("NFC"));
+    return refs.some((r) => {
+      const src = sources.get(r);
+      if (!src) return false;
+      return A === "" ? src.item : src.texts.some((t) => t.includes(A));
+    });
   };
-  if (c.mode === "ops") {
-    for (const a of c.applied ?? []) {
-      if (!a.sacred) continue;
-      sacredTouched = true;
-      if (!verbatim(a.op.refs, a.inserted)) findings.push(f("VR-12", "blocking", tag(BOOK_EDIT_REASONS.VR12_SACRED, a.index)));
-    }
-  } else {
-    const spans = sacredSpans(c.base);
-    const lineStart = (t: string, line: number) => t.split("\n").slice(0, line).join("\n").length + (line > 0 ? 1 : 0);
-    const rows = c.changes.filter((x) => x.chapterKey === c.key);
-    for (const h of hunks) {
-      const removed = h.removed.join("\n");
-      const added = h.added.join("\n");
-      const s = lineStart(c.base, h.aStart);
-      const e = s + removed.length;
-      const touches = ARABIC_RE.test(removed) || ARABIC_RE.test(added) || spans.some((sp) => s < sp.end && sp.start < e);
-      if (!touches) continue;
-      sacredTouched = true;
-      const covering = rows.filter((r) => hunkCovered(removed, added, [r]));
-      if (!covering.some((r) => verbatim(r.refs, r.afterExcerpt) && (!ARABIC_RE.test(added) || verbatim(r.refs, added)))) {
-        findings.push(f("VR-12", "blocking", tag(BOOK_EDIT_REASONS.VR12_SACRED)));
-      }
-    }
+  for (const run of runs.filter((r) => r.sacred)) {
+    sacredTouched = true;
+    const covering = rows.map((r, i) => ({ r, i })).filter(({ r }) => runCovered(run.removed, run.added, [r]));
+    const ok = covering.find(({ r }) => verbatim(r.refs, run.added));
+    for (const { r } of covering) sacredRows.add(rawRows.indexOf(r) + 1);
+    if (!ok) sacredBad = true;
   }
+  if (sacredBad) findings.push(f("VR-12", "blocking", tag(BOOK_EDIT_REASONS.VR12_SACRED)));
   if (sacredTouched) findings.push(f("VR-12", "warning", tag("কুরআন/হাদিস/দোয়ার পরিবর্তন — মানুষের যাচাই দরকার; পরের স্মারকে পর্যালোচককে জানানো হবে")));
 
   // VR-13 rules lexicon (warnings) on the changed text
-  const insertedText = c.mode === "ops" ? (c.applied ?? []).map((a) => a.inserted).join("\n") : hunks.map((h) => h.added.join("\n")).join("\n");
+  const insertedText = c.mode === "ops" ? (c.applied ?? []).map((a) => a.inserted).join("\n") : runs.map((r) => r.added).join("\n");
   for (const l of lexicon(ctx.ruleSets)) {
     if (insertedText.includes(l.wrong)) findings.push(f("VR-13", "warning", tag(`${BOOK_EDIT_REASONS.VR13_LEXICON}: «${l.wrong}» → «${l.right}» (${l.key})`)));
   }
 
-  return { findings, unexplained, sacredTouched };
+  return { findings, unexplained, sacredTouched, sacredRows: [...sacredRows] };
 }
 
 /** VR-14: every item and instruction given is cited somewhere or listed in notApplied. */

@@ -101,13 +101,13 @@ export default function BookLcDraftScreen({ navigation, route }: Props): React.R
                   {c.unexplained.map((u) => (
                     <View key={u.index} style={{ marginVertical: space(1) }}>
                       <Notice tone="warn" message={`${BL.unexplainedHunk}: «${u.beforeText.slice(0, 120)}» → «${u.afterText.slice(0, 120)}»`} />
-                      {u.acked ? <Badge text={`✓ ${BL.ackHunk}`} tone="ok" /> : finalize && open ? <Button title={BL.ackHunk} variant="ghost" onPress={() => void ackHunk({ draftId, chapterKey: c.key, index: u.index }).then(after)} /> : null}
+                      {u.acked ? <Badge text={`✓ ${BL.ackHunk}`} tone="ok" /> : finalize && open ? <Button title={BL.ackHunk} variant="ghost" onPress={() => void ackHunk({ draftId, chapterKey: c.key, index: u.index, runHash: u.runHash }).then(after)} /> : null}
                     </View>
                   ))}
                   {diffs.get(c.key) ? <DiffView hunks={diffs.get(c.key)!.hunks} /> : null}
                   {manage && open ? (
                     <View style={{ flexDirection: "row", gap: space(2) }}>
-                      <Button title={BL.accept} onPress={() => void decide({ draftId, chapterKey: c.key, accept: true }).then(after)} />
+                      <Button title={BL.accept} onPress={() => void decide({ draftId, chapterKey: c.key, accept: true, expectedNewSha: c.newSha }).then(after)} />
                       <Button title={BL.drop} variant="ghost" onPress={() => void decide({ draftId, chapterKey: c.key, accept: false }).then(after)} />
                     </View>
                   ) : null}

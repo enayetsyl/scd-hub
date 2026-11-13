@@ -32,6 +32,7 @@ export default function BookLcBundleScreen({ navigation, route }: Props): React.
   const [needsReview, setNeedsReview] = useState(true);
   const [paste, setPaste] = useState("");
   const [nonce, setNonce] = useState("");
+  const [leftOut, setLeftOut] = useState<{ code: string; reasonBn: string }[]>([]);
   const [master, setMaster] = useState<BlAsset | null>(null);
   const [changes, setChanges] = useState<BlAsset | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,6 +46,7 @@ export default function BookLcBundleScreen({ navigation, route }: Props): React.
     try {
       const r = await downloadBookLcBundle({ bookId, feedback: items, instructionIds: instr, includeMedia: media });
       setNonce(r.nonce);
+      setLeftOut(r.leftOut);
       setMsg({ tone: "ok", text: `${BL.bundleReady} ${r.nonce}` });
     } catch (e) {
       setMsg({ tone: "danger", text: (e as Error).message });
@@ -103,6 +105,16 @@ export default function BookLcBundleScreen({ navigation, route }: Props): React.
           />
         </View>
       </Card>
+      {leftOut.length ? (
+        <Card style={{ marginTop: space(2) }}>
+          <Body style={{ fontWeight: "700" }}>{BL.leftOutTitle}</Body>
+          {leftOut.map((x) => (
+            <Muted key={x.code}>
+              {x.code} — {x.reasonBn}
+            </Muted>
+          ))}
+        </Card>
+      ) : null}
       <Card style={{ marginTop: space(2) }}>
         <Body style={{ fontWeight: "700" }}>{BL.wholeUpload}</Body>
         <Field label={BL.bundleNonce} value={nonce} onChangeText={setNonce} />

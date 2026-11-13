@@ -368,6 +368,7 @@ const DraftRef = builder.objectRef<DraftShape>("BookLcDraft").implement({
           .sort((a, b) => a.order - b.order)
           .map((c) => ({
             key: c.key,
+            newSha: c.newSha ?? null,
             title: c.title,
             status: c.status,
             mode: c.mode ?? null,
@@ -375,7 +376,7 @@ const DraftRef = builder.objectRef<DraftShape>("BookLcDraft").implement({
             removed: c.newSha === null,
             opsCount: c.opsCount,
             findings: c.findings.map((f) => ({ code: f.code, level: f.level, messageBn: f.messageBn })),
-            unexplained: c.unexplained.map((u) => ({ index: u.index, beforeText: u.beforeText, afterText: u.afterText, acked: !!u.ack?.at })),
+            unexplained: c.unexplained.map((u) => ({ index: u.index, beforeText: u.beforeText, afterText: u.afterText, runHash: u.runHash ?? null, acked: !!u.ack?.at })),
             notApplied: c.notApplied.map((n) => ({ code: n.ref, textBn: n.reasonBn })),
           })),
     }),
@@ -1029,10 +1030,10 @@ builder.mutationField("decideBookLcDraftChapter", (t) =>
   t.field({
     type: DraftRef,
     authScopes: { hasPermission: "book_lifecycle:manage" },
-    args: { draftId: t.arg.string({ required: true }), chapterKey: t.arg.string({ required: true }), accept: t.arg.boolean({ required: true }) },
+    args: { draftId: t.arg.string({ required: true }), chapterKey: t.arg.string({ required: true }), accept: t.arg.boolean({ required: true }), expectedNewSha: t.arg.string() },
     resolve: async (_r, a, ctx) => {
       assertBookPlane();
-      return draftShape(await V.decideDraftChapter(auth(ctx), a.draftId, a.chapterKey, a.accept));
+      return draftShape(await V.decideDraftChapter(auth(ctx), a.draftId, a.chapterKey, a.accept, a.expectedNewSha ?? null));
     },
   }),
 );

@@ -6,7 +6,7 @@
  */
 import { Types } from "mongoose";
 import { randomBytes } from "crypto";
-import { BOOK_EDIT_REASONS, type BookEditDraftSource } from "@scd/shared";
+import { BOOK_EDIT_REASONS, BOOK_LC_LIMITS, type BookEditDraftSource } from "@scd/shared";
 import type { AuthPayload } from "../../../context";
 import { BookEditDraft, type DraftChapter, type DraftFinding, type IBookEditDraft } from "../models/BookEditDraft";
 import { BookFeedback, BookInstruction, BookDecision, type IBookFeedback } from "../models/BookFeedback";
@@ -19,9 +19,10 @@ import { chapterTextsBySha, loadBook, loadVersion, putChapterTexts, versionChapt
 import { activeRuleSetsFor } from "./feedbackService";
 import { applyOps, ChapterEditSchema, ChangeListRowSchema, schemaFindings, type ChangeListRow } from "./editOps";
 import { coverageFindings, validateChapter, type ValidationContext } from "./validator";
-import { assertDraftBaseFresh, loadDraft, registerAcceptGuard, resolveRefs } from "./versionService";
+import { assertDraftBaseFresh, loadDraft, resolveRefs } from "./versionService";
 import { methodText } from "./method";
 import { sha256 } from "./markdown";
+import { writeAudit } from "../../platform/services/AuditService";
 
 const OPEN = ["open", "submitted", "ready"];
 
@@ -101,7 +102,7 @@ export async function validationContext(draft: IBookEditDraft): Promise<Validati
     BookDecision.find({ bookId: book._id, status: "ruled" }),
     activeRuleSetsFor(book),
   ]);
-  return { draft, items, instructions, decisions, ruleSets, mediaPaths: new Set([...base.media.map((m) => m.path), ...draft.media.map((m) => m.path)]) };
+  return { draft, items, instructions, decisions, ruleSets, headingLevel: book.chapterHeadingLevel, mediaPaths: new Set([...base.media.map((m) => m.path), ...draft.media.map((m) => m.path)]) };
 }
 
 async function baseText(draft: IBookEditDraft, key: string): Promise<{ chapter: DraftChapter; text: string }> {
@@ -173,10 +174,11 @@ export async function applyChapterEdit(auth: AuthPayload, draftId: string, edit:
   const res = applyOps(text, e.ops);
   const ctx = await validationContext(draft);
   const v = validateChapter(ctx, { key: e.chapter, base: text, next: res.text, mode: "ops", applied: res.applied, changes: [] });
+  const sacredOps = new Set(v.sacredRows);
   const findings: DraftFinding[] = [...res.findings.map((f) => ({ ...f, messageBn: `${e.chapter}: ${f.messageBn}` })), ...v.findings];
   const [newSha] = await putChapterTexts([res.text]);
   const changes: BookChange[] = [];
-  for (const a of res.applied) {
+  for (const [pos, a] of res.applied.entries()) {
     const r = await routeOf(draft.bookId, a.op.refs);
     changes.push({
       chapterKey: e.chapter,
@@ -186,7 +188,7 @@ export async function applyChapterEdit(auth: AuthPayload, draftId: string, edit:
       reason: (a.op.reasonBn ?? "").slice(0, 500),
       refs: a.op.refs,
       route: r.route,
-      sacred: a.sacred || r.sacred || undefined,
+      sacred: a.sacred || sacredOps.has(pos + 1) || r.sacred || undefined,
     });
   }
   chapter.newSha = newSha;
@@ -219,6 +221,7 @@ export async function putChapter(auth: AuthPayload, draftId: string, key: string
     if (p.success) rows.push(p.data);
     else schemaErr.push(...schemaFindings(p.error));
   }
+  if (markdown.length > BOOK_LC_LIMITS.chapterChars) throw new BookLcError("VR-11", `${key}: ${BOOK_EDIT_REASONS.VR11_MAX}`);
   const next = markdown.replace(/\r\n/g, "\n").normalize("NFC");
   const { chapter, text } = await baseText(draft, key);
   const ctx = await validationContext(draft);
@@ -226,9 +229,11 @@ export async function putChapter(auth: AuthPayload, draftId: string, key: string
   const v = validateChapter(ctx, { key, base: text, next, mode: "whole", changes: mine });
   const [newSha] = await putChapterTexts([next]);
   const changes: BookChange[] = [];
-  for (const r of mine) {
+  const sacredRows = new Set(v.sacredRows);
+  for (const [pos, r] of mine.entries()) {
     const route = await routeOf(draft.bookId, r.refs);
-    changes.push({ chapterKey: key, where: r.where ?? chapter.title, page: r.page, beforeExcerpt: r.beforeExcerpt, afterExcerpt: r.afterExcerpt, reason: r.reason ?? "", refs: r.refs, route: route.route, sacred: route.sacred || undefined });
+    // A row that covers a hunk touching sacred text is flagged, so the next memo shows it.
+    changes.push({ chapterKey: key, where: r.where ?? chapter.title, page: r.page, beforeExcerpt: r.beforeExcerpt, afterExcerpt: r.afterExcerpt, reason: r.reason ?? "", refs: r.refs, route: route.route, sacred: route.sacred || sacredRows.has(pos + 1) || undefined });
   }
   chapter.newSha = newSha;
   chapter.mode = "whole";
@@ -283,26 +288,25 @@ export async function submitDraft(auth: AuthPayload, draftId: string, input: { s
 }
 
 /** VR-7: a finalize holder ticks an unexplained hunk "আমি দেখেছি" (stamped). */
-export async function ackUnexplained(auth: AuthPayload, draftId: string, key: string, index: number): Promise<IBookEditDraft> {
+export async function ackUnexplained(auth: AuthPayload, draftId: string, key: string, index: number, runHash?: string | null): Promise<IBookEditDraft> {
   requireBookLc(auth, "finalize");
   const draft = await loadDraft(draftId);
+  if (!OPEN.includes(draft.status)) throw new BookLcError("DRAFT_CLOSED", "খসড়াটি আর খোলা নেই");
   const ch = draft.chapters.find((c) => c.key === key);
   const u = ch?.unexplained.find((x) => x.index === index);
   if (!ch || !u) throw new BookLcError("NO_HUNK", "পরিবর্তনটি পাওয়া যায়নি");
+  // The tick is for the run the person SAW: a re-edit that reorders the list cannot move it to another run.
+  if (runHash && u.runHash !== runHash) throw new BookLcError("CHANGED", "পরিবর্তনটি বদলে গেছে — আবার দেখে টিক দিন");
   u.ack = { by: uid(auth), at: new Date() };
   draft.markModified("chapters");
   await draft.save();
+  await lcEvent({ bookId: draft.bookId, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: `${key}: unexplained run ${u.runHash ?? index} seen`, refs: { draftId: draft._id } });
+  const book = await loadBook(draft.bookId);
+  await writeAudit({ eventKind: "BOOK_LC_FINALIZED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookEditDraft", targetId: draft._id.toString(), meta: { action: "ack_unexplained", bookCode: book.code, chapter: key, run: u.runHash ?? String(index) } });
   return draft;
 }
 
-/** Accept-time guard (VR-15 + the full validator): no accepted chapter may carry a blocking finding. */
-registerAcceptGuard(async (draft) => {
-  for (const c of draft.chapters.filter((x) => x.status === "accepted")) {
-    const b = c.findings.find((f) => f.level === "blocking");
-    if (b) throw new BookLcError(b.code, `${c.key}: ${b.messageBn}`);
-    if (c.unexplained.some((u) => !u.ack?.at)) throw new BookLcError("VR-7", `${c.key}: ব্যাখ্যাহীন পরিবর্তন দেখা হয়নি (VR-7)`);
-  }
-});
+/* The accept-time guard (no blocking finding, no unseen unexplained change) is built into acceptDraft itself. */
 
 export function draftMasterHashOf(texts: string[]): string {
   return sha256(texts.join(""));

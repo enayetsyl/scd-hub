@@ -60,10 +60,10 @@ builder.mutationField("ackBookLcUnexplained", (t) =>
     type: "Boolean",
     authScopes: { hasPermission: "book_lifecycle:finalize" },
     description: "VR-7 — the Principal has looked at an unexplained hunk (আমি দেখেছি), stamped.",
-    args: { draftId: t.arg.string({ required: true }), chapterKey: t.arg.string({ required: true }), index: t.arg.int({ required: true }) },
+    args: { draftId: t.arg.string({ required: true }), chapterKey: t.arg.string({ required: true }), index: t.arg.int({ required: true }), runHash: t.arg.string() },
     resolve: async (_r, a, ctx) => {
       assertBookPlane();
-      await D.ackUnexplained(auth(ctx), a.draftId, a.chapterKey, a.index);
+      await D.ackUnexplained(auth(ctx), a.draftId, a.chapterKey, a.index, a.runHash ?? null);
       return true;
     },
   }),

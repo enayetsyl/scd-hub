@@ -223,11 +223,12 @@ export interface BlDraftT {
     title: string;
     status: string;
     mode: string | null;
+    newSha: string | null;
     isNew: boolean;
     removed: boolean;
     opsCount: number;
     findings: BlFindingT[];
-    unexplained: { index: number; beforeText: string; afterText: string; acked: boolean }[];
+    unexplained: { index: number; beforeText: string; afterText: string; runHash: string | null; acked: boolean }[];
     notApplied: { code: string; textBn: string }[];
   }[];
   changes: BlChangeT[];
@@ -237,7 +238,7 @@ export interface BlDraftT {
   createdAt: string;
 }
 const DRAFT = `id bookId status source baseVersionId baseLabel newChapters missingChapters rekeyConfirmed protectedChanged protectedConfirmed
-  chapters { key title status mode isNew removed opsCount findings { code level messageBn } unexplained { index beforeText afterText acked } notApplied { code textBn } }
+  chapters { key newSha title status mode isNew removed opsCount findings { code level messageBn } unexplained { index beforeText afterText runHash acked } notApplied { code textBn } }
   changes { ${CHANGE} } blocking { code level messageBn } warnings { code level messageBn } acceptedVersionId createdAt`;
 
 export interface BlDiffChapterT {
@@ -421,9 +422,9 @@ export const BL_CONFIRM_REKEY = gql<{ confirmBookLcRekey: BlDraftT }, { draftId:
 export const BL_CONFIRM_PROTECTED = gql<{ confirmBookLcProtectedChange: BlDraftT }, { draftId: string }>`
   mutation ConfirmBookLcProtectedChange($draftId: String!) { confirmBookLcProtectedChange(draftId: $draftId) { ${DRAFT} } }
 `;
-export const BL_DECIDE_CHAPTER = gql<{ decideBookLcDraftChapter: BlDraftT }, { draftId: string; chapterKey: string; accept: boolean }>`
-  mutation DecideBookLcDraftChapter($draftId: String!, $chapterKey: String!, $accept: Boolean!) {
-    decideBookLcDraftChapter(draftId: $draftId, chapterKey: $chapterKey, accept: $accept) { ${DRAFT} }
+export const BL_DECIDE_CHAPTER = gql<{ decideBookLcDraftChapter: BlDraftT }, { draftId: string; chapterKey: string; accept: boolean; expectedNewSha?: string | null }>`
+  mutation DecideBookLcDraftChapter($draftId: String!, $chapterKey: String!, $accept: Boolean!, $expectedNewSha: String) {
+    decideBookLcDraftChapter(draftId: $draftId, chapterKey: $chapterKey, accept: $accept, expectedNewSha: $expectedNewSha) { ${DRAFT} }
   }
 `;
 export const BL_ACCEPT_DRAFT = gql<{ acceptBookLcDraft: BlVersionT }, { draftId: string; bump?: string | null; summaryBn: string }>`

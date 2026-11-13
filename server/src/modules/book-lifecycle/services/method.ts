@@ -32,11 +32,13 @@ export interface MethodSection {
   end: number;
 }
 
-const MARK_RE = /^<!-- section: (M-\d+) · used-by: ([a-z,]+) -->$/gm;
+const MARK_RE = /^<!-- section: (M-\d+) · used-by: ([a-z,]+) -->\r?$/gm;
 
 export function methodSections(): MethodSection[] {
   const { text } = methodText();
   const marks = [...text.matchAll(MARK_RE)];
+  // A file that parses to no sections (e.g. a changed line ending) must stop the server, not silently empty the prompts.
+  if (!marks.length) throw new Error("edit_method: no sections found (line endings? check .gitattributes)");
   return marks.map((m, i) => {
     const start = m.index!;
     const end = i + 1 < marks.length ? marks[i + 1].index! : text.length;

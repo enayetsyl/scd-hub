@@ -16,7 +16,7 @@
 import { randomBytes } from "crypto";
 import JSZip from "jszip";
 import { z } from "zod";
-import { BOOK_FEEDBACK_CATEGORIES, BOOK_ITEM_VERDICTS } from "@scd/shared";
+import { BOOK_FEEDBACK_CATEGORIES, BOOK_ITEM_VERDICTS, BOOK_LC_LIMITS } from "@scd/shared";
 import type { AuthPayload } from "../../../context";
 import { BookEditDraft, type IBookEditDraft } from "../models/BookEditDraft";
 import { BookFeedback, BookInstruction, BookDecision, type IBookFeedback } from "../models/BookFeedback";
@@ -36,6 +36,31 @@ import { loadRound, proposeTranscription, roundMemoMarkdown } from "./roundServi
 import { scopeForSchool } from "../../platform/services/DeidScopeService";
 import { deidentify } from "../../platform/ai/deidentify";
 import { writeAudit } from "../../platform/services/AuditService";
+
+/** Hard cap on one bundle / pack (bytes of file content, before compression). */
+export const BUNDLE_MAX_BYTES = 300 * 1024 * 1024;
+const ALREADY_COMPRESSED = /\.(pdf|jpe?g|png|webp|zip|docx)$/i;
+
+/** A zip that refuses to grow past the cap and STOREs files that are already compressed. */
+function cappedZip(): { zip: JSZip; add: (name: string, data: string | Buffer) => void } {
+  const zip = new JSZip();
+  let total = 0;
+  return {
+    zip,
+    add(name, data) {
+      total += typeof data === "string" ? Buffer.byteLength(data) : data.length;
+      if (total > BUNDLE_MAX_BYTES) throw new BookLcError("CAP", "বান্ডেল খুব বড় — ছবি বাদ দিয়ে আবার চেষ্টা করুন");
+      zip.file(name, data, ALREADY_COMPRESSED.test(name) ? { compression: "STORE" } : undefined);
+    },
+  };
+}
+
+/** A scan's name as one safe path segment (no folders, no dots-only, no control characters). */
+export function safeBaseName(name: string): string {
+  const last = name.split(/[\\/]/).pop() ?? "";
+  const cleaned = last.replace(/[\u0000-\u001f]/g, "").replace(/^\.+/, "").trim().slice(0, 120);
+  return cleaned || "scan";
+}
 
 export const NAME_LEFT_OUT_BN = "নাম আছে — বাছাইয়ে ঠিক করুন";
 
@@ -100,7 +125,8 @@ export async function downloadBundle(
   auth: AuthPayload,
   bookId: string,
   input: { feedback?: string[] | null; instructionIds?: string[] | null; instructions?: { text: string; needsReview?: boolean | null }[] | null; includeMedia?: boolean | null },
-): Promise<{ zip: Buffer; filename: string; nonce: string; draftId: string; excluded: { code: string; reasonBn: string }[] }> {
+  opts: { buffer?: boolean } = {},
+): Promise<{ zip: Buffer; jszip: JSZip; filename: string; nonce: string; draftId: string; excluded: { code: string; reasonBn: string }[] }> {
   requireBookLc(auth, "manage");
   const book = await loadBook(bookId);
   const draft = await openEditDraft(auth, bookId, { source: "bundle", feedback: input.feedback, instructionIds: input.instructionIds, instructions: input.instructions });
@@ -112,7 +138,8 @@ export async function downloadBundle(
   const decisions = await BookDecision.find({ bookId: book._id, status: "ruled" }).sort({ code: 1 });
   const ruleSets = await activeRuleSetsFor(book);
   const chapters = await versionChapters(base);
-  const zip = new JSZip();
+  const cz = cappedZip();
+  const zip = { file: cz.add } as { file: (name: string, data: string | Buffer) => void };
   zip.file("README.md", README(book.code, vlabel(base)));
   zip.file("METHOD.md", m.text);
   zip.file("book/master.md", await storedMaster(base));
@@ -138,11 +165,11 @@ export async function downloadBundle(
       if (asset) zip.file(md.path, (await loadLcFile(asset.storedFileId)).data);
     }
   }
-  const buf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+  const buf = opts.buffer === false ? Buffer.alloc(0) : await cz.zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
   await recordContentRead({ bookId: book._id, versionId: base._id, userId: auth.userId, surface: "bundle" });
   await lcEvent({ bookId: book._id, kind: "BUNDLE_DOWNLOADED", actorId: uid(auth), summary: `bundle ${draft.bundleNonce} (${kept.length} items, ${excluded.length} left out)`, refs: { draftId: draft._id, versionId: base._id } });
   await writeAudit({ eventKind: "BOOK_LC_BUNDLE_DOWNLOADED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookEditDraft", targetId: draft._id.toString(), meta: { bookCode: book.code, version: vlabel(base), nonce: draft.bundleNonce, items: kept.length, leftOut: excluded.length } });
-  return { zip: buf, filename: `book-bundle_${book.code}_${vlabel(base)}_${draft.bundleNonce}.zip`, nonce: draft.bundleNonce!, draftId: draft._id.toString(), excluded };
+  return { zip: buf, jszip: cz.zip, filename: `book-bundle_${book.code}_${vlabel(base)}_${draft.bundleNonce}.zip`, nonce: draft.bundleNonce!, draftId: draft._id.toString(), excluded };
 }
 
 /** The raw JSON, or the first fenced block of a .md / .txt answer (≤ 4 MB). */
@@ -197,24 +224,36 @@ export async function uploadBundleResult(auth: AuthPayload, bookId: string, text
 }
 
 /** Upload a whole `master.md` + `changes.json` (book-change-list/v1 rows) into the bundle's draft. */
-export async function uploadBundleWhole(auth: AuthPayload, bookId: string, input: { nonce: string; master: Buffer; changesJson: string }): Promise<{ draftId: string; chapters: { key: string; status: string; unexplained: number }[] }> {
+export async function uploadBundleWhole(auth: AuthPayload, bookId: string, input: { nonce: string; master: Buffer; changesJson: string }): Promise<{ draftId: string; chapters: { key: string; status: string; unexplained: number }[]; newChapters: string[]; missingChapters: string[]; ignoredKeys: string[] }> {
   requireBookLc(auth, "manage");
   const draft = await bundleDraft(bookId, input.nonce);
   const book = await loadBook(bookId);
   const changes = extractJson(input.changesJson);
   const rows = Array.isArray(changes) ? changes : Array.isArray((changes as { changes?: unknown[] })?.changes) ? (changes as { changes: unknown[] }).changes : null;
   if (!rows) throw new BookLcError("VR-2", "changes.json একটি তালিকা হতে হবে (VR-2)");
+  if (input.master.length > BOOK_LC_LIMITS.masterMdBytes) throw new BookLcError("CAP", "master.md ৫ মেগাবাইটের বেশি");
   const parsed = parseMaster(normaliseMarkdown(input.master), book.chapterHeadingLevel);
+  // Markers are the chapters' identity: a stray or repeated marker is refused, never guessed.
+  if (parsed.strayMarkers.length) throw new BookLcError("VR-6", `শিরোনামহীন অধ্যায়-মার্কার আছে: ${parsed.strayMarkers.join(", ")} (VR-6)`);
+  if (parsed.duplicateKeys.length) throw new BookLcError("VR-6", `একই অধ্যায়-মার্কার একাধিকবার আছে: ${parsed.duplicateKeys.join(", ")} (VR-6)`);
   const base = await versionChapters(await loadVersion(draft.baseVersionId));
+  const baseKeys = new Set(base.map((b) => b.key));
   const out: { key: string; status: string; unexplained: number }[] = [];
   const next = new Map<string, string>([["front", parsed.front], ...parsed.chapters.filter((c) => c.key).map((c) => [c.key!, c.text] as [string, string])]);
+  // Never silently drop a chapter: whatever does not match is reported for the person to confirm.
+  const newChapters = parsed.chapters.filter((c) => !c.key || !baseKeys.has(c.key)).map((c) => c.title);
+  const missingChapters = base.filter((b) => b.key !== "front" && !next.has(b.key)).map((b) => b.key);
+  const ignoredKeys = [...next.keys()].filter((k) => k !== "front" && !baseKeys.has(k));
   for (const b of base) {
     const t = next.get(b.key);
     if (t === undefined || t === b.text) continue;
     const res = await putChapter(auth, draft._id.toString(), b.key, t, rows);
     out.push({ key: b.key, status: res.status, unexplained: res.unexplained });
   }
-  return { draftId: draft._id.toString(), chapters: out };
+  if (newChapters.length || missingChapters.length) {
+    await lcEvent({ bookId: book._id, kind: "DRAFT_CHAPTER", actorId: uid(auth), summary: `bundle upload: ${newChapters.length} new, ${missingChapters.length} missing chapter(s) NOT applied`, refs: { draftId: draft._id } });
+  }
+  return { draftId: draft._id.toString(), chapters: out, newChapters, missingChapters, ignoredKeys };
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +281,8 @@ Every row you send arrives UNCHECKED; the Principal checks each against the scan
 verdict himself. Never write a verdict for her.
 `;
 
-export async function downloadTranscriptionPack(auth: AuthPayload, roundId: string): Promise<{ zip: Buffer; filename: string; nonce: string }> {
+export async function downloadTranscriptionPack(auth: AuthPayload, roundId: string, opts: { buffer?: boolean } = {},
+): Promise<{ zip: Buffer; jszip: JSZip; filename: string; nonce: string }> {
   requireBookLc(auth, "manage");
   const r = await loadRound(roundId);
   if (r.status !== "sent_on_paper") throw new BookLcError("ROUND_STATE", "শুধু কাগজে পাঠানো পর্যালোচনার প্যাক");
@@ -252,13 +292,14 @@ export async function downloadTranscriptionPack(auth: AuthPayload, roundId: stri
   await BookMemoRound.updateOne({ _id: r._id }, { $set: { transcriptionNonce: nonce } });
   const [items, decs] = await Promise.all([BookFeedback.find({ _id: { $in: r.feedbackIds } }).sort({ createdAt: 1 }), BookDecision.find({ _id: { $in: r.decisionIds } }).sort({ code: 1 })]);
   const { kept, excluded } = await deidentifiedItems(items);
-  const zip = new JSZip();
+  const cz2 = cappedZip();
+  const zip = { file: cz2.add } as { file: (name: string, data: string | Buffer) => void };
   zip.file("README.md", `# ফেরত কপি — স্মারক ${r.memoNo} (${book.code})\n\nscans/ দেখে তাঁর দাগ ও লেখা OUTPUT.md-র JSON-এ তুলুন। প্রতিটি সারি "মেলানো হয়নি" অবস্থায় আসবে।\n`);
   zip.file("memo.md", await roundMemoMarkdown(r));
   const scans: { file_id: string; name: string }[] = [];
   for (const [i, id] of r.scanFileIds.entries()) {
     const { file, data } = await loadLcFile(id);
-    const name = `scans/${String(i + 1).padStart(2, "0")}_${file.originalName}`;
+    const name = `scans/${String(i + 1).padStart(2, "0")}_${safeBaseName(file.originalName)}`;
     zip.file(name, data);
     scans.push({ file_id: id.toString(), name });
   }
@@ -279,10 +320,10 @@ export async function downloadTranscriptionPack(auth: AuthPayload, roundId: stri
   );
   zip.file("pagemap.json", JSON.stringify(r.packet?.pageMap ?? [], null, 2));
   zip.file("OUTPUT.md", OUTPUT_ITEMS(r._id.toString(), nonce));
-  const buf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+  const buf = opts.buffer === false ? Buffer.alloc(0) : await cz2.zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
   await lcEvent({ bookId: r.bookId, kind: "BUNDLE_DOWNLOADED", actorId: uid(auth), summary: `transcription pack for memo ${r.memoNo}`, refs: { roundId: r._id } });
   await writeAudit({ eventKind: "BOOK_LC_BUNDLE_DOWNLOADED", actorId: auth.userId, actorRole: auth.role, targetKind: "BookMemoRound", targetId: r._id.toString(), meta: { bookCode: book.code, memoNo: r.memoNo, nonce, kind: "transcription" } });
-  return { zip: buf, filename: `transcription_${book.code}_memo-${r.memoNo}_${nonce}.zip`, nonce };
+  return { zip: buf, jszip: cz2.zip, filename: `transcription_${book.code}_memo-${r.memoNo}_${nonce}.zip`, nonce };
 }
 
 const ItemsSchema = z
@@ -323,6 +364,26 @@ export async function uploadTranscriptionResult(auth: AuthPayload, roundId: stri
   if (p.round !== r._id.toString() || !nonce || p.nonce !== nonce) throw new BookLcError("MISMATCH", "এই ফলাফল অন্য পর্যালোচনা বা অন্য প্যাকের");
   const scan = p.scan_file_id ?? r.scanFileIds[0]?.toString();
   if (!scan) throw new BookLcError("NO_SCAN", "স্ক্যান নেই");
+  if (!r.scanFileIds.some((s) => s.toString() === scan)) throw new BookLcError("BAD_SCAN", "স্ক্যানটি এই পর্যালোচনার নয়");
+  // Validate EVERY mark before anything is written (a bad row must not leave half an answer behind).
+  const asked = await BookFeedback.find({ _id: { $in: r.feedbackIds } }).select("code").lean();
+  const decs = await BookDecision.find({ _id: { $in: r.decisionIds } }).select("code options").lean();
+  for (const m of p.item_marks) if (!asked.some((x) => x.code === m.feedback_code)) throw new BookLcError("NOT_ASKED", `${m.feedback_code} এই স্মারকে চাওয়া হয়নি`);
+  for (const m of p.decision_marks) {
+    const d = decs.find((x) => x.code === m.decision_code);
+    if (!d) throw new BookLcError("NOT_ASKED", `${m.decision_code} এই স্মারকে চাওয়া হয়নি`);
+    if (m.option_key && !d.options.some((o) => o.key === m.option_key)) throw new BookLcError("BAD_OPTION", `${m.decision_code}: বিকল্প ভুল`);
+  }
+  // One answer per pack: the nonce is consumed first, so a second upload (or a double click) is refused.
+  const taken = await BookMemoRound.updateOne({ _id: r._id, transcriptionNonce: nonce }, { $unset: { transcriptionNonce: 1 } });
+  if (!taken.modifiedCount) throw new BookLcError("MISMATCH", "এই প্যাকের উত্তর আগেই নেওয়া হয়েছে");
+  try {
+    return await applyTranscription();
+  } catch (e) {
+    await BookMemoRound.updateOne({ _id: r._id, transcriptionNonce: { $exists: false } }, { $set: { transcriptionNonce: nonce } });
+    throw e;
+  }
+  async function applyTranscription(): Promise<{ created: string[] }> {
   const { items } = await proposeTranscription(
     auth,
     roundId,
@@ -335,6 +396,7 @@ export async function uploadTranscriptionResult(auth: AuthPayload, roundId: stri
     "bundle",
   );
   return { created: items.map((i) => i.code) };
+  }
 }
 
 export { loadDraft };
