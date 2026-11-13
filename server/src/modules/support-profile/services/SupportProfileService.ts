@@ -24,11 +24,17 @@ import { SupportProfileVersion, type ISupportProfileVersion, type SupportItem } 
 import { SupportReview } from "../models/SupportReview";
 import { SupportProfileRefusal } from "./errors";
 import { accessToChild, getSupportSetting, holdsViewAll, isSwitchedOn, supportCaller, type SupportCtx } from "./supportAccess";
-import { currentSupportReaders } from "./supportScope";
+import { studentsReadBy } from "./supportScope";
 import { callerHasPermission, type Permission } from "@scd/shared";
 
 export const SUPPORT_SURFACES = ["CARD", "FULL", "HISTORY", "REPORT"] as const;
 export const SUPPORT_VIA = ["ROUTINE", "ATTENDANCE", "CLASS_NOTE", "CLASS_TEST", "STUDENT_PAGE", "QUEUE"] as const;
+
+/** The audit row carries only known values: a made-up `via` / `surface` is refused. */
+export function assertSurfaceVia(surface: string, via: string): void {
+  if (!(SUPPORT_SURFACES as readonly string[]).includes(surface)) throw new SupportProfileRefusal("ভুল মান।");
+  if (!(SUPPORT_VIA as readonly string[]).includes(via)) throw new SupportProfileRefusal("ভুল মান।");
+}
 
 const oid = (s: string): Types.ObjectId => {
   if (!Types.ObjectId.isValid(s)) throw new SupportProfileRefusal("ভুল আইডি।");
@@ -122,6 +128,7 @@ function buildView(profile: ISupportProfile, version: ISupportProfileVersion | n
 
 /** The card or the full profile of one child. Audited (one row per open). */
 export async function readProfile(ctx: SupportCtx, studentId: string, surface: "CARD" | "FULL", via: string): Promise<ProfileView | null> {
+  assertSurfaceVia(surface, via);
   const acc = await accessToChild(ctx, studentId, "view");
   const profile = await SupportProfile.findOne({ studentId: oid(studentId) });
   if (!profile) return null;
@@ -151,12 +158,9 @@ export async function chipStudentIds(ctx: SupportCtx, studentIds: string[]): Pro
   const withProfile = await SupportProfile.find({ studentId: { $in: ids.map(oid) }, status: "OPEN", currentVersionId: { $ne: null } }).select("studentId").lean();
   if (holdsViewAll(auth)) return withProfile.map((p) => String(p.studentId));
   if (!(await isSwitchedOn()) || !callerHasPermission(auth, "support_profile:view" as Permission)) return [];
-  const out: string[] = [];
-  for (const p of withProfile) {
-    const readers = await currentSupportReaders(String(p.studentId));
-    if (readers.some((r) => r.userId === auth.userId)) out.push(String(p.studentId));
-  }
-  return out;
+  // The caller's reach is computed once for the whole list, not per profile.
+  const mine = await studentsReadBy(auth.userId, withProfile.map((p) => String(p.studentId)));
+  return withProfile.map((p) => String(p.studentId)).filter((id) => mine.has(id));
 }
 
 /** The Principal's list (§9.5): by class and name — never by concern count. */

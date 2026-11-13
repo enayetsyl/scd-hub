@@ -5,6 +5,7 @@
  * Gated on `audit_log:view` (was audit:read; Principal by default).
  */
 import { builder } from "../../../schema";
+import { auditVisibility } from "../auditPrivacy";
 import {
   auditLog,
   type AuditRowShape,
@@ -51,8 +52,9 @@ builder.queryField("auditLog", (t) =>
       from: t.arg.string({ required: false }),
       to: t.arg.string({ required: false }),
     },
-    resolve: async (_root, args) =>
+    resolve: async (_root, args, ctx) =>
       auditLog({
+        visibility: auditVisibility(ctx.auth),
         before: args.before,
         limit: args.limit,
         eventKind: args.eventKind,

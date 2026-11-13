@@ -244,3 +244,52 @@ builder.mutationField("stopDataAnswer", (t) =>
     resolve: (_r, a, ctx) => stopDataAnswer(ctx.auth, a.messageId),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// DA-3/DA-4: connections (Claude). Own list for any staff login; everyone's for the Principal.
+// ---------------------------------------------------------------------------
+
+import { allDataConnectionsPage, myDataConnections, revokeDataConnection, type DataConnectionView } from "../services/DataConnectionService";
+
+const DataConnectionRef = builder.objectRef<DataConnectionView>("DataConnection").implement({
+  fields: (t) => ({
+    userId: t.string({ resolve: (c) => c.userId }),
+    userName: t.string({ nullable: true, resolve: (c) => c.userName }),
+    clientId: t.string({ resolve: (c) => c.clientId }),
+    clientName: t.string({ resolve: (c) => c.clientName }),
+    connectedAt: t.string({ resolve: (c) => new Date(c.connectedAt).toISOString() }),
+    lastUsedAt: t.string({ nullable: true, resolve: (c) => (c.lastUsedAt ? new Date(c.lastUsedAt).toISOString() : null) }),
+    expiresAt: t.string({ description: "The 90-day limit: the person signs in again after this.", resolve: (c) => new Date(c.expiresAt).toISOString() }),
+    calls30d: t.int({ resolve: (c) => c.calls30d }),
+  }),
+});
+
+builder.queryField("myDataConnections", (t) =>
+  t.field({
+    type: [DataConnectionRef],
+    description: "My connected apps (Claude) reading school data as me.",
+    authScopes: { hasPermission: "my_account:view" },
+    resolve: (_r, _a, ctx) => myDataConnections(ctx.auth),
+  }),
+);
+
+const DataConnectionPageRef = pageRef("DataConnectionPage", DataConnectionRef);
+
+builder.queryField("allDataConnectionsPage", (t) =>
+  t.field({
+    type: DataConnectionPageRef,
+    description: "Every person's data connections, paged (data_assistant:audit, Principal).",
+    authScopes: { hasPermission: "data_assistant:audit" },
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: (_r, a, ctx) => allDataConnectionsPage(ctx.auth, { page: a.page, pageSize: a.pageSize }),
+  }),
+);
+
+builder.mutationField("revokeDataConnection", (t) =>
+  t.boolean({
+    description: "Disconnect: my own connection, or anyone's with data_assistant:audit.",
+    authScopes: { hasPermission: "my_account:view" },
+    args: { clientId: t.arg.string({ required: true }), userId: t.arg.string({ required: false }) },
+    resolve: (_r, a, ctx) => revokeDataConnection(ctx.auth, a.clientId, a.userId),
+  }),
+);

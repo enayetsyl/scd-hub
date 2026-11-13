@@ -72,6 +72,7 @@ export interface Fx {
     guardian: AuthPayload;
     deactivated: AuthPayload;
     officeNoUse: AuthPayload;
+    officePay: AuthPayload;
   };
 }
 
@@ -84,7 +85,7 @@ export async function setupFixtures(opts: { featureOn?: boolean } = {}): Promise
   await Promise.allSettled(Object.values(mongoose.models).map((m) => m.init()));
   const today = dhakaDayKey(new Date());
 
-  const ids = { principal: oid(), office: oid(), officeRevoked: oid(), officeGranted: oid(), teacher: oid(), guardianUser: oid(), deactivated: oid(), officeNoUse: oid() };
+  const ids = { principal: oid(), office: oid(), officeRevoked: oid(), officeGranted: oid(), teacher: oid(), guardianUser: oid(), deactivated: oid(), officeNoUse: oid(), officePay: oid() };
   const use: Permission[] = ["data_assistant:use", "data_assistant:connect"];
   await User.create([
     { _id: ids.principal, role: "PRINCIPAL", name: "Head Teacher", email: MARK.userEmail, phone: MARK.userPhone, passwordHash: "x", active: true },
@@ -94,6 +95,7 @@ export async function setupFixtures(opts: { featureOn?: boolean } = {}): Promise
     { _id: ids.teacher, role: "TEACHER", name: "Class Teacher", email: "teacher@school.test", passwordHash: "x", active: true, grantedPermissions: use },
     { _id: ids.guardianUser, role: "GUARDIAN", name: "A Guardian", email: "g@school.test", passwordHash: "x", active: true },
     { _id: ids.deactivated, role: "PRINCIPAL", name: "Old Head", email: "old@school.test", passwordHash: "x", active: false },
+    { _id: ids.officePay, role: "OFFICE", name: "Office Pay", email: "office5@school.test", passwordHash: "x", active: true, grantedPermissions: [...use, "data_assistant:individual_pay"] },
     { _id: ids.officeNoUse, role: "OFFICE", name: "Office Plain", email: "office4@school.test", passwordHash: "x", active: true },
   ]);
 
@@ -156,6 +158,7 @@ export async function setupFixtures(opts: { featureOn?: boolean } = {}): Promise
       guardian: a(ids.guardianUser, "GUARDIAN"),
       deactivated: a(ids.deactivated, "PRINCIPAL"),
       officeNoUse: a(ids.officeNoUse, "OFFICE"),
+      officePay: a(ids.officePay, "OFFICE"),
     },
   };
 }

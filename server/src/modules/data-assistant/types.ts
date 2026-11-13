@@ -55,6 +55,9 @@ export interface ToolDef {
   gates: readonly GateMirror[];
   /** True for `my_access` (the door switch is its only gate). */
   alwaysVisible?: boolean;
+  /** Shown to the model instead of `description`/`input` when `when(auth)` is true (a mode the
+   *  caller may not use is not offered; runTool still denies it if called anyway). */
+  trimmed?: { when(auth: AuthPayload): boolean; description: string; input: Record<string, z.ZodTypeAny> };
   maxRows: number;
   run(ctx: ToolCtx, args: Record<string, unknown>): Promise<ToolResult>;
 }

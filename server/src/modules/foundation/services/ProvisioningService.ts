@@ -10,6 +10,7 @@ import { clearAccountThrottle } from "./LoginThrottleService";
 import { generatePassword, normalizePhone, buildCredentialShareLink } from "./credentials";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ForbiddenError } from "../../../middleware/authz";
+import { revokeDataTokensForUser } from "../../data-assistant/services/DataConnectionService";
 
 /**
  * Login provisioning (D-#59 guardians, D-#60 staff).
@@ -316,6 +317,7 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
     if (!user.name) user.name = staff.name;
     await user.save();
     await clearAccountThrottle("User", user._id.toString());
+    await revokeDataTokensForUser(user._id.toString(), "password_reset", { userId: actor.userId ?? null, role: actor.role ?? null });
   } else {
     user = await User.create({ phone, name: staff.name, role, passwordHash, active: true });
   }
@@ -368,6 +370,8 @@ export async function resetUserPassword(userId: string, actor: Actor): Promise<P
   await user.save();
   // A reset is how the Office lets a locked-out person back in (D-#765).
   await clearAccountThrottle("User", user._id.toString());
+  // Data assistant (D-#1536): a reset cuts every Claude data connection of the person.
+  await revokeDataTokensForUser(user._id.toString(), "password_reset", { userId: actor.userId ?? null, role: actor.role ?? null });
 
   await writeAudit({
     eventKind: "CREDENTIAL_PROVISIONED",
@@ -402,6 +406,8 @@ export async function resetStaffPassword(userId: string, actor: Actor): Promise<
   await user.save();
   // A reset is how the Office lets a locked-out person back in (D-#765).
   await clearAccountThrottle("User", user._id.toString());
+  // Data assistant (D-#1536): a reset cuts every Claude data connection of the person.
+  await revokeDataTokensForUser(user._id.toString(), "password_reset", { userId: actor.userId ?? null, role: actor.role ?? null });
 
   await writeAudit({
     eventKind: "CREDENTIAL_PROVISIONED",

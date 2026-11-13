@@ -88,7 +88,7 @@ const ReportRef = builder.objectRef<ReportView>("SupportReport").implement({
     status: t.string({ resolve: (v) => v.r.status }),
     source: t.string({ resolve: (v) => v.r.source }),
     authorVia: t.string({ resolve: (v) => v.r.authorVia }),
-    occurredOn: t.string({ resolve: (v) => v.r.occurredOn }),
+    occurredOn: t.string({ resolve: (v) => (v.metaVisible === false ? "" : v.r.occurredOn) }),
     subject: t.string({ nullable: true, resolve: (v) => (v.textVisible ? v.r.subject : null) }),
     periodNo: t.int({ nullable: true, resolve: (v) => (v.textVisible ? v.r.periodNo : null) }),
     context: t.string({ nullable: true, resolve: (v) => (v.textVisible ? v.r.context : null) }),
@@ -109,7 +109,8 @@ const ReportRef = builder.objectRef<ReportView>("SupportReport").implement({
     goodThingNone: t.boolean({ resolve: (v) => !!v.r.goodThing?.none }),
     goodThingReasonKey: t.string({ nullable: true, resolve: (v) => (v.textVisible ? (v.r.goodThing?.reasonKey ?? null) : null) }),
     goodThingReasonBn: t.string({ nullable: true, resolve: (v) => (v.textVisible ? (v.r.goodThing?.reasonBn ?? null) : null) }),
-    tone: t.string({ resolve: (v) => v.r.tone }),
+    tone: t.string({ resolve: (v) => (v.metaVisible === false ? "" : v.r.tone) }),
+    signs: t.stringList({ description: "Draft save only: safeguarding signs found (the app asks the question).", resolve: (v) => v.signs ?? [] }),
     round: t.int({ resolve: (v) => v.r.round }),
     safeguardingHold: t.string({ resolve: (v) => v.r.safeguardingHold }),
     checkSkipped: t.string({ resolve: (v) => v.r.checkSkipped }),
@@ -277,7 +278,10 @@ builder.mutationField("saveSupportReportDraft", (t) =>
     description: "খসড়া রাখুন — a draft (≤ 3 open per child).",
     authScopes: { hasPermission: "support_profile:report" },
     args: { input: t.arg({ type: ReportInput, required: true }), reportId: t.arg.string({ required: false }) },
-    resolve: async (_r, a, ctx) => ({ r: await saveSupportDraft(ctx, a.input as SupportReportInput, a.reportId), textVisible: true, studentName: null, authorName: null }),
+    resolve: async (_r, a, ctx) => {
+      const d = await saveSupportDraft(ctx, a.input as SupportReportInput, a.reportId);
+      return { r: d.report, textVisible: true, studentName: null, authorName: null, signs: d.signs };
+    },
   }),
 );
 
@@ -306,7 +310,7 @@ builder.mutationField("withdrawSupportReport", (t) =>
     type: ReportRef,
     authScopes: { hasPermission: "support_profile:report" },
     args: { reportId: t.arg.string({ required: true }) },
-    resolve: async (_r, a, ctx) => ({ r: await withdrawSupportReport(ctx, a.reportId), textVisible: true, studentName: null, authorName: null }),
+    resolve: async (_r, a, ctx) => ({ r: await withdrawSupportReport(ctx, a.reportId), textVisible: false, studentName: null, authorName: null }),
   }),
 );
 
@@ -390,7 +394,7 @@ builder.mutationField("decideSupportReport", (t) =>
     resolve: async (_r, a, ctx) => {
       const d = a.decision as "APPROVED" | "APPROVED_EDITED" | "RETURNED" | "NOT_USED";
       const r = await decideSupportReport(ctx, { reportId: a.reportId, decision: d, reasonBn: a.reasonBn, edited: (a.edited ?? null) as never });
-      return { r, textVisible: true, studentName: null, authorName: null };
+      return { r, textVisible: false, studentName: null, authorName: null };
     },
   }),
 );
@@ -401,7 +405,7 @@ builder.mutationField("resolveSupportSafeguardingHold", (t) =>
     description: "হ্যাঁ, সুরক্ষার বিষয় (YES → referral, report routed) · না, সাধারণ ঘটনা (NO → hold cleared).",
     authScopes: { hasPermission: "support_profile:approve" },
     args: { reportId: t.arg.string({ required: true }), answer: t.arg.string({ required: true }) },
-    resolve: async (_r, a, ctx) => ({ r: await resolveSafeguardingHold(ctx, a.reportId, a.answer === "YES" ? "YES" : "NO"), textVisible: true, studentName: null, authorName: null }),
+    resolve: async (_r, a, ctx) => ({ r: await resolveSafeguardingHold(ctx, a.reportId, a.answer === "YES" ? "YES" : "NO"), textVisible: false, studentName: null, authorName: null }),
   }),
 );
 
