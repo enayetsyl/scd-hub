@@ -16,6 +16,7 @@ import { connectDb } from "./db";
 import { refreshAiConfig } from "./modules/platform/services/AiSettingService";
 import { seedAiPolicies } from "./modules/platform/services/AiPolicyService";
 import { startWorkspaceQueue } from "./modules/ai-workspace/services/workspaceQueue";
+import { failOrphanedDataAnswers } from "./modules/data-assistant/services/DataChatService";
 import { oauthRouter } from "./modules/ai-workspace/mcp/oauth";
 import { mcpRouter } from "./modules/ai-workspace/mcp/mcpRoute";
 import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
@@ -270,6 +271,8 @@ async function start() {
   startNotificationTicker();
   // AI Workspace W-2/W-3: answer off-peak chat turns and draft revisions once DeepSeek is off-peak (60s).
   startWorkspaceQueue();
+  // Data chat answers left "running" by a restart become failed (DA-2).
+  void failOrphanedDataAnswers().catch(() => undefined);
   app.listen(PORT, () => {
     console.log(`SCD Hub server listening on http://localhost:${PORT}/graphql`);
   });

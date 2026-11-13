@@ -103,3 +103,69 @@ D-#1569 sweep details, D-#1570 View-as door rule, D-#1571 small build choices.
 1. Office + `data_assistant:use` ⇒ individual pay (they hold `payroll:view`). OK, or should
    Office's `payroll:view` be split first?
 2. Should Office get any `reports:daily_*` so the daily report works in the assistant?
+
+---
+
+## DA-2 — in-app data chat with provider tool calling
+
+- **Commits:** one `[DA-2]` commit after 9fa09176 (see `git log --grep "\[DA-2\]"`).
+
+### Built
+- **Provider seam** (`platform/ai/provider.ts`): `tools`, `toolChoice` ("auto" | "none" — never a
+  forced choice), `toolRounds`; results carry `finishReason: "tool_calls"`, `toolCalls`,
+  `assistantRaw`. **Claude**: tools + `tool_choice` in the body (tools render before the cached
+  system prefix), assistant content echoed unchanged (thinking blocks included), ALL results in
+  ONE user message with `is_error` on failures, tool inputs `JSON.stringify`'d and parsed with
+  `JSON.parse`. **DeepSeek**: OpenAI-format tools, never streamed with tools, the assistant message
+  echoed as returned (incl. `reasoning_content`) then one `tool` message per call. **Gemini** refuses
+  tools before sending.
+- **`DataChatService`**: placeholder answer → loop (≤ 6 rounds / 12 calls, the last round
+  `toolChoice: "none"`), every tool call through `runTool` (surface `in_app`, session + message ids),
+  history = earlier questions + final answers only, rules-only stable prefix + permission-filtered
+  tool list in registry order (byte-identical for equal permissions — tested), date + swept question
+  in the variable part, Stop, orphan clean-up at boot, one AI request-log row per question
+  (question, answer, tool calls with names + swept args + AiDataCall ids, `impersonatorId`,
+  `deidentified: false`; no tool results). Costs from the ledger.
+- **Own collections** `DataChatSession` / `DataChatMessage` (D-#1572) instead of
+  `AiAssistSession.kind` — so data chats never appear in the teacher assistant's lists.
+- **GraphQL** `dataChatModels`, `dataChatDeepseekWarning`, `dataChatsPage`, `dataChat`,
+  `dataChatMessagesPage`, `dataChatMessage`, `startDataChat`, `setDataChatModel`,
+  `askDataAssistant`, `stopDataAnswer`.
+- **App**: drawer item "তথ্য সহকারী" (`data_assistant:use`, or while "View as" — the server decides),
+  home (paged chats, new chat) and chat (paged turns, polling, Stop, model picker defaulting to
+  Claude Sonnet 5.5, DeepSeek warning + confirm every time it is picked, tool chips, "অনুমতি নেই"
+  chip, cost per answer, View-as banner). Help guide `data-assistant-chat` (draft, no pictures).
+- `DataChatError` registered in `EXPECTED_ERROR_NAMES`; `data_assistant` added to the logged AI
+  features; AiExchange gains `toolCalls` + `impersonatorId`.
+
+### Verified (executed)
+```
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_help_guides → help guides: 374 file(s), 26 draft(s) … ALL CHECKS PASSED
+verify_descriptive_carriers → RESULT: PASS — all 11 descriptive cases gate as intended
+shared build 0; shared typecheck 0; server tsc 0 (Instantiations 8,672,972; Memory used 3,714,946K
+  — up ~42 MB from DA-1: CI's 4 GB heap is getting close, see risk R2); app tsc 0
+Targeted (--runInBand), 25 suites: Test Suites 25 passed; Tests 311 passed (dataAssistant* incl.
+  Chat 9/9, aiProviderTools 9/9, aiClaudeProvider, aiProviders, aiWorkspaceW1–W7, aiAssist,
+  graphqlDocuments, helpGuides, permissionCatalogueGates, firewall)
+Full suite (--maxWorkers=2): Test Suites 1 failed, 459 passed; Tests 1 failed, 7451 passed —
+  expectedErrorRegistry: DataChatError unregistered → registered; rerun Tests 5 passed, 5 total
+expo export --platform web → App exported … EXPO_EXIT 0
+```
+
+### Not done
+- No live call to Claude or DeepSeek (no keys here). DeepSeek's thinking-mode tool round-trip and
+  `tool_choice: "none"` could not be checked against api-docs.deepseek.com (host not allowed from
+  this session) — confirm on the dev site before offering DeepSeek.
+- `strict: true` tools left off (D-#1573) — try on dev with the 24 tools, then switch on.
+- No SSE streaming for the data chat (polling only, D-#1574); no per-answer "price now" clock.
+- The local UI walk / screenshots were not done (draft guides).
+
+### Decisions
+D-#1540, D-#1541 (PRD rows as built), D-#1572 separate chat collections, D-#1573 tool schemas
+without `strict`, D-#1574 chat details (polling, `my_account:view` scope + service door, one log
+row per question, DeepSeek unconfirmed).
+
+### Questions
+3. Is it fine that data chats live in their own collections (not in "read every assistant
+   conversation")? The Principal still sees every question + answer in the AI request log.

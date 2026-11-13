@@ -70,6 +70,11 @@ export interface IAiExchange extends Document {
   /** The model's raw answer text, de-identified. Empty when the call failed. */
   reply: string;
   outcome?: IAiExchangeOutcome;
+  /** Data assistant (DA-2, owner Q7): the tool calls of the answer — names + swept arguments +
+   *  the AiDataCall ids. Tool RESULTS are never stored. */
+  toolCalls?: Array<{ name: string; args: string; dataCallId?: string | null }>;
+  /** Data assistant "View as" (owner Q11): the Principal who tested the chat as this login. */
+  impersonatorId?: Types.ObjectId | null;
 }
 
 const AiExchangeSchema = new Schema<IAiExchange>(
@@ -113,6 +118,8 @@ const AiExchangeSchema = new Schema<IAiExchange>(
     deidentified: { type: Boolean, default: true },
     request: { type: String, required: true },
     reply: { type: String, default: "" },
+    toolCalls: { type: [new Schema({ name: { type: String, required: true }, args: { type: String, default: "{}" }, dataCallId: { type: String, default: null } }, { _id: false })], default: undefined },
+    impersonatorId: { type: Schema.Types.ObjectId, ref: "User", default: undefined },
     outcome: {
       type: new Schema(
         {

@@ -63,6 +63,8 @@ export class GeminiProvider implements AiProvider {
   ) {}
 
   async send(input: AiSendInput, model: string): Promise<AiSendResult> {
+    // DA-2: no tool calling through Gemini here (it stays for OCR); refuse before sending.
+    if (input.tools?.length) throw new AiProviderError("not_configured", "Gemini cannot call tools in this app", this.name);
     const started = Date.now();
     const body = await withDeadline(input.timeoutMs ?? DEFAULT_TIMEOUT_MS, this.name, async (signal) => {
       const res = await this.fetchImpl(`${this.baseUrl}/models/${encodeURIComponent(model)}:generateContent`, {
