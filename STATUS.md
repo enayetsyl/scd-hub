@@ -1,5 +1,15 @@
 # STATUS
 
+- 2026-11-13: **BUILT — book lifecycle BL-1…BL-6 (D-#1590–#1632 (D-#1620 and D-#1621 belong to other features))** on `claude/new-session-6juppd`, NOT merged, no PR (handoff `docs/overnight-handoff-book-lifecycle.md`). Everything ships OFF. **Owner switch-on checklist (BL-6):**
+  1. Read and approve the editing method `server/assets/book-lifecycle/edit_method_v1.md` (one file; the AI job, the Claude connector and the bundle all use it word for word).
+  2. Confirm the BL-0 backup of the book plane (`BOOK_MONGODB_URI`) is in place on the VM before the first real book.
+  3. Import the first pilot book: **a printed book that already has post-print fixes waiting** (owner Q11) — বই ও সংস্করণ → নতুন বই / পুরোনো বই আনুন, state "print_released" (needs the Principal).
+  4. Set the reviewer's name on the book (text only; she has no login).
+  5. Turn on the TEACHER template's `book_lifecycle:teacher_view` + `book_lifecycle:report` (Access control) so teachers see আমার বই and ভুল জানান.
+  6. Print the first packet (স্মারক + বই PDF), send it on paper, and record its return.
+  7. AI settings → "বই সংশোধন (এআই)": keep Claude Opus 5.5, $10 a month, $3 a job (owner Q9). Switch it on **only after** step 1. The AI worker needs `BOOK_MONGODB_URI` in its environment (same `.env` as the API).
+  8. Help guides `book-*` are drafts without pictures: one local walk (one browser, stop everything after) adds the screenshots; then clear `draft`.
+- 2026-11-13: **BUILT — book lifecycle BL-5 (D-#1631)** on `claude/new-session-6juppd`: the AI edit job (S10) — estimate, start, per-chapter progress, draft for S11. The `book_edit` AI feature ships OFF; the AI worker now also opens the book plane (needs `BOOK_MONGODB_URI` in the worker's environment).
 - 2026-11-13: **BUILT — book lifecycle BL-4 (D-#1629)** on `claude/new-session-6juppd`: the Claude connector (`/mcp`) gains eleven book tools + single-use upload links. Nothing applies by itself; a Claude submit never creates a version.
 - 2026-11-13: **BUILT — book lifecycle BL-3 (D-#1627)** on `claude/new-session-6juppd`: edit drafts with the edit-operation engine and validator (VR-1…VR-15), editing method v1, the Path B bundle and the return-transcription pack. Still OFF; nothing applies by itself (S11 accept only).
 - 2026-11-13: **BUILT — book lifecycle BL-2 (D-#1624)** on `claude/new-session-6juppd`: print releases, errata, teacher surfaces (আমার বই, ভুল জানান), class-books publish switch. Still OFF; teachers see nothing until the owner switches `teacher_view` + `report` on.

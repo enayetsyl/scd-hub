@@ -251,4 +251,87 @@ little margin is left for any feature, not caused by the book tools (the non-gen
 
 ### Decisions
 
-D-#1629 (BL-4 build details).
+D-#1621 (BL-4 build details).
+
+## BL-5 — the AI edit job (Path A)
+
+**Commits:** the `[BL-5]` commit after BL-4 — see `git log --oneline`.
+
+### Built
+
+- `book_edit` in `AI_FEATURES` (OFF, anthropic, `claude-opus-5-5`, no fallback, $10/month, 400/day) and in
+  `LOGGED_AI_FEATURES`.
+- `BookEditJob` (book plane; pinned `provider` + `modelName`, per-chapter tokens/cost, `leftOut`).
+- `services/editJob.ts` — `previewEditJob` (S10 estimate, writes nothing), `startEditJob` (confirm when over cap /
+  > 60 parts; opens the `ai_job` draft, pins the model), `runEditJob` (chapters one at a time in reading order; prompt
+  cache-ordered from the method; ≤ 2 fix rounds; same-provider retries; cap → partial before the call; feature off →
+  stopped; new version → stale_base; BOOK_EDIT_READY), `bookEditWorkerTick` (20-minute re-queue, one job at a time).
+- `workers/aiWorkerPlanes.ts` — the AI worker opens the book plane too (optional) and runs book jobs without holding
+  up workspace items; `aiJobWorker.ts` uses it.
+- GraphQL `bookLifecycleJob.ts` (estimate, start, stop, re-run failed chapters, job, jobs page). App: S10 এআই সংশোধন (from the book page,
+  `ai_edit` + `manage`), job progress + earlier jobs (paged), → S11. Guide `book-ai-edit` (draft).
+- `permissionCatalogueGates`: `ai_edit` left `DECLARED_AHEAD` (now gated).
+- Touched pinned tests: `aiFeatureSettings` (feature list + the book_edit defaults), `aiWorkspaceW1` (caps total 23 →
+  33; the "under budget" step now sets $35).
+
+### Verified
+
+```
+new suites --runInBand: bookEditJob 8 · bookEditJobWorker 3 → 11 passed
+touched --runInBand: aiFeatureSettings, aiWorkspaceW1/W4/W5, aiUsage, aiExchange, permissionCatalogueGates, graphqlDocuments, firewall, helpGuides, all book*, expectedErrorRegistry, notification* → 37 suites, 491 passed
+verify_shared_vocab → RESULT: PASS · verify_help_guides → ALL CHECKS PASSED · shared build 0 · shared tsc 0 · server tsc (4 GB) 0 · app tsc 0
+expo export --platform web → EXPO_EXIT 0
+full server suite --maxWorkers=2, run 1 → 499/500 suites: aiWorkspaceW5 "every reply's size is logged" saw 5 of ≥ 6 AiMcpCall rows
+  (the W-5 helper writes those rows fire-and-forget; no ai-workspace file changed in BL-5; W5 alone 3 × 10/10 green)
+full server suite --maxWorkers=2, run 2 →
+  Test Suites: 500 passed, 500 total
+  Tests:       7832 passed, 7832 total
+  Time:        409.561 s
+  EXIT 0
+```
+
+### Not done / notes
+
+- **Flake to know about:** `aiWorkspaceW5` counts `AiMcpCall` rows written with `void …create()` right after the
+  calls; under full-suite load one can land late (seen once, run 1 above). Pre-existing W-5 code, left unchanged as the
+  brief requires; awaiting the write in `logged()` would fix it.
+
+- **VM:** the AI worker reads the same `.env` as the API — it needs `BOOK_MONGODB_URI` there to run book jobs
+  (without it the worker logs "book plane not configured" and runs workspace items only).
+- Failed chapters re-run as a new job on the same draft (§14.1 step 5), once per job (`rerunBookLcEditJobFailed`).
+
+### Decisions
+
+D-#1622 (BL-5 build details).
+
+## BL-6 — switch-on pack
+
+**Commits:** the `[BL-6]` commit (docs only).
+
+### Built
+
+- STATUS: the owner's switch-on checklist (method approval, BL-0 backup, pilot import, reviewer name, teacher
+  template, first packet, `book_edit` caps and switch, guide pictures).
+
+### Verified
+
+```
+verify_help_guides → coverage (report-only): 322 of 482 catalogue actions have a guide ALL CHECKS PASSED
+verify_shared_vocab → RESULT: PASS — all checks green
+(docs only: no code changed, so no typecheck/test/export rerun)
+```
+
+### Not done
+
+- **Guide pictures.** The seven `book-*` guides are drafts without screenshots. Taking them needs one local walk of the
+  app with a book plane and invented books (one browser, everything stopped after) — not possible honestly from this
+  cloud session without a running app against data; left for the lead. The help verifier passes with drafts.
+
+## Merging this branch
+
+- `origin/dev` moved on after BL-1 was pushed (CSP-2 and later, now `23f20b41`). A trial merge (throwaway worktree,
+  nothing committed) conflicts only in `CHANGELOG.md`, `STATUS.md` (append-only: keep both sides) and
+  `server/src/__tests__/permissionCatalogueGates.test.ts` — `DECLARED_AHEAD`: dev emptied it (CSP-2 gated
+  `support_profile:process`) and BL-5 removed `book_lifecycle:ai_edit`, so the merged value is `{}`.
+- Decision numbers D-#1620–#1622 are past the reserved D-#1590–#1619; dev ended at D-#1588 at the trial merge.
+- Re-run the full gate after the merge (the AI caps total in `aiWorkspaceW1` assumes dev added no new capped feature).

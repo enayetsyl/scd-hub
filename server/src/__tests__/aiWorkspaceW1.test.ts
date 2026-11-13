@@ -364,9 +364,10 @@ describe("providers, settings and caps", () => {
 
   it("the budget screen holds the workspace cap + defaults and flags caps above the school budget", async () => {
     const b = await aiBudgetView(principal);
-    // 23 = the five capped features + the workspace cap + the data assistant's $5 (D-#1539).
-    expect(b).toMatchObject({ monthlyUsd: 8, workspaceMonthlyUsd: 10, workspaceDefaultModel: "deepseek-flash", workspaceDefaultThinking: "high", capsTotalUsd: 23, capsOverBudget: true });
-    expect(await setAiBudget(principal, { monthlyUsd: 25, workspaceDefaultThinking: "low" })).toMatchObject({ capsOverBudget: false, workspaceDefaultThinking: "low" });
+    // 33 = the five capped features + the workspace cap + the data assistant's $5 (D-#1539) + the book
+    // edit job's $10 (docs/prd-book-lifecycle.md §14.4, D-#1603).
+    expect(b).toMatchObject({ monthlyUsd: 8, workspaceMonthlyUsd: 10, workspaceDefaultModel: "deepseek-flash", workspaceDefaultThinking: "high", capsTotalUsd: 33, capsOverBudget: true });
+    expect(await setAiBudget(principal, { monthlyUsd: 35, workspaceDefaultThinking: "low" })).toMatchObject({ capsOverBudget: false, workspaceDefaultThinking: "low" });
     await expect(setAiBudget(principal, { workspaceDefaultModel: "gpt-4" })).rejects.toThrow("মডেলটি");
     await setAiBudget(principal, { workspaceDefaultThinking: "high" });
   });
