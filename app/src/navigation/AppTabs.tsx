@@ -1897,7 +1897,7 @@ function AiAssistNavigator(): React.ReactElement {
   );
 }
 
-/** AI Workspace (docs/prd-ai-workspace.md) — projects, files, instructions; chat + drafts + jobs in later slices. */
+/** Data assistant (docs/prd-data-assistant-mcp.md §11) — the in-app data chat. */
 const DataAssistantStack = createNativeStackNavigator<DataAssistantStackParamList>();
 function DataAssistantNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1911,6 +1911,7 @@ function DataAssistantNavigator(): React.ReactElement {
   );
 }
 
+/** AI Workspace (docs/prd-ai-workspace.md) — projects, files, instructions; chat + drafts + jobs in later slices. */
 const AiWorkspaceStack = createNativeStackNavigator<AiWorkspaceStackParamList>();
 function AiWorkspaceNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();

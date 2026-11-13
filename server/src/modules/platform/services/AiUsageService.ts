@@ -178,7 +178,11 @@ export async function assertWithinCaps(ctx: CapContext): Promise<void> {
   }
   if (!refusal && ctx.sessionId && cfg.perSessionTurns !== null) {
     const used = await callsSince({ feature: ctx.feature, refId: ctx.sessionId }, new Date(0));
-    if (used >= cfg.perSessionTurns) refusal = new AiCapError(`এই আলাপে ${cfg.perSessionTurns}টি প্রশ্নের সীমা শেষ — নতুন আলাপ শুরু করুন।`, "session");
+    if (used >= cfg.perSessionTurns) // The data assistant counts model rounds (a question takes several), not questions.
+    refusal = new AiCapError(
+      ctx.feature === "data_assistant" ? "এই আলাপটি সীমায় পৌঁছেছে — নতুন আলাপ শুরু করুন।" : `এই আলাপে ${cfg.perSessionTurns}টি প্রশ্নের সীমা শেষ — নতুন আলাপ শুরু করুন।`,
+      "session",
+    );
   }
   if (!refusal) {
     const spent = await spentSince([ctx.feature], dhakaMonthStart(at));

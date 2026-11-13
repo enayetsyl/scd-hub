@@ -10,7 +10,8 @@ import { homeworkSectionOverview } from "../../trackers/services/HomeworkSummary
 import { homeworkLifecycleReport } from "../../trackers/services/HomeworkLifecycleReportService";
 import { assignmentSummary } from "../../trackers/services/AssignmentSummaryService";
 import { assignmentLoadReport } from "../../trackers/services/AssignmentLoadReportService";
-import { progressOverview, sectionTracker } from "../../lesson-progress/services/LessonProgressService";
+import { assertMayViewSection, progressOverview, sectionTracker } from "../../lesson-progress/services/LessonProgressService";
+import { LessonProgressError } from "../../lesson-progress/services/LessonDeliveryService";
 import { routineForDate, slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
 import { coversForDate } from "../../routine/services/RoutineCoverService";
 import { liveClassBoard } from "../../routine/services/LiveClassBoardService";
@@ -217,7 +218,13 @@ export const lessonProgress: ToolDef = {
     if (args.section_id) {
       if (!args.subject) throw new ToolInvalid("subject is needed with section_id.");
       assertRule(ctx.auth, LP_SECTION);
-      // The service runs the screen's row check (assertMayViewSection).
+      // The screen's row check (assertMayViewSection): its refusal is the §5.4 denial, not a failure.
+      try {
+        await assertMayViewSection(ctx.auth, args.section_id, args.subject);
+      } catch (e) {
+        if (e instanceof LessonProgressError) throw new ToolDenied(["lesson_progress:view_all"], e.message);
+        throw e;
+      }
       const t = await sectionTracker(args.section_id, args.subject, ctx.auth);
       const s = cap(t.sessions, 100);
       return {

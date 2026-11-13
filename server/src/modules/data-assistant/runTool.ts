@@ -18,7 +18,7 @@ import { dhakaDayKey } from "../../lib/dhakaDay";
 import { doorOpen, DOOR_PERMISSION, freshAuth } from "./freshAuth";
 import { acquireSlot, checkRate, LIMITS, ToolTimeout, withTimeout } from "./limits";
 import { AiDataCall } from "./models/AiDataCall";
-import { redact } from "./redact";
+import { redact, sweepText } from "./redact";
 import { toolContext } from "./toolContext";
 import { TOOL_REGISTRY, findTool } from "./tools/registry";
 import { permLabel, rulePerms, toolVisible } from "./gates";
@@ -52,12 +52,12 @@ export function deniedReply(needs: readonly string[], originalBn?: string): Tool
     ok: false,
     error: "permission_denied",
     needs: [...needs],
-    message_bn: originalBn && originalBn !== "permission_denied" && /[ঀ-৿]/.test(originalBn) ? `এই তথ্য দেখার অনুমতি আপনার নেই (${originalBn})।` : `এই তথ্য দেখার অনুমতি আপনার নেই (${bn || "অনুমতি"})।`,
+    message_bn: originalBn && originalBn !== "permission_denied" && /[ঀ-৿]/.test(originalBn) ? sweepText(`এই তথ্য দেখার অনুমতি আপনার নেই (${originalBn})।`) : `এই তথ্য দেখার অনুমতি আপনার নেই (${bn || "অনুমতি"})।`,
     message_en: `You don't have permission to see this (${en || "permission"}).`,
   };
 }
 
-const errReply = (error: ToolReplyErr["error"], bn: string, en: string, extra: Partial<ToolReplyErr> = {}): ToolReplyErr => ({ ok: false, error, message_bn: bn, message_en: en, ...extra });
+const errReply = (error: ToolReplyErr["error"], bn: string, en: string, extra: Partial<ToolReplyErr> = {}): ToolReplyErr => ({ ok: false, error, message_bn: sweepText(bn), message_en: sweepText(en), ...extra });
 
 const bytesOf = (v: unknown) => Buffer.byteLength(JSON.stringify(v), "utf8");
 

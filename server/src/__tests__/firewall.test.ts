@@ -682,9 +682,15 @@ describe("Saturday-Revision firewall (ADR-005 / SR-1, D-#241)", () => {
   // the screens' services, which is not a corpus→identity path. Kept so: (a) the corpus module never
   // imports the data assistant; (b) a data-assistant corpus tool file, if one ever exists, imports no
   // identity model and nothing from foundation; (c) no tool returns a pseudoActorId.
+  test("data assistant: the import pattern matches real relative imports", () => {
+    for (const sample of ['import { x } from "../data-assistant/runTool";', 'import { x } from "../../modules/data-assistant/redact";', 'const m = require("../data-assistant/types");']) {
+      expect(sample).toMatch(importPattern("data-assistant/"));
+    }
+    expect('import { x } from "../corpus/other";').not.toMatch(importPattern("data-assistant/"));
+  });
   test("data assistant: corpus never imports it; corpus tools stay identity-free", () => {
     const corpusDir = path.resolve(__dirname, "../modules/corpus");
-    for (const f of walkDir(corpusDir)) expect(fs.readFileSync(f, "utf8")).not.toMatch(importPattern("modules/data-assistant"));
+    for (const f of walkDir(corpusDir)) expect(fs.readFileSync(f, "utf8")).not.toMatch(importPattern("data-assistant/"));
     const daDir = path.resolve(__dirname, "../modules/data-assistant");
     expect(fs.existsSync(daDir)).toBe(true);
     for (const f of walkDir(path.join(daDir, "tools")).filter((x) => /corpus[^/\\]*\.ts$/.test(path.basename(x)))) {

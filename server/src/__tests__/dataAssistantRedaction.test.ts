@@ -68,7 +68,7 @@ describe("redact.ts", () => {
     expect(out).toEqual({ a: [{ nested: { keep: "ok" } }] });
   });
   it("sweeps Latin, Bangla-digit and +880 phones and e-mails; leaves amounts and ids alone", () => {
-    expect(sweepText("call 01711-223344 now")).toBe(`call ${PHONE_MASK} now`);
+    expect(sweepText("call 01700-000001 now")).toBe(`call ${PHONE_MASK} now`);
     expect(sweepText("ফোন ০১৮১২৩৪৫৬৭৮")).toBe(`ফোন ${PHONE_MASK}`);
     expect(sweepText("+880 1612-998877")).toBe(PHONE_MASK);
     expect(sweepText("+8801712345678")).toBe(PHONE_MASK);
@@ -76,6 +76,27 @@ describe("redact.ts", () => {
     expect(sweepText("net 1250000 taka, 17750")).toBe("net 1250000 taka, 17750");
     expect(sweepText("6553017123456789abcdef01")).toBe("6553017123456789abcdef01");
     expect(sweepText("ref 120171234567890")).toBe("ref 120171234567890");
+  });
+  it.each([
+    "0170-0000001",
+    "0170 000 0001",
+    "017-0000-0001",
+    "01700-00-00-01",
+    "01700.000.001",
+    "(01700) 000001",
+    "০১৭ ০০০০ ০০০১",
+    "1700000001",
+    "+880 1700-000001",
+    "8801700000001",
+  ])("sweeps the separated phone format %s", (p) => {
+    expect(sweepText(`call ${p} now`)).toBe(`call ${PHONE_MASK} now`);
+    expect(hasContact(`call ${p} now`)).toBe(true);
+  });
+  it("does not sweep amounts, dates, short ids or the neighbours of a phone", () => {
+    for (const keep of ["৳ 12,500", "2026-11-13", "2026-11-13 14:30", "school id 10234", "id 123456", "total 1,250,000 taka", "17.50 and 3.14159", "১২,৫০০ টাকা"]) {
+      expect(sweepText(keep)).toBe(keep);
+    }
+    expect(sweepText("amount 5000 phone 0170-0000001 end")).toBe(`amount 5000 phone ${PHONE_MASK} end`);
   });
   it("keeps numbers, booleans, null; dates become ISO", () => {
     expect(redact({ n: 5, b: true, z: null, d: new Date("2026-01-02T00:00:00Z") })).toEqual({ n: 5, b: true, z: null, d: "2026-01-02T00:00:00.000Z" });

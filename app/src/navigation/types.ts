@@ -347,7 +347,6 @@ export type AiAssistStackParamList = {
   AiAssistChat: { sessionId: string };
 };
 
-/** AI Workspace (docs/prd-ai-workspace.md). AiWorkspaceHome stays first: the initial route takes no params. */
 /** Data assistant (docs/prd-data-assistant-mcp.md §11): the data chat + (DA-4) Claude, apps, log. */
 export type DataAssistantStackParamList = {
   DataAssistantHome: undefined;
@@ -357,6 +356,7 @@ export type DataAssistantStackParamList = {
   DataConnections: undefined;
 };
 
+/** AI Workspace (docs/prd-ai-workspace.md). AiWorkspaceHome stays first: the initial route takes no params. */
 export type AiWorkspaceStackParamList = {
   AiWorkspaceHome: undefined;
   AiProjectNew: undefined;

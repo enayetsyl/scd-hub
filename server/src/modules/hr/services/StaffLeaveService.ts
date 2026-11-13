@@ -361,6 +361,8 @@ export interface ListLeaveFilter {
   status?: string;
   fromKey?: string;
   toKey?: string;
+  /** One person only (the data assistant's staff_leave). */
+  staffProfileId?: string;
 }
 
 /** Office/Principal list: applications overlapping a range, optionally by status. */
@@ -381,6 +383,7 @@ export function listLeavePage(filter: ListLeaveFilter, args: PageArgs): Promise<
   if (filter.status) q.status = filter.status;
   if (filter.fromKey) q.toKey = { $gte: filter.fromKey };
   if (filter.toKey) q.fromKey = { $lte: filter.toKey };
+  if (filter.staffProfileId && Types.ObjectId.isValid(filter.staffProfileId)) q.staffProfileId = new Types.ObjectId(filter.staffProfileId);
   return queryPage(StaffLeaveApplication, q, { fromKey: -1, _id: -1 }, args, (docs) => docs as IStaffLeaveApplication[]);
 }
 
