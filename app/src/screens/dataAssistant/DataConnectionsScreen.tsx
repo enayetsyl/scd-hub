@@ -7,7 +7,6 @@ import React from "react";
 import { useMutation, useQuery } from "urql";
 import { ALL_DATA_CONNECTIONS_PAGE, REVOKE_DATA_CONNECTION } from "../../graphql/dataAssistantAdmin";
 
-const PAGE_SIZE = 20;
 import { Screen, Card, Body, Muted, Button, Loader, ErrorBanner } from "../../components/ui";
 import { Pager } from "../../components/Pager";
 import { usePageState } from "../../lib/paging";
@@ -16,6 +15,8 @@ import { useToast } from "../../state/ToastContext";
 import { STR, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { fill } from "../aiWorkspace/aiWorkspaceUi";
+
+const PAGE_SIZE = 20;
 
 export default function DataConnectionsScreen(): React.ReactElement {
   const toast = useToast();

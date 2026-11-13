@@ -121,12 +121,20 @@ ${error ? `<div class="err">${esc(error)}</div>` : ""}
 <button type="submit">অনুমতি দিন / Allow</button></form></main></body></html>`;
 }
 
+/** The two resource URLs this server protects (RFC 8707 `resource` must be one of them). */
+const resourceUrl = (base: string, r: OAuthResource): string => (r === "data" ? `${base}/mcp/data` : `${base}/mcp`);
+const normResource = (v: string): string => v.trim().replace(/\/+$/, "");
+
 const AUTH_PARAMS = ["response_type", "client_id", "redirect_uri", "code_challenge", "code_challenge_method", "state", "scope", "resource"] as const;
 
-async function checkAuthorizeParams(q: Record<string, unknown>): Promise<{ ok: true; params: Record<string, string>; clientName: string } | { ok: false; status: number; error: string }> {
+async function checkAuthorizeParams(q: Record<string, unknown>, base: string): Promise<{ ok: true; params: Record<string, string>; clientName: string } | { ok: false; status: number; error: string }> {
   const params: Record<string, string> = {};
   for (const k of AUTH_PARAMS) if (typeof q[k] === "string") params[k] = q[k] as string;
   if (params.response_type !== "code") return { ok: false, status: 400, error: "unsupported_response_type" };
+  if (params.resource !== undefined && params.resource !== "") {
+    const r = normResource(params.resource);
+    if (r !== resourceUrl(base, "workspace") && r !== resourceUrl(base, "data")) return { ok: false, status: 400, error: "invalid_target" };
+  }
   const client = params.client_id ? await AiOAuthClient.findOne({ clientId: params.client_id }).lean() : null;
   if (!client) return { ok: false, status: 400, error: "invalid_client" };
   if (!params.redirect_uri || !client.redirectUris.includes(params.redirect_uri)) return { ok: false, status: 400, error: "invalid_redirect_uri" };
@@ -202,7 +210,7 @@ export async function verifyAccessToken(raw: string | null | undefined, resource
   if (!raw) return null;
   const t = await AiOAuthToken.findOne({ accessHash: sha256(raw), revokedAt: null, accessExpiresAt: { $gt: new Date() }, ...resourceFilter(resource) }).lean();
   if (!t) return null;
-  if (resource === "data" && t.grantedAt && Date.now() >= new Date(t.grantedAt).getTime() + DATA_MAX_AGE_MS) return null;
+  if (resource === "data" && Date.now() >= new Date(t.grantedAt ?? t.createdAt).getTime() + DATA_MAX_AGE_MS) return null;
   const auth = await authFor(resource, t.userId);
   if (!auth) {
     if (resource === "data" && onDataAccessLost) await onDataAccessLost(String(t.userId)).catch(() => undefined);
@@ -243,7 +251,7 @@ oauthRouter.post("/oauth/register", json, async (req: Request, res: Response) =>
 });
 
 oauthRouter.get("/oauth/authorize", async (req: Request, res: Response) => {
-  const c = await checkAuthorizeParams(req.query as Record<string, unknown>);
+  const c = await checkAuthorizeParams(req.query as Record<string, unknown>, baseUrlOf(req));
   if (!c.ok) {
     res.status(c.status).type("text/plain").send(c.error);
     return;
@@ -253,7 +261,7 @@ oauthRouter.get("/oauth/authorize", async (req: Request, res: Response) => {
 
 oauthRouter.post("/oauth/authorize", form, async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const c = await checkAuthorizeParams(body);
+  const c = await checkAuthorizeParams(body, baseUrlOf(req));
   if (!c.ok) {
     res.status(c.status).type("text/plain").send(c.error);
     return;
@@ -304,6 +312,7 @@ oauthRouter.post("/oauth/token", form, json, async (req: Request, res: Response)
     if (!code || code.clientId !== b.client_id || code.redirectUri !== b.redirect_uri) return void bad("invalid_grant");
     if (pkceS256(b.code_verifier) !== code.codeChallenge) return void bad("invalid_grant");
     const resource: OAuthResource = code.resource === "data" ? "data" : "workspace";
+    if (b.resource && normResource(b.resource) !== resourceUrl(baseUrlOf(req), resource)) return void bad("invalid_target");
     if (!(await authFor(resource, code.userId))) return void bad("invalid_grant");
     const client = await AiOAuthClient.findOne({ clientId: code.clientId }).lean();
     res.json(await issueTokens(code.clientId, client?.name ?? "MCP client", code.userId, resource));
@@ -311,6 +320,11 @@ oauthRouter.post("/oauth/token", form, json, async (req: Request, res: Response)
   }
   if (b.grant_type === "refresh_token") {
     if (!b.refresh_token) return void bad("invalid_request");
+    if (b.resource) {
+      // A `resource` that is not the token's bound one is refused BEFORE anything is rotated.
+      const cur = await AiOAuthToken.findOne({ refreshHash: sha256(b.refresh_token) }).select("resource").lean();
+      if (cur && normResource(b.resource) !== resourceUrl(baseUrlOf(req), cur.resource === "data" ? "data" : "workspace")) return void bad("invalid_target");
+    }
     // Rotation: the old pair is revoked as the new one is issued.
     const old = await AiOAuthToken.findOneAndUpdate(
       { refreshHash: sha256(b.refresh_token), revokedAt: null, refreshExpiresAt: { $gt: new Date() }, ...(b.client_id ? { clientId: b.client_id } : {}) },
@@ -320,8 +334,9 @@ oauthRouter.post("/oauth/token", form, json, async (req: Request, res: Response)
     const resource: OAuthResource = old?.resource === "data" ? "data" : "workspace";
     if (!old || !(await authFor(resource, old.userId))) return void bad("invalid_grant");
     // The 90-day limit holds across rotations: past it, the person signs in again.
-    if (resource === "data" && old.grantedAt && Date.now() >= new Date(old.grantedAt).getTime() + DATA_MAX_AGE_MS) return void bad("invalid_grant");
-    res.json(await issueTokens(old.clientId, old.clientName, old.userId, resource, old.grantedAt ?? null));
+    const firstSignIn = old.grantedAt ?? old.createdAt;
+    if (resource === "data" && Date.now() >= new Date(firstSignIn).getTime() + DATA_MAX_AGE_MS) return void bad("invalid_grant");
+    res.json(await issueTokens(old.clientId, old.clientName, old.userId, resource, resource === "data" ? firstSignIn : null));
     return;
   }
   bad("unsupported_grant_type");

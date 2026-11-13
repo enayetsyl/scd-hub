@@ -36,8 +36,14 @@ export function buildDataMcpServer(auth: AuthPayload, client: { name: string; id
       tool.name,
       { description: tool.description, inputSchema: tool.input, annotations: { title: tool.label_en, readOnlyHint: true, openWorldHint: false } },
       async (args: never): Promise<Reply> => {
-        const r = await runTool(auth, tool.name, args ?? {}, { surface: "claude", clientName: client.name, clientId: client.id });
-        return { content: [{ type: "text", text: JSON.stringify(r.reply) }], ...(r.reply.ok ? {} : { isError: true }) };
+        try {
+          const r = await runTool(auth, tool.name, args ?? {}, { surface: "claude", clientName: client.name, clientId: client.id });
+          return { content: [{ type: "text", text: JSON.stringify(r.reply) }], ...(r.reply.ok ? {} : { isError: true }) };
+        } catch (e) {
+          // Never put e.message in the reply: it can carry a host:port or a driver detail.
+          console.warn("[mcp/data] tool failed:", tool.name, (e as Error)?.message);
+          return { content: [{ type: "text", text: JSON.stringify({ ok: false, error: "internal_error", message: "তথ্য আনা যায়নি, একটু পরে আবার চেষ্টা করুন / Could not fetch the data, please try again shortly." }) }], isError: true };
+        }
       },
     );
   }
@@ -49,7 +55,14 @@ export const dataMcpRouter: Router = express.Router();
 dataMcpRouter.post("/", express.json({ limit: "64kb" }), async (req: Request, res: Response) => {
   const header = req.header("authorization") ?? "";
   const raw = /^Bearer\s+(.+)$/i.exec(header)?.[1]?.trim() ?? null;
-  const who = await verifyAccessToken(raw, "data");
+  let who: Awaited<ReturnType<typeof verifyAccessToken>>;
+  try {
+    who = await verifyAccessToken(raw, "data");
+  } catch (e) {
+    console.warn("[mcp/data] token check failed:", (e as Error)?.message);
+    res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal error" }, id: null });
+    return;
+  }
   if (!who) {
     res.setHeader("WWW-Authenticate", `Bearer resource_metadata="${baseUrlOf(req)}/.well-known/oauth-protected-resource/mcp/data"`);
     res.status(401).json({ error: "invalid_token" });

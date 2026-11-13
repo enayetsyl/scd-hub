@@ -35,16 +35,20 @@ export default function DataAssistantLogScreen(): React.ReactElement {
   const [tool, setTool] = React.useState<string | null>(null);
   const [outcome, setOutcome] = React.useState<string | null>(null);
   const [surface, setSurface] = React.useState<string | null>(null);
+  const [userId, setUserId] = React.useState("");
+  const [clientName, setClientName] = React.useState("");
   const [fromKey, setFrom] = React.useState("");
   const [toKey, setTo] = React.useState("");
-  const filterKey = `${tool}|${outcome}|${surface}|${fromKey}|${toKey}`;
+  const filterKey = `${tool}|${outcome}|${surface}|${userId}|${clientName}|${fromKey}|${toKey}`;
   const [page, setPage] = usePageState(filterKey);
   const [q] = useQuery({
     query: DATA_TOOL_CALLS_PAGE,
-    variables: { tool, outcome, surface, fromKey: KEY.test(fromKey) ? fromKey : null, toKey: KEY.test(toKey) ? toKey : null, page, pageSize: PAGE_SIZE },
+    variables: { userId: userId.trim() || null, clientName: clientName.trim() || null, tool, outcome, surface, fromKey: KEY.test(fromKey) ? fromKey : null, toKey: KEY.test(toKey) ? toKey : null, page, pageSize: PAGE_SIZE },
     requestPolicy: "cache-and-network",
   });
   const data = q.data?.dataToolCallsPage;
+  // TODO: the server exposes no query for the tool names (TOOL_REGISTRY is server-only), so this list
+  // is hand-kept; replace it with a registry-backed query when one is added.
   const toolOptions = [{ label: STR.daLogAll, value: "" }, ...["my_access", "daily_report", "find_students", "student_overview", "attendance_day", "student_attendance_history", "attendance_ranking", "homework_status", "assignment_status", "class_test_status", "class_test_marks", "exam_results", "mastery_overview", "lesson_progress", "routine_lookup", "find_staff", "staff_attendance", "staff_leave", "payroll_summary", "finance_summary", "fee_dues", "notices", "question_bank_stats", "monthly_report_status"].map((t) => ({ label: t, value: t }))];
   return (
     <Screen scroll>
@@ -57,6 +61,8 @@ export default function DataAssistantLogScreen(): React.ReactElement {
           options={[{ label: STR.daLogAll, value: "" }, { label: STR.daLogInApp, value: "in_app" }, { label: "Claude", value: "claude" }]}
           onChange={(v) => setSurface(v || null)}
         />
+        <Field label={STR.daLogPerson} value={userId} onChangeText={setUserId} autoCapitalize="none" />
+        <Field label={STR.daLogClient} value={clientName} onChangeText={setClientName} />
         <Field label={STR.daLogFrom} value={fromKey} onChangeText={setFrom} placeholder="YYYY-MM-DD" />
         <Field label={STR.daLogTo} value={toKey} onChangeText={setTo} placeholder="YYYY-MM-DD" />
       </Card>

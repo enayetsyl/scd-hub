@@ -28,7 +28,7 @@ export interface McpConnectionView {
 export async function mcpConnections(authIn: AuthPayload | null): Promise<McpConnectionView[]> {
   assertAdmin(authIn);
   const live = await AiOAuthToken.aggregate<{ _id: string; clientName: string; connectedAt: Date; lastUsedAt: Date | null }>([
-    { $match: { revokedAt: null, refreshExpiresAt: { $gt: new Date() } } },
+    { $match: { revokedAt: null, refreshExpiresAt: { $gt: new Date() }, resource: { $ne: "data" } } },
     { $group: { _id: "$clientId", clientName: { $last: "$clientName" }, connectedAt: { $min: "$createdAt" }, lastUsedAt: { $max: "$lastUsedAt" } } },
     { $sort: { connectedAt: -1 } },
   ]);
@@ -50,7 +50,7 @@ export async function mcpConnections(authIn: AuthPayload | null): Promise<McpCon
 
 export async function revokeMcpConnection(authIn: AuthPayload | null, clientId: string): Promise<boolean> {
   const auth = assertAdmin(authIn);
-  const res = await AiOAuthToken.updateMany({ clientId, revokedAt: null }, { $set: { revokedAt: new Date() } });
+  const res = await AiOAuthToken.updateMany({ clientId, revokedAt: null, resource: { $ne: "data" } }, { $set: { revokedAt: new Date() } });
   await writeAudit({ eventKind: "AI_MCP_REVOKED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiOAuthClient", meta: { clientId, tokens: res.modifiedCount } });
   return res.modifiedCount > 0;
 }

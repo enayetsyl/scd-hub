@@ -317,6 +317,7 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
     if (!user.name) user.name = staff.name;
     await user.save();
     await clearAccountThrottle("User", user._id.toString());
+    await revokeDataTokensForUser(user._id.toString(), "password_reset", { userId: actor.userId ?? null, role: actor.role ?? null });
   } else {
     user = await User.create({ phone, name: staff.name, role, passwordHash, active: true });
   }

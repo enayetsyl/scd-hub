@@ -6,7 +6,8 @@
  */
 import React from "react";
 import { useMutation, useQuery } from "urql";
-import { MY_DATA_CONNECTIONS, REVOKE_DATA_CONNECTION } from "../../graphql/dataAssistantAdmin";
+import * as Clipboard from "expo-clipboard";
+import { MY_DATA_CONNECTIONS, MY_DATA_TOOL_CALLS_PAGE, REVOKE_DATA_CONNECTION } from "../../graphql/dataAssistantAdmin";
 import { Card, Body, Muted, Button, Notice } from "../../components/ui";
 import { REST_BASE } from "../../graphql/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -15,6 +16,10 @@ import { useToast } from "../../state/ToastContext";
 import { STR, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { fill } from "../aiWorkspace/aiWorkspaceUi";
+import { Pager } from "../../components/Pager";
+import { usePageState } from "../../lib/paging";
+
+const MY_CALLS_PAGE_SIZE = 10;
 
 type Nav = { navigate: (screen: "DataAssistantLog" | "DataConnections") => void };
 
@@ -26,12 +31,20 @@ export function dataConnectorUrl(): string {
 
 function ConnectClaudeCard(): React.ReactElement {
   const url = dataConnectorUrl();
+  const [copied, setCopied] = React.useState(false);
   return (
     <Card>
       <Body style={{ fontWeight: "700" }}>{STR.daClaudeTitle}</Body>
       <Muted>{STR.daClaudeHelp}</Muted>
       <Body>{STR.daClaudeStep1}</Body>
       <Body>{fill(STR.daClaudeStep2, { url })}</Body>
+      <Button
+        title={copied ? STR.copied : STR.copy}
+        variant="secondary"
+        onPress={() => {
+          void Clipboard.setStringAsync(url).then(() => setCopied(true));
+        }}
+      />
       <Body>{STR.daClaudeStep3}</Body>
       <Body>{STR.daClaudeStep4}</Body>
       <Muted>{STR.daClaudeNote}</Muted>
@@ -71,6 +84,24 @@ function MyConnectionsCard(): React.ReactElement | null {
   );
 }
 
+function MyCallsCard(): React.ReactElement | null {
+  const [page, setPage] = usePageState(false);
+  const [q] = useQuery({ query: MY_DATA_TOOL_CALLS_PAGE, variables: { page, pageSize: MY_CALLS_PAGE_SIZE }, requestPolicy: "cache-and-network" });
+  const data = q.data?.myDataToolCallsPage;
+  if (!data && !q.error) return null;
+  return (
+    <Card>
+      <Body style={{ fontWeight: "700" }}>{STR.daMyCallsTitle}</Body>
+      {q.error ? <Notice tone="danger" message={friendlyError(q.error as never)} /> : null}
+      {data && data.rows.length === 0 ? <Muted>{STR.daMyCallsNone}</Muted> : null}
+      {data?.rows.map((r) => (
+        <Muted key={r.id}>{`${isoDateTimeLabel(r.at)} · ${r.surface === "claude" ? r.clientName ?? "Claude" : STR.daLogInApp} · ${r.tool} · ${r.outcome}`}</Muted>
+      ))}
+      {data ? <Pager page={page} pageSize={MY_CALLS_PAGE_SIZE} total={data.total} onPage={setPage} /> : null}
+    </Card>
+  );
+}
+
 export function DataAssistantLinks({ navigation }: { navigation: unknown }): React.ReactElement {
   const { can } = useAuth();
   const nav = navigation as Nav;
@@ -78,6 +109,7 @@ export function DataAssistantLinks({ navigation }: { navigation: unknown }): Rea
     <>
       {can("data_assistant:connect") ? <ConnectClaudeCard /> : null}
       <MyConnectionsCard />
+      <MyCallsCard />
       {can("data_assistant:audit") ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.daAdminTitle}</Body>

@@ -59,10 +59,23 @@ export const REVOKE_DATA_CONNECTION = gql<{ revokeDataConnection: boolean }, { c
 
 export const DATA_TOOL_CALLS_PAGE = gql<
   { dataToolCallsPage: { rows: DataToolCallT[]; total: number; page: number; pageSize: number } },
-  { tool?: string | null; outcome?: string | null; surface?: string | null; fromKey?: string | null; toKey?: string | null; page?: number | null; pageSize?: number }
+  { userId?: string | null; clientName?: string | null; tool?: string | null; outcome?: string | null; surface?: string | null; fromKey?: string | null; toKey?: string | null; page?: number | null; pageSize?: number }
 >`
-  query DataToolCallsPage($tool: String, $outcome: String, $surface: String, $fromKey: String, $toKey: String, $page: Int, $pageSize: Int) {
-    dataToolCallsPage(tool: $tool, outcome: $outcome, surface: $surface, fromKey: $fromKey, toKey: $toKey, page: $page, pageSize: $pageSize) {
+  query DataToolCallsPage($userId: String, $clientName: String, $tool: String, $outcome: String, $surface: String, $fromKey: String, $toKey: String, $page: Int, $pageSize: Int) {
+    dataToolCallsPage(userId: $userId, clientName: $clientName, tool: $tool, outcome: $outcome, surface: $surface, fromKey: $fromKey, toKey: $toKey, page: $page, pageSize: $pageSize) {
+      rows { id at userId userName role impersonatorName surface clientName tool args outcome deniedNeeds rowCount truncated replyBytes ms }
+      total page pageSize
+    }
+  }
+`;
+
+/** The caller's own calls (any staff login) — the "Connected apps" card lists a page of them. */
+export const MY_DATA_TOOL_CALLS_PAGE = gql<
+  { myDataToolCallsPage: { rows: DataToolCallT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number }
+>`
+  query MyDataToolCallsPage($page: Int, $pageSize: Int) {
+    myDataToolCallsPage(page: $page, pageSize: $pageSize) {
       rows { id at userId userName role impersonatorName surface clientName tool args outcome deniedNeeds rowCount truncated replyBytes ms }
       total page pageSize
     }
