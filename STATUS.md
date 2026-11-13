@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-11-13: **BUILT — book lifecycle BL-5 (D-#1622)** on `claude/new-session-6juppd`: the AI edit job (S10) — estimate, start, per-chapter progress, draft for S11. The `book_edit` AI feature ships OFF; the AI worker now also opens the book plane (needs `BOOK_MONGODB_URI` in the worker's environment).
 - 2026-11-13: **BUILT — book lifecycle BL-4 (D-#1621)** on `claude/new-session-6juppd`: the Claude connector (`/mcp`) gains eleven book tools + single-use upload links. Nothing applies by itself; a Claude submit never creates a version.
 - 2026-11-13: **BUILT — book lifecycle BL-3 (D-#1620)** on `claude/new-session-6juppd`: edit drafts with the edit-operation engine and validator (VR-1…VR-15), editing method v1, the Path B bundle and the return-transcription pack. Still OFF; nothing applies by itself (S11 accept only).
 - 2026-11-13: **BUILT — book lifecycle BL-2 (D-#1619)** on `claude/new-session-6juppd`: print releases, errata, teacher surfaces (আমার বই, ভুল জানান), class-books publish switch. Still OFF; teachers see nothing until the owner switches `teacher_view` + `report` on.

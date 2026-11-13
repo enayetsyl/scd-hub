@@ -100,8 +100,6 @@ const DECLARED_AHEAD: Record<string, string> = {
   // Catalogued at CSP-1 with the rest of the feature (D-#1548); its batch / pack / result
   // resolvers arrive in CSP-2 (docs/prd-child-support-profile.md §12). Leaves this list then.
   "support_profile:process": "CSP-2 — batches, the analysis pack, result upload",
-  // Book lifecycle (docs/prd-book-lifecycle.md §19): ai_edit is gated by BL-5 (the AI edit job).
-  "book_lifecycle:ai_edit": "BL-5 AI edit job",
 };
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):
