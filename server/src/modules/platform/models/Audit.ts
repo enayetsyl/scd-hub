@@ -445,6 +445,7 @@ export type AuditEventKind =
   | "SUPPORT_REPORT_SUBMITTED" // a support report saved for processing — reportId, studentId, source, checkSkipped, flag counts (D-#1582)
   | "SUPPORT_REPORT_WITHDRAWN" // a teacher withdrew their own waiting support report (D-#1582)
   | "SUPPORT_REPORT_DECIDED" // the Principal decided a support report — reportId, decision (D-#1555)
+  | "SUPPORT_STRATEGY_CREATED" // a strategy made at report approval — strategyId, reportId, starterKey; never text (CSP-3)
   | "SUPPORT_VERSION_PUBLISHED" // a support-profile version published — versionNo, item counts per level (D-#1555)
   | "SUPPORT_VERSION_DISCARDED" // a support-profile draft discarded (D-#1555)
   | "SUPPORT_BATCH_CREATED" // a support processing batch made — batchId, mode, methodVersion, counts (D-#1585)

@@ -11,18 +11,21 @@ import { renotifyUnseenReferrals } from "../../platform/safeguarding/Safeguardin
 import { sweepNotUsedText } from "./SupportReportService";
 import { sweepBatches } from "./SupportBatchService";
 import { batchReminders, sweepRewrites } from "./supportRewriteSweeps";
+import { dailyDigest } from "./supportQueueExtras";
+import { sweepSeedPrompts } from "./supportSeed";
 
 export type RunOnce = (key: string, fn: () => Promise<void>) => Promise<boolean>;
 
 /** Reminders (the teacher's gentle one, the Principal's batch and Thursday ones) are sent by day only. */
 export const REMINDER_FROM_HOUR_DHAKA = 9;
-const dhakaHour = (d: Date): number => Number(d.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hour12: false })) % 24;
+const dhakaHour = (d: Date): number => Number(d.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hourCycle: "h23" }));
 
 export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Promise<number> {
   let n = await renotifyUnseenReferrals(now);
   await runOnce("SUPPORT_DAILY", async () => {
     n += await sweepNotUsedText(now);
     n += await sweepBatches(now);
+    n += await sweepSeedPrompts(now);
     n += await sweepRewrites(now, { reminders: false });
   });
   // Its own key and window: the first tick after 09:00 Dhaka (a restart before then loses nothing).
@@ -30,6 +33,12 @@ export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Prom
     await runOnce("SUPPORT_REMIND", async () => {
       n += await sweepRewrites(now, { states: false });
       n += await batchReminders(now);
+    });
+  }
+  // 9.7: the approvers digest at 16:00 Dhaka, once a day.
+  if (dhakaHour(now) >= 16) {
+    await runOnce("SUPPORT_DIGEST", async () => {
+      n += await dailyDigest(now);
     });
   }
   return n;

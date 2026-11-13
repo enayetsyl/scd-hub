@@ -75,6 +75,8 @@ export interface ValidationCtx {
   reports: Map<string, CtxReport>;
   children: Set<string>;
   strategies: Set<string>;
+  /** Strategy code → child code (COMPARE strategy ids must be this child's, §6.4). */
+  strategyChildren?: Map<string, string>;
   items: Set<string>;
   /** Every roster name (children, guardians, staff): none may sit in a model sentence (V-11). */
   rosterNames: string[];
@@ -194,6 +196,9 @@ function nameIn(text: string, roster: string[]): string | null {
 /** A model-written text must be plain and hold no bracket token but [S] (and ___ in suggestions). */
 const otherToken = (s: string): boolean => /\[(?!S\])[^\]]*\]/.test(s);
 
+/** What a compare `recordFacts` entry may name: the keys of the records pack (+ `ctTrend:<subject>`). */
+const RECORD_FACT_KEYS = new Set(["attendancePct", "attendanceTrend", "homeworkCompletionPct", "assignmentMarksPct", "classTestAvgPct", "classTestTrend", "ctTrend", "comments", "youngForClass"]);
+
 function textProblem(text: string, ctx: ValidationCtx, childCode: string | null): SupportImportReason | null {
   if (LINK_OR_HTML.test(text)) return "LINK_OR_HTML";
   if (safeguardingTermIn(text)) return "SAFEGUARDING_TERM";
@@ -301,6 +306,57 @@ function validateReport(
       flags.push({ id: `s${flags.length + 1}`, category: "OTHER_CHILD", severity: "BLOCK", field: field === "resultNote" ? "result" : field, quote: OTHER_CHILD_MASK, whyBn: "অন্য শিশুর পরিচয় রিপোর্টে থাকবে না।", askBn: "নামটি বাদ দিয়ে 'এক সহপাঠী' লিখুন।", suggestionBn: null, byServer: true });
     }
   }
+  // COMPARE (§6.4, V-5): every report / strategy id must be this child's and in this batch's map.
+  let compare = (raw.compare as Record<string, unknown> | null) ?? null;
+  if (compare) {
+    const cmp = compare as {
+      agreement: { otherReportIds: string[]; noteBn: string; claim: string; recordFacts?: string[] }[];
+      functionHint: { tag?: string | null; noteBn: string; reportIds: string[] };
+      safeguardingPattern: { reportIds: string[]; noteBn: string };
+      strategyMatches: { strategyId: string }[];
+      authorSkew: { status: string; noteBn: string };
+      principalSummaryBn: string;
+    };
+    const ids = [...cmp.agreement.flatMap((a) => a.otherReportIds), ...cmp.functionHint.reportIds, ...cmp.safeguardingPattern.reportIds];
+    const badReport = ids.some((x) => ctx.reports.get(x)?.childCode !== rep.childCode);
+    const badStrategy = cmp.strategyMatches.some(
+      (m) => m.strategyId !== "NEW" && (!ctx.strategies.has(m.strategyId) || (ctx.strategyChildren && ctx.strategyChildren.get(m.strategyId) !== rep.childCode)),
+    );
+    if (badReport || badStrategy) {
+      out.rejected.push({ itemRef: ref, reasonCode: "UNKNOWN_CODE", field: "compare" });
+      return null;
+    }
+    // authorSkew only with ≥ 3 reports from this author and ≥ 3 from others on this child (§6.4).
+    const childReps = [...ctx.reports.values()].filter((x) => x.childCode === rep.childCode);
+    const mine = childReps.filter((x) => x.authorCode === rep.authorCode).length;
+    const others = childReps.length - mine;
+    if (mine < 3 || others < 3) cmp.authorSkew = { status: "TOO_FEW", noteBn: "" };
+    // V-10 on the model's notes: a label / diagnosis or a link drops that note.
+    // The full text check (labels, safeguarding terms, links, tokens, names, frequency words) runs on
+    // every model-written string; a hit drops that note, never the whole report.
+    const clean = (t: string | null | undefined) => (!t || textProblem(t, ctx, rep.childCode) ? "" : t);
+    for (const a of cmp.agreement) {
+      a.noteBn = clean(a.noteBn);
+      a.claim = clean(a.claim);
+      // recordFacts name numbers of the records pack, nothing else (`ctTrend:MATH` carries a subject).
+      a.recordFacts = (a.recordFacts ?? []).filter((x) => RECORD_FACT_KEYS.has(x.split(":")[0]) && /^[A-Za-z]+(:[A-Z_]{1,12})?$/.test(x));
+    }
+    cmp.authorSkew.noteBn = clean(cmp.authorSkew.noteBn);
+    cmp.principalSummaryBn = clean(cmp.principalSummaryBn);
+    cmp.functionHint.noteBn = clean(cmp.functionHint.noteBn);
+    cmp.safeguardingPattern.noteBn = clean(cmp.safeguardingPattern.noteBn);
+    // Rule 11 again: a possible reason needs ≥ 3 observations from ≥ 2 teachers that share it.
+    if (cmp.functionHint.tag) {
+      const tag = cmp.functionHint.tag;
+      const sharing = [rep, ...cmp.functionHint.reportIds.map((x) => ctx.reports.get(x)!)].filter((x) => x && x.gotOrAvoided.includes(tag));
+      const uniq = new Map(sharing.map((x) => [x.code, x]));
+      const rs = [...uniq.values()];
+      const obs = new Set(rs.map((x) => `${x.occurredOn}|${x.slot}`)).size;
+      const teachers = new Set(rs.map((x) => x.authorCode)).size;
+      if (!functionTagAllowed(obs, teachers)) cmp.functionHint.tag = null;
+    }
+    compare = cmp as unknown as Record<string, unknown>;
+  }
   const anyBlock = flags.some((f) => f.severity === "BLOCK");
   return {
     code,
@@ -309,7 +365,7 @@ function validateReport(
     toneCheck: c.toneCheck,
     strategyCandidate: c.strategyCandidate.present && !textProblem(c.strategyCandidate.titleBn, ctx, rep.childCode) && !c.strategyCandidate.punitive ? c.strategyCandidate : null,
     safeguarding: { present: c.safeguarding.present, signs: c.safeguarding.signs, confidence: c.safeguarding.confidence },
-    compare: (raw.compare as unknown) ?? null,
+    compare,
   };
 }
 
