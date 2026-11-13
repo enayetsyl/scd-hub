@@ -106,7 +106,7 @@ export async function assertReportRead(
 }
 
 /** The school-wide dashboard (J5) — `class_test:view_all` (Principal/Office by default). */
-function assertDashboardAdmin(ctx: AppContext): void {
+export function assertDashboardAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!holdsViewAll(ctx, CLASS_TEST_REPORT_GATE)) {
     throw new ForbiddenError("ড্যাশবোর্ড অফিস/অধ্যক্ষের জন্য");
@@ -115,13 +115,13 @@ function assertDashboardAdmin(ctx: AppContext): void {
 
 /** Overdue-chase: `class_test:remind` (D-#88 — the Office chases; a teacher never chases
  *  themselves — the action is Office/Principal by default). */
-function assertChaseAdmin(ctx: AppContext): void {
+export function assertChaseAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (callerHasPermission(ctx.auth, "class_test:remind")) return;
   throw new ForbiddenError("ক্লাস টেস্ট ফলো-আপ অফিস/অধ্যক্ষের কাজ");
 }
 
-function filterFromArgs(args: {
+export function filterFromArgs(args: {
   academicYearId?: string | null;
   classLevel?: number | null;
   sectionId?: string | null;

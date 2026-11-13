@@ -21,7 +21,7 @@ import { ExamError } from "../services/ExamService";
 import { COMMENT_SUGGESTIONS } from "../models/ExamReportComment";
 import type { CardTotals } from "../reportCardMath";
 
-function assertExamReader(ctx: AppContext): void {
+export function assertExamReader(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!callerHasPermission(ctx.auth, "exam_results:view")) {
     throw new ForbiddenError("পরীক্ষার তথ্য দেখার অনুমতি নেই");

@@ -106,7 +106,7 @@ async function assertUnitMarkerOrManage(
 /** §8 row-scope: `attendance:view_all` passes; otherwise `attendance:view` + the
  *  section's class teacher (reports stay coordinator-scoped — a one-day marker override
  *  doesn't open the section's history). */
-async function assertSectionReportAccess(ctx: AppContext, sectionId: string): Promise<void> {
+export async function assertSectionReportAccess(ctx: AppContext, sectionId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (has(ctx, "attendance:view_all")) return;
   if (!has(ctx, "attendance:view")) throw new ForbiddenError("Requires attendance:view");
