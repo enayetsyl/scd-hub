@@ -13,14 +13,21 @@ import { SupportReport, type ISupportReport } from "../models/SupportReport";
 import { SupportProfileVersion } from "../models/SupportProfileVersion";
 import { notifyHolders } from "./supportNotify";
 
-export function isQuickApprovable(r: ISupportReport): boolean {
-  const compare = (r as unknown as { compare?: { agreement?: { status: string }[] } | null }).compare;
+/**
+ * §9.4. COMPARE must have run and shown nothing against the report: no compare → never quick
+ * (a report nobody compared is not "cleared"); a CONTRADICTS_* or a build-up (SG-6) → not quick;
+ * a child with a safeguarding banner → not quick.
+ */
+export function isQuickApprovable(r: ISupportReport, opts: { banner?: boolean } = {}): boolean {
+  const compare = (r as unknown as { compare?: { agreement?: { status: string }[]; safeguardingPattern?: { present?: boolean } } | null }).compare;
+  if (compare == null || opts.banner) return false;
+  if (r.status === "SAFEGUARDING_ROUTED" || compare.safeguardingPattern?.present) return false;
   return (
     r.status === "PROCESSED" &&
     (r.tone === "POSITIVE" || r.result === "WORKED") &&
     r.openFlags.length === 0 &&
     r.teacherDisagreements.length === 0 &&
-    !(compare?.agreement ?? []).some((a) => a.status.startsWith("CONTRADICTS_")) &&
+    !(compare.agreement ?? []).some((a) => a.status.startsWith("CONTRADICTS_")) &&
     r.safeguardingAsked === "NONE" &&
     r.safeguardingHold === "NONE" &&
     r.checkSkipped === "NONE" &&

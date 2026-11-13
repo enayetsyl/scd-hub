@@ -1,7 +1,11 @@
 /**
- * Revision 3 — one method, both modes (docs/prd-child-support-profile.md §6.2 MD-1…MD-7; D-#1584).
- * Mode A (the API run through `aiSend`) is CSP-7 and NOT built (owner Q-21): the half of this test that
- * runs a batch through a fake provider is left for CSP-7. What holds today is asserted here.
+ * CSP-2 — MD-7: one method text for every door (docs/prd-child-support-profile.md §6.2).
+ *  - the pack's METHOD part equals method_vN.md byte for byte after LF normalisation (real pack and
+ *    evaluation pack alike);
+ *  - the Mode A prompt builder (`stagePrompt`) embeds the same text, section by section, in file order;
+ *  - a CRLF checkout hashes and embeds the same text as an LF one (the loader normalises).
+ * Revision 3 (D-#1584): Mode A (the API run through `aiSend`) is CSP-7 and NOT built (owner Q-21); the
+ * fake-provider half is left for CSP-7.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -12,14 +16,64 @@ import { SUPPORT_RESULT_SCHEMA } from "@scd/shared";
 import "../registerResolvers";
 import { builder } from "../schema";
 import { currentMethodVersion, loadMethod, METHOD_DIR, stagePrompt } from "../modules/support-profile/services/methodDoc";
+import { buildEvalPack } from "../modules/support-profile/eval/supportEvaluation";
 import { validateSupportResult } from "../modules/support-profile/services/supportResultValidator";
 import { assertProducerPassed } from "../modules/support-profile/services/SupportBatchService";
 import { runner, seedSupport, type SupportFx } from "./supportFixtures";
 import { DOWNLOAD, P, setupBatch } from "./supportBatchFixtures";
 
+const version = currentMethodVersion();
+const fileLf = (): string => fs.readFileSync(path.join(METHOD_DIR, `method_${version}.md`), "utf8").replace(/\r\n/g, "\n");
+
+/** The METHOD part of a pack: from the P-2 heading to the P-3 heading. */
+const methodPart = (pack: string): string => {
+  const start = pack.indexOf("## P-2 METHOD\n\n") + "## P-2 METHOD\n\n".length;
+  return pack.slice(start, pack.indexOf("\n\n## P-3 DATA", start) + 1);
+};
+
+describe("MD-7 parity", () => {
+  it("the evaluation pack's METHOD part is the file, byte for byte", () => {
+    const part = methodPart(buildEvalPack().content);
+    expect(part.startsWith(fileLf())).toBe(true);
+    expect(part.slice(fileLf().length)).toMatch(/^\n?$/);
+  });
+
+  it("every Mode A stage prompt is made of the file's own sections, byte for byte, in file order", () => {
+    const text = fileLf();
+    const m = loadMethod("v1");
+    expect(m.sections.map((s) => s.text).join("")).toBe(text);
+    for (const stage of ["CHECK", "COMPARE", "SYNTHESIS"] as const) {
+      const prompt = stagePrompt(stage);
+      let at = 0;
+      for (const s of m.sections.filter((x) => x.stages.includes("ALL") || x.stages.includes(stage))) {
+        const i = text.indexOf(s.text, at);
+        expect([stage, s.id, i >= 0]).toEqual([stage, s.id, true]);
+        expect(prompt.includes(s.text)).toBe(true);
+        at = i + s.text.length;
+      }
+      expect(prompt.length).toBeLessThanOrEqual(text.length);
+    }
+  });
+
+  it("a CRLF copy of the file hashes and splits exactly like the LF one", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "method-crlf-"));
+    try {
+      fs.writeFileSync(path.join(dir, `method_${version}.md`), fileLf().replace(/\n/g, "\r\n"));
+      const crlf = loadMethod(version, dir);
+      const lf = loadMethod(version);
+      expect(crlf.sha256).toBe(lf.sha256);
+      expect(crlf.text).toBe(lf.text);
+      expect(crlf.sections.map((s) => s.id)).toEqual(lf.sections.map((s) => s.id));
+      expect(crlf.text.includes("\r")).toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 const m = loadMethod("v1");
 
-describe("the method file drives every stage byte for byte", () => {
+describe("MD-7 parity — each stage prompt is the stage's marked sections", () => {
   it.each(["CHECK", "COMPARE", "SYNTHESIS"] as const)("the %s prompt is the stage's marked sections, joined, in file order — and nothing else", (stage) => {
     const p = stagePrompt(stage, "v1");
     const expected = m.sections.filter((s) => s.stages.includes("ALL") || s.stages.includes(stage)).map((s) => s.text).join("");
@@ -38,7 +92,7 @@ describe("the method file drives every stage byte for byte", () => {
   });
 });
 
-describe("a new method version changes both stamps and voids old evaluations", () => {
+describe("MD-7 parity — the real pack", () => {
   let mongo: MongoMemoryServer;
   const run = runner(builder.toSchema());
   let fx: SupportFx;
@@ -52,6 +106,24 @@ describe("a new method version changes both stamps and voids old evaluations", (
     await mongo.stop();
   });
 
+  it("the downloaded pack's METHOD part is the file, byte for byte, and its header carries the file's hash", async () => {
+    const s = await setupBatch(run, fx);
+    const d = await run(DOWNLOAD, P(fx), { b: s.batchId });
+    expect(d.errors).toBeUndefined();
+    const pack: string = d.data?.downloadSupportPack.content;
+    const part = methodPart(pack);
+    expect(part.startsWith(fileLf())).toBe(true);
+    expect(pack).toContain(loadMethod(version).sha256);
+  });
+
+  it("the batch row is stamped with the file's methodVersion and methodHash (methodHash pin)", async () => {
+    const s = await setupBatch(run, fx);
+    const { SupportBatch } = await import("../modules/support-profile/models/SupportBatch");
+    const row = await SupportBatch.findById(s.batchId).lean();
+    expect(row?.methodVersion).toBe(version);
+    expect(row?.methodHash).toBe(loadMethod(version).sha256);
+  });
+
   it("the pack holds the whole method file, its version and hash, and prints the same result schema", async () => {
     const s = await setupBatch(run, fx);
     const pack = (await run(DOWNLOAD, P(fx), { b: s.batchId })).data?.downloadSupportPack.content as string;
@@ -60,8 +132,9 @@ describe("a new method version changes both stamps and voids old evaluations", (
     expect(pack).toContain(JSON.stringify(SUPPORT_RESULT_SCHEMA));
   });
 
-  it("method_v2 → a new version and hash; an evaluation passed for v1 is not valid for v2; a result stamped v1 is refused by a v2 batch", async () => {
+  it("method_v2 → a new version and hash; an evaluation passed for v1 is not valid for v2; a result stamped v1 is WRONG_METHOD when the batch expects v2", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "method-"));
+    try {
     fs.copyFileSync(path.join(METHOD_DIR, "method_v1.md"), path.join(dir, "method_v1.md"));
     fs.writeFileSync(path.join(dir, "method_v2.md"), m.text.replace("version v1", "version v2"));
     expect(currentMethodVersion(dir)).toBe("v2");
@@ -74,7 +147,9 @@ describe("a new method version changes both stamps and voids old evaluations", (
       batchCode: "B-0002", nonce: "N", methodVersion: "v2", open: true, todayKey: "2026-11-13", reports: new Map(), children: new Set(), strategies: new Set(), items: new Set(), rosterNames: [],
     });
     expect(out.fileError).toBe("WRONG_METHOD");
-    fs.rmSync(dir, { recursive: true, force: true });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it.todo("CSP-7: one batch run once in Mode A (fake provider) and once in Mode B gives two runs with the same methodVersion and methodHash");

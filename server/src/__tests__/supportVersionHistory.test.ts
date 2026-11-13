@@ -38,7 +38,7 @@ it("the readers tab lists SUPPORT_PROFILE_VIEWED rows for that child only; a tea
   await run(VIEW, authOf(fx.routineTeacher, "TEACHER"), { s: String(fx.child), surface: "FULL", via: "STUDENT_PAGE" });
   await mongoose.connection.db!.collection("audits").insertOne({ eventKind: "SUPPORT_PROFILE_VIEWED", actorId: fx.classTeacher, targetId: String(fx.classmate), meta: { surface: "CARD" }, createdAt: new Date() });
   const q = await run(`query($s: String!) { supportReadersPage(studentId: $s) { total rows { who surface via } } }`, authOf(fx.principal, "PRINCIPAL"), { s: String(fx.child) });
-  expect(q.data?.supportReadersPage.total).toBe(2);
-  expect(q.data?.supportReadersPage.rows.map((r: { surface: string }) => r.surface).sort()).toEqual(["CARD", "FULL"]);
+  expect(q.data?.supportReadersPage.total).toBe(3); // CARD + FULL + the HISTORY row the diff above wrote (it is audited)
+  expect(q.data?.supportReadersPage.rows.map((r: { surface: string }) => r.surface).sort()).toEqual(["CARD", "FULL", "HISTORY"]);
   expect((await run(`query($s: String!) { supportReadersPage(studentId: $s) { total } }`, authOf(fx.classTeacher, "TEACHER"), { s: String(fx.child) })).errors).toBeDefined();
 });

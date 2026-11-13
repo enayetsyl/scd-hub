@@ -17,28 +17,37 @@ import { leaverSweep, monthlyNudge, newClassAndCoverNotices, reviewNotices } fro
 
 export type RunOnce = (key: string, fn: () => Promise<void>) => Promise<boolean>;
 
+/** Reminders (the teacher's gentle one, the Principal's batch and Thursday ones) are sent by day only. */
+export const REMINDER_FROM_HOUR_DHAKA = 9;
+const dhakaHour = (d: Date): number => Number(d.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hourCycle: "h23" }));
+
 export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Promise<number> {
   let n = await renotifyUnseenReferrals(now);
   await runOnce("SUPPORT_DAILY", async () => {
     n += await sweepNotUsedText(now);
     n += await sweepBatches(now);
-    n += await sweepRewrites(now);
-    n += await batchReminders(now);
     n += await sweepSeedPrompts(now);
     n += await leaverSweep(now);
+    n += await sweepRewrites(now, { reminders: false });
   });
-  const hour = Number(now.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hour12: false }));
-  // §9.7 morning notices (from 07:00 Dhaka, once a day): new class, the cover morning, the monthly
-  // nudge (the 25th), review due and the approval-load review day.
-  if (hour >= 7) {
+  // Its own key and window: the first tick after 09:00 Dhaka (a restart before then loses nothing).
+  if (dhakaHour(now) >= REMINDER_FROM_HOUR_DHAKA) {
+    await runOnce("SUPPORT_REMIND", async () => {
+      n += await sweepRewrites(now, { states: false });
+      n += await batchReminders(now);
+    });
+  }
+  // 9.7 morning notices (from 07:00 Dhaka, once a day): new class, the cover morning, the monthly
+  // nudge (the 25th), review due and the approval-load review day. All are no-ops while the switch is OFF.
+  if (dhakaHour(now) >= 7) {
     await runOnce("SUPPORT_MORNING", async () => {
       n += await newClassAndCoverNotices(now);
       n += await monthlyNudge(now);
       n += await reviewNotices(now);
     });
   }
-  // §9.7: the approvers' digest at 16:00 Dhaka, once a day.
-  if (hour >= 16) {
+  // 9.7: the approvers digest at 16:00 Dhaka, once a day.
+  if (dhakaHour(now) >= 16) {
     await runOnce("SUPPORT_DIGEST", async () => {
       n += await dailyDigest(now);
     });

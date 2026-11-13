@@ -1,0 +1,29 @@
+{
+  "id": "data-assistant-claude",
+  "draft": true,
+  "category": "admin_access",
+  "order": 63,
+  "title": "Claude-এ স্কুলের তথ্য সংযোগ করা",
+  "intro": "নিজের Claude (claude.ai বা Claude Desktop) থেকে স্কুলের তথ্য জিজ্ঞেস করা যায়। Claude আপনার অনুমতি অনুযায়ী শুধু পড়ে; কিছু বদলাতে পারে না। ☰ → তথ্য সহকারী → Claude-এর সঙ্গে সংযোগ কার্ড।",
+  "keywords": ["Claude", "সংযোগ", "connector", "MCP", "তথ্য সহকারী"],
+  "perms": ["data_assistant:connect"],
+  "screens": ["DataAssistantTab/DataAssistantHome"],
+  "goTo": { "route": "DataAssistantTab", "screen": "DataAssistantHome" },
+  "rows": [
+    {
+      "heading": "সংযোগ যোগ করা",
+      "steps": [
+        { "text": "কার্ড থেকে <b>সংযোগের ঠিকানা</b> (…/mcp/data) কপি করুন। claude.ai-তে Settings → Connectors → Add custom connector খুলে নাম দিন “SCD Hub data” ও ঠিকানাটি দিন।" },
+        { "text": "<b>Connect</b> চাপলে SCD Hub-এর সাইন-ইন পাতা খুলবে। নিজের ফোন/ইমেইল ও পাসওয়ার্ড দিয়ে <b>অনুমতি দিন</b> চাপুন।" },
+        { "text": "আলাপে সংযোগটি চালু করে প্রশ্ন করুন। Claude Desktop একই অ্যাকাউন্ট থেকে সংযোগটি পায়।" }
+      ]
+    },
+    {
+      "heading": "নিরাপত্তা",
+      "steps": [
+        { "text": "সংযোগ সর্বোচ্চ ৯০ দিন থাকে; তারপর আবার সাইন-ইন করতে হয়। পাসওয়ার্ড রিসেট হলে বা অনুমতি সরালে সংযোগ সঙ্গে সঙ্গে বন্ধ হয়।" },
+        { "text": "ফোন নম্বর, ঠিকানা, ইমেইল, NID ও ব্যাংকের তথ্য কখনো Claude-এ যায় না। নাম, নম্বর, বেতন ও মন্তব্য যায়। স্কুলের আলাপে Claude-এর অন্য সংযোগ (ইমেইল, ওয়েব) বন্ধ রাখুন।" }
+      ]
+    }
+  ]
+}

@@ -80,14 +80,14 @@ export function computeSupportReaders(inp: ScopeInputs): SupportReader[] {
       if (!p.live || p.sectionId !== inp.sectionId) continue;
       if (p.startKey <= today && today < addDays(p.startKey, p.durationDays)) put(p.coveringTeacherId, "COVER");
     }
-  }
-  // Quran / Arabic (Q-6): a live slot on a group the child belongs to. Group membership is the
-  // child's own, so it does not depend on the section.
-  for (const s of inp.slots) {
-    if (s.groupType === "subjectgroup" && inp.subjectGroupIds.includes(s.groupId) && slotLive(s, today)) put(s.teacherId, "TEACHING");
-  }
-  for (const c of inp.groupCovers ?? []) {
-    if (c.active && c.dateKey === today && inp.subjectGroupIds.includes(c.groupId)) put(c.coverTeacherId, "COVER");
+    // Quran / Arabic (Q-6): a live slot on a group the child belongs to. With no enrolment covering
+    // today (sectionId null) there are NO readers at all, group teachers included (§2.4, §8.2.1).
+    for (const s of inp.slots) {
+      if (s.groupType === "subjectgroup" && inp.subjectGroupIds.includes(s.groupId) && slotLive(s, today)) put(s.teacherId, "TEACHING");
+    }
+    for (const c of inp.groupCovers ?? []) {
+      if (c.active && c.dateKey === today && inp.subjectGroupIds.includes(c.groupId)) put(c.coverTeacherId, "COVER");
+    }
   }
   return [...out.entries()].map(([userId, via]) => ({ userId, via }));
 }
@@ -108,8 +108,9 @@ export async function sectionOfChildToday(studentId: string, todayKey: string): 
   if (covering) return String((covering as { sectionId: Types.ObjectId }).sectionId);
   const any = await Enrolment.exists({ studentId: sid });
   if (any) return null;
-  const st = await Student.findById(sid).select("sectionId").lean();
-  return st?.sectionId ? String(st.sectionId) : null;
+  const st = await Student.findById(sid).select("sectionId active").lean();
+  if (!st || st.active === false) return null;
+  return st.sectionId ? String(st.sectionId) : null;
 }
 
 /** Load the inputs and compute the current readers of one child (§8.2). */
@@ -133,13 +134,26 @@ export async function currentSupportReaders(studentId: string, now: Date = new D
         .select("slotId date coverTeacherId active")
         .lean()
     : [];
-  type G = Record<string, unknown> & { kind: string };
-  const g = grants as unknown as G[];
   return computeSupportReaders({
     todayKey,
     sectionId,
     classTeacherId: section?.classTeacherId ? String(section.classTeacherId) : null,
     subjectGroupIds,
+    ...mapGrants(grants),
+    slots: mapSlots(slots),
+    groupCovers: subs.map((x) => ({
+      coverTeacherId: String(x.coverTeacherId),
+      groupId: groupSlotOf.get(String(x.slotId)) ?? "",
+      dateKey: dhakaDayKey(x.date),
+      active: x.active !== false,
+    })),
+  });
+}
+
+type G = Record<string, unknown> & { kind: string };
+function mapGrants(grants: unknown[]): Pick<ScopeInputs, "teachingGrants" | "proxyGrants"> {
+  const g = grants as G[];
+  return {
     teachingGrants: g
       .filter((x) => x.kind === "teaching")
       .map((x) => ({
@@ -158,21 +172,69 @@ export async function currentSupportReaders(studentId: string, now: Date = new D
         durationDays: Number(x.durationDays ?? 1),
         live: x.active !== false && (x.proxyStatus ?? "active") === "active",
       })),
-    slots: slots.map((s) => ({
-      teacherId: s.teacherId ? String(s.teacherId) : null,
-      groupType: s.groupType as "section" | "subjectgroup",
-      groupId: String(s.groupId),
-      fromKey: dhakaDayKey(s.effectiveFrom),
-      toKey: s.effectiveTo ? dhakaDayKey(s.effectiveTo) : null,
-      active: s.active !== false,
-    })),
-    groupCovers: subs.map((x) => ({
-      coverTeacherId: String(x.coverTeacherId),
-      groupId: groupSlotOf.get(String(x.slotId)) ?? "",
-      dateKey: dhakaDayKey(x.date),
-      active: x.active !== false,
-    })),
-  });
+  };
+}
+function mapSlots(slots: { teacherId?: unknown; groupType: string; groupId: unknown; effectiveFrom: Date; effectiveTo?: Date | null; active?: boolean }[]): ScopeInputs["slots"] {
+  return slots.map((s) => ({
+    teacherId: s.teacherId ? String(s.teacherId) : null,
+    groupType: s.groupType as "section" | "subjectgroup",
+    groupId: String(s.groupId),
+    fromKey: dhakaDayKey(s.effectiveFrom),
+    toKey: s.effectiveTo ? dhakaDayKey(s.effectiveTo) : null,
+    active: s.active !== false,
+  }));
+}
+
+/**
+ * Of these children, which does this user teach today? The caller's own reach (class-teacher sections,
+ * grants, slots, covers) is loaded ONCE for the whole list; the per-child rule is still the pure
+ * computeSupportReaders, so the chip and the gate cannot drift apart.
+ */
+export async function studentsReadBy(userId: string, studentIds: string[], now: Date = new Date()): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!studentIds.length) return out;
+  const todayKey = dhakaDayKey(now);
+  const sids = studentIds.map((x) => new Types.ObjectId(x));
+  const uid = new Types.ObjectId(userId);
+  // The enrolment covering today per child; a child with no rows at all falls back to Student (active).
+  const rows = await Enrolment.find({ studentId: { $in: sids }, status: { $in: ["ACTIVE", "CLOSED"] }, startKey: { $lte: todayKey }, $or: [{ endKey: { $exists: false } }, { endKey: null }, { endKey: { $gte: todayKey } }] })
+    .sort({ startKey: -1 })
+    .select("studentId sectionId")
+    .lean();
+  const sectionOf = new Map<string, string>();
+  for (const e of rows as unknown as { studentId: Types.ObjectId; sectionId: Types.ObjectId }[]) if (!sectionOf.has(String(e.studentId))) sectionOf.set(String(e.studentId), String(e.sectionId));
+  const uncovered = sids.filter((x) => !sectionOf.has(String(x)));
+  if (uncovered.length) {
+    const hasRows = new Set((await Enrolment.distinct("studentId", { studentId: { $in: uncovered } })).map(String));
+    const legacy = uncovered.filter((x) => !hasRows.has(String(x)));
+    if (legacy.length) {
+      for (const st of await Student.find({ _id: { $in: legacy } }).select("sectionId active").lean())
+        if (st.active !== false && st.sectionId) sectionOf.set(String(st._id), String(st.sectionId));
+    }
+  }
+  const members = await SubjectGroupMembership.find({ studentId: { $in: sids } }).select("studentId groupId").lean();
+  const groupsOf = new Map<string, string[]>();
+  for (const m of members) groupsOf.set(String(m.studentId), [...(groupsOf.get(String(m.studentId)) ?? []), String(m.groupId)]);
+  const sectionIds = [...new Set(sectionOf.values())].map((x) => new Types.ObjectId(x));
+  const groupIds = [...new Set([...groupsOf.values()].flat())].map((x) => new Types.ObjectId(x));
+  const [sections, grants, mySlots, mySubs] = await Promise.all([
+    sectionIds.length ? Section.find({ _id: { $in: sectionIds } }).select("classTeacherId").lean() : Promise.resolve([]),
+    sectionIds.length ? ScopeGrant.find({ kind: { $in: ["teaching", "proxy"] }, sectionId: { $in: sectionIds }, $or: [{ teacherId: uid }, { coveringTeacherId: uid }] }).lean() : Promise.resolve([]),
+    RoutineSlot.find({ teacherId: uid, groupId: { $in: [...sectionIds, ...groupIds] } }).select("teacherId groupType groupId effectiveFrom effectiveTo active").lean(),
+    groupIds.length ? RoutineSubstitution.find({ coverTeacherId: uid, active: true, date: { $gte: new Date(now.getTime() - 2 * 86_400_000) } }).select("slotId date coverTeacherId active").lean() : Promise.resolve([]),
+  ]);
+  const coverSlots = mySubs.length ? await RoutineSlot.find({ _id: { $in: mySubs.map((x) => x.slotId) }, groupType: "subjectgroup" }).select("groupId").lean() : [];
+  const coverGroupOf = new Map(coverSlots.map((x) => [String(x._id), String(x.groupId)]));
+  const ctOf = new Map(sections.map((x) => [String(x._id), x.classTeacherId ? String(x.classTeacherId) : null]));
+  const gm = mapGrants(grants);
+  const slots = mapSlots(mySlots);
+  const groupCovers = mySubs.map((x) => ({ coverTeacherId: String(x.coverTeacherId), groupId: coverGroupOf.get(String(x.slotId)) ?? "", dateKey: dhakaDayKey(x.date), active: x.active !== false }));
+  for (const sid of studentIds) {
+    const sectionId = sectionOf.get(sid) ?? null;
+    const readers = computeSupportReaders({ todayKey, sectionId, classTeacherId: sectionId ? (ctOf.get(sectionId) ?? null) : null, subjectGroupIds: groupsOf.get(sid) ?? [], ...gm, slots, groupCovers });
+    if (readers.some((r) => r.userId === userId)) out.add(sid);
+  }
+  return out;
 }
 
 /** Is this user a current reader of the child today? Returns the reader row or null. */

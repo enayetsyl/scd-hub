@@ -7,6 +7,7 @@
  * list are re-run on every piece of model-written text; unknown fields and ids are refused.
  */
 import {
+  SUPPORT_ASK_TERMS,
   SUPPORT_ITEM_SCHEMA,
   SUPPORT_REPORT_RESULT_SCHEMA,
   SUPPORT_RESULT_LIMITS,
@@ -41,6 +42,8 @@ import {
   type SupportSeverity,
   type SupportTone,
 } from "@scd/shared";
+
+import { reportUsableOnSide, viaGoodThingOf, functionTagKept } from "./supportEvidenceRules";
 
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 export const OTHER_CHILD_MASK = "[অন্য শিশু]";
@@ -195,7 +198,10 @@ function nameIn(text: string, roster: string[]): string | null {
 /** A model-written text must be plain and hold no bracket token but [S] (and ___ in suggestions). */
 const otherToken = (s: string): boolean => /\[(?!S\])[^\]]*\]/.test(s);
 
-function textProblem(text: string, ctx: ValidationCtx, childCode: string | null): SupportImportReason | null {
+/** What a compare `recordFacts` entry may name: the keys of the records pack (+ `ctTrend:<subject>`). */
+const RECORD_FACT_KEYS = new Set(["attendancePct", "attendanceTrend", "homeworkCompletionPct", "assignmentMarksPct", "classTestAvgPct", "classTestTrend", "ctTrend", "comments", "youngForClass"]);
+
+export function textProblem(text: string, ctx: Pick<ValidationCtx, "reports" | "rosterNames">, childCode: string | null): SupportImportReason | null {
   if (LINK_OR_HTML.test(text)) return "LINK_OR_HTML";
   if (safeguardingTermIn(text)) return "SAFEGUARDING_TERM";
   if (blockedTermIn(text)) return "LABEL_TERM";
@@ -275,7 +281,10 @@ function validateReport(
         suggestion = null;
       }
     }
-    const askLabel = f.category === "LABEL" && f.severity === "ASK";
+    // The ASK exception for a LABEL comes from the SERVER's own ask-list hit in the quote — never from
+    // the model's severity — so a model can never lower a BLOCK (D-#1552).
+    const quoteNorm = normaliseSupportText(f.quote);
+    const askLabel = f.category === "LABEL" && !blockedTermIn(f.quote) && SUPPORT_ASK_TERMS.some((t) => termOccurs(quoteNorm, t.term));
     flags.push({ id: f.id, category: f.category, severity: severityFor(f.category, f.field, askLabel), field: f.field, quote: f.quote, whyBn: f.whyBn, askBn: f.askBn, suggestionBn: suggestion, byServer: false });
   }
   // The server's own lists run again on the report and add their flags (V-6, S-6).
@@ -303,9 +312,9 @@ function validateReport(
   let compare = (raw.compare as Record<string, unknown> | null) ?? null;
   if (compare) {
     const cmp = compare as {
-      agreement: { otherReportIds: string[]; noteBn: string; claim: string }[];
-      functionHint: { reportIds: string[] };
-      safeguardingPattern: { reportIds: string[] };
+      agreement: { otherReportIds: string[]; noteBn: string; claim: string; recordFacts?: string[] }[];
+      functionHint: { tag?: string | null; noteBn: string; reportIds: string[] };
+      safeguardingPattern: { reportIds: string[]; noteBn: string };
       strategyMatches: { strategyId: string }[];
       authorSkew: { status: string; noteBn: string };
       principalSummaryBn: string;
@@ -325,13 +334,29 @@ function validateReport(
     const others = childReps.length - mine;
     if (mine < 3 || others < 3) cmp.authorSkew = { status: "TOO_FEW", noteBn: "" };
     // V-10 on the model's notes: a label / diagnosis or a link drops that note.
-    const clean = (t: string) => (blockedTermIn(t) || LINK_OR_HTML.test(t) ? "" : t);
+    // The full text check (labels, safeguarding terms, links, tokens, names, frequency words) runs on
+    // every model-written string; a hit drops that note, never the whole report.
+    const clean = (t: string | null | undefined) => (!t || textProblem(t, ctx, rep.childCode) ? "" : t);
     for (const a of cmp.agreement) {
       a.noteBn = clean(a.noteBn);
       a.claim = clean(a.claim);
+      // recordFacts name numbers of the records pack, nothing else (`ctTrend:MATH` carries a subject).
+      a.recordFacts = (a.recordFacts ?? []).filter((x) => RECORD_FACT_KEYS.has(x.split(":")[0]) && /^[A-Za-z]+(:[A-Z_]{1,12})?$/.test(x));
     }
     cmp.authorSkew.noteBn = clean(cmp.authorSkew.noteBn);
     cmp.principalSummaryBn = clean(cmp.principalSummaryBn);
+    cmp.functionHint.noteBn = clean(cmp.functionHint.noteBn);
+    cmp.safeguardingPattern.noteBn = clean(cmp.safeguardingPattern.noteBn);
+    // Rule 11 again: a possible reason needs ≥ 3 observations from ≥ 2 teachers that share it.
+    if (cmp.functionHint.tag) {
+      const tag = cmp.functionHint.tag;
+      const sharing = [rep, ...cmp.functionHint.reportIds.map((x) => ctx.reports.get(x)!)].filter((x) => x && x.gotOrAvoided.includes(tag));
+      const uniq = new Map(sharing.map((x) => [x.code, x]));
+      const rs = [...uniq.values()];
+      const obs = new Set(rs.map((x) => `${x.occurredOn}|${x.slot}`)).size;
+      const teachers = new Set(rs.map((x) => x.authorCode)).size;
+      if (!functionTagAllowed(obs, teachers)) cmp.functionHint.tag = null;
+    }
     compare = cmp as unknown as Record<string, unknown>;
   }
   const anyBlock = flags.some((f) => f.severity === "BLOCK");
@@ -340,7 +365,7 @@ function validateReport(
     verdict: anyBlock ? "NEEDS_REWRITE" : c.verdict,
     flags,
     toneCheck: c.toneCheck,
-    strategyCandidate: c.strategyCandidate.present && !blockedTermIn(c.strategyCandidate.titleBn) && !safeguardingTermIn(c.strategyCandidate.titleBn) && !c.strategyCandidate.punitive ? c.strategyCandidate : null,
+    strategyCandidate: c.strategyCandidate.present && !textProblem(c.strategyCandidate.titleBn, ctx, rep.childCode) && !c.strategyCandidate.punitive ? c.strategyCandidate : null,
     safeguarding: { present: c.safeguarding.present, signs: c.safeguarding.signs, confidence: c.safeguarding.confidence },
     compare,
   };
@@ -406,6 +431,23 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
         reject(tp, "textBn");
         continue;
       }
+      // The goal's baseline and expectation are model text too: names, links, tokens, labels.
+      let sideTextProblem: SupportImportReason | null = null;
+      let sideField = "";
+      for (const f of ["baselineBn", "expectedBn"] as const) {
+        const v = item[f];
+        const tpf = v ? textProblem(v, ctx, code) : null;
+        if (tpf) {
+          sideTextProblem = tpf;
+          sideField = f;
+          break;
+        }
+      }
+      if (sideTextProblem) {
+        if (sideTextProblem === "SAFEGUARDING_TERM") banner = true;
+        reject(sideTextProblem, sideField);
+        continue;
+      }
       // V-5: every code must exist in this batch's map.
       const allCodes = [...item.evidence, ...item.counterEvidence];
       if (allCodes.some((x) => !ctx.reports.has(x)) || (item.strategyId && item.strategyId !== "NEW" && !ctx.strategies.has(item.strategyId)) || (item.replacesItemId && !ctx.items.has(item.replacesItemId))) {
@@ -424,8 +466,7 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       // E-2: on the positive side a CONCERN report counts only through a concrete good thing.
       const usable = (c: string): boolean => {
         const r = ctx.reports.get(c)!;
-        if (side === "POSITIVE" && r.tone === "CONCERN" && !r.goodThingCounts) return false;
-        return true;
+        return reportUsableOnSide(side, r.tone, r.goodThingCounts);
       };
       const evidence = [...new Set(item.evidence)].filter((c) => allowed(c) && usable(c));
       const counter = [...new Set(item.counterEvidence)].filter((c) => allowed(c));
@@ -435,7 +476,7 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       }
       const evRep = (c: string) => {
         const r = ctx.reports.get(c)!;
-        return toEvidence(r, side === "POSITIVE" && r.tone === "CONCERN" && r.goodThingCounts);
+        return toEvidence(r, viaGoodThingOf(side, r.tone, r.goodThingCounts));
       };
       const isStrategy = section === "works";
       const computed = evidenceLevel({ side: side ?? "POSITIVE", evidence: evidence.map(evRep), counter: counter.map(evRep), isStrategy, todayKey: ctx.todayKey });
@@ -476,10 +517,7 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       // Rule 11: a possible reason needs ≥ 3 observations from ≥ 2 teachers that share it.
       let functionTag = item.functionTag ?? null;
       if (functionTag) {
-        const sharing = evidence.map((c) => ctx.reports.get(c)!).filter((r) => r.gotOrAvoided.includes(functionTag!));
-        const obs = new Set(sharing.map((r) => `${r.occurredOn}|${r.slot}`)).size;
-        const teachers = new Set(sharing.map((r) => r.authorCode)).size;
-        if (!functionTagAllowed(obs, teachers)) functionTag = null;
+        functionTag = functionTagKept(functionTag, evidence.map((c) => ctx.reports.get(c)!).map((r) => ({ authorId: r.authorCode, occurredOn: r.occurredOn, slot: r.slot, gotOrAvoided: r.gotOrAvoided })));
       }
       items.push({
         section,

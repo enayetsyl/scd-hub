@@ -13,7 +13,15 @@ import { Schema, model, Document, Types } from "mongoose";
  *                  SHA-256 hashes are stored — a database copy cannot be replayed.
  *   AiMcpCall      one tool call: which tool, the reply size sent to Claude (PRD §7 "log the
  *                  size of every reply"), ok or not. No arguments, no text.
+ *
+ * Data assistant DA-3 (docs/prd-data-assistant-mcp.md §4.4, D-#1536): codes and tokens are bound
+ * to ONE resource — "workspace" (`/mcp`, the default, so existing rows keep working with no
+ * migration) or "data" (`/mcp/data`). A token of one resource is refused at the other. Data
+ * tokens also carry `grantedAt` (the first sign-in, kept across refresh rotations) for the
+ * 90-day absolute limit.
  */
+export const OAUTH_RESOURCES = ["workspace", "data"] as const;
+export type OAuthResource = (typeof OAUTH_RESOURCES)[number];
 export interface IAiOAuthClient extends Document {
   _id: Types.ObjectId;
   clientId: string;
@@ -40,6 +48,7 @@ export interface IAiOAuthCode extends Document {
   redirectUri: string;
   codeChallenge: string;
   scope: string;
+  resource?: OAuthResource;
   expiresAt: Date;
   usedAt?: Date | null;
 }
@@ -52,6 +61,7 @@ const AiOAuthCodeSchema = new Schema<IAiOAuthCode>(
     redirectUri: { type: String, required: true },
     codeChallenge: { type: String, required: true },
     scope: { type: String, default: "mcp" },
+    resource: { type: String, enum: OAUTH_RESOURCES, default: "workspace" },
     expiresAt: { type: Date, required: true },
     usedAt: { type: Date, default: null },
   },
@@ -72,6 +82,9 @@ export interface IAiOAuthToken extends Document {
   refreshExpiresAt: Date;
   revokedAt?: Date | null;
   lastUsedAt?: Date | null;
+  resource?: OAuthResource;
+  /** The first authorisation of this connection, carried across rotations (90-day limit). */
+  grantedAt?: Date | null;
   createdAt: Date;
 }
 
@@ -86,6 +99,8 @@ const AiOAuthTokenSchema = new Schema<IAiOAuthToken>(
     refreshExpiresAt: { type: Date, required: true },
     revokedAt: { type: Date, default: null },
     lastUsedAt: { type: Date, default: null },
+    resource: { type: String, enum: OAUTH_RESOURCES, default: "workspace" },
+    grantedAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

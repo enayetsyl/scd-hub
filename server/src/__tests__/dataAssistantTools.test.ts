@@ -35,7 +35,7 @@ async function outcomes(who: keyof Fx["auth"]): Promise<Record<string, string>> 
   return out;
 }
 
-const OFFICE_DENIED = ["daily_report/default", "homework_status/summary", "assignment_status/summary", "mastery_overview/default"];
+const OFFICE_DENIED = ["daily_report/default", "homework_status/summary", "assignment_status/summary", "mastery_overview/default", "payroll_summary/person"];
 
 describe("the registry", () => {
   it("has the 24 tools of PRD §7, uniquely named, each with a gate, a cap and Bangla keywords", () => {

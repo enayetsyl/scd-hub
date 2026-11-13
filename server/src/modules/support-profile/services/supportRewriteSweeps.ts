@@ -17,12 +17,15 @@ import { readerOf } from "./supportScope";
 
 const DAY = 86_400_000;
 
-export async function sweepRewrites(now: Date = new Date()): Promise<number> {
+/** `states` = move a report on (21 days, or its author no longer reads the child); `reminders` = the
+ *  gentle 7-day reminder. The scheduler runs them separately (states by night, reminders by day). */
+export async function sweepRewrites(now: Date = new Date(), opts: { states?: boolean; reminders?: boolean } = {}): Promise<number> {
+  const { states = true, reminders = true } = opts;
   let n = 0;
   for (const r of await SupportReport.find({ status: "NEEDS_REWRITE" }).limit(500)) {
     const age = r.returnedAt ? now.getTime() - r.returnedAt.getTime() : 0;
     const reads = !!(await readerOf(String(r.studentId), String(r.authorId), now));
-    if (!reads || age >= 21 * DAY) {
+    if (states && (!reads || age >= 21 * DAY)) {
       r.status = "PROCESSED";
       r.processedAt = now;
       r.openFlags = r.returnQuestions;
@@ -31,7 +34,7 @@ export async function sweepRewrites(now: Date = new Date()): Promise<number> {
       n++;
       continue;
     }
-    if (age >= 7 * DAY && (await notifyUser(String(r.authorId), "আপনার রিপোর্টে কয়েকটি প্রশ্ন আছে — সময় করে দেখে নিন", `support-questions-reminder:${r._id}:${r.round}`))) n++;
+    if (reminders && reads && age < 21 * DAY && age >= 7 * DAY && (await notifyUser(String(r.authorId), "আপনার রিপোর্টে কয়েকটি প্রশ্ন আছে — সময় করে দেখে নিন", `support-questions-reminder:${r._id}:${r.round}`))) n++;
   }
   return n;
 }
@@ -39,8 +42,10 @@ export async function sweepRewrites(now: Date = new Date()): Promise<number> {
 export async function batchReminders(now: Date = new Date()): Promise<number> {
   const today = dhakaDayKey(now);
   const thursday = new Date(`${today}T12:00:00+06:00`).getUTCDay() === 4;
-  const waiting = await SupportReport.countDocuments({ status: "TO_PROCESS" });
-  const oldest = await SupportReport.findOne({ status: "TO_PROCESS" }).sort({ waitingSince: 1 }).select("waitingSince").lean();
+  // a report held for an open safeguarding question is not waiting for a batch (B-2)
+  const waitingQuery = { status: "TO_PROCESS", safeguardingHold: { $ne: "OPEN" } };
+  const waiting = await SupportReport.countDocuments(waitingQuery);
+  const oldest = await SupportReport.findOne(waitingQuery).sort({ waitingSince: 1 }).select("waitingSince").lean();
   const oldestDays = oldest?.waitingSince ? Math.floor((now.getTime() - new Date(oldest.waitingSince).getTime()) / DAY) : 0;
   let n = 0;
   if (waiting > 0 && (oldestDays >= SUPPORT_THRESHOLDS.batchReminderOldestDays || waiting >= SUPPORT_THRESHOLDS.batchReminderWaiting || thursday)) {
