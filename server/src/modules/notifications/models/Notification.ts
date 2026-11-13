@@ -115,6 +115,10 @@ export interface NotificationRefs {
   /** School notice (D-#1072) — the page it opens, as "Tab/Screen" (the pop-up OPEN_SCREEN
    *  convention, so a notice and its pop-up name the same page the same way). */
   screenTarget?: string;
+  /** Book lifecycle (docs/prd-book-lifecycle.md §16) — deep-link: the book (SchoolBook id), and an
+   *  AI edit draft for BOOK_EDIT_READY. */
+  bookId?: string;
+  bookDraftId?: string;
 }
 
 export interface INotification extends Document {
@@ -137,6 +141,8 @@ export interface INotification extends Document {
 
 const RefsSchema = new Schema<NotificationRefs>(
   {
+    bookId: { type: String },
+    bookDraftId: { type: String },
     classNoteId: { type: String },
     slotId: { type: String },
     date: { type: String },

@@ -30,6 +30,13 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
+  // Book lifecycle (docs/prd-book-lifecycle.md): a refused upload / transition / validator rule,
+  // and a write to an immutable version. Bangla sentences for the person, never faults.
+  "BookLcError",
+  "BookMarkdownError",
+  "ImmutableVersionError",
+  // pdftotext absent on a host: the page map falls back to "set by hand" — never a fault.
+  "PopplerMissingError",
   // An AI feature that is switched off (AI-1, D-#1122): "এই এআই সুবিধাটি এখন বন্ধ আছে".
   // The Principal's switch working, never a fault; callers fail open (D-#1100).
   "AiFeatureOffError",

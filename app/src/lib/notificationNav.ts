@@ -395,6 +395,15 @@ export function notificationTarget(
     // AI Workspace W-4 (D-#1250): a finished batch job opens the workspace (the job is named in the text).
     case "AI_JOB_FINISHED":
       return { tab: "AiWorkspaceTab", screen: "AiWorkspaceHome" };
+    // Book lifecycle (D-#1610): a filed report opens the book's triage; the rest open the book.
+    case "BOOK_FEEDBACK_FILED":
+      return refs?.bookId ? { tab: "BookLcTab", screen: "BookLcFeedback", params: { bookId: refs.bookId } } : { tab: "BookLcTab", screen: "BookLcList" };
+    case "BOOK_EDIT_READY":
+      return refs?.bookDraftId ? { tab: "BookLcTab", screen: "BookLcDraft", params: { draftId: refs.bookDraftId } } : { tab: "BookLcTab", screen: "BookLcList" };
+    case "BOOK_FEEDBACK_ANSWERED":
+    case "BOOK_ERRATUM":
+    case "BOOK_RELEASED":
+      return { tab: "BookLcTab", screen: "BookLcList" };
     case "SCHOOL_NOTICE": {
       // D-#1072 — the page the school named, "Tab/Screen" like a pop-up's OPEN_SCREEN button.
       // No page = a plain message: the detail screen shows it whole with no button.

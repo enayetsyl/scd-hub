@@ -101,6 +101,7 @@ import {
 import { LibraryError } from "../modules/library/errors";
 import { storyStickerCodes, storyStickerPdf } from "../modules/library/services/StoryDeskService";
 import { registerActivityFileRoutes } from "./activityFiles";
+import { registerBookLcFileRoutes, assertBookLcFileReadAccess } from "../modules/book-lifecycle/routes/bookLcFiles";
 import { assertActivityFileReadAccess } from "../modules/activity-sheets/services/ActivityBankService";
 import { assertAiWorkspaceFileReadAccess, startAiProjectFileUpload } from "../modules/ai-workspace/services/FileIngestService";
 import { AiWorkspaceError } from "../modules/ai-workspace/services/AiProjectService";
@@ -1496,6 +1497,8 @@ filesRouter.get("/storybook-stickers", async (req: Request, res: Response) => {
 
 // Activity sheets (AS-1..): bank import, sheet add/replace, print runs — see activityFiles.ts.
 registerActivityFileRoutes(filesRouter);
+// Book lifecycle (docs/prd-book-lifecycle.md): imports, version files, scans, master/memo downloads.
+registerBookLcFileRoutes(filesRouter);
 
 // ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
@@ -1537,6 +1540,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       }
     } else if (file.kind === "assignment_attachment") {
       await assertAssignmentFileReadAccess(ctx, file);
+    } else if (file.kind.startsWith("book_lc_")) {
+      // Book lifecycle (§5.13): checked BEFORE the old `book_` prefix — its own gate
+      // (book_lifecycle:view; print files to release; teacher readers per BL-2 rules).
+      await assertBookLcFileReadAccess(ctx, file);
     } else if (file.kind.startsWith("book_")) {
       // Prefix rather than the exported kind list: a dozen suites mock this module,
       // and a dispatch that depends on a new named export breaks every one of them

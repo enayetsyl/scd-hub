@@ -243,6 +243,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
   // D-#870: class books (staff read every class's; the Office uploads).
   { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
+  // Book lifecycle (D-#1590): বই ও সংস্করণ — the school's own books, versions and paper review.
+  { type: "item", route: "BookLcTab", labelKey: "blNavTitle", icon: "📗" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   // Pop-up notices (D-#852): the sender's list for Office / Principal; আমার বার্তা for every
   // staff login (the pop-ups they received, to read again).

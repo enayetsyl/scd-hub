@@ -775,6 +775,19 @@ export type AdminStackParamList = {
 // the screens unreachable for exactly the people they were built for (D-#405 hands
 // `book:*` out per user; the `myPermissions` / `can()` gate is the fix). Every screen
 // here is param-free, so the stack's initial route is safe whichever one is first.
+/** Book lifecycle (docs/prd-book-lifecycle.md §8): S1 list (param-free initial route) → book → version /
+ *  round (S4+S7) / feedback triage (S5) / draft (S11); rule sets (S13). */
+export type BookLcStackParamList = {
+  BookLcList: undefined;
+  BookLcImport: undefined;
+  BookLcRuleSets: undefined;
+  BookLcBook: { bookId: string };
+  BookLcVersion: { versionId: string };
+  BookLcRound: { roundId: string };
+  BookLcFeedback: { bookId: string };
+  BookLcDraft: { draftId: string };
+};
+
 export type SupportBookStackParamList = {
   BookImport: undefined;
   BookPolicy: undefined;
@@ -901,6 +914,8 @@ export type TabParamList = {
   HrTab: NavigatorScreenParams<HrStackParamList>;
   ReportsTab: NavigatorScreenParams<ReportsStackParamList>;
   SupportBookTab: NavigatorScreenParams<SupportBookStackParamList>;
+  /** Book lifecycle (D-#1590): বই ও সংস্করণ. */
+  BookLcTab: NavigatorScreenParams<BookLcStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;

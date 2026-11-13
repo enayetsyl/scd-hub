@@ -80,7 +80,17 @@ export type StoredFileKind =
   | "reference_paper_source"
   /** An AI Workspace knowledge file (W-1, docs/prd-ai-workspace.md): the original its text was
    *  read from. Read-gated by project membership (or ai_workspace:admin). */
-  | "ai_workspace_file";
+  | "ai_workspace_file"
+  /** Book lifecycle (docs/prd-book-lifecycle.md §5.13, D-#1592). Read-gated by
+   *  `assertBookLcFileReadAccess` (book_lifecycle:view; a released Teacher edition also to
+   *  the book's scoped teachers; a teacher's own report photo to its reporter). */
+  | "book_lc_master"
+  | "book_lc_edition"
+  | "book_lc_media"
+  | "book_lc_packet"
+  | "book_lc_feedback"
+  | "book_lc_print"
+  | "book_lc_history";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -113,7 +123,15 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "reference_paper_page",
   "reference_paper_source",
   "ai_workspace_file",
+  "book_lc_master",
+  "book_lc_edition",
+  "book_lc_media",
+  "book_lc_packet",
+  "book_lc_feedback",
+  "book_lc_print",
+  "book_lc_history",
 ];
+
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */
 export const CHAT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
@@ -126,11 +144,25 @@ export const CHAT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
 /** The student-comment attachment subset (CM-2) — the read gate routes these to
  *  the comment file gate (author OR the child's guardian for a DELIVERED comment). */
 /** The book-production subset (SB-2) — the read gate routes these to the book plane. */
+/** The book-lifecycle kinds (§5.13). Checked BEFORE the `book_` prefix dispatch in GET /files/:id. */
+export const BOOK_LC_STORED_FILE_KINDS: readonly StoredFileKind[] = [
+  "book_lc_master",
+  "book_lc_edition",
+  "book_lc_media",
+  "book_lc_packet",
+  "book_lc_feedback",
+  "book_lc_print",
+  "book_lc_history",
+];
+
+/** Every kind starting with `book_` (the prefix invariant pinned by supportBookFiles.test.ts). The
+ *  lifecycle `book_lc_*` kinds are dispatched to their own gate BEFORE the old prefix branch. */
 export const BOOK_STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "book_image_raw",
   "book_image_approved",
   "book_image_compliant",
   "book_pdf",
+  ...BOOK_LC_STORED_FILE_KINDS,
 ];
 
 export const COMMENT_STORED_FILE_KINDS: readonly StoredFileKind[] = [

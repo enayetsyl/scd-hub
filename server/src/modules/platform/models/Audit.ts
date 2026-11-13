@@ -381,6 +381,13 @@ export type AuditEventKind =
   | "WORKSHEET_SENT_TO_PRINT" // a generated Nursery/KG paper filed to the print queue (D-#747) — meta.kind/subject/seed
   | "WORKSHEET_PLAN_SAVED"    // how a class level × subject's মানবন্টন rows are generated, + presets (D-#745)
   | "WORKSHEET_PICTURE_EDITED" // a picture-bank row re-tagged / hidden / reserved for the final (D-#746)
+  // Book lifecycle (docs/prd-book-lifecycle.md §18, D-#1608): who/what/which book/version — NEVER text.
+  | "BOOK_LC_VERSION_CREATED"   // a book version created (import / upload / accepted draft) — meta.bookCode/version/source
+  | "BOOK_LC_FINALIZED"         // paper return recorded as approved, direct-fix approve, or marked final — meta.action/bookCode/version
+  | "BOOK_LC_RELEASED"          // a print release recorded / status changed / teachers told — meta.bookCode/version/releaseNo/action
+  | "BOOK_LC_BUNDLE_DOWNLOADED" // a bundle / transcription pack left the server — meta.bookCode/version/nonce/items
+  | "BOOK_LC_UPLOAD_URL_ISSUED" // a single-use upload URL issued (Path B) — meta.bookCode/role/bytes
+  | "BOOK_LC_PROTECTED_CHANGED" // protected text changed by a finalize holder's confirmed upload — meta.bookCode/version
   | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
   | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
   | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)

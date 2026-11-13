@@ -50,6 +50,39 @@ export const BOOK_EVENT_KINDS = [
   // block's own timeline carries the notes raised against it.
   "COMMENT_ADDED",
   "COMMENT_RESOLVED",
+  // Book lifecycle (docs/prd-book-lifecycle.md §5.14, D-#1592/#1608) — rows carry flow "LIFECYCLE"
+  // and `bookId` = the SchoolBook id (hex), never an old SupportBook code.
+  "BOOK_LC_CREATED",
+  "BOOK_LC_UPDATED",
+  "VERSION_CREATED",
+  "VERSION_STATUS",
+  "FILE_UPLOADED",
+  "ROUND_OPENED",
+  "PACKET_MADE",
+  "ROUND_SENT_ON_PAPER",
+  "ROUND_RETURN_RECORDED",
+  "ROUND_RETURN_CORRECTED",
+  "ROUND_WITHDRAWN",
+  "SCAN_CHECKED",
+  "FEEDBACK_FILED",
+  "FEEDBACK_TRIAGED",
+  "FEEDBACK_RULED",
+  "DECISION_OPENED",
+  "DECISION_RULED",
+  "RULESET_ACTIVATED",
+  "DRAFT_OPENED",
+  "DRAFT_CHAPTER",
+  "DRAFT_SUBMITTED",
+  "DRAFT_ACCEPTED",
+  "DRAFT_REJECTED",
+  "JOB_STARTED",
+  "JOB_FINISHED",
+  "RELEASE_RECORDED",
+  "RELEASE_STATUS",
+  "ERRATUM_ANNOUNCED",
+  "ERRATUM_ACK",
+  "CONTENT_READ",
+  "BUNDLE_DOWNLOADED",
 ] as const;
 export type BookEventKind = (typeof BOOK_EVENT_KINDS)[number];
 
@@ -60,6 +93,12 @@ export interface IBookEvent extends Document {
   targetType?: EscalationTarget;
   targetId?: string;
   kind: BookEventKind;
+  /** Absent = the lesson-JSON flow (old rows stay valid); "LIFECYCLE" = the book lifecycle (§5.14). */
+  flow?: "LESSON_JSON" | "LIFECYCLE";
+  /** Who drove the write: the app, or Claude over MCP (§15.1). Lifecycle rows only. */
+  origin?: "app" | "claude";
+  /** Once-per-key rows (CONTENT_READ: user × version × surface × Dhaka day). */
+  dedupeKey?: string;
   /** Bare id — identity is on the other connection (D-#404). */
   actorId: Types.ObjectId;
   at: Date;
@@ -75,6 +114,14 @@ export interface IBookEvent extends Document {
     assetId?: Types.ObjectId;
     commentId?: Types.ObjectId;
     policySetHash?: string;
+    versionId?: Types.ObjectId;
+    roundId?: Types.ObjectId;
+    feedbackId?: Types.ObjectId;
+    decisionId?: Types.ObjectId;
+    releaseId?: Types.ObjectId;
+    erratumId?: Types.ObjectId;
+    draftId?: Types.ObjectId;
+    jobId?: Types.ObjectId;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +134,9 @@ const BookEventSchema = new Schema<IBookEvent>(
     targetType: { type: String, enum: ESCALATION_TARGETS },
     targetId: { type: String },
     kind: { type: String, enum: BOOK_EVENT_KINDS, required: true },
+    flow: { type: String, enum: ["LESSON_JSON", "LIFECYCLE"] },
+    origin: { type: String, enum: ["app", "claude"] },
+    dedupeKey: { type: String },
     actorId: { type: Schema.Types.ObjectId, required: true },
     at: { type: Date, required: true, default: () => new Date() },
     summary: { type: String, required: true },
@@ -98,6 +148,14 @@ const BookEventSchema = new Schema<IBookEvent>(
       assetId: { type: Schema.Types.ObjectId },
       commentId: { type: Schema.Types.ObjectId },
       policySetHash: { type: String },
+      versionId: { type: Schema.Types.ObjectId },
+      roundId: { type: Schema.Types.ObjectId },
+      feedbackId: { type: Schema.Types.ObjectId },
+      decisionId: { type: Schema.Types.ObjectId },
+      releaseId: { type: Schema.Types.ObjectId },
+      erratumId: { type: Schema.Types.ObjectId },
+      draftId: { type: Schema.Types.ObjectId },
+      jobId: { type: Schema.Types.ObjectId },
     },
   },
   { timestamps: true },
@@ -107,6 +165,8 @@ const BookEventSchema = new Schema<IBookEvent>(
 BookEventSchema.index({ bookId: 1, at: -1 });
 // Lesson timeline — the read SB-5 renders most.
 BookEventSchema.index({ bookId: 1, lessonNo: 1, at: -1 });
+// Once-per-key rows (lifecycle CONTENT_READ) — sparse so old rows without a key never collide.
+BookEventSchema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
 // Item timeline (a specific block or image slot).
 BookEventSchema.index({ bookId: 1, targetType: 1, targetId: 1, at: -1 });
 
