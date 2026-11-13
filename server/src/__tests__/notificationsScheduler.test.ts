@@ -104,6 +104,10 @@ jest.mock("../modules/daily-report/services/DailyReportService", () => ({
 jest.mock("../modules/daily-report/services/DailyReportShareService", () => ({
   sweepExpiredShares: (key: string) => mockSweepShares(key),
 }));
+// Support profile (D-#1564): hourly safeguarding re-notices + daily sweeps.
+jest.mock("../modules/support-profile/services/supportSweeps", () => ({
+  runSupportProfileSweeps: jest.fn().mockResolvedValue(0),
+}));
 // D-#1020: the 18:00 end-of-day mistake report.
 jest.mock("../modules/staff-mistakes/services/StaffMistakeDailyService", () => ({
   dispatchStaffMistakeDaily: jest.fn().mockResolvedValue(0),

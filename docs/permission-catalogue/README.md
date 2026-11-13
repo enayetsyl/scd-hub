@@ -18,6 +18,7 @@ This catalogue is the build checklist for the permission matrix. It names every 
 | [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, staff_mistakes, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
 | [`attendance-routine-library.md`](attendance-routine-library.md) | attendance, staff_attendance, routine, class_note, lesson_progress, library, chat, saturday_revision, vocab_test |
 | [`observation-comments-reports.md`](observation-comments-reports.md) | classroom_observation, free_mixing_review, student_comments, parents_meeting, monthly_report, improvement_plan, teaching_notes, english_drive, worksheets |
+| [`students-support.md`](students-support.md) | support_profile, safeguarding (D-#1546–#1566, #1582–#1589) |
 | [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, quran_exam, viva, mastery, book_production |
 
 ## Flag legend
@@ -139,6 +140,8 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Students & families | `students` | Students | শিক্ষার্থী | 3 | foundation-platform |
 | Students & families | `guardians` | Guardians | অভিভাবক | 4 | foundation-platform |
 | Students & families | `student_profile` | Student profile | শিক্ষার্থী প্রোফাইল | 3 | trackers-classtest |
+| Students & families | `support_profile` | Student support profile | শিক্ষার্থী সহায়তা প্রোফাইল | 6 | students-support |
+| Students & families | `safeguarding` | Safeguarding | শিশু সুরক্ষা | 1 | students-support |
 | Students & families | `student_comments` | Daily comments | দৈনিক মন্তব্য | 6 | observation-comments-reports |
 | Students & families | `parents_meeting` | Parents' meeting | অভিভাবক সভা | 9 | observation-comments-reports |
 | Students & families | `monthly_report` | Monthly progress report | মাসিক অগ্রগতি রিপোর্ট | 9 | observation-comments-reports |
@@ -481,6 +484,22 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `student_profile:view` | Open a profile | শিক্ষার্থীর প্রোফাইল দেখা | Header, homework, assignment, class test, উপস্থিতি, comments panels; whole picture | on | on | | authenticated + assertStudentProfileRead |
 | `student_profile:view_all` | Any শিক্ষার্থী's profile | সব শিক্ষার্থীর প্রোফাইল দেখা | Profile with no row limit | — | on | | isAdminStaff |
 | `student_profile:export` | Profile PDF | প্রোফাইল PDF ডাউনলোড | Print the profile sheet | on | on | | assertStudentProfileRead |
+
+#### `support_profile` — শিক্ষার্থী সহায়তা প্রোফাইল
+Office can never hold `view` / `report`: every resolver also refuses an OFFICE or GUARDIAN caller whatever is stored (ROLE_CHECK_BASELINE, D-#1548). Readers are narrowed per child by `currentSupportReaders` (docs/prd-child-support-profile.md §8.2).
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `support_profile:view` | View a support profile | সহায়তা প্রোফাইল দেখা | The card and the full profile of a child the holder teaches now | on | — | | (new) |
+| `support_profile:report` | Write a support report | সহায়তা রিপোর্ট লেখা | Write, save, edit, withdraw own reports; the comment prompt; raise a safeguarding concern | on | — | | (new) |
+| `support_profile:view_all` | Any child's support profile | সব সহায়তা প্রোফাইল দেখা | Any child's profile, history, reports, readers list | — | — | LOCKED | (new) |
+| `support_profile:approve` | Approve reports, publish profiles | রিপোর্ট অনুমোদন ও প্রোফাইল প্রকাশ | The review queue and decisions (also directly on a waiting report); publish/discard | — | — | LOCKED | (new) |
+| `support_profile:process` | Run batches, packs and results | ব্যাচ চালানো, প্যাক নামানো ও ফলাফল আপলোড | Batches, the de-identified analysis pack, result upload/apply, the evaluation pack | — | — | LOCKED | (new) |
+| `support_profile:manage` | Open/close profiles and settings | প্রোফাইল খোলা/বন্ধ ও নিয়ম | Open/close/reopen; the switch; review dates, strategies, goals | — | — | LOCKED | (new) |
+
+#### `safeguarding` — শিশু সুরক্ষা
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `safeguarding:receive` | Receive safeguarding referrals | শিশু সুরক্ষা বিষয় গ্রহণ | Read referrals, mark seen, one note, handled outside the app (never under "view as") | — | — | LOCKED | (new) |
 
 #### `student_comments` — দৈনিক মন্তব্য
 | permission | EN | BN | what it allows | T | O | flags | replaces |

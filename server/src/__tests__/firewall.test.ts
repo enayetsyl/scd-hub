@@ -702,6 +702,58 @@ describe("Saturday-Revision firewall (ADR-005 / SR-1, D-#241)", () => {
   });
 });
 
+// Student support profile (docs/prd-child-support-profile.md §2.2, §12 CSP-1; D-#1548/#1564): the
+// profile never reaches the analytics plane, the AI Workspace, the MCP bridge or the data assistant,
+// and the comment module (guardian-facing) imports nothing from it — the one-way wall of §7.4.
+const SUPPORT_MODEL_NAMES = [
+  "SupportProfile",
+  "SupportReport",
+  "SupportProfileVersion",
+  "SupportStrategy",
+  "SupportReview",
+  "SupportAiRun",
+  "SupportSeedPrompt",
+  "SafeguardingReferral",
+  "SupportBatch",
+  "SupportImport",
+  "SupportProducerEval",
+  "SupportSetting",
+];
+describe("Support-profile firewall (ADR-005 / CSP-1, D-#1548)", () => {
+  const modules = path.resolve(__dirname, "../modules");
+  const touchesSupport = (content: string): boolean =>
+    importPattern("support-profile/").test(content) ||
+    importPattern("safeguarding/").test(content) ||
+    SUPPORT_MODEL_NAMES.some((m) => new RegExp(`(?:from|require)\\s*\\(?["'][^"']*/${m}["']`, "m").test(content));
+
+  test("the pattern catches real imports", () => {
+    expect(touchesSupport('import { SupportReport } from "../../support-profile/models/SupportReport";')).toBe(true);
+    expect(touchesSupport('import { SafeguardingReferral } from "../platform/safeguarding/SafeguardingReferral";')).toBe(true);
+    expect(touchesSupport('import { x } from "../corpus/other";')).toBe(false);
+  });
+  test("the module exists where the data-assistant exclusion expects it", () => {
+    expect(fs.existsSync(path.join(modules, "support-profile"))).toBe(true);
+  });
+  test("corpus imports none of the support-profile or safeguarding models", () => {
+    for (const f of walkDir(path.join(modules, "corpus"))) expect([f, touchesSupport(fs.readFileSync(f, "utf8"))]).toEqual([f, false]);
+  });
+  test("the AI Workspace (incl. its MCP tools and analytics) and AiAnalyticsService import none of them", () => {
+    const files = [...walkDir(path.join(modules, "ai-workspace")), path.join(modules, "platform/services/AiAnalyticsService.ts")];
+    expect(files.some((f) => f.endsWith(path.join("mcp", "tools.ts")))).toBe(true);
+    expect(files.some((f) => f.endsWith("WorkspaceAnalytics.ts"))).toBe(true);
+    for (const f of files) expect([f, touchesSupport(fs.readFileSync(f, "utf8"))]).toEqual([f, false]);
+  });
+  test("the data assistant imports none of them", () => {
+    for (const f of walkDir(path.join(modules, "data-assistant"))) expect([f, touchesSupport(fs.readFileSync(f, "utf8"))]).toEqual([f, false]);
+  });
+  test("comments/ imports nothing from support-profile/ (the §7.4 wall)", () => {
+    for (const f of walkDir(path.join(modules, "comments"))) expect([f, touchesSupport(fs.readFileSync(f, "utf8"))]).toEqual([f, false]);
+  });
+  test("the support-profile module never imports the corpus plane", () => {
+    for (const f of walkDir(path.join(modules, "support-profile"))) expect(fs.readFileSync(f, "utf8")).not.toMatch(importPattern("corpus/"));
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

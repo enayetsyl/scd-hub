@@ -20,6 +20,7 @@ import {
 } from "../services/ActivityService";
 import { ACTIVITY_GROUPS, ACTIVITY_GROUP_LABELS, type ActivityGroup } from "../auditLabels";
 import { pageRef } from "../../../pageRef";
+import { auditVisibility } from "../auditPrivacy";
 
 const ActivityPersonRef = builder.objectRef<ActivityPersonShape>("ActivityPerson");
 ActivityPersonRef.implement({
@@ -136,8 +137,9 @@ builder.queryField("personActivity", (t) =>
       source: t.arg.string({ required: false }),
       limit: t.arg.int({ required: false }),
     },
-    resolve: async (_root, args) =>
+    resolve: async (_root, args, ctx) =>
       personActivity({
+        visibility: auditVisibility(ctx.auth),
         personId: args.personId,
         from: args.from,
         to: args.to,
@@ -171,9 +173,10 @@ builder.queryField("personActivityPage", (t) =>
       page: t.arg.int({ required: false }),
       pageSize: t.arg.int({ required: false }),
     },
-    resolve: async (_root, args) =>
+    resolve: async (_root, args, ctx) =>
       personActivityPage(
         {
+          visibility: auditVisibility(ctx.auth),
           personId: args.personId,
           from: args.from,
           to: args.to,
@@ -198,8 +201,8 @@ builder.queryField("personActivityDays", (t) =>
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),
     },
-    resolve: async (_root, args) =>
-      personActivityDays({ personId: args.personId, from: args.from, to: args.to }),
+    resolve: async (_root, args, ctx) =>
+      personActivityDays({ personId: args.personId, from: args.from, to: args.to, visibility: auditVisibility(ctx.auth) }),
   }),
 );
 

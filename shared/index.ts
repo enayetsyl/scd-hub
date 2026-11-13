@@ -8,3 +8,4 @@ export * from "./objectiveTree";
 export * from "./helpGuides";
 export * from "./dailyReport";
 export * from "./masteryPartners";
+export * from "./supportProfile";
