@@ -56,6 +56,7 @@ import type {
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
   BookLcStackParamList,
+  BookLcTeacherStackParamList,
   ExamPapersStackParamList,
   StorybooksStackParamList,
   ActivityStackParamList,
@@ -145,6 +146,9 @@ import BookLcRoundScreen from "../screens/booklifecycle/BookLcRoundScreen";
 import BookLcFeedbackScreen from "../screens/booklifecycle/BookLcFeedbackScreen";
 import BookLcDraftScreen from "../screens/booklifecycle/BookLcDraftScreen";
 import BookLcRuleSetsScreen from "../screens/booklifecycle/BookLcRuleSetsScreen";
+import BookLcReleaseScreen from "../screens/booklifecycle/BookLcReleaseScreen";
+import BookLcMyBooksScreen from "../screens/booklifecycle/BookLcMyBooksScreen";
+import BookLcReportScreen from "../screens/booklifecycle/BookLcReportScreen";
 import { BL as BLS } from "../screens/booklifecycle/blStrings";
 import ExamPapersHomeScreen from "../screens/exampapers/ExamPapersHomeScreen";
 import ExamPaperDraftScreen from "../screens/exampapers/ExamPaperDraftScreen";
@@ -1983,7 +1987,20 @@ function BookLcNavigator(): React.ReactElement {
       <BookLcStack.Screen name="BookLcRound" component={BookLcRoundScreen} options={{ title: BLS.roundTitle }} />
       <BookLcStack.Screen name="BookLcFeedback" component={BookLcFeedbackScreen} options={{ title: BLS.triageTitle }} />
       <BookLcStack.Screen name="BookLcDraft" component={BookLcDraftScreen} options={{ title: BLS.draftTitle }} />
+      <BookLcStack.Screen name="BookLcRelease" component={BookLcReleaseScreen} options={{ title: BLS.printTitle }} />
     </BookLcStack.Navigator>
+  );
+}
+
+// Book lifecycle for teachers (§8 S8/S9): আমার বই is param-free (initial slot).
+const BookLcTeacherStack = createNativeStackNavigator<BookLcTeacherStackParamList>();
+function BookLcTeacherNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <BookLcTeacherStack.Navigator screenOptions={stackOptions}>
+      <BookLcTeacherStack.Screen name="BookLcMyBooks" component={BookLcMyBooksScreen} options={{ title: BLS.myBooksTitle }} />
+      <BookLcTeacherStack.Screen name="BookLcReport" component={BookLcReportScreen} options={{ title: BLS.reportTitle }} />
+    </BookLcTeacherStack.Navigator>
   );
 }
 
@@ -2287,6 +2304,8 @@ export function AppTabs(): React.ReactElement {
   const canClassBooks = any("class_books:view", "class_books:manage");
   // Book lifecycle (D-#1596): ships Principal-only; `view` opens the list, each screen gates its own actions.
   const canBookLc = any("book_lifecycle:view", "book_lifecycle:manage", "book_lifecycle:finalize", "book_lifecycle:release");
+  // Teachers (switched on by the owner): আমার বই + ভুল জানান.
+  const canBookLcTeacher = any("book_lifecycle:teacher_view", "book_lifecycle:report");
   // D-#1030–#1033: exam paper bank — every staff member may be given a paper to review
   // (exam_papers:review is SELF), so the stack mounts for any of its actions.
   const canExamPapers = any("exam_papers:review", "exam_papers:view", "exam_papers:manage", "exam_papers:view_reference", "exam_papers:manage_reference");
@@ -2310,7 +2329,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canBookLc || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
+    canSupportBook || canBookLc || canBookLcTeacher || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2410,6 +2429,7 @@ export function AppTabs(): React.ReactElement {
             drawer group is hidden); S1's footer link opens it for book_production holders. */}
         {canSupportBook ? <Drawer.Screen name="SupportBookTab" component={SupportBookNavigator} /> : null}
         {canBookLc ? <Drawer.Screen name="BookLcTab" component={BookLcNavigator} /> : null}
+        {canBookLcTeacher ? <Drawer.Screen name="BookLcTeacherTab" component={BookLcTeacherNavigator} /> : null}
         {canAdmin ? <Drawer.Screen name="AdminTab" component={AdminNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} /> : null}

@@ -97,10 +97,7 @@ const OPEN_FIELDS: Record<string, string> = {
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
 const DECLARED_AHEAD: Record<string, string> = {
-  // Book lifecycle (docs/prd-book-lifecycle.md §19): gated by BL-2 (release, teacher_view, report) and BL-5 (ai_edit).
-  "book_lifecycle:release": "BL-2 print releases",
-  "book_lifecycle:teacher_view": "BL-2 teacher surfaces",
-  "book_lifecycle:report": "BL-2 report form",
+  // Book lifecycle (docs/prd-book-lifecycle.md §19): ai_edit is gated by BL-5 (the AI edit job).
   "book_lifecycle:ai_edit": "BL-5 AI edit job",
 };
 

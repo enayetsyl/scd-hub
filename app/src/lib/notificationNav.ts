@@ -400,10 +400,11 @@ export function notificationTarget(
       return refs?.bookId ? { tab: "BookLcTab", screen: "BookLcFeedback", params: { bookId: refs.bookId } } : { tab: "BookLcTab", screen: "BookLcList" };
     case "BOOK_EDIT_READY":
       return refs?.bookDraftId ? { tab: "BookLcTab", screen: "BookLcDraft", params: { draftId: refs.bookDraftId } } : { tab: "BookLcTab", screen: "BookLcList" };
+    // Teacher-facing kinds open আমার বই (errata, release, my reports).
     case "BOOK_FEEDBACK_ANSWERED":
     case "BOOK_ERRATUM":
     case "BOOK_RELEASED":
-      return { tab: "BookLcTab", screen: "BookLcList" };
+      return { tab: "BookLcTeacherTab", screen: "BookLcMyBooks" };
     case "SCHOOL_NOTICE": {
       // D-#1072 — the page the school named, "Tab/Screen" like a pop-up's OPEN_SCREEN button.
       // No page = a plain message: the detail screen shows it whole with no button.

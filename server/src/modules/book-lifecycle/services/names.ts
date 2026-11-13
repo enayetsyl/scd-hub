@@ -13,3 +13,10 @@ export async function namesOf(ids: (Types.ObjectId | string | undefined | null)[
   return new Map(rows.map((u) => [u._id.toString(), u.name]));
 }
 
+/** Of these user ids, the active staff logins (never a guardian). */
+export async function activeStaffIds(ids: string[]): Promise<string[]> {
+  const list = ids.filter((x) => Types.ObjectId.isValid(x));
+  if (!list.length) return [];
+  const rows = await User.find({ _id: { $in: list }, active: true, role: { $ne: "GUARDIAN" } }).select("_id").lean();
+  return rows.map((r) => r._id.toString());
+}

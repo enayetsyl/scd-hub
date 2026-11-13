@@ -263,3 +263,58 @@ export async function approveOnPaper(auth: AuthPayload, roundId: string) {
   for (const m of r.decisionMarks) await s.round.checkAgainstScan(auth, roundId, { kind: "decision", id: m.decisionId.toString() });
   return s.round.recordReturn(auth, roundId, { verdict: "approve", returnedAt: new Date("2026-11-12T04:00:00Z") });
 }
+
+// ---------------------------------------------------------------------------
+// BL-2: a tiny school so bookTeachersNow has someone to find (all invented)
+// ---------------------------------------------------------------------------
+
+export interface School {
+  routineTeacher: AuthPayload;
+  classTeacher: AuthPayload;
+  otherTeacher: AuthPayload;
+}
+
+/** Class 3 (current year) with one section: a routine BAN teacher, a class teacher, and a teacher
+ *  of another subject. `teacher_view` + `report` are granted to all three (the switch-on). */
+export async function seedSchool(): Promise<School> {
+  const { AcademicYear } = require("../modules/foundation/models/AcademicYear") as typeof import("../modules/foundation/models/AcademicYear");
+  const { Class } = require("../modules/foundation/models/Class") as typeof import("../modules/foundation/models/Class");
+  const { Section } = require("../modules/foundation/models/Section") as typeof import("../modules/foundation/models/Section");
+  const { Subject } = require("../modules/foundation/models/Subject") as typeof import("../modules/foundation/models/Subject");
+  const { ScopeGrant } = require("../modules/foundation/models/ScopeGrant") as typeof import("../modules/foundation/models/ScopeGrant");
+  await Promise.all([AcademicYear, Class, Section, Subject, ScopeGrant].map((m) => (m as unknown as { deleteMany: (f: object) => Promise<unknown> }).deleteMany({})));
+  await User.deleteMany({ email: /@reader\.test$/ });
+  const ids = { rt: new Types.ObjectId(), ct: new Types.ObjectId(), ot: new Types.ObjectId() };
+  const perms: Permission[] = ["book_lifecycle:teacher_view", "book_lifecycle:report"];
+  await User.create([
+    { _id: ids.rt, role: "TEACHER", name: "Routine Teacher Kalpanik", email: "rt@reader.test", passwordHash: "x", active: true, grantedPermissions: perms },
+    { _id: ids.ct, role: "TEACHER", name: "Class Teacher Kalpanik", email: "ct@reader.test", passwordHash: "x", active: true, grantedPermissions: perms },
+    { _id: ids.ot, role: "TEACHER", name: "Other Teacher Kalpanik", email: "ot@reader.test", passwordHash: "x", active: true, grantedPermissions: perms },
+  ]);
+  const [year] = await AcademicYear.create([{ label: "2026-fixture", startDate: new Date("2026-01-01"), endDate: new Date("2026-12-31"), current: true }]);
+  const [c3] = await Class.create([{ level: 3, nameBn: "তৃতীয় শ্রেণি", academicYearId: year._id }]);
+  await Section.create([{ classId: c3._id, code: "A", nameBn: "ক শাখা", classTeacherId: ids.ct }]);
+  const sec = await Section.findOne({ classId: c3._id });
+  const [ban, math] = await Subject.create([{ code: "BAN", nameBn: "বাংলা" }, { code: "MATH", nameBn: "গণিত" }]);
+  await ScopeGrant.create([
+    { teacherId: ids.rt, kind: "teaching", active: true, source: "routine", createdBy: ids.rt, classId: c3._id, sectionId: sec!._id, subjectId: ban._id },
+    { teacherId: ids.ot, kind: "teaching", active: true, source: "routine", createdBy: ids.ot, classId: c3._id, sectionId: sec!._id, subjectId: math._id },
+  ]);
+  return { routineTeacher: a(ids.rt, "TEACHER", perms), classTeacher: a(ids.ct, "TEACHER", perms), otherTeacher: a(ids.ot, "TEACHER", perms) };
+}
+
+/** A final version (paper-approved, editions fresh) + a recorded release with the Student package. */
+export async function releasedBook(auth: AuthPayload, opts: { code?: string } = {}) {
+  const s = svc();
+  const rel = require("../modules/book-lifecycle/services/releaseService") as typeof import("../modules/book-lifecycle/services/releaseService");
+  const { book } = await importSample(auth, { code: opts.code });
+  const r = await roundSent(auth, book._id.toString());
+  await approveOnPaper(auth, r._id.toString());
+  for (const e of ["TEACHER", "STUDENT"] as const) await s.version.uploadVersionFile(auth, r.versionId.toString(), { role: "edition", edition: e, name: `${e}.pdf`, data: await samplePdf(1, []), mime: "application/pdf" });
+  const v = await s.version.markFinal(auth, r.versionId.toString());
+  const release = await rel.createRelease(auth, v._id.toString(), { labelBn: "২০২৭ প্রথম ছাপা (কাল্পনিক)" });
+  await rel.addReleaseFile(auth, release._id.toString(), { edition: "STUDENT", kind: "idml_zip", name: "s.zip", data: Buffer.from("PK\x03\x04fixture"), mime: "application/zip" });
+  await rel.addReleaseFile(auth, release._id.toString(), { edition: "STUDENT", kind: "preview_pdf", name: "s.pdf", data: await samplePdf(2, []), mime: "application/pdf" });
+  const recorded = await rel.recordRelease(auth, release._id.toString());
+  return { book: await s.store.loadBook(book._id), version: await s.store.loadVersion(v._id), release: recorded };
+}
