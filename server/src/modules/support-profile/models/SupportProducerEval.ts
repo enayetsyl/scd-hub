@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 
 /** SupportProducerEval (§5.12, §16.9) — who passed the evaluation for a method version. A provider +
  *  model (Mode A) or a chat label (Mode B) is used for real batches only with a `passed` row for the
- *  method version in use (D-#1566). */
+ *  method version in use (§16.9). */
 export interface ISupportProducerEval extends Document {
   _id: Types.ObjectId;
   kind: "API" | "CHAT";

@@ -7,6 +7,7 @@
  * list are re-run on every piece of model-written text; unknown fields and ids are refused.
  */
 import {
+  SUPPORT_ASK_TERMS,
   SUPPORT_ITEM_SCHEMA,
   SUPPORT_REPORT_RESULT_SCHEMA,
   SUPPORT_RESULT_LIMITS,
@@ -273,7 +274,10 @@ function validateReport(
         suggestion = null;
       }
     }
-    const askLabel = f.category === "LABEL" && f.severity === "ASK";
+    // The ASK exception for a LABEL comes from the SERVER's own ask-list hit in the quote — never from
+    // the model's severity — so a model can never lower a BLOCK (D-#1552).
+    const quoteNorm = normaliseSupportText(f.quote);
+    const askLabel = f.category === "LABEL" && !blockedTermIn(f.quote) && SUPPORT_ASK_TERMS.some((t) => termOccurs(quoteNorm, t.term));
     flags.push({ id: f.id, category: f.category, severity: severityFor(f.category, f.field, askLabel), field: f.field, quote: f.quote, whyBn: f.whyBn, askBn: f.askBn, suggestionBn: suggestion, byServer: false });
   }
   // The server's own lists run again on the report and add their flags (V-6, S-6).
@@ -303,7 +307,7 @@ function validateReport(
     verdict: anyBlock ? "NEEDS_REWRITE" : c.verdict,
     flags,
     toneCheck: c.toneCheck,
-    strategyCandidate: c.strategyCandidate.present && !blockedTermIn(c.strategyCandidate.titleBn) && !safeguardingTermIn(c.strategyCandidate.titleBn) && !c.strategyCandidate.punitive ? c.strategyCandidate : null,
+    strategyCandidate: c.strategyCandidate.present && !textProblem(c.strategyCandidate.titleBn, ctx, rep.childCode) && !c.strategyCandidate.punitive ? c.strategyCandidate : null,
     safeguarding: { present: c.safeguarding.present, signs: c.safeguarding.signs, confidence: c.safeguarding.confidence },
     compare: (raw.compare as unknown) ?? null,
   };
@@ -367,6 +371,23 @@ function validateChild(raw: Record<string, unknown>, ctx: ValidationCtx, ready: 
       if (tp) {
         if (tp === "SAFEGUARDING_TERM") banner = true;
         reject(tp, "textBn");
+        continue;
+      }
+      // The goal's baseline and expectation are model text too: names, links, tokens, labels.
+      let sideTextProblem: SupportImportReason | null = null;
+      let sideField = "";
+      for (const f of ["baselineBn", "expectedBn"] as const) {
+        const v = item[f];
+        const tpf = v ? textProblem(v, ctx, code) : null;
+        if (tpf) {
+          sideTextProblem = tpf;
+          sideField = f;
+          break;
+        }
+      }
+      if (sideTextProblem) {
+        if (sideTextProblem === "SAFEGUARDING_TERM") banner = true;
+        reject(sideTextProblem, sideField);
         continue;
       }
       // V-5: every code must exist in this batch's map.

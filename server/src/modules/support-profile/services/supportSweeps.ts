@@ -14,13 +14,23 @@ import { batchReminders, sweepRewrites } from "./supportRewriteSweeps";
 
 export type RunOnce = (key: string, fn: () => Promise<void>) => Promise<boolean>;
 
+/** Reminders (the teacher's gentle one, the Principal's batch and Thursday ones) are sent by day only. */
+export const REMINDER_FROM_HOUR_DHAKA = 9;
+const dhakaHour = (d: Date): number => Number(d.toLocaleString("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", hour12: false })) % 24;
+
 export async function runSupportProfileSweeps(now: Date, runOnce: RunOnce): Promise<number> {
   let n = await renotifyUnseenReferrals(now);
   await runOnce("SUPPORT_DAILY", async () => {
     n += await sweepNotUsedText(now);
     n += await sweepBatches(now);
-    n += await sweepRewrites(now);
-    n += await batchReminders(now);
+    n += await sweepRewrites(now, { reminders: false });
   });
+  // Its own key and window: the first tick after 09:00 Dhaka (a restart before then loses nothing).
+  if (dhakaHour(now) >= REMINDER_FROM_HOUR_DHAKA) {
+    await runOnce("SUPPORT_REMIND", async () => {
+      n += await sweepRewrites(now, { states: false });
+      n += await batchReminders(now);
+    });
+  }
   return n;
 }

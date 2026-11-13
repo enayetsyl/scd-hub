@@ -996,10 +996,10 @@ export function checkMiniSchema(value: unknown, schema: MiniSchema, path = "$"):
     case "object": {
       if (!value || typeof value !== "object" || Array.isArray(value)) return { path, kind: "BAD_VALUE" };
       const v = value as Record<string, unknown>;
-      for (const k of Object.keys(v)) if (!(k in schema.properties)) return { path: `${path}.${k}`, kind: "UNKNOWN_FIELD" };
-      for (const k of schema.required ?? []) if (!(k in v)) return { path: `${path}.${k}`, kind: "BAD_VALUE" };
+      for (const k of Object.keys(v)) if (!Object.hasOwn(schema.properties, k)) return { path: `${path}.${k}`, kind: "UNKNOWN_FIELD" };
+      for (const k of schema.required ?? []) if (!Object.hasOwn(v, k)) return { path: `${path}.${k}`, kind: "BAD_VALUE" };
       for (const [k, s] of Object.entries(schema.properties)) {
-        if (!(k in v)) continue;
+        if (!Object.hasOwn(v, k)) continue;
         const e = checkMiniSchema(v[k], s, `${path}.${k}`);
         if (e) return e;
       }

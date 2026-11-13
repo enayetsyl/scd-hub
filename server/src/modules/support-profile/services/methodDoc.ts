@@ -10,7 +10,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 
 export const METHOD_DIR = path.resolve(__dirname, "../../../../assets/support-profile");
-const MARKER = /<!-- section: (M-\d+) · stages: ([A-Z, ]+) -->\n/g;
+const MARKER = /<!-- section: (M-\d+) · stages: ([A-Z, ]+) -->\r?\n/g;
 
 export interface MethodSection {
   id: string;
@@ -25,6 +25,9 @@ export interface MethodDoc {
   sha256: string;
   sections: MethodSection[];
 }
+
+/** Line ends → LF (and no BOM), so the hash never depends on the checkout's line-ending setting. */
+export const lf = (s: string): string => s.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
 
 const cache = new Map<string, MethodDoc>();
 
@@ -44,7 +47,8 @@ export function currentMethodVersion(dir = METHOD_DIR): string {
   return all[all.length - 1];
 }
 
-export function splitSections(text: string): MethodSection[] {
+export function splitSections(rawText: string): MethodSection[] {
+  const text = lf(rawText);
   const marks = [...text.matchAll(MARKER)];
   return marks.map((m, i) => ({
     id: m[1],
@@ -59,7 +63,8 @@ export function loadMethod(version?: string, dir = METHOD_DIR): MethodDoc {
   const hit = cache.get(key);
   if (hit) return hit;
   const fileName = `method_${v}.md`;
-  const text = fs.readFileSync(path.join(dir, fileName), "utf8");
+  // LF-normalised: a checkout with CRLF line ends must hash and embed the same text (MD-7).
+  const text = lf(fs.readFileSync(path.join(dir, fileName), "utf8"));
   const doc: MethodDoc = { version: v, fileName, text, sha256: createHash("sha256").update(text, "utf8").digest("hex"), sections: splitSections(text) };
   cache.set(key, doc);
   return doc;

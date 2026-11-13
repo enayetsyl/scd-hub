@@ -3,6 +3,7 @@
  * NORMATIVE; D-#1586).
  */
 import fs from "node:fs";
+import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import "../registerResolvers";
@@ -100,13 +101,25 @@ describe("the analysis pack", () => {
     expect(JSON.stringify(a?.meta)).not.toMatch(/অঙ্ক|\[S\]/);
   });
 
-  it("P-07 the same child gets a different code in the next batch", async () => {
-    const first = (await SupportBatch.findById(batchId).lean())!.codeMap!.children[0].code;
+  it("P-07 the same child gets a different code in the next batch (deterministic: the random source is a counter)", async () => {
     await run(CANCEL_BATCH, P(fx), { b: batchId });
-    const b2 = await run(CREATE_BATCH, P(fx), {});
-    const second = (await SupportBatch.findById(b2.data?.createSupportBatch.id).lean())!.codeMap!.children[0].code;
-    expect(second).not.toBe(first);
-    await run(CANCEL_BATCH, P(fx), { b: b2.data?.createSupportBatch.id });
+    // a counter instead of chance: two real random draws could collide once in 999 runs
+    let n = 0;
+    const spy = jest.spyOn(crypto, "randomInt").mockImplementation(((a: number, b?: number) => {
+      const [lo, hi] = b === undefined ? [0, a] : [a, b];
+      return lo + (n++ % (hi - lo));
+    }) as typeof crypto.randomInt);
+    try {
+      const b2 = await run(CREATE_BATCH, P(fx), {});
+      const first = (await SupportBatch.findById(b2.data?.createSupportBatch.id).lean())!.codeMap!.children[0].code;
+      await run(CANCEL_BATCH, P(fx), { b: b2.data?.createSupportBatch.id });
+      const b3 = await run(CREATE_BATCH, P(fx), {});
+      const second = (await SupportBatch.findById(b3.data?.createSupportBatch.id).lean())!.codeMap!.children[0].code;
+      expect(second).not.toBe(first);
+      await run(CANCEL_BATCH, P(fx), { b: b3.data?.createSupportBatch.id });
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("P-05 a guardian's name in an unusual spelling, found only by the final scan → the download is refused and names the report", async () => {
