@@ -29,6 +29,7 @@ import { useToast } from "../../state/ToastContext";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 import { fill, modelLabel, usd } from "../aiWorkspace/aiWorkspaceUi";
 
 type Props = NativeStackScreenProps<DataAssistantStackParamList, "DataChat">;
@@ -65,6 +66,7 @@ function MessageCard({ m, onStop }: { m: DataChatMessageT; onStop: () => void })
 export default function DataChatScreen({ route }: Props): React.ReactElement {
   const { sessionId } = route.params;
   const toast = useToast();
+  const { viewAs: viewAsSession } = useAuth();
   const [page, setPage] = React.useState<number | null>(null);
   const [setup] = useQuery({ query: DATA_CHAT_SETUP, variables: { id: sessionId } });
   const [mq, refetch] = useQuery({ query: DATA_CHAT_MESSAGES_PAGE, variables: { sessionId, page, pageSize: PAGE_SIZE }, requestPolicy: "cache-and-network" });
@@ -94,6 +96,7 @@ export default function DataChatScreen({ route }: Props): React.ReactElement {
   const chat = setup.data?.dataChat;
   const picked = model ?? chat?.chatModel ?? models.find((m) => m.isDefault)?.id ?? "claude-sonnet-5-5";
   const viewAs = !!chat?.viewAs;
+  const pickedDeepseek = model !== null ? !!models.find((x) => x.id === model)?.deepseek : !!chat?.deepseekWarning;
 
   function onPick(m: string): void {
     // DeepSeek: show the warning every time it is chosen, and wait for the confirm.
@@ -126,7 +129,8 @@ export default function DataChatScreen({ route }: Props): React.ReactElement {
 
   return (
     <Screen scroll>
-      {viewAs ? <Notice tone="warn" message={STR.daViewAs} /> : null}
+      {viewAs ? <Notice tone="warn" message={fill(STR.daViewAs, { name: viewAsSession?.name ?? "" })} /> : null}
+      {pickedDeepseek && !pendingDeepseek ? <Notice tone="warn" message={warning} /> : null}
       {data.total > data.rows.length && data.page > 1 ? <Pager page={data.page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}
       {rows.length === 0 ? <Notice tone="info" message={STR.daIntro} /> : null}
       {rows.map((m) => (

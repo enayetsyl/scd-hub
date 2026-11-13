@@ -137,7 +137,7 @@ async function ownSession(auth: AuthPayload, sessionId: string): Promise<IDataCh
   const s = Types.ObjectId.isValid(sessionId) ? await DataChatSession.findById(sessionId) : null;
   // Own chats only — not even the Principal reads another person's data chat here (the tool
   // calls are in the audit log; the questions and answers in the AI request log).
-  if (!s || String(s.userId) !== auth.userId) throw new DataChatError(BN.notFound);
+  if (!s || String(s.userId) !== auth.userId || String(s.impersonatorId ?? "") !== String(auth.impersonatorId ?? "")) throw new DataChatError(BN.notFound);
   return s;
 }
 
@@ -175,7 +175,7 @@ export async function setDataChatModel(authIn: AuthPayload | null, sessionId: st
 
 export async function dataChatsPage(authIn: AuthPayload | null, args: PageArgs): Promise<Page<DataChatSessionView>> {
   const auth = await assertDoor(authIn);
-  return queryPage(DataChatSession, { userId: new Types.ObjectId(auth.userId) }, { lastAt: -1, _id: -1 }, args, (docs) => (docs as unknown as IDataChatSession[]).map(sessionView), 20);
+  return queryPage(DataChatSession, { userId: new Types.ObjectId(auth.userId), impersonatorId: impersonator(auth) }, { lastAt: -1, _id: -1 }, args, (docs) => (docs as unknown as IDataChatSession[]).map(sessionView), 20);
 }
 
 export async function dataChatMessagesPage(authIn: AuthPayload | null, sessionId: string, args: PageArgs): Promise<Page<DataChatMessageView>> {
@@ -189,7 +189,7 @@ export async function dataChatMessagesPage(authIn: AuthPayload | null, sessionId
 export async function dataChatMessage(authIn: AuthPayload | null, messageId: string): Promise<DataChatMessageView> {
   const auth = await assertDoor(authIn);
   const m = Types.ObjectId.isValid(messageId) ? await DataChatMessage.findById(messageId).lean() : null;
-  if (!m || String(m.userId) !== auth.userId) throw new DataChatError(BN.notFound);
+  if (!m || String(m.userId) !== auth.userId || String(m.impersonatorId ?? "") !== String(auth.impersonatorId ?? "")) throw new DataChatError(BN.notFound);
   return messageView(m as unknown as IDataChatMessage);
 }
 
@@ -287,7 +287,9 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
     const rounds: AiToolRound[] = [];
     let calls = 0;
     let out: AiSendOutcome | null = null;
+    const stopped = () => new AiProviderError("stopped", "stopped by the user", "anthropic");
     for (let round = 1; round <= MAX_ROUNDS; round++) {
+      if (ctl.signal.aborted) throw stopped();
       const last = round === MAX_ROUNDS || calls >= MAX_TOOL_CALLS;
       out = await (deps.send ?? aiSend)(
         "data_assistant",
@@ -314,6 +316,7 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
       );
       llmCallIds.push(out.callId);
       const r = out.result;
+      if (last && r.finishReason === "tool_calls") break; // tools were switched off: do not run them
       if (r.finishReason !== "tool_calls" || !r.toolCalls?.length) {
         answer = r.text;
         break;
@@ -325,6 +328,7 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
           results.push({ id: call.id, content: JSON.stringify({ ok: false, error: "limit", message_en: "Tool-call limit reached for this question; answer with what you have." }), isError: true });
           continue;
         }
+        if (ctl.signal.aborted) throw stopped();
         calls++;
         let args: unknown = {};
         try {
@@ -340,6 +344,12 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
       rounds.push({ assistant: r.assistantRaw, calls: r.toolCalls, results, ...(calls >= MAX_TOOL_CALLS ? { note: "Tool-call limit reached. Answer now from the results above." } : {}) });
     }
     if (!answer) answer = out?.result.text ?? "";
+    // A last round that still asks for tools, or an empty reply, is a failed answer.
+    if (!answer.trim() || out?.result.finishReason === "tool_calls") {
+      answer = "";
+      await finish({ status: "failed", error: BN.down, tools, rounds: llmCallIds.length, costUsd: await costOf(llmCallIds) });
+      return;
+    }
     await finish({
       status: "done",
       text: answer,
@@ -351,6 +361,8 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
     });
     await DataChatSession.updateOne({ _id: msg.sessionId }, { $set: { lastAt: new Date() } });
   } catch (e) {
+    const failedCall = (e as { callId?: string } | null)?.callId;
+    if (failedCall && !llmCallIds.includes(failedCall)) llmCallIds.push(failedCall);
     const set = (error: string, status: "failed" | "stopped" = "failed") => finish({ status, error, tools, rounds: llmCallIds.length });
     if (e instanceof AiProviderError && e.kind === "stopped") await set(BN.stopped, "stopped");
     else if (e instanceof AiFeatureOffError) await set(BN.off);
@@ -367,11 +379,11 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
     const usage = (await AiUsage.find(llmCallIds.length ? { callId: { $in: llmCallIds } } : { refId: String(msg.sessionId), at: { $gte: msg.at } })
       .sort({ at: 1 })
       .lean()
-      .catch(() => [])) as Array<{ callId?: string; provider: string; model: string; resolvedModel?: string | null; outcome: string; errorKind?: string | null; latencyMs?: number; costUsd?: number }>;
+      .catch(() => [])) as Array<{ callId?: string; provider: string; modelName: string; resolvedModel?: string | null; outcome: string; errorKind?: string | null; latencyMs?: number; costUsd?: number }>;
     if (usage.length > 0) {
       const attempts = usage.map((r) => ({
         provider: r.provider,
-        modelName: r.resolvedModel || r.model,
+        modelName: r.resolvedModel || r.modelName,
         outcome: (r.outcome === "ok" || r.outcome === "fallback" ? "ok" : "error") as "ok" | "error",
         ...(r.errorKind ? { errorKind: r.errorKind } : {}),
         fallback: r.outcome === "fallback",
@@ -403,7 +415,7 @@ export async function runDataAnswer(messageId: Types.ObjectId, auth: AuthPayload
 export async function stopDataAnswer(authIn: AuthPayload | null, messageId: string): Promise<DataChatMessageView> {
   const auth = await assertDoor(authIn);
   const m = Types.ObjectId.isValid(messageId) ? await DataChatMessage.findById(messageId) : null;
-  if (!m || String(m.userId) !== auth.userId || m.role !== "assistant") throw new DataChatError(BN.notFound);
+  if (!m || String(m.userId) !== auth.userId || String(m.impersonatorId ?? "") !== String(auth.impersonatorId ?? "") || m.role !== "assistant") throw new DataChatError(BN.notFound);
   const ctl = running.get(String(m._id));
   if (ctl) {
     ctl.abort();
