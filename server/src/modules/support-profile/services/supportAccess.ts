@@ -8,6 +8,7 @@
  *  - The feature ships OFF: until it is switched on, only a view_all holder gets in (CSP-6).
  *  - A refused read by authenticated staff writes SUPPORT_ACCESS_REFUSED (no text).
  */
+import { Types } from "mongoose";
 import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AuthPayload } from "../../../context";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -72,6 +73,7 @@ export interface ChildAccess {
  */
 export async function accessToChild(ctx: SupportCtx, studentId: string, need: "view" | "report"): Promise<ChildAccess & { auth: AuthPayload }> {
   const auth = await supportCaller(ctx);
+  if (!Types.ObjectId.isValid(studentId)) throw new SupportProfileRefusal("ভুল আইডি।");
   if (holdsViewAll(auth)) return { auth, mode: "ALL", readerVia: "PRINCIPAL" };
   const refuse = async (reason: string): Promise<never> => {
     await writeAudit({ eventKind: "SUPPORT_ACCESS_REFUSED", actorId: auth.userId, actorRole: auth.role, targetId: studentId, targetKind: "Student", meta: { studentId, reason } });

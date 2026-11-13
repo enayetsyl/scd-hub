@@ -111,12 +111,16 @@ describe("support profile access", () => {
     await run(SUBMIT, authOf(fx.manualTeacher, "TEACHER"), { input: reportInput(fx.child) });
     const mine = await run(MINE, authOf(fx.manualTeacher, "TEACHER"));
     expect(mine.data?.mySupportReportsPage.total).toBe(1);
-    expect(mine.data?.mySupportReportsPage.rows[0].textVisible).toBe(true);
+    // a list row is metadata only (§6.9): no text, but the child is named while the author still reads them
+    expect(mine.data?.mySupportReportsPage.rows[0].textVisible).toBe(false);
+    expect(mine.data?.mySupportReportsPage.rows[0].behaviour).toBeNull();
+    expect(mine.data?.mySupportReportsPage.rows[0].studentName).toBeTruthy();
     const other = await run(MINE, authOf(fx.classTeacher, "TEACHER"));
     expect(other.data?.mySupportReportsPage.total).toBe(0);
     await mongoose.connection.db!.collection("scopegrants").updateOne({ teacherId: fx.manualTeacher }, { $set: { active: false } });
     const after = await run(MINE, authOf(fx.manualTeacher, "TEACHER"));
     expect(after.data?.mySupportReportsPage.rows[0].textVisible).toBe(false);
     expect(after.data?.mySupportReportsPage.rows[0].behaviour).toBeNull();
+    expect(after.data?.mySupportReportsPage.rows[0].studentName).toBeNull();
   });
 });
