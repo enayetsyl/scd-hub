@@ -149,7 +149,7 @@ export interface IBookDecision extends Document {
   recommendedKey?: string;
   status: BookDecisionStatus;
   ruling?: { optionKey?: string; textBn?: string; by: string; recordedBy: Types.ObjectId; at: Date; selfRuled: boolean; recordedFromPaper: boolean; roundId?: Types.ObjectId };
-  /** Rulings a correction replaced (never overwritten, D-#1621). */
+  /** Rulings a correction replaced (never overwritten, D-#1623). */
   rulingHistory?: unknown[];
   supersededBy?: Types.ObjectId;
   promotedToRuleSet?: { key: string; version: number };
