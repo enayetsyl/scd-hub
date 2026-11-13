@@ -34,6 +34,7 @@ import { addReleaseFile } from "../services/releaseService";
 import { teacherMayRead, uploadReportPhoto } from "../services/teacherService";
 import type { BookReleaseFileKind } from "@scd/shared";
 import { downloadBundle, downloadTranscriptionPack, uploadBundleWhole } from "../services/bundle";
+import { consumeUploadUrl } from "../services/uploadUrl";
 
 const upload = multer({ dest: tmpdir(), limits: { fileSize: BOOK_LC_LIMITS.printBytes + 1, files: 2 } });
 
@@ -249,6 +250,20 @@ export function registerBookLcFileRoutes(router: Router): void {
       const f = await take(req, "file", () => capFor("book_lc_feedback", "image/png", { photo: true }));
       if (!f) throw new BookLcError("NO_FILE", "ছবি দিন");
       res.json({ fileId: await uploadReportPhoto(ctx.auth!, str(req.body?.bookId), { name: f.name, data: f.data }) });
+    } catch (e) {
+      fail(res, e);
+    } finally {
+      await cleanup(req);
+    }
+  });
+
+  // BL-4: a single-use upload link for Claude Code (`curl -F file=@<path> <url>`). No session: the
+  // hashed, 10-minute, size-bound token is the credential; its user is re-read and must hold manage.
+  router.post("/book-lc/upload/:token", parse([{ name: "file", maxCount: 1 }]), async (req, res) => {
+    try {
+      const f = await take(req, "file");
+      if (!f) throw new BookLcError("NO_FILE", "file missing (multipart field: file)");
+      res.json(await consumeUploadUrl(String(req.params.token), { name: f.name, data: f.data, mime: f.mime }));
     } catch (e) {
       fail(res, e);
     } finally {

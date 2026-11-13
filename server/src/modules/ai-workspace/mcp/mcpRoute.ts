@@ -12,6 +12,8 @@ import express, { type Request, type Response, type Router } from "express";
 import { McpServer, StreamableHTTPServerTransport, type McpServerLike } from "./sdk";
 import { baseUrlOf, verifyAccessToken } from "./oauth";
 import { registerWorkspaceTools } from "./tools";
+import { BOOK_MCP_INSTRUCTIONS } from "../../book-lifecycle/mcp/bookTools";
+import { isBookDbReady } from "../../../bookDb";
 
 export const MCP_INSTRUCTIONS = `SCD Hub AI Workspace (a Bangladeshi school's own AI workspace on DeepSeek).
 - The Hub holds the MASTER copy of each project's instructions: call read_project before working on a project and apply its instructions.
@@ -19,9 +21,12 @@ export const MCP_INSTRUCTIONS = `SCD Hub AI Workspace (a Bangladeshi school's ow
 - ds_draft, run_batch and revise_draft need model, thinking and run_at. Ask the Principal which to use — "now" or "offpeak" (half price) — and state the estimated cost of each before starting anything long.
 - Replies are small summaries with ids; read long text with read_file / read_draft by range.`;
 
-export function buildMcpServer(auth: Parameters<typeof registerWorkspaceTools>[1], clientName: string): McpServerLike {
-  const server = new McpServer({ name: "scd-hub-ai-workspace", version: "1.0.0" }, { instructions: MCP_INSTRUCTIONS });
-  registerWorkspaceTools(server, auth, clientName);
+export function buildMcpServer(auth: Parameters<typeof registerWorkspaceTools>[1], clientName: string, baseUrl = ""): McpServerLike {
+  // The book tools (BL-4) exist only where the book plane is open — always on the server and in tests
+  // that open it; a W-5-only setup keeps exactly its ten tools and its instructions.
+  const books = isBookDbReady();
+  const server = new McpServer({ name: "scd-hub-ai-workspace", version: "1.0.0" }, { instructions: books ? `${MCP_INSTRUCTIONS}\n${BOOK_MCP_INSTRUCTIONS}` : MCP_INSTRUCTIONS });
+  registerWorkspaceTools(server, auth, clientName, baseUrl, books);
   return server;
 }
 
@@ -36,7 +41,7 @@ mcpRouter.post("/", express.json({ limit: "4mb" }), async (req: Request, res: Re
     res.status(401).json({ error: "invalid_token" });
     return;
   }
-  const server = buildMcpServer(who.auth, who.clientName);
+  const server = buildMcpServer(who.auth, who.clientName, baseUrlOf(req));
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   res.on("close", () => {
     void transport.close();
