@@ -70,3 +70,177 @@ builder.queryField("myDataToolCallsPage", (t) =>
       myDataToolCallsPage(ctx.auth, { tool: a.tool, surface: a.surface, clientName: a.clientName, outcome: a.outcome, fromKey: a.fromKey, toKey: a.toKey }, { page: a.page, pageSize: a.pageSize }),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// DA-2: the in-app data chat. authScopes = any staff login (`my_account:view`, SELF); the door
+// itself (`data_assistant:use`, or a Principal testing through "View as", D-#1570) is checked in
+// DataChatService on fresh permissions — a scope here would refuse the View-as test.
+// ---------------------------------------------------------------------------
+
+import {
+  askDataAssistant,
+  dataChat,
+  dataChatMessage,
+  dataChatMessagesPage,
+  dataChatModels,
+  dataChatsPage,
+  setDataChatModel,
+  startDataChat,
+  stopDataAnswer,
+  BN as CHAT_BN,
+  type DataChatMessageView,
+  type DataChatSessionView,
+} from "../services/DataChatService";
+
+const DataChatRef = builder.objectRef<DataChatSessionView>("DataChat").implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (s) => s.id }),
+    title: t.string({ resolve: (s) => s.title }),
+    turns: t.int({ resolve: (s) => s.turns }),
+    lastAt: t.string({ resolve: (s) => new Date(s.lastAt).toISOString() }),
+    chatModel: t.string({ resolve: (s) => s.chatModel }),
+    deepseekWarning: t.boolean({ description: "True when the chat answers with DeepSeek: show the names/pay/comments warning.", resolve: (s) => s.deepseekWarning }),
+    viewAs: t.boolean({ description: "True when the Principal is testing as another login (View as).", resolve: (s) => s.viewAs }),
+  }),
+});
+
+const DataToolChipRef = builder.objectRef<DataChatMessageView["tools"][number]>("DataToolChip").implement({
+  fields: (t) => ({
+    tool: t.string({ resolve: (c) => c.tool }),
+    labelBn: t.string({ resolve: (c) => c.labelBn }),
+    outcome: t.string({ resolve: (c) => c.outcome }),
+  }),
+});
+
+const DataChatMessageRef = builder.objectRef<DataChatMessageView>("DataChatMessage").implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (m) => m.id }),
+    sessionId: t.string({ resolve: (m) => m.sessionId }),
+    role: t.string({ resolve: (m) => m.role }),
+    text: t.string({ resolve: (m) => m.text }),
+    at: t.string({ resolve: (m) => new Date(m.at).toISOString() }),
+    status: t.string({ description: "running | done | failed | stopped", resolve: (m) => m.status }),
+    error: t.string({ nullable: true, resolve: (m) => m.error }),
+    modelName: t.string({ nullable: true, resolve: (m) => m.modelName }),
+    tools: t.field({ type: [DataToolChipRef], resolve: (m) => m.tools }),
+    denied: t.boolean({ resolve: (m) => m.denied }),
+    costUsd: t.float({ nullable: true, resolve: (m) => m.costUsd }),
+  }),
+});
+
+const DataChatPageRef = pageRef("DataChatPage", DataChatRef);
+const DataChatMessagePageRef = pageRef("DataChatMessagePage", DataChatMessageRef);
+
+const DataChatModelRef = builder.objectRef<{ id: string; deepseek: boolean; isDefault: boolean }>("DataChatModel").implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (m) => m.id }),
+    deepseek: t.boolean({ resolve: (m) => m.deepseek }),
+    isDefault: t.boolean({ resolve: (m) => m.isDefault }),
+  }),
+});
+
+const DataAskResultRef = builder
+  .objectRef<{ user: DataChatMessageView; assistant: DataChatMessageView; session: DataChatSessionView }>("DataAskResult")
+  .implement({
+    fields: (t) => ({
+      user: t.field({ type: DataChatMessageRef, resolve: (r) => r.user }),
+      assistant: t.field({ type: DataChatMessageRef, resolve: (r) => r.assistant }),
+      session: t.field({ type: DataChatRef, resolve: (r) => r.session }),
+    }),
+  });
+
+const CHAT_SCOPE = { hasPermission: "my_account:view" } as const;
+
+builder.queryField("dataChatModels", (t) =>
+  t.field({
+    type: [DataChatModelRef],
+    description: "The data chat's model picker; DeepSeek entries carry the warning.",
+    authScopes: CHAT_SCOPE,
+    resolve: () => dataChatModels(),
+  }),
+);
+
+builder.queryField("dataChatDeepseekWarning", (t) =>
+  t.string({ description: "The Bangla + English warning shown before a DeepSeek answer.", authScopes: CHAT_SCOPE, resolve: () => CHAT_BN.deepseekWarning }),
+);
+
+builder.queryField("dataChatsPage", (t) =>
+  t.field({
+    type: DataChatPageRef,
+    description: "My data chats, newest first.",
+    authScopes: CHAT_SCOPE,
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: (_r, a, ctx) => dataChatsPage(ctx.auth, { page: a.page, pageSize: a.pageSize }),
+  }),
+);
+
+builder.queryField("dataChat", (t) =>
+  t.field({
+    type: DataChatRef,
+    description: "One of my data chats.",
+    authScopes: CHAT_SCOPE,
+    args: { id: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => dataChat(ctx.auth, a.id),
+  }),
+);
+
+builder.queryField("dataChatMessagesPage", (t) =>
+  t.field({
+    type: DataChatMessagePageRef,
+    description: "One of my data chats, newest page first (rows oldest → newest within the page).",
+    authScopes: CHAT_SCOPE,
+    args: { sessionId: t.arg.string({ required: true }), page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: (_r, a, ctx) => dataChatMessagesPage(ctx.auth, a.sessionId, { page: a.page, pageSize: a.pageSize }),
+  }),
+);
+
+builder.queryField("dataChatMessage", (t) =>
+  t.field({
+    type: DataChatMessageRef,
+    description: "One answer (polled while it is running).",
+    authScopes: CHAT_SCOPE,
+    args: { id: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => dataChatMessage(ctx.auth, a.id),
+  }),
+);
+
+builder.mutationField("startDataChat", (t) =>
+  t.field({
+    type: DataChatRef,
+    authScopes: CHAT_SCOPE,
+    args: { title: t.arg.string({ required: false }), model: t.arg.string({ required: false }) },
+    resolve: (_r, a, ctx) => startDataChat(ctx.auth, { title: a.title, model: a.model }),
+  }),
+);
+
+builder.mutationField("setDataChatModel", (t) =>
+  t.field({
+    type: DataChatRef,
+    authScopes: CHAT_SCOPE,
+    args: { sessionId: t.arg.string({ required: true }), model: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => setDataChatModel(ctx.auth, a.sessionId, a.model),
+  }),
+);
+
+builder.mutationField("askDataAssistant", (t) =>
+  t.field({
+    type: DataAskResultRef,
+    description: "Ask a question; the answer is written to the returned assistant message as it completes (poll dataChatMessage).",
+    authScopes: CHAT_SCOPE,
+    args: { sessionId: t.arg.string({ required: true }), text: t.arg.string({ required: true }), model: t.arg.string({ required: false }) },
+    resolve: async (_r, a, ctx) => {
+      const out = await askDataAssistant(ctx.auth, a.sessionId, { text: a.text, model: a.model });
+      out.done.catch((e) => console.warn("[data-assistant] answer crashed:", (e as Error)?.message));
+      return out;
+    },
+  }),
+);
+
+builder.mutationField("stopDataAnswer", (t) =>
+  t.field({
+    type: DataChatMessageRef,
+    authScopes: CHAT_SCOPE,
+    args: { messageId: t.arg.string({ required: true }) },
+    resolve: (_r, a, ctx) => stopDataAnswer(ctx.auth, a.messageId),
+  }),
+);

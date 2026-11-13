@@ -62,6 +62,7 @@ import type {
   VivaStackParamList,
   AiAssistStackParamList,
   AiWorkspaceStackParamList,
+  DataAssistantStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
@@ -168,6 +169,8 @@ import AiAssistHomeScreen from "../screens/aiAssist/AiAssistHomeScreen";
 import AiAssistNewScreen from "../screens/aiAssist/AiAssistNewScreen";
 import AiAssistChatScreen from "../screens/aiAssist/AiAssistChatScreen";
 import AiWorkspaceHomeScreen from "../screens/aiWorkspace/AiWorkspaceHomeScreen";
+import DataAssistantHomeScreen from "../screens/dataAssistant/DataAssistantHomeScreen";
+import DataChatScreen from "../screens/dataAssistant/DataChatScreen";
 import AiProjectNewScreen from "../screens/aiWorkspace/AiProjectNewScreen";
 import AiProjectScreen from "../screens/aiWorkspace/AiProjectScreen";
 import AiProjectFileTextScreen from "../screens/aiWorkspace/AiProjectFileTextScreen";
@@ -1892,6 +1895,18 @@ function AiAssistNavigator(): React.ReactElement {
   );
 }
 
+/** Data assistant (docs/prd-data-assistant-mcp.md §11) — the in-app data chat. */
+const DataAssistantStack = createNativeStackNavigator<DataAssistantStackParamList>();
+function DataAssistantNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <DataAssistantStack.Navigator screenOptions={stackOptions}>
+      <DataAssistantStack.Screen name="DataAssistantHome" component={DataAssistantHomeScreen} options={{ title: STR.daHomeTitle }} />
+      <DataAssistantStack.Screen name="DataChat" component={DataChatScreen} options={{ title: STR.daChatTitle }} />
+    </DataAssistantStack.Navigator>
+  );
+}
+
 /** AI Workspace (docs/prd-ai-workspace.md) — projects, files, instructions; chat + drafts + jobs in later slices. */
 const AiWorkspaceStack = createNativeStackNavigator<AiWorkspaceStackParamList>();
 function AiWorkspaceNavigator(): React.ReactElement {
@@ -2094,7 +2109,7 @@ export function AppTabs(): React.ReactElement {
   // answers for the chosen hat, and with none it answers for EVERY template the login
   // holds — so a teacher who also runs the office desk gets the office-only tabs in the
   // "everything" view instead of only what their primary role template carries.
-  const { role, can, logout } = useAuth();
+  const { role, can, logout, viewAs } = useAuth();
   const colors = useColors();
   // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
   // when at least one video is assigned to them; Principal/Office always.
@@ -2247,6 +2262,9 @@ export function AppTabs(): React.ReactElement {
   const canAiAssist = any("ai_assist:chat", "ai_assist:read_all_chats");
   // AI Workspace (D-#1208): the Principal at launch; ai_workspace:use is granted from the matrix.
   const canAiWorkspace = any("ai_workspace:use", "ai_workspace:admin");
+  // Data assistant (D-#1537): the switch holder; during "View as" the Principal may test the chat
+  // as a login without the switch (D-#1570) — the server checks the real person.
+  const canDataAssistant = any("data_assistant:use") || !!viewAs;
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
@@ -2258,7 +2276,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canAiWorkspace || canExamPapers;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canAiWorkspace || canDataAssistant || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2332,6 +2350,7 @@ export function AppTabs(): React.ReactElement {
         {canViva ? <Drawer.Screen name="VivaTab" component={VivaNavigator} /> : null}
         {canAiAssist ? <Drawer.Screen name="AiAssistTab" component={AiAssistNavigator} /> : null}
         {canAiWorkspace ? <Drawer.Screen name="AiWorkspaceTab" component={AiWorkspaceNavigator} /> : null}
+        {canDataAssistant ? <Drawer.Screen name="DataAssistantTab" component={DataAssistantNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

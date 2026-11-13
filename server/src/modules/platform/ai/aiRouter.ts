@@ -134,6 +134,9 @@ export async function aiSend(
       fallback: routed.fallback && routed.fallback.provider !== to ? routed.fallback : null,
     };
   }
+  // A tool-calling round never crosses to the other provider: the fallback would send the data to
+  // a provider the person did not pick (Q6 consent) and the tool-round message shapes differ.
+  if (input.tools?.length) route = { ...route, fallback: null };
   const make = deps.makeProvider ?? defaultProviderFactory;
   const ledger = deps.ledger ?? defaultLedger;
   const now = deps.now ?? (() => new Date());

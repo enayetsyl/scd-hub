@@ -24,6 +24,39 @@ export interface AiTurn {
   text: string;
 }
 
+/**
+ * Tool calling (data assistant DA-2, D-#1540): a tool the model may call. `inputSchema` is a JSON
+ * schema object (properties / required / additionalProperties: false). The caller validates every
+ * call's arguments itself before running anything.
+ */
+export interface AiToolSpec {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export interface AiToolCall {
+  /** The provider's id for the call; the result must carry it back. */
+  id: string;
+  name: string;
+  /** The arguments exactly as the model wrote them (parse with JSON.parse, never match strings). */
+  argsJson: string;
+}
+
+/**
+ * One earlier tool round of the SAME question, provider-neutral: the assistant turn that asked
+ * (`assistant` = the provider's own raw assistant content, echoed back UNCHANGED — Claude's
+ * thinking blocks, DeepSeek's reasoning_content), the calls, and every call's result. All
+ * results of a round go back together (Claude: one user message). `note` is a short line added
+ * after the results (e.g. "tool-call limit reached").
+ */
+export interface AiToolRound {
+  assistant: unknown;
+  calls: AiToolCall[];
+  results: Array<{ id: string; content: string; isError: boolean }>;
+  note?: string;
+}
+
 export interface AiSendInput {
   /** Rules + examples. Byte-identical across calls, or the prompt cache is lost. */
   stablePrefix: string;
@@ -52,6 +85,15 @@ export interface AiSendInput {
   onDelta?: (textSoFar: string) => void;
   /** Stop button (W-2): aborting it ends the call with kind "stopped" (no fallback). */
   abortSignal?: AbortSignal;
+  /**
+   * Tools (DA-2). A provider that cannot call tools refuses before sending (`not_configured`).
+   * `toolChoice` is "auto" (default) or "none" (answer now, no more calls) — never a forced
+   * call (Claude Opus/Sonnet 5.5 refuse forced tool choice).
+   */
+  tools?: AiToolSpec[];
+  toolChoice?: "auto" | "none";
+  /** Earlier tool rounds of this question, sent after `variablePart` in order. */
+  toolRounds?: AiToolRound[];
 }
 
 export interface AiInlineFile {
@@ -83,8 +125,13 @@ export interface AiSendResult {
   text: string;
   json?: unknown;
   usage: AiTokenUsage;
-  /** Always "stop" on a result — anything else was thrown as `truncated`. */
-  finishReason: "stop";
+  /** "stop" = a final answer; "tool_calls" = the model asks for tools (only when `tools` were
+   *  sent). Anything else was thrown as `truncated`. */
+  finishReason: "stop" | "tool_calls";
+  /** Set when finishReason is "tool_calls". */
+  toolCalls?: AiToolCall[];
+  /** The provider's raw assistant content, to echo back in the next round (`AiToolRound.assistant`). */
+  assistantRaw?: unknown;
   latencyMs: number;
 }
 

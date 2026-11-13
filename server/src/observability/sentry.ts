@@ -52,6 +52,7 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // AI Workspace (W-1): a Bangla sentence for the person — no permission in the project, a
   // name too short, a file too big or of an unknown type, the context limit.
   "AiWorkspaceError",
+  "DataChatError", // the data chat's refusals (DA-2): off, no door, busy, empty question, wrong model
   // AI Workspace (W-1): a file could not be read (a tool not installed, an empty scan, Gemini
   // switched off). Written onto the file row as its reason; never a fault.
   "FileReadError",
