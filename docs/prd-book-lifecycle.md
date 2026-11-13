@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | PLANNED 2026-11-13 — requirements only, nothing built. Owner request received 13 Nov 2026 (§1). Owner questions open in §21; each has a recommendation the build follows until he answers. |
+| **Status** | PLANNED 2026-11-13 — requirements only, nothing built. Owner request received 13 Nov 2026 (§1). **Revision 2 (13 Nov 2026, later the same day): owner answers Q1, Q4, Q5, Q7, Q9, Q11 folded in (§1.3).** Q1 changed the design: **the reviewer works on paper** — no reviewer login, no reviewer inbox; the app prints a review packet and the Principal records her returned, marked copy (§10). Other questions still open in §21; each has a recommendation the build follows until he answers. |
 | **Owner** | Principal |
 | **Will be committed as** | `docs/prd-book-lifecycle.md` |
 | **Built by** | a Claude Code cloud session, slices `BL-1 … BL-6` in the order of §19 (BL-0 is the owner's and the lead's ops step). |
-| **Decision block** | Proposed **D-#1590 – D-#1612**, reserve to D-#1619 (§22). Highest on `origin/dev` at writing: D-#1571; highest on any recent remote branch: D-#1576. D-#1531–#1545 / #1567–#1581 belong to the data-assistant PRD, D-#1546–#1566 / #1582–#1589 to the child-support PRD. **Confirm at build time.** |
+| **Decision block** | Proposed **D-#1590 – D-#1616** (R2 added #1613–#1616 and revised #1595, #1596, #1604, #1610, #1612 in place), reserve to D-#1619 (§22). Highest on `origin/dev` at writing: D-#1571; highest on any recent remote branch: D-#1576. D-#1531–#1545 / #1567–#1581 belong to the data-assistant PRD, D-#1546–#1566 / #1582–#1589 to the child-support PRD. **Confirm at build time.** |
 | **Plane** | The **book plane** (D-#404): its own Mongo connection (`BOOK_MONGODB_URI`), files in Google Drive through `StoredFile` + `DriveStore`. No student, guardian or staff row is stored there except bare `userId`s for attribution. Not identity, not corpus; ADR-005 untouched. |
 | **Extends** | `docs/prd-support-book.md` (D-#403–#440: book plane, `BookEvent`, `book_production` permissions, self-review stamp D-#424). Reuses: AI seam `platform/ai` (`aiSend`, D-#1090–#1105, request log D-#1179), AI Workspace MCP server `/mcp` + OAuth 2.1 (D-#1214/#1253/#1254), the AI worker process (D-#1251), class-books reader (D-#870), print queue (D-#281), notifications, pop-up notices (D-#852), help centre (D-#973), permission catalogue (D-#790–#801). |
 | **Normative parts** | **§6** Book Markdown conventions · **§12.3** validator rules VR-1…VR-15 · **§13** the editing method document · **§14.3** the edit-operation contract. The build must follow them; changing one needs a D-# row. |
@@ -28,15 +28,20 @@ This PRD puts **the real process** into the app, **additively**, beside the old 
 1. **A book has versions** (`v7`, `v7.1` … `v8`). Each version holds the **master text as Markdown** (the canonical
    text that people and AI edit), the uploaded Word/PDF of the master, and the **editions** (Teacher, Student,
    Scholarship Student). Versions are immutable once made.
-2. **Review rounds with a memo.** The app writes the memo for the reviewer from the change list since the version she
-   last saw (page/where/what/why), plus the open decisions with options. She reads the memo and the changed chapters
-   (with a diff), marks each item, rules on each decision, may upload a marked PDF, and **approves** or **asks for
-   changes**. A Principal reviewing his own book is allowed and stamped (D-#424 pattern).
+2. **Review rounds on paper (owner Q1).** The reviewer does not use the app. The app writes the memo from the change
+   list since the version she last saw (page/where/what/why), plus the open decisions with tick boxes, and builds a
+   **print packet**: the memo PDF and the version's PDF (whole book or only the changed chapters), with page references
+   that match the pages she will mark. The Principal prints it and marks the round **কাগজে পাঠানো** (sent on paper).
+   When the marked copy comes back he uploads the scan(s), records her points as feedback items (by hand, or with
+   Claude reading the scan) and records **on her behalf** her ruling on each decision and her overall verdict
+   (**approved** / **changes needed**), stamped "কাগজের কপি থেকে লেখা" with the scan attached as evidence. A version
+   can become final only on her recorded approval.
 3. **One feedback inbox** for every source: the reviewer, teachers using the printed book, the school, print errors,
    the proof-reader. The Principal **triages** each item: *needs the reviewer* · *direct fix* (obvious; skips review,
    minor bump) · *verbal errata* (teachers fix their and the students' books by hand now; the next print carries it) ·
    *rejected* / *duplicate*.
-4. **Final → print → in use.** An approved version is marked **চূড়ান্ত** (Principal only). Editions and the print
+4. **Final → print → in use.** An approved version — with the reviewer's approval recorded from her paper copy (or
+   inherited through direct fixes) — is marked **চূড়ান্ত** (Principal only). Editions and the print
    package (IDML zip, preview PDF, images zip — still built by the **local** print engine in v1) are uploaded and
    recorded as a **print release**. Teachers of that class and subject are told; they open the Teacher edition in the
    app and see the **ভুল-সংশোধনী** (errata) list, and can **report an error** from the book in their hands.
@@ -46,7 +51,8 @@ This PRD puts **the real process** into the app, **additively**, beside the old 
      returns **edit operations** (exact find → replace), never a free rewrite, each citing a feedback or instruction id.
    - **Path B — Claude Code / Claude Desktop:** MCP tools on the existing `/mcp` server (`list_books`,
      `get_book_version`, `start_book_edit`, `edit_chapter` / `put_chapter`, `submit_book_version`,
-     `add_feedback_items` …), and a **bundle zip** download/upload for chats without MCP.
+     `add_feedback_items`, `list_round_scans` / `get_scan_page` for reading her returned scan …), and a **bundle
+     zip** download/upload for chats without MCP.
    - Both land in a **draft**, pass the **same validator**, and show a **diff**; a person accepts it chapter by
      chapter; only then does a new version exist. Nothing applies by itself.
 6. **Ships OFF.** At ship only the Principal sees it; the AI feature `book_edit` is off; teacher and Office switches are
@@ -58,6 +64,7 @@ This PRD puts **the real process** into the app, **additively**, beside the old 
 | Date | Change |
 |---|---|
 | 2026-11-13 | First version, from the owner's request of 13 Nov and the lead's design direction. Pre-flight against `origin/dev` `3028bc9e`. |
+| 2026-11-13 (R2) | Owner answers (§1.3). **Q1 changed:** paper review — the reviewer login, reviewer inbox (old S7), the `review` action and its OFFICE role check, and the `BOOK_REVIEW_SENT` / `BOOK_REVIEW_RETURNED` notifications are removed. Added: print packet (§10.4), record-the-return screen (new S7), round fields for the paper trail (§5.5), scan evidence on every transcribed item (§5.6), "final needs her recorded approval" (§4.1, §4.3), risk R14, D-#1613–#1616. D-#1595, #1596, #1610, #1612 revised in place (same numbers). Q4, Q5, Q7, Q9, Q11 confirmed as recommended. |
 
 ---
 
@@ -99,7 +106,19 @@ Whole-book document lifecycle beside the old lesson-JSON flow (additive; book pl
 group reused; no rebuild of JSON-block authoring); Markdown master as the canonical text; editions and the IDML
 package uploaded in v1 (the local print engine stays outside the repo); one validator + diff + accept for both edit
 doors; MCP tools on the existing `/mcp` server; ships OFF; Bangla-first UI with the terms বই, সংস্করণ, পর্যালোচক,
-মতামত, চূড়ান্ত, ছাপা, ভুল-সংশোধনী.
+মতামত, চূড়ান্ত, ছাপা, ভুল-সংশোধনী. (The lead's "reviewer account with an inbox" was replaced by the owner's Q1
+answer, §1.3.)
+
+### 1.3 Owner answers to the PRD questions (13 Nov 2026, BINDING)
+
+| Q | Answer | Where it lands |
+|---|---|---|
+| Q1 | **CHANGED from the recommendation:** "Nobody reviews in the app. We send a PRINTED version to the reviewer; she reviews on paper and sends back the reviewed (marked) copy." No reviewer login, no reviewer inbox, no notifications to her. The app makes a print packet; the Principal records the returned copy on her behalf, with the scan as evidence. Final still needs her (recorded) approval. | §4, §5.5, §5.6, §7, §8 (S4, S7), §10, §16, §19, R14, D-#1613–#1615 |
+| Q4 | Only the Principal may skip the reviewer for obvious fixes; she still sees each such fix listed in her next memo (as recommended). | §4.3, D-#1594 |
+| Q5 | Readers of a book = that class and subject's routine teachers + the class teacher (as recommended). | §7.3, D-#1597 |
+| Q7 | Student PDF to the guardians' class-book reader: OFF, with a switch per book (as recommended). | §11.2, D-#1600 |
+| Q9 | AI edit: Claude Opus 5.5, $10 a month, $3 per job, OFF until the owner approves the editing method (as recommended). | §14.4, §14.5, D-#1603 |
+| Q11 | First book: a printed book that already has post-print fixes waiting (as recommended). | BL-6 checklist |
 
 ---
 
@@ -111,7 +130,8 @@ the API or by Claude, and no change reaches a version without a person accepting
 
 **In scope (v1)**
 - Books, versions (vMAJOR.MINOR), master Markdown + uploaded docx/pdf, editions, media files.
-- Review rounds with a generated memo, reviewer inbox, item marks, decisions, approve / request changes.
+- Review rounds **on paper**: a generated memo, a print packet (memo PDF + version PDF), "sent on paper", recording
+  the returned marked copy (scans, her points as feedback items, her rulings and verdict, entered on her behalf).
 - One feedback inbox (reviewer, teacher, school, print error, proof-read), triage, direct fixes, verbal errata.
 - Locked cross-book rule sets and per-book decision logs.
 - Final, print releases (uploaded IDML/preview/images), teacher distribution, errata with acknowledgement.
@@ -157,6 +177,7 @@ The build session re-checks each line against the live files and reports drift.
 | P18 | Teacher scope: `resolveTeacherScopes(ctx)` and `allowedSubjectCodesForSection` in `server/src/middleware/authz.ts`. Book subject rides `ROUTINE_SUBJECTS`, class rides `ROSTER_CLASS_LEVELS` (D-#405). | `bookTeachersNow(book)` built on these (§7.3). |
 | P19 | The real offline process (owner's local folder, not in the repo) per book: W-R master `.docx` + `.md` + `.pdf` per version; `Memo_vN` (`.md`/`.docx`/`.pdf`); `Feedback_*.pdf` (reviewer's marked PDF); Teacher and Student `.docx`/`.md`/`.pdf` from the final version; a Scholarship Student edition for some Class 5 books; images zip; print zip (IDML package) + preview PDF per print. Master Markdown sizes seen: ~0.36–1.3 MB, 24–54 level-2 chapter headings, up to ~30 image references (`![](media/imageN.png)`); IDML zips up to ~100 MB, preview PDFs up to ~80 MB, master docx with pictures ~12 MB. The W-R master carries its own decision log and version log as paragraphs near the front. | Sizes and caps in §5.13; chapter = level-2 heading by default (§6). |
 | P20 | Memo shape (from a real memo, structure only): header table (to, from, subject, date, attachments); a box "no need to re-read the whole book — only these pages changed"; Part 1 table **page / where / what changed / why** since the version the reviewer saw; then decisions **D-01, D-02 …** each with options and tick boxes. | The generated memo keeps exactly this shape (§10.2). |
+| P21 | Server PDF tools: `pdfkit` (Bangla PDFs already made, e.g. `hr/routes/staffLetterPdf.ts`, fonts in `server/assets/fonts`) and `pdf-lib` (page extraction/merge, e.g. `activity-sheets/services/pdfTools.ts`); `class-books/services/pdfPages.ts` shells out to poppler (`pdftoppm`; poppler-utils is on the VM, so `pdftotext` is too). | The memo PDF is drawn with `pdfkit`; the packet merges/extracts pages with `pdf-lib`; chapter start pages are found with `pdftotext` (§10.4). No new dependency. |
 
 ---
 
@@ -169,16 +190,19 @@ The build session re-checks each line against the live files and reports drift.
                                        │
                                        ▼
           ┌──────────── withdraw ── [draft] ──────────────────────────────┐
-          │                            │ send memo round (manage)          │ direct fix only:
-          │                            ▼                                   │ every change cites a
-          └──────────────────────► [in_review]                             │ direct_fix / verbal_errata
-                                  │            │                           │ item (finalize, stamped
-           reviewer: changes ◄────┘            └────► reviewer: approve    │ reviewSkipped)
-                  │                                        │               │
+          │                            │ print packet made, marked         │ direct fix only:
+          │                            │ "sent on paper" (manage)          │ every change cites a
+          │                            ▼                                   │ direct_fix / verbal_errata
+          └──────────────────────► [in_review]  (out with the reviewer     │ item (finalize, stamped
+                                  │            │   on paper)               │ reviewSkipped; keeps the
+     return recorded: changes ◄───┘            └──► return recorded:       │ approval basis of its
+     (finalize, from the scan)                      approved (finalize,    │ parent)
+                  │                                 from the scan)         │
                   ▼                                        ▼               │
         [changes_requested]                           [approved] ◄─────────┘
         (terminal; the next                                │ mark final (finalize, LOCKED;
-         version is its child)                             │ editions present and fresh)
+         version is its child)                             │ her recorded approval as basis;
+                                                           │ editions present and fresh)
                                                            ▼
                                                         [final]  (চূড়ান্ত)
                                                            │ record a print release (release)
@@ -191,12 +215,12 @@ The build session re-checks each line against the live files and reports drift.
 | From | To | Who | Condition |
 |---|---|---|---|
 | — | `draft` | `manage` | a whole upload, an accepted edit draft (§12), or an import (§4.4) |
-| `draft` | `in_review` | `manage` | a memo round is sent (§10); one open round per book |
-| `in_review` | `draft` | `manage` | the round is withdrawn before the reviewer returns it |
-| `in_review` | `approved` | the round's reviewer (`review`) | every asked item marked; every asked decision ruled |
-| `in_review` | `changes_requested` | the round's reviewer | at least one mark is "disagree"/"modify", or a general note asks for changes |
+| `draft` | `in_review` | `manage` | the round's print packet is made and the round is marked **sent on paper** with a date (§10); one open round per book |
+| `in_review` | `draft` | `manage` | the round is withdrawn before her copy comes back |
+| `in_review` | `approved` | `finalize`, **recording her return** | at least one scan uploaded; every asked item marked; every asked decision ruled; verdict "approved"; stamped `recordedFromPaper` (§10.3) |
+| `in_review` | `changes_requested` | `finalize`, recording her return | at least one scan uploaded; verdict "changes needed" |
 | `draft` | `approved` | `finalize` | **direct-fix path (§4.3)**; stamped `reviewSkipped` |
-| `approved` | `final` | `finalize` (LOCKED, Principal only) | every required edition uploaded and not stale (§11.1); no open `needs_reviewer` item targets this version |
+| `approved` | `final` | `finalize` (LOCKED, Principal only) | **an approval basis exists** (below); every required edition uploaded and not stale (§11.1); no open `needs_reviewer` item targets this version |
 | `final` | `print_released` | `release` | a `BookPrintRelease` with at least the Student print package is recorded (§11.2) |
 
 Rules:
@@ -206,6 +230,11 @@ Rules:
   version**. A version that is not the book's latest can still be read and diffed.
 - Only the **latest** version of a book may be the base of a new edit draft (no branches). A draft whose base is no
   longer latest is `stale` (VR-1).
+- **Final needs the reviewer's recorded approval (owner Q1).** Every `approved` version carries `approvalBasis`:
+  either `{ kind: "round", roundId }` (her approval recorded from the paper copy, scan attached), or
+  `{ kind: "inherited", roundId }` (a direct-fix version, §4.3, inherits the basis of its parent), or
+  `{ kind: "imported" }` (approved offline before the book came into the app, §4.4). A version with no basis cannot be
+  marked final; there is no override.
 
 ### 4.2 Version numbers
 
@@ -222,16 +251,21 @@ Rules:
 - A draft version whose **every** change cites only such items (no `needs_reviewer` item, no instruction marked
   "needs review", no sacred-text change, VR-12) can be moved `draft → approved` by a `finalize` holder. The version is
   stamped `reviewSkipped: { by, at }` and the stamp shows wherever the version shows.
+- **Only the Principal** may do this (`finalize`, LOCKED; owner Q4).
+- The direct-fix version **inherits its parent's approval basis** (§4.1). A parent with no basis (e.g. a draft never
+  approved) gives none, so the direct-fix path can never make a never-approved text final.
 - If the parent was `final` or `print_released`, the child may then be marked `final` the same way (still LOCKED).
-- **Nothing is hidden from the reviewer:** the next memo she receives lists every direct fix since the version she last
-  saw, in Part 1, marked "সরাসরি সংশোধন — জানানোর জন্য" (FYI). She may raise any of them as a new item.
+- **Nothing is hidden from the reviewer (owner Q4):** the next memo she receives lists every direct fix since the
+  version she last saw, in Part 1, marked "সরাসরি সংশোধন — জানানোর জন্য" (FYI). She may raise any of them on her copy.
 
 ### 4.4 Importing a book that already has a history
 
 A book that already exists offline (most books today) is created with:
 - its current version number (e.g. `v7.4`), its master Markdown (+ media zip if the Markdown references pictures),
   the master docx/pdf, its editions, and its print release files if printed;
-- the **state it is in** (`draft`, `approved`, `final` or `print_released`), stamped `imported: { by, at }`;
+- the **state it is in** (`draft`, `approved`, `final` or `print_released`), stamped `imported: { by, at }`; an imported
+  `approved`/`final`/`print_released` version gets `approvalBasis: { kind: "imported" }` (her approval happened
+  offline; the old memos and her marked copies can be attached as history files);
 - `nextMemoNo` and, optionally, the offline history (old memos, feedback PDFs) as **history attachments** (read-only
   files on the book page; not parsed).
 
@@ -258,7 +292,7 @@ per book, taken with an atomic `$inc` on `SchoolBook`.
 | `titleBn`, `titleEn?` | string | |
 | `editions` | `BOOK_EDITIONS[]` | required editions at final: subset of `TEACHER`, `STUDENT`, `SCHOLARSHIP_STUDENT` (the W-R master is always there) |
 | `chapterHeadingLevel` | 1–3, default 2 | §6.2 |
-| `reviewerIds` | ObjectId[] | assigned reviewers (§7.2) |
+| `reviewerName?` | string ≤ 120 | the paper reviewer's name as text (owner Q1: she has no login); default for new rounds |
 | `ruleSetKeys` | string[] | locked rule sets that apply (§5.9) |
 | `latestVersionId`, `finalVersionId?`, `currentReleaseId?` | ObjectId | pointers, updated in the same write as the version/release |
 | `nextMemoNo`, `nextFeedbackNo`, `nextDecisionNo`, `nextErratumNo`, `nextInstructionNo` | number | counters |
@@ -287,7 +321,8 @@ per book, taken with an atomic `$inc` on `SchoolBook`.
 | `files` | `BookVersionFile[]` | §5.2.2 |
 | `reviewSkipped?` | `{ by, at }` | §4.3 |
 | `imported?` | `{ by, at }` | §4.4 |
-| `approvedBy/At?`, `finalBy/At?`, `selfReviewed` | | `selfReviewed` copied from the approving round |
+| `approvalBasis?` | `{ kind: round \| inherited \| imported, roundId? }` | §4.1 — required for `final` |
+| `approvedBy/At?`, `finalBy/At?`, `selfReviewed` | | `approvedBy` = the person who recorded her return (or did the direct-fix approve); `selfReviewed` copied from the approving round |
 | `createdBy`, timestamps | | |
 
 **5.2.1 `BookChange`** (one row of the memo's Part 1): `{ chapterKey, where ≤ 200 (heading path, e.g. "পাঠ ৩ › শিক্ষক-নোট"),
@@ -308,26 +343,29 @@ are shared, so a new version costs only its changed chapters. Never deleted whil
 `{ bookId, sha256, originalName, mime (png | jpeg | webp | svg), bytes, storedFileId }`, unique `(bookId, sha256)`.
 Pictures referenced by the master. Same picture across versions = one asset.
 
-### 5.5 `BookMemoRound` (a review round; the memo is its letter)
+### 5.5 `BookMemoRound` (a review round on paper; the memo is its letter) — revised for owner Q1
 
 | Field | Notes |
 |---|---|
 | `bookId`, `memoNo` | unique `(bookId, memoNo)` |
 | `versionId` | the version sent |
-| `baseVersionId?` | the last version **this reviewer** reviewed (for her diff and Part 1); null on her first round |
-| `reviewerId`, `assignedBy`, `selfReviewed` | `selfReviewed` = reviewer is the assigner or holds `finalize` and reviews own book (D-#424 stamp, no wall) |
-| `status` | `draft \| sent \| returned \| withdrawn` |
-| `memo` | `{ markdown, generatedAt, changeHash, editedBy? }` — frozen at send |
+| `baseVersionId?` | the last version she reviewed in a **returned** round of this book (for Part 1 and the changed-chapter list); null on the first round |
+| `reviewerName` | text ≤ 120 (no user id; she has no login). Copied from `SchoolBook.reviewerName`, editable per round |
+| `assignedBy`, `selfReviewed` | `selfReviewed` = the Principal reviews his own book (reviewerName is his; D-#424 stamp, no wall) |
+| `status` | `draft \| packet_ready \| sent_on_paper \| returned \| withdrawn` |
+| `memo` | `{ markdown, generatedAt, changeHash, editedBy? }` — frozen when the packet is made |
 | `feedbackIds`, `decisionIds` | what she is asked |
-| `attachments` | `storedFileId[]` (W-R pdf/docx sent with the memo) |
-| `sentAt`, `dueBy?`, `returnedAt?` | |
-| `verdict?` | `approve \| changes` |
-| `reviewerNoteBn?` | ≤ 5,000 |
-| `itemMarks` | `{ feedbackId, verdict: agree \| disagree \| modify, noteBn? }[]` |
-| `decisionMarks` | `{ decisionId, optionKey?, noteBn? }[]` |
-| `returnedFiles` | `storedFileId[]` — her marked PDFs (kind `book_lc_feedback`) |
+| `packet` | `{ scope: whole \| changed, memoPdfFileId, bookPdfFileId, sourcePdfFileId, sourcePdfMasterHash, pageMap: { chapterKey, startPage, confirmed }[], pageCount, generatedAt, generatedBy }` (§10.4) |
+| `sentOnPaperAt?`, `sentBy?`, `dueBy?` | the date it went out on paper |
+| `returnedAt?` | the date her copy came back (typed; may be before the recording date) |
+| `scanFileIds` | `storedFileId[]` — scans of her marked copy (kind `book_lc_feedback`); **≥ 1 required to record a return** |
+| `recordedBy?`, `recordedAt?`, `recordedFromPaper` | who entered her return in the app and when; `recordedFromPaper: true` on every returned round |
+| `verdict?` | `approve \| changes` — her overall verdict as written on the paper |
+| `reviewerNoteBn?` | ≤ 5,000 — her general note, transcribed |
+| `itemMarks` | `{ feedbackId, verdict: agree \| disagree \| modify, noteBn?, scanFileId?, scanPage?, checkedAgainstScan?: { by, at } }[]` |
+| `decisionMarks` | `{ decisionId, optionKey?, noteBn?, scanFileId?, scanPage?, checkedAgainstScan?: { by, at } }[]` |
 
-One open (`draft` or `sent`) round per book.
+One open (`draft`, `packet_ready` or `sent_on_paper`) round per book.
 
 ### 5.6 `BookFeedback` (one inbox for every source)
 
@@ -337,8 +375,9 @@ One open (`draft` or `sent`) round per book.
 | `versionId` | the version the reporter saw |
 | `releaseId?` | the print release, for in-use reports |
 | `source` | `reviewer \| teacher \| school \| print_error \| proof_read` |
-| `reporterId?` | bare user id (the Principal sees the name; the reviewer sees "শিক্ষক" for a teacher report) |
-| `roundId?` | when raised inside a round |
+| `reporterId?` | bare user id (the Principal sees the name; the memo prints "শিক্ষকের মতামত" for a teacher report); null for the paper reviewer |
+| `roundId?` | when raised inside a round (her points from the returned copy) |
+| `evidence?` | for `source: reviewer`: `{ scanFileId, scanPage?, recordedBy, recordedAt, via: hand \| mcp \| bundle, checkedAgainstScan?: { by, at } }` — the scan stays attached to the item for its whole life |
 | `anchor` | `{ chapterKey?, where? ≤ 200, quote? ≤ 500, page? ≤ 20, edition? }` |
 | `category` | `spelling \| grammar \| fact \| sacred_text \| picture \| layout \| instruction \| exercise \| other` |
 | `textBn` | ≤ 2,000 |
@@ -346,7 +385,7 @@ One open (`draft` or `sent`) round per book.
 | `route?` | `needs_reviewer \| direct_fix \| verbal_errata` (null until triaged) |
 | `status` | `open \| with_reviewer \| accepted \| applied \| rejected \| duplicate` |
 | `duplicateOf?`, `decisionId?`, `erratumId?` | links |
-| `reviewerRuling?` | `{ verdict, noteBn?, by, at }` copied from the round marks |
+| `reviewerRuling?` | `{ verdict, noteBn?, recordedBy, at, roundId }` copied from the round marks (her ruling, entered on her behalf) |
 | `rejectReasonBn?` | shown to the reporter |
 | `appliedInVersionId?` | set when an accepted draft's change cites it |
 | `history` | `{ action, by, at, note? }[]` |
@@ -417,10 +456,11 @@ New `StoredFile` kinds, each with a read gate in `GET /files/:id` (`assertBookLc
 
 | Kind | What | Cap | Who may read |
 |---|---|---|---|
-| `book_lc_master` | master `.md` / `.docx` / `.pdf` | md 5 MB, docx 40 MB, pdf 100 MB | `view`; the round's reviewer for the version sent |
+| `book_lc_master` | master `.md` / `.docx` / `.pdf` | md 5 MB, docx 40 MB, pdf 100 MB | `view` |
 | `book_lc_edition` | Teacher / Student / Scholarship `.docx` / `.pdf` / `.md` | same | `view`; Teacher edition also scoped teachers (§7.3) of a released version |
-| `book_lc_media` | pictures | 15 MB each; media zip 200 MB | `view`; reviewer of a round |
-| `book_lc_feedback` | marked PDFs, page photos | 50 MB / 5 MB | `view`; the reporter |
+| `book_lc_media` | pictures | 15 MB each; media zip 200 MB | `view` |
+| `book_lc_packet` | the round's memo PDF and packet book PDF (§10.4) | 150 MB | `view` |
+| `book_lc_feedback` | scans of the reviewer's marked copy, teachers' page photos | 100 MB per scan / 5 MB per photo | `view`; a teacher's own photo to its reporter |
 | `book_lc_print` | IDML zip, preview/print PDF, images zip, pageplan/checks JSON | 250 MB | `view`, `release` |
 | `book_lc_history` | offline history attachments | 50 MB | `view` |
 
@@ -433,11 +473,11 @@ whole-file memory buffer (the build session checks the existing upload route and
 
 Add `flow: "LESSON_JSON" | "LIFECYCLE"` (absent = lesson JSON, so old rows stay valid) and refs `versionId`,
 `roundId`, `feedbackId`, `decisionId`, `releaseId`, `erratumId`, `draftId`, `jobId`. New kinds (lifecycle):
-`BOOK_LC_CREATED, VERSION_CREATED, VERSION_STATUS, FILE_UPLOADED, ROUND_SENT, ROUND_RETURNED, ROUND_WITHDRAWN,
-FEEDBACK_FILED, FEEDBACK_TRIAGED, FEEDBACK_RULED, DECISION_OPENED, DECISION_RULED, RULESET_ACTIVATED,
+`BOOK_LC_CREATED, VERSION_CREATED, VERSION_STATUS, FILE_UPLOADED, PACKET_MADE, ROUND_SENT_ON_PAPER,
+ROUND_RETURN_RECORDED, ROUND_WITHDRAWN, SCAN_CHECKED, FEEDBACK_FILED, FEEDBACK_TRIAGED, FEEDBACK_RULED, DECISION_OPENED, DECISION_RULED, RULESET_ACTIVATED,
 DRAFT_OPENED, DRAFT_CHAPTER, DRAFT_SUBMITTED, DRAFT_ACCEPTED, DRAFT_REJECTED, JOB_STARTED, JOB_FINISHED,
 RELEASE_RECORDED, RELEASE_STATUS, ERRATUM_ANNOUNCED, ERRATUM_ACK, CONTENT_READ, BUNDLE_DOWNLOADED`.
-`CONTENT_READ` is written once per (user, version, surface: app | mcp | bundle | reviewer) per Dhaka day.
+`CONTENT_READ` is written once per (user, version, surface: app | mcp | bundle | packet) per Dhaka day.
 
 ---
 
@@ -496,33 +536,36 @@ Bangla names follow the owner's words; the build confirms wording.
 | Action | bn | teacher | office | flags | Meaning |
 |---|---|---|---|---|---|
 | `view` | বই ও সংস্করণ দেখা | false | false | — | Books, versions, master text and files, rounds, feedback, decisions, rule sets, releases, errata, timeline. |
-| `manage` | বই ও সংস্করণ সামলানো | false | false | — | Create/import a book, upload a version, assign reviewers, open/send/withdraw a round, triage feedback, open decisions, upload rule sets, draft errata, open edit drafts (bundle / upload), accept a draft into a **draft** version. |
-| `review` | বই পর্যালোচনা করা | false | false | designation `assigned_reviewer` | Rounds of books she is assigned to only: read the memo + version + diff, mark items, rule decisions, upload marked PDFs, approve / ask for changes. |
-| `finalize` | চূড়ান্ত ঘোষণা | false | false | **LOCKED** | Direct-fix approval (§4.3), mark final, announce errata. Principal only, never switchable. |
+| `manage` | বই ও সংস্করণ সামলানো | false | false | — | Create/import a book, upload a version, set the reviewer's name, build a round and its print packet, mark it sent on paper, withdraw it, upload the returned scans and transcribe her points as feedback items, tick "checked against scan", triage feedback, open decisions, upload rule sets, draft errata, open edit drafts (bundle / upload), accept a draft into a **draft** version. |
+| `finalize` | চূড়ান্ত ঘোষণা | false | false | **LOCKED** | **Record the reviewer's verdict and rulings from the paper copy** (§10.3), direct-fix approval (§4.3), mark final, announce errata. Principal only, never switchable. |
 | `release` | ছাপা ও বিতরণ | false | false | — | Record a print release, upload print files, mark sent to press / printed, tell teachers, publish the Student PDF to class books (when the book's switch is on). Grantable to Office for press logistics; it cannot finalize. |
 | `ai_edit` | এআই দিয়ে সংশোধন | false | false | PRINCIPAL_DEFAULT | Start an AI edit job (Path A); its spend is capped (§14.5). |
 | `teacher_view` | আমার শ্রেণির বই ও ভুল-সংশোধনী | false (on at switch-on) | false | — | For books of the class + subject the person teaches now (§7.3): the released Teacher edition, the errata list, acknowledge an erratum. |
 | `report` | বইয়ের ভুল জানানো | false (on at switch-on) | false | — | File a feedback item on such a book; see own reports and their outcome. |
 
 - PRINCIPAL holds every action implicitly. `finalize` joins the verifier's pinned LOCKED list.
-- **Office cannot approve**: `finalize` is LOCKED; `review` is additionally refused to an OFFICE-role login by a role
-  check in the service (a reviewer is a teacher-role or Principal login), so a mistaken grant cannot make Office approve.
+- **Office cannot approve**: recording her verdict and rulings, the direct-fix approve and mark final are all
+  `finalize`, which is LOCKED (Principal only). Office may hold `manage` (packets, scans, transcription) or `release`
+  by grant; neither can approve. (Revision 2: the `review` action, its assigned-reviewer designation and its OFFICE role
+  check are removed — there is no reviewer login, owner Q1.)
 - **Switch-on** is the role editor (Access control → TEACHER template: `teacher_view`, `report` on). No code change.
 - Path B MCP tools: the `/mcp` token already requires `ai_workspace:admin` (Principal); each book tool **also** checks
   its book action (§15.1), so a later opening of `/mcp` to other people cannot widen book access.
 - The old `book_production` feature and its legacy `book:*` mapping are unchanged.
 
-### 7.2 Reviewer scope
-- `SchoolBook.reviewerIds` lists who may review that book (`manage` assigns). A round's `reviewerId` must be in it.
-- A reviewer sees **only** her assigned books, and inside them only: rounds sent to her (memo, version sent, base
-  version, the diff between them, the items and decisions asked), the version files attached to those rounds, and her
-  own marks. She does not see the triage inbox, teacher names, other rounds' marks, AI jobs or the timeline.
-- Principal as reviewer: allowed; `selfReviewed: true` stamped on the round and copied to the version (D-#424).
+### 7.2 The reviewer has no login (owner Q1)
+- She reviews on paper. The app knows her only as `reviewerName` (text) on the book and on each round. No account, no
+  screen, no notification, no file access for her.
+- Everything she says enters the app through a person: the scans (`manage`), her points as feedback items (`manage`,
+  by hand or with Claude), her rulings and verdict (`finalize`), each stamped `recordedBy` + `recordedFromPaper`, with
+  the scan attached.
+- Principal as reviewer (no outside reviewer for a book): allowed; the round is stamped `selfReviewed: true` and the
+  stamp is copied to the version (D-#424).
 
 ### 7.3 Teacher scope — `bookTeachersNow(book, todayKey)`
 - A teacher is a reader of a book when, today, her routine scope (`resolveTeacherScopes`) includes a section of
   `book.classLevel` **and** the book's subject (`allowedSubjectCodesForSection`), or she is the **class teacher** of a
-  section at that level (Q5).
+  section at that level (owner Q5, answered 13 Nov as recommended).
 - Readers get only **released** content: the Teacher edition of the current release, the errata of that release, and
   their own reports. Never drafts, memos, rounds, reviewer marks, other teachers' reports or the master.
 - The same function picks the recipients of errata and release notices (§16).
@@ -532,9 +575,8 @@ Bangla names follow the owner's words; the build confirms wording.
 | Surface | Gate |
 |---|---|
 | Book list, book page, versions, master text, diff, timeline | `view` |
-| Create/import, upload version, assign, rounds, triage, decisions, rule sets, errata drafts, bundle, accept draft | `manage` |
-| Reviewer inbox + round page | `review` + assigned + round's reviewer; OFFICE login refused |
-| Direct-fix approve, mark final, announce errata | `finalize` |
+| Create/import, upload version, rounds, print packet, sent on paper, withdraw, scans, transcribe her points, scan check, triage, decisions, rule sets, errata drafts, bundle, accept draft | `manage` |
+| Record her verdict and decision rulings (return recorded), direct-fix approve, mark final, announce errata | `finalize` |
 | Print release + files + statuses + teacher notice + class-books publish | `release` (+ book switch for publish) |
 | AI edit job | `ai_edit` + `manage` + AI feature `book_edit` on |
 | আমার বই, errata ack | `teacher_view` + `bookTeachersNow` |
@@ -549,12 +591,12 @@ Bangla names follow the owner's words; the build confirms wording.
 | # | Screen | Who | What |
 |---|---|---|---|
 | S1 | **বই ও সংস্করণ** (book list) | `view` | Rows: code, Bangla title, class, subject, latest version + status chip, open feedback, open round, current release, AI job badge. Filters: class, subject, status. Button **নতুন বই / পুরোনো বই আনুন** (`manage`). Footer link **পুরোনো JSON-সহায়িকা (আর্কাইভ)** for holders of a `book_production` action (§17). |
-| S2 | **বই** (book page) | `view` | Header (title, class, subject, editions, reviewers). Tabs: **সংস্করণ** (version timeline with stamps: reviewSkipped, selfReviewed, imported), **মতামত** (feedback counts → S5), **পর্যালোচনা** (rounds), **সিদ্ধান্ত** (decision log + linked rule sets), **ছাপা** (releases → S6), **ইতিহাস** (BookEvent timeline). Actions per permission. |
+| S2 | **বই** (book page) | `view` | Header (title, class, subject, editions, reviewer's name). Tabs: **সংস্করণ** (version timeline with stamps: reviewSkipped, selfReviewed, imported), **মতামত** (feedback counts → S5), **পর্যালোচনা** (rounds), **সিদ্ধান্ত** (decision log + linked rule sets), **ছাপা** (releases → S6), **ইতিহাস** (BookEvent timeline). Actions per permission. |
 | S3 | **সংস্করণ** (version page) | `view` | Status + actions (send for review, approve without review, mark final, record print). Files (master md/docx/pdf, editions with "পুরোনো" stale flags). Change list (where / what / why / refs). Reader: chapter list → rendered chapter (markdown-it, pictures through `/files`), **তুলনা** (diff) against any other version, chapter by chapter, word-level. Download master `.md` (audited). Upload editions/renders (`manage`). |
-| S4 | **স্মারক / পর্যালোচনা রাউন্ড** (round page) | `manage` | Pick reviewer, generated memo (§10.2) with an editable "অতিরিক্ত কথা" part, attach files, due date, **পাঠান**. After return: her verdict, marks per item and decision, her note, her marked PDFs, a **মতামত হিসেবে তুলুন** helper (one form row per point she marked on paper → `BookFeedback` with `source: reviewer`). |
+| S4 | **স্মারক ও ছাপার প্যাকেট** (round + print packet) | `manage` | Reviewer's name (text), items and decisions to ask, generated memo (§10.2) with an editable "অতিরিক্ত কথা" part, due date. **প্যাকেট তৈরি** (§10.4): scope **পুরো বই / শুধু বদলানো অধ্যায়**, the source PDF (the version's fresh master PDF), the detected chapter start pages to confirm or correct, then the packet: memo PDF + book PDF to download and print. **কাগজে পাঠানো হয়েছে** with the date. Withdraw. |
+| S7 | **ফেরত কপি লিপিবদ্ধ** (record the returned paper copy) — replaces the old reviewer inbox | `manage` (scans, points) + `finalize` (verdict, rulings) | Opens on a round that is `sent_on_paper`. (1) **স্ক্যান তুলুন** (≥ 1 PDF/photo; required) + the date it came back. (2) Scan viewer beside the form. (3) Per item asked: **একমত / একমত নই / বদলে…** + note + the scan page it is on. (4) Per decision: the option she ticked + note + scan page. (5) **নতুন মতামত**: one row per new point she wrote (chapter, page, quote, text, category, scan page) → `BookFeedback` (`source: reviewer`); or **Claude দিয়ে তোলা** — shows the MCP / bundle route (§15) and lists items Claude added for this round. (6) Her general note. (7) Per row a **স্ক্যানের সাথে মিলিয়েছি** tick (who/when). (8) Her overall verdict **অনুমোদিত / পরিবর্তন দরকার** → **লিপিবদ্ধ করুন** (`finalize`). Everything is stamped "কাগজের কপি থেকে লেখা — <name>, <date>". The page shows how many rows are not yet checked against the scan. |
 | S5 | **মতামত বাছাই** (feedback triage) | `manage` | Inbox: source, code, chapter/page, quote, text, reporter (Principal sees names), age. Buttons per item: **পর্যালোচকের কাছে**, **সরাসরি সংশোধন**, **মুখে জানানো (ভুল-সংশোধনী)**, **বাতিল** (reason → reporter sees it), **একই** (duplicate of …), **সিদ্ধান্তে নিন** (open a decision). Bulk triage. Filters: source, status, route, chapter, release. |
 | S6 | **ছাপা ও ভুল-সংশোধনী** (release + errata) | `release` / `finalize` | Record a release from a final version: label, files per edition, press, statuses with dates, **শিক্ষকদের জানান** (notice). Errata list for the current release: drafts (from verbal-errata items), **ঘোষণা** (`finalize`), per-erratum acknowledgement count ("১২ জনের ৯ জন ঠিক করেছেন") with names. |
-| S7 | **পর্যালোচনা** (reviewer inbox) | `review` | Her rounds, newest first, with due dates. Round view: memo (as sent); **যা বদলেছে** — changed chapters with the diff against her base version, plus "পুরো বই পড়ুন" (whole version reader); per item **একমত / একমত নই / বদলে…** + note; per decision the options as radio buttons + note; general note; upload marked PDF(s); **অনুমোদন** or **পরিবর্তন দরকার**. Download the attached PDF/docx. |
 | S8 | **আমার বই** (teacher) | `teacher_view` | Books of my classes/subjects: current release, **শিক্ষক সংস্করণ খুলুন** (PDF, Q8), **ভুল-সংশোধনী** list (page, wrong → correct, instruction) with **ঠিক করেছি** per erratum, **ভুল জানান** → S9, **আমার পাঠানো** (my reports with status and the Principal's answer). |
 | S9 | **ভুল জানান** (report form) | `report` | Book (pre-filled from my books), edition (Student / Teacher), page, "বইয়ে যা লেখা" (quote), "কী ভুল / কী হওয়া উচিত", category chips, optional photo of the page. A fixed note: "শিক্ষার্থীর নাম লিখবেন না।" Target: under 1 minute. |
 | S10 | **এআই সংশোধন** (AI edit job) | `ai_edit` | Base = latest version. Pick feedback items (accepted / with ruling; open allowed with a warning), add instructions (I-n, "পর্যালোচকের দেখা দরকার" tick, default on), chapter scope (auto = chapters the items anchor + "সব অধ্যায়" for a global instruction), model picker (`WORKSPACE_MODELS`), the estimate and cap, **শুরু করুন**. Then per-chapter progress, cost, failures, **খসড়া দেখুন** → S11. |
@@ -562,8 +604,8 @@ Bangla names follow the owner's words; the build confirms wording.
 | S12 | **বান্ডেল** (download / upload) | `manage` | **বান্ডেল নামান**: pick items + instructions (+ "ছবিও দিন" tick) → zip (§15.4). **ফলাফল তুলুন**: a `book-edit-result/v1` JSON, or a whole `master.md` + `changes.json`, or a whole new version upload (docx-exported md) → a draft → S11. |
 | S13 | **নিয়ম-সংকলন** (rule sets) | `view` / `manage` | List, versions, upload new version, which books. |
 
-Help guides (D-#973, `server/assets/help/guides/*.json`): `book-lifecycle-overview` (Principal), `book-review-round`
-(reviewer), `book-teacher-errata` and `book-teacher-report` (teachers), `book-ai-edit`, `book-claude-edit` (MCP +
+Help guides (D-#973, `server/assets/help/guides/*.json`): `book-lifecycle-overview` (Principal), `book-paper-review`
+(Principal: packet, sent on paper, recording the returned copy), `book-teacher-errata` and `book-teacher-report` (teachers), `book-ai-edit`, `book-claude-edit` (MCP +
 bundle), `book-print-release`. Drafts without pictures are fine; the help verifier must pass.
 
 ---
@@ -573,15 +615,15 @@ bundle), `book-print-release`. Drafts without pictures are fine; the help verifi
 ### 9.1 Sources
 | Source | How it arrives |
 |---|---|
-| `reviewer` | Marks in a round (S7) — each "disagree"/"modify" and each point in her general note that the Principal splits out; points marked on her PDF, transcribed in S4 or by Claude via `add_feedback_items` (§15). |
+| `reviewer` | Her returned paper copy, recorded in S7: her mark on each item asked, and each new point she wrote on the pages or in her note — typed by a `manage` holder, or read from the scan by Claude via `add_feedback_items` / a `book-feedback-items/v1` upload (§15). Every such item carries the scan as `evidence` and a "checked against scan" tick. |
 | `teacher` | S9, from a teacher in scope (§7.3). |
 | `school` | The Principal or a `manage` holder, from S5 ("নতুন মতামত"). |
 | `print_error` | Found at the press or in printed copies (S5, linked to the release). |
 | `proof_read` | The independent proof-read of a print package (S5 or `add_feedback_items`). |
 
 ### 9.2 Triage (S5; `manage`)
-- **needs_reviewer** → status `with_reviewer`; the item is offered in the next memo; her mark decides (`agree`/`modify`
-  → `accepted`, `disagree` → `rejected` with her note).
+- **needs_reviewer** → status `with_reviewer`; the item is printed in the next memo; her mark on paper, recorded in S7,
+  decides (`agree`/`modify` → `accepted`, `disagree` → `rejected` with her note).
 - **direct_fix** → `accepted`; can be applied without a round (§4.3).
 - **verbal_errata** → `accepted` + an **erratum draft** on the current release (§9.4); the fix goes into the master in
   the next version.
@@ -591,8 +633,9 @@ bundle), `book-print-release`. Drafts without pictures are fine; the help verifi
 - The reporter is notified when her item is answered (accepted, rejected, applied in vX.Y).
 
 ### 9.3 What the reviewer sees of in-use feedback
-Teacher items reach her only through a memo, without the teacher's name ("শিক্ষকের মতামত"). The Principal may edit the
-wording before sending (the item keeps the original; the memo shows the edited text, flagged "সম্পাদিত").
+Teacher items reach her only on paper, in a printed memo, without the teacher's name ("শিক্ষকের মতামত"). The Principal
+may edit the wording before the packet is made (the item keeps the original; the memo shows the edited text, flagged
+"সম্পাদিত").
 
 ### 9.4 Verbal errata (owner: "we instruct teachers verbally; they change their and the students' books by hand")
 1. Triage an item `verbal_errata` → erratum draft on the **current release**: page, edition(s), wrong → correct, a short
@@ -616,14 +659,16 @@ whole school, fail-closed **per item** (D-#1606): an item where a roster name re
 
 ---
 
-## 10. Review rounds and the memo
+## 10. Review rounds on paper and the memo (revised for owner Q1)
 
-### 10.1 Sending a round (S4, `manage`)
+### 10.1 Building and sending a round (S4, `manage`)
 - Version must be `draft` and the book's latest; no other open round.
-- Reviewer from `reviewerIds`. `baseVersionId` = the newest version this reviewer returned a round on (null if none).
+- `reviewerName` from the book (editable). `baseVersionId` = the newest version of this book whose round was
+  **returned** (null if none).
 - Items offered: every `with_reviewer` item (oldest first), plus the open decisions; the person can untick any.
-- Attachments: by default the version's master PDF (if uploaded); the person can add the docx or any file.
-- **Send** freezes the memo, moves the version to `in_review`, notifies the reviewer (§16).
+- **প্যাকেট তৈরি** freezes the memo and makes the print packet (§10.4); round → `packet_ready`.
+- **কাগজে পাঠানো হয়েছে** (with the date) → round `sent_on_paper`, version `in_review`. Nobody is notified: she has no
+  login (owner Q1).
 
 ### 10.2 The generated memo (Markdown; Bangla; the offline memo's shape, P20)
 ```
@@ -639,16 +684,51 @@ whole school, fail-closed **per item** (D-#1606): an item where a roster name re
 ```
 - The memo text is built **only** from records (versions' change lists, items, decisions). Generation is deterministic
   (`bookMemoMarkdown(round)`), testable byte for byte. The Principal may edit part 4 and the wording of rows before
-  sending; edits are kept on the round.
-- Rendered in-app (S7) and downloadable as `.md`; a printable HTML view (browser print to PDF). A `.docx` memo is not
-  built in v1 (Q16).
+  the packet is made; edits are kept on the round.
+- **The page column is filled from the packet's page map** (§10.4), so every page number in the memo is a page of the
+  paper she holds. Every row also prints its **code** (F-12, D-03) and a short **quote** of the changed text, so she can
+  find the exact line and so her marks map back to records when the copy returns.
+- Shown in-app (S4) and downloadable as `.md`; printed as the **memo PDF** of the packet. A `.docx` memo is not built
+  in v1 (Q16).
 
-### 10.3 The reviewer's return (S7)
-- Marks every offered item and rules every offered decision (or leaves a decision "পরে" — then the verdict can only be
-  `changes`). Her new points become `BookFeedback` (`source: reviewer`, `roundId`) when she types them in the "নতুন
-  মতামত" list on S7; points marked only on her PDF are transcribed by the Principal (S4) or by Claude (§15).
-- **Approve** → version `approved`, items `accepted`, decisions `ruled`. **Changes** → version `changes_requested`.
-- The round is `returned`; the Principal is notified.
+### 10.3 Recording the returned paper copy (S7)
+- Allowed only on a round in `sent_on_paper`. **At least one scan** must be uploaded first (kind `book_lc_feedback`);
+  the return date is typed.
+- A `manage` holder records, from the scan: her mark on every offered item, the option she ticked on every offered
+  decision (or "পরে" — not ruled), her general note, and each new point she wrote as a `BookFeedback`
+  (`source: reviewer`, `roundId`, `evidence: { scanFileId, scanPage, via }`). Claude may do the transcription through
+  MCP `add_feedback_items` or a `book-feedback-items/v1` upload (§15); those rows arrive with `via: mcp | bundle` and
+  still need the person's check.
+- **Check against the scan:** every transcribed row has a **স্ক্যানের সাথে মিলিয়েছি** tick (who, when). Recording the
+  verdict is refused while any row of the round is unticked ("৩টি সারি স্ক্যানের সাথে মেলানো হয়নি").
+- **Her verdict** is recorded by a `finalize` holder (Principal) on her behalf: **অনুমোদিত** → version `approved`
+  (`approvalBasis: { kind: round }`), items `accepted`/`rejected` per mark, decisions `ruled` (ruling `by` = her name as
+  text, `recordedBy` = the Principal); **পরিবর্তন দরকার** → version `changes_requested`. An "approved" with a
+  decision left "পরে" is refused.
+- The round becomes `returned` with `recordedBy`, `recordedAt`, `recordedFromPaper: true`; the stamp "কাগজের কপি থেকে
+  লেখা" and a link to the scan show on the round, on the version and on every item and ruling it produced.
+- A recorded return can be corrected only by a `finalize` holder while the version is still `approved` and not
+  final: the change is a new entry in the round's history (old values kept), never an overwrite.
+
+### 10.4 The print packet (NORMATIVE)
+- **Source PDF:** the version's uploaded master PDF (`master_pdf`), which must be fresh (`fromMasterHash ==
+  masterHash`); without one the packet is refused ("এই সংস্করণের PDF নেই — আগে তুলুন"). The PDF is made locally from
+  the same master as today.
+- **Page map:** the server runs `pdftotext -layout` page by page and finds each chapter's start page by its heading
+  text (NFC, whitespace-folded). The person confirms or corrects each start page in S4 (`confirmed: true`). A chapter
+  not found must be set by hand. The map is stored on the round.
+- **Book PDF:** scope **পুরো বই** = the source PDF as is; scope **শুধু বদলানো অধ্যায়** = with `pdf-lib`, the page
+  ranges of every chapter that changed since `baseVersionId` (plus `front` if it changed), in book order, **keeping the
+  original page numbers printed on the pages** (pages are copied, never renumbered), each range preceded by a small
+  divider page "অধ্যায় … — পৃষ্ঠা ৩৫–৪২".
+- **Memo PDF:** the memo Markdown drawn with `pdfkit` and the Bangla fonts already used for staff letters (P21):
+  header table, the "no need to re-read" box listing changed chapters with their page ranges, Part 1 rows with page,
+  where, quote, what, why, code; Part 2 items with codes and an empty answer box each; Part 3 decisions with ☐ boxes;
+  Part 4 notes; a last page "আপনার সামগ্রিক মত: ☐ অনুমোদিত ☐ পরিবর্তন দরকার — স্বাক্ষর ও তারিখ".
+- Header/footer on every memo page: book code, version, memo number, page x of y. Both PDFs are stored (kind
+  `book_lc_packet`) and downloadable; the packet never changes after the round is sent.
+- Line references: the memo gives page + a short quote per row. Line numbers are printed only if the source PDF already
+  carries them (the local tool's option); the app does not add line numbers to a PDF in v1.
 
 ---
 
@@ -660,7 +740,8 @@ whole school, fail-closed **per item** (D-#1606): an item where a roster name re
   §15.3). Each upload records `fromMasterHash = version.masterHash`.
 - At version creation, the parent's edition files are **carried** with their old `fromMasterHash`, so they show as
   **পুরোনো (stale)** until re-uploaded. **Mark final is refused while any required edition is missing or stale**
-  ("শিক্ষক সংস্করণ পুরোনো — নতুন করে তুলুন").
+  ("শিক্ষক সংস্করণ পুরোনো — নতুন করে তুলুন"), and while the version has **no approval basis** — her approval recorded
+  from the paper copy, inherited through direct fixes, or imported (§4.1; "পর্যালোচকের অনুমোদন লিপিবদ্ধ হয়নি").
 - Scholarship Student is required only for books whose `editions` include it.
 
 ### 11.2 Print release (S6, `release`)
@@ -747,7 +828,7 @@ Messages are Bangla, one line each, with the chapter key and the op number (code
 
 ### 12.4 Diff
 - `shared/bookDiff.ts`: line diff (Myers) per chapter, then word diff inside changed lines (Bangla word boundaries =
-  whitespace and punctuation). Pure, unit-tested, shared by server (VR-7, memo) and app (S3, S7, S11).
+  whitespace and punctuation). Pure, unit-tested, shared by server (VR-7, memo) and app (S3, S11).
 
 ---
 
@@ -850,7 +931,9 @@ message. Every call is logged in `AiMcpCall` (as today) and every content read /
 | `edit_chapter` | `draft_id`, `chapter_key`, `edit` (`book-chapter-edit/v1` object) | `{ applied_ops, findings[], new_sha, status }` | `manage` | ≤ 300 ops; body ≤ 4 MB |
 | `put_chapter` | `draft_id`, `chapter_key`, `markdown`, `changes[]` (`book-change-list/v1`) | `{ findings[], unexplained_hunks, new_sha }` | `manage` | ≤ 150,000 chars |
 | `submit_book_version` | `draft_id`, `summary_bn`, `bump`: `minor \| major` | `{ validator: { blocking[], warnings[] }, status: "ready" \| "refused", app_link }` — **does not create the version**; a person accepts in S11 | `manage` | — |
-| `add_feedback_items` | `book`, `version`, `source`: `reviewer \| school \| proof_read \| print_error`, `round_id?`, `items[]: { chapter_key?, where?, page?, quote?, category, text_bn }` | `[{ code }]` (status `open`) | `manage` | ≤ 100 per call |
+| `add_feedback_items` | `book`, `version`, `source`: `reviewer \| school \| proof_read \| print_error`, `round_id?` (required for `reviewer`; the round must be `sent_on_paper` and hold ≥ 1 scan), `scan_file_id?` (required for `reviewer`), `items[]: { chapter_key?, where?, page?, quote?, category, text_bn, scan_page? }`, `item_marks?[]: { feedback_code, verdict, note_bn?, scan_page? }`, `decision_marks?[]: { decision_code, option_key?, note_bn?, scan_page? }` | `[{ code }]` (status `open`); marks stored on the round as **unchecked** proposals (`via: mcp`) — never the verdict | `manage` | ≤ 100 per call |
+| `list_round_scans` | `book`, `round_id` | the round's memo (Markdown), page map, items/decisions asked with codes, and the scans as `{ file_id, name, pages }` | `view` | — |
+| `get_scan_page` | `file_id`, `page` | the scan page as an image content block (PNG/JPEG ≤ 2,000 px long side), so Claude can read her handwriting | `view` | one page per call; 300 calls/day |
 | `propose_decision` | `book`, `question_bn`, `options[]`, `recommended_key?` | `{ code }` (status `open`, offered in the next memo) | `manage` | 2–6 options |
 | `request_upload_url` | `target`: `{ version }` or `{ draft_id }`, `role`: `master_docx \| master_pdf \| edition \| media \| media_zip`, `edition?`, `file_name`, `bytes` | `{ url, expires_at }` — single use, 10 minutes, bound to user + target + role + size; `curl -F file=@… <url>` from Claude Code | `manage` | caps of §5.13 |
 
@@ -866,8 +949,11 @@ SCD Hub books (the school's own books). The Hub holds the master copy.
 ```
 
 ### 15.2 What Claude can do end to end (journeys)
-- **Claude Desktop, reviewer's PDF arrived:** read the marked PDF the Principal drops into the chat →
-  `add_feedback_items(source: reviewer, round_id)` → the Principal triages in S5.
+- **The reviewer's marked paper copy came back (owner Q1):** the Principal uploads the scan in S7. Claude Desktop reads
+  the scan he drops into the chat (or Claude Code reads it with `list_round_scans` + `get_scan_page`) and the round's
+  memo → `add_feedback_items(source: reviewer, round_id, scan_file_id, items, item_marks, decision_marks)` → the rows
+  appear in S7 as **unchecked**; the Principal ticks each against the scan, then records her verdict himself. Claude
+  never records the verdict.
 - **Claude Code, next version:** `get_book_version(outline, feedback, method, rules, decisions)` → `start_book_edit`
   → `edit_chapter` per chapter → `submit_book_version` → the Principal accepts in S11 → version vX.Y+1 (draft).
 - **Claude Code, editions after approval:** build the Teacher/Student docx locally (as today) →
@@ -897,6 +983,11 @@ book-bundle_<CODE>_v7.4_<nonce>.zip
   or another method version is refused (VR-1/VR-2).
 - The zip is built in memory and streamed; the server keeps the nonce, the base hash and the list of items, not the
   zip. `BUNDLE_DOWNLOADED` in `BookEvent` + a main `Audit` row (content leaves the server).
+- **Return-transcription pack (owner Q1; chats without MCP):** on S7, **ট্রান্সক্রিপশন প্যাক নামান** gives a zip with
+  the round's memo, its codes, the page map, the scans, and `OUTPUT.md` describing `book-feedback-items/v1`
+  (`{ schema, round: "<round id>", nonce, items[], item_marks[], decision_marks[] }`, same fields as
+  `add_feedback_items`). Uploading the result back on S7 creates the same **unchecked** rows; nonce/round mismatch is
+  refused.
 
 ---
 
@@ -904,8 +995,6 @@ book-bundle_<CODE>_v7.4_<nonce>.zip
 
 | Kind | To | When | Opens |
 |---|---|---|---|
-| `BOOK_REVIEW_SENT` | the reviewer | a round is sent | S7 round |
-| `BOOK_REVIEW_RETURNED` | the round's assigner + `finalize` holders | the reviewer returns | S4 |
 | `BOOK_FEEDBACK_FILED` | `manage` holders (Principal by default) — one digest per book per Dhaka day after the first | a teacher/print report arrives | S5 |
 | `BOOK_FEEDBACK_ANSWERED` | the reporter | her item is accepted, rejected or applied | S8 my reports |
 | `BOOK_ERRATUM` | readers of the book (§7.3) | an erratum is announced | S8 errata |
@@ -914,6 +1003,8 @@ book-bundle_<CODE>_v7.4_<nonce>.zip
 
 Each kind gets its Bangla title/body template, push channel registration as other kinds, and the verifier list.
 Pop-ups are optional and go through the existing composer (no new pop-up code).
+**No review-round notifications** (Revision 2, owner Q1): the reviewer has no login, and the Principal sends and records
+rounds himself. A round past its `dueBy` shows a "সময় পেরিয়েছে" badge on S1/S2 instead.
 
 ---
 
@@ -936,8 +1027,10 @@ Pop-ups are optional and go through the existing composer (no new pop-up code).
 
 - **Content stays in the book plane and Drive.** Never in the repo, never in fixtures (invented text only), never in
   the main `Audit` (which records who/what/which book/version, never text), never in help guides.
-- **Who sees what** = §7. Reviewers only their rounds; teachers only released Teacher editions and errata of books they
-  teach; Office only what a grant gives (and never finalize/review).
+- **Who sees what** = §7. The reviewer sees nothing in the app (paper only); teachers only released Teacher editions
+  and errata of books they teach; Office only what a grant gives (and never `finalize`).
+- **Paper evidence:** every scan of a returned copy is kept with its round; every item, mark and ruling recorded from
+  it links to the scan and page and carries `recordedBy` + the "checked against scan" stamp.
 - **Audit:** `BookEvent` for every write and for content reads (`CONTENT_READ`, one per user/version/surface/day);
   main `Audit` kinds `BOOK_LC_VERSION_CREATED`, `BOOK_LC_FINALIZED`, `BOOK_LC_RELEASED`, `BOOK_LC_BUNDLE_DOWNLOADED`,
   `BOOK_LC_UPLOAD_URL_ISSUED`, `BOOK_LC_PROTECTED_CHANGED` (+ labels in `platform/auditLabels.ts`).
@@ -966,24 +1059,28 @@ All fixtures use invented text and names.
 - §18 ops (1)–(3); owner answers to §21 (the build follows the recommendations until then); lead confirms the D-# range.
 - **Done when:** STATUS records the book plane connected on prod and in the backup.
 
-### BL-1 — Books, versions, upload, reader + diff, review rounds, feedback triage (no AI)
+### BL-1 — Books, versions, upload, reader + diff, paper review rounds, feedback triage (no AI)
 Build: `shared/bookLifecycle.ts` (enums, reason codes, version-number helpers), `shared/bookDiff.ts`; catalogue feature
 `book_lifecycle` (§7.1) + docs + verifier LOCKED list; models §5.1–§5.9, §5.12 `BookEditDraft` in its basic form:
 "upload a whole new version" = upload → draft (`source: upload`) → a basic S11 (diff per chapter + change rows the
 person types, each citing F/I/D refs) → accept → version, with VR-1, VR-6, VR-9, VR-10 only (BL-3 adds the rest of
 the validator and ops); `BookEvent` extension; normalisation + chapter split + markers + re-keying (§6); StoredFile kinds +
 read gate (§5.13); import (§4.4); version state machine (§4.1) incl. direct-fix approve (§4.3); memo generation
-(§10.2); rounds (§10); reviewer inbox; triage (§9.2); decisions; rule sets; notifications `BOOK_REVIEW_SENT`,
-`BOOK_REVIEW_RETURNED`, `BOOK_FEEDBACK_FILED`, `BOOK_FEEDBACK_ANSWERED`; screens S1–S5, S7, S13 and a basic S11; hide the old drawer
-entry (§17); help guides `book-lifecycle-overview`, `book-review-round` (drafts).
+(§10.2); paper rounds (§10.1); **print packet** (§10.4: page map via `pdftotext`, memo PDF via `pdfkit`, changed-
+chapter extraction via `pdf-lib`); **record the returned copy** (§10.3: scans, hand transcription with scan evidence,
+"checked against scan" ticks, verdict and rulings by `finalize`, `approvalBasis`); triage (§9.2); decisions; rule
+sets; notifications `BOOK_FEEDBACK_FILED`, `BOOK_FEEDBACK_ANSWERED`; screens S1–S5, S7 (record the return), S13 and a
+basic S11; hide the old drawer entry (§17); help guides `book-lifecycle-overview`, `book-paper-review` (drafts).
 
 | Test file | Asserts |
 |---|---|
 | `bookLcVersionMachine.test.ts` | Every legal transition of §4.1 by the right action; every illegal one refused (incl. leaving `final`, two open rounds, non-latest base); number rules (minor/major, monotonic, import at v7.4); immutability (a write to a created version's text throws). |
 | `bookLcUpload.test.ts` | Normalisation (BOM, CRLF, NFC, invalid UTF-8 refused); split at the chosen heading level; `front`; markers inserted; re-keying by heading text keeps keys and lists new/missing chapters; >60k chapter parts; content-addressed chapter rows shared across versions; media refs resolved from a media zip; caps refused in Bangla. |
 | `bookLcRegions.test.ts` | Server regions rewritten on version creation and on final (version line, version log from rows); protected-region change refused to `manage`, allowed to `finalize` with the confirmation and audited. |
-| `bookLcPermissions.test.ts` | Fixtures: Principal, Office (template), Office with `release` granted, Office with `review` granted (still refused — role check), teacher (template), teacher with `review` assigned to book A only, guardian. Each gate of §7.4. LOCKED `finalize` cannot be granted. |
-| `bookLcReview.test.ts` | Round send freezes memo + `in_review`; base = reviewer's last returned round; generated memo **byte-for-byte** against a fixture (Part 1 rows from changes since base incl. direct fixes as FYI; Part 2 items; Part 3 decisions); reviewer sees only her rounds; approve → `approved` + items accepted + decisions ruled; changes → `changes_requested`; withdraw → `draft`; Principal self-review stamped `selfReviewed`. |
+| `bookLcPermissions.test.ts` | Fixtures: Principal, Office (template), Office with `manage` granted, Office with `release` granted, teacher (template), guardian. Each gate of §7.4. Office with `manage` can make a packet, upload scans and transcribe, but **cannot record a verdict or ruling, direct-fix approve or mark final** (`finalize` LOCKED, cannot be granted). No `book_lifecycle:review` action exists in the catalogue. |
+| `bookLcMemo.test.ts` | Generated memo **byte-for-byte** against a fixture: Part 1 rows from changes since the last **returned** round incl. direct fixes as FYI, with page numbers from the page map, codes and quotes; Part 2 items; Part 3 decisions with ☐ boxes; teacher items without names. |
+| `bookLcPrintPacket.test.ts` | **Print-packet fixture** (an invented 12-page master PDF made in the test with `pdfkit`, chapters on known pages): page map found by `pdftotext` (skipped with a named reason if poppler is absent on the runner, and the map is then set by hand in the test) and confirmable; packet refused without a fresh master PDF; scope "whole" = source page count; scope "changed" = exactly the changed chapters' pages, original page numbers kept, divider pages present; memo PDF has the header/footer with code, version, memo number and the closing verdict box; packet files stored as `book_lc_packet` and immutable after sent; round → `packet_ready` → `sent_on_paper` with the date; version `in_review`; no notification emitted. |
+| `bookLcRecordReturn.test.ts` | Record-return refused without a scan, on a round not `sent_on_paper`, or for a verdict while any row is unchecked against the scan; hand-transcribed items get `source: reviewer`, `roundId`, `evidence.scanFileId/scanPage`; MCP/bundle-proposed rows arrive unchecked; verdict + rulings only by `finalize` (Office with `manage` refused); approve → version `approved` with `approvalBasis: round`, items accepted/rejected per mark, decisions ruled with her name and `recordedBy`; "approved" with a decision left "পরে" refused; changes → `changes_requested`; the "কাগজের কপি থেকে লেখা" stamp on round, version, items and rulings; a correction keeps the old values in history; withdraw → `draft`; Principal as reviewer stamped `selfReviewed`. |
 | `bookLcFeedback.test.ts` | Triage routes and status moves (§5.6); reject reason reaches the reporter; duplicate link; `sacred_text` cannot be `direct_fix`; direct-fix approve allowed only when every change cites direct_fix/verbal_errata items, stamped `reviewSkipped`; next memo lists them FYI. |
 | `bookLcEvents.test.ts` | One `BookEvent` (flow LIFECYCLE) per write; `CONTENT_READ` once per user/version/surface/day; main `Audit` rows carry no book text (assert by marker strings). |
 | `bookLcDiff.test.ts` | `bookDiff` line + word diff on Bangla and English fixtures; identical text → no hunks. |
@@ -999,7 +1096,7 @@ guides `book-teacher-errata`, `book-teacher-report`, `book-print-release`.
 
 | Test file | Asserts |
 |---|---|
-| `bookLcFinal.test.ts` | Final refused when an edition is missing or stale, when a `needs_reviewer` item targets the version, or by a non-`finalize` holder; carried parent editions show stale; re-upload clears it. |
+| `bookLcFinal.test.ts` | Final refused when an edition is missing or stale, when a `needs_reviewer` item targets the version, by a non-`finalize` holder, or **when the version has no approval basis**; a direct-fix child of a paper-approved version inherits the basis and may go final; a direct-fix child of a never-approved version cannot; an imported approved version has basis `imported`; carried parent editions show stale; re-upload clears it. |
 | `bookLcRelease.test.ts` | Release only from `final`; required files; statuses + dates; first release moves version to `print_released`; newer printed release supersedes the older; **release refused while an announced erratum is not carried**; print files readable by `view`/`release` only. |
 | `bookLcTeacherScope.test.ts` | Routine teacher of class+subject and class teacher of the level are readers; another teacher, Office, guardian are not; readers get only the released Teacher edition + errata + own reports (never master/drafts/rounds); report form needs `report` + scope. |
 | `bookLcErrata.test.ts` | verbal_errata → erratum draft → announce (`finalize`) → notifications to readers only → ack per teacher → `carriedIntoVersionId` when applied. |
@@ -1008,7 +1105,8 @@ guides `book-teacher-errata`, `book-teacher-report`, `book-print-release`.
 
 ### BL-3 — Edit drafts, validator, diff + accept, editing method, bundle (Path B manual)
 Build: `BookEditDraft` full flow; `book-chapter-edit/v1` ops engine; whole-text coverage (VR-7); VR-1…VR-15;
-`edit_method_v1.md` (§13, invented examples only); bundle download/upload (§15.4); S11, S12; `BookInstruction`.
+`edit_method_v1.md` (§13, invented examples only); bundle download/upload (§15.4); the **return-transcription pack**
+and its `book-feedback-items/v1` upload on S7 (§15.4); S11, S12; `BookInstruction`.
 
 | Test file | Asserts |
 |---|---|
@@ -1017,6 +1115,7 @@ Build: `BookEditDraft` full flow; `book-chapter-edit/v1` ops engine; whole-text 
 | `bookEditCoverage.test.ts` | Whole-text replacement: every hunk covered → ok; an uncovered hunk → "ব্যাখ্যাহীন পরিবর্তন" and accept refused until a `finalize` holder ticks it (stamped). |
 | `bookEditAccept.test.ts` | Per-chapter accept/reject; accept creates a draft version with the chosen bump, the change list, items → `applied`, server regions rewritten; a stale draft (new version appeared) cannot be accepted. |
 | `bookBundle.test.ts` | Zip contents and names; METHOD.md byte-identical to the asset; feedback de-identified (a seeded roster name excludes that item, named); nonce/base/method mismatch refused; result JSON in a fenced `.md` accepted; whole `master.md` + `changes.json` path; download audited. |
+| `bookReturnPack.test.ts` | The transcription pack holds the round's memo, codes, page map and scans; a `book-feedback-items/v1` upload creates **unchecked** rows with `via: bundle` and scan evidence; wrong round or nonce refused; the upload never records a verdict or a ruling. |
 | `bookMethodParity.test.ts` | The method file's section markers; Path A prompt sections are byte slices of the file; the bundle embeds the same bytes; `methodHash` stamped on drafts. |
 
 ### BL-4 — MCP book tools (Path B MCP) + upload URL
@@ -1024,7 +1123,7 @@ Build: §15.1 tools on `/mcp`, §15.3 upload route, server instructions block, h
 
 | Test file | Asserts |
 |---|---|
-| `bookMcpTools.test.ts` (drives the real SDK over HTTP like `aiWorkspaceW5.test.ts`) | `tools/list` contains the nine book tools; each refuses a token whose user lost the book action (fresh auth); slices ≤ 50k with `more`; `start_book_edit` → `edit_chapter` → `submit_book_version` gives `ready` and **no version exists** until S11 accept; `put_chapter` with an unexplained hunk reports it; `add_feedback_items` creates `open` items with codes; `propose_decision` appears in the next generated memo; limits (300 ops, 100 items, 4 MB body); `AiMcpCall` row per call; `BookEvent` with origin claude. |
+| `bookMcpTools.test.ts` (drives the real SDK over HTTP like `aiWorkspaceW5.test.ts`) | `tools/list` contains the eleven book tools; each refuses a token whose user lost the book action (fresh auth); slices ≤ 50k with `more`; `start_book_edit` → `edit_chapter` → `submit_book_version` gives `ready` and **no version exists** until S11 accept; `put_chapter` with an unexplained hunk reports it; `add_feedback_items` creates `open` items with codes; with `source: reviewer` it needs a `sent_on_paper` round with a scan and `scan_file_id`, stores marks as **unchecked** proposals and never moves the version or records a verdict; `list_round_scans` / `get_scan_page` return the memo, codes and one scan page image; `propose_decision` appears in the next generated memo; limits (300 ops, 100 items, 4 MB body); `AiMcpCall` row per call; `BookEvent` with origin claude. |
 | `bookUploadUrl.test.ts` | Single use; 10-minute expiry; bound to user/target/role/size; wrong size or second use refused; file lands as the right `StoredFile` kind; audited. |
 | `aiWorkspaceW5.test.ts` | Unchanged and green. |
 | tsc memory | `tsc --extendedDiagnostics` before/after recorded in the handoff; still under CI's 4 GB with margin. |
@@ -1040,8 +1139,10 @@ prompt assembly from the method; estimate + caps; S10; `BOOK_EDIT_READY`; help g
 
 ### BL-6 — Switch-on pack
 Build: final help guides with pictures from one local walk (one browser; stop everything after); STATUS switch-on
-checklist for the owner: read and approve `edit_method_v1.md`; import the first pilot book; TEACHER template `teacher_view`
-+ `report` on; assign the reviewer; set `book_edit` caps and switch it on; confirm the BL-0 backup.
+checklist for the owner: read and approve `edit_method_v1.md`; import the first pilot book — **a printed book that
+already has post-print fixes waiting** (owner Q11); TEACHER template `teacher_view` + `report` on; set the reviewer's
+name on the book; print the first packet and record its return; set `book_edit` caps ($10/month, $3/job, Claude Opus
+5.5 — owner Q9) and switch it on only after approving the method; confirm the BL-0 backup.
 - **Done when:** the help verifier passes and the checklist is in STATUS.
 
 ### Later (not built in this series)
@@ -1064,37 +1165,40 @@ checklist for the owner: read and approve `edit_method_v1.md`; import the first 
 | R7 | MCP tool zod schemas push `tsc` over CI's 4 GB heap. | Non-generic registration (P8); measure in BL-4. |
 | R8 | Parallel sessions editing the catalogue, vocab, verifier, `NOTIFICATION_KINDS`. | Land BL-1's contract change first; renumber D-# against `origin/dev` before each commit. |
 | R9 | The repo is public. | No content in fixtures/method/help; invented text only; a review step greps the diff for Bangla book text. |
-| R10 | The reviewer does not take to the app. | Same memo shape; PDF in/out still supported; transcription helpers (S4, `add_feedback_items`). |
+| R10 | ~~The reviewer does not take to the app.~~ Closed by owner Q1: she stays on paper. | Same memo shape, printed; the app only adds the packet and the record of her return. |
 | R11 | Drive storage growth (print zips ~100 MB each). | Caps; content-addressed text and media; retention decided later (Q15). |
 | R12 | Unicode normalisation differences create false diffs. | NFC on import and before every compare; tests with composed/decomposed fixtures. |
 | R13 | Errata never carried into the next print. | Release refused while an announced erratum is not carried (§9.4.5). |
+| R14 | **Transcription errors** — her handwritten marks are typed (or read by Claude) wrongly, or a point is missed, and the app then holds an approval or a ruling she did not give. | The scan stays attached to the round and to every item, mark and ruling, with its page; every transcribed row needs a **"checked against scan"** tick (who, when) before the verdict can be recorded; Claude's rows always arrive unchecked and Claude can never record a verdict; the verdict and rulings are `finalize` only (Principal); a correction keeps the old values; the next memo's Part 1 lists what was done with each of her points, so she can catch a wrong reading on her next paper copy. |
+| R15 | The packet's page numbers do not match her paper (wrong source PDF, a re-made PDF, a bad page map). | Packet only from a fresh master PDF (`fromMasterHash`); page map detected and confirmed by a person; extracted pages keep their printed numbers; the packet is frozen after "sent on paper". |
 
 ---
 
-## 21. Questions for the owner (each with a recommendation; the build follows it until he answers)
+## 21. Questions for the owner (answered ones marked; the build follows the recommendation of every open one until he answers)
 
-| # | Question | Recommendation |
+| # | Question | Recommendation / answer |
 |---|---|---|
-| Q1 | Who is the reviewer in the app — an existing staff login, or a new one? | Her own staff login (TEACHER role, or a new TEACHER-role login with no routine), `book_lifecycle:review` granted, assigned per book. |
-| Q2 | Does the reviewer read in the app, or keep PDFs? | Both: memo + changed chapters with the diff in the app; the PDF stays attached and her marked PDF can be uploaded. |
+| Q1 | Who is the reviewer in the app — an existing staff login, or a new one? | **ANSWERED (owner 13 Nov) — CHANGED:** nobody reviews in the app. A printed version goes to the reviewer; she reviews on paper and sends back the marked copy. → print packet, "sent on paper", the Principal records her return from the scan on her behalf (§10). (Was: her own login with `book_lifecycle:review`.) |
+| Q2 | Does the reviewer read in the app, or keep PDFs? | **CLOSED by the Q1 answer:** paper only. |
 | Q3 | Who picks minor vs major numbers? | The person accepting the draft; default minor; major for a full review-cycle rewrite. |
-| Q4 | Who may skip the reviewer for direct fixes? | The Principal only (`finalize`, LOCKED); she sees every direct fix FYI in the next memo. |
-| Q5 | Which teachers see a book's Teacher edition and errata and can report? | Routine teachers of that class + subject, plus the class teachers of that class level. |
+| Q4 | Who may skip the reviewer for direct fixes? | **ANSWERED (owner 13 Nov), as recommended:** the Principal only (`finalize`, LOCKED); she still sees each such fix listed in her next memo. |
+| Q5 | Which teachers see a book's Teacher edition and errata and can report? | **ANSWERED (owner 13 Nov), as recommended:** that class and subject's routine teachers, plus the class teacher. |
 | Q6 | Errata: notification only, or also a pop-up? | Notification + the list in আমার বই; a pop-up only when you choose it for a batch. |
-| Q7 | Publish the Student PDF to the class-books reader (guardians of that class see it)? | Off by default; a per-book switch you turn on book by book. |
+| Q7 | Publish the Student PDF to the class-books reader (guardians of that class see it)? | **ANSWERED (owner 13 Nov), as recommended:** OFF, with a switch per book. |
 | Q8 | Teacher edition: open/download, or view-only pages? | Open/download for scoped teachers (they hold the printed copy anyway). |
-| Q9 | AI edit: default model and caps? | Claude Opus 5.5 by default (Sonnet and DeepSeek selectable); $10 a month for the feature, $3 per job; OFF until you switch it on. |
+| Q9 | AI edit: default model and caps? | **ANSWERED (owner 13 Nov), as recommended:** Claude Opus 5.5 by default (Sonnet and DeepSeek selectable); $10 a month for the feature, $3 per job; OFF until the owner approves the editing method. |
 | Q10 | May book text go to DeepSeek as well as Anthropic? | Yes, it is the school's own text, not personal data — with a one-line warning when DeepSeek is picked. |
-| Q11 | Which book first? | One book that is printed and has post-print fixes waiting (a minor version) as the pilot; import the others at their current version and state. |
+| Q11 | Which book first? | **ANSWERED (owner 13 Nov), as recommended:** a printed book that already has post-print fixes waiting (a minor version) as the pilot; import the others at their current version and state. |
 | Q12 | The old lesson-JSON screens? | Hide from the sidebar, keep the code and the archive (§17). |
 | Q13 | Editions made in the app (BL-7) — when? | After two or three books have gone through v1 with uploaded editions. |
 | Q14 | May the Office record print releases and press dates? | Yes, by granting `release` per person; never finalize. |
 | Q15 | Keep every version and print file forever? | Master text and media: forever (deduplicated, small). Print zips and edition binaries: keep every printed release; drafts' files of unreleased versions may be pruned after a year (decide later; nothing auto-deleted in v1). |
-| Q16 | Memo as Word file? | In-app + `.md` + printable page in v1; `.docx` only if the reviewer needs it. |
+| Q16 | Memo as Word file? | After Q1 the memo is printed from the packet's **memo PDF**; a `.docx` memo only if the reviewer or the Principal needs to edit it in Word. |
+| Q17 | (new, from Q1) Where do the PDFs of the book come from for the packet? | From the version's master PDF made locally, as today (uploaded, must be fresh). The app does not render the book itself in v1. |
 
 ---
 
-## 22. Decision block (proposed D-#1590 – D-#1612; reserve to D-#1619; confirm at build time)
+## 22. Decision block (proposed D-#1590 – D-#1616; reserve to D-#1619; confirm at build time)
 
 Highest on `origin/dev` at writing: D-#1571; on recent remote branches: D-#1576. Re-read `origin/dev:DECISIONS.md`
 before each commit and move the block up if any number is taken.
@@ -1106,8 +1210,8 @@ before each commit and move the block up if any number is taken.
 | D-#1592 | **Models:** `SchoolBook`, `BookVersion`, `BookChapterText`, `BookMediaAsset`, `BookMemoRound`, `BookFeedback`, `BookInstruction`, `BookDecision`, `BookRuleSet`, `BookPrintRelease`, `BookErratum`, `BookEditDraft`, `BookEditJob`; `BookEvent` gains `flow` and lifecycle kinds/refs. |
 | D-#1593 | **Versions are vMAJOR.MINOR, monotonic and immutable**; states draft → in_review → changes_requested \| approved → final → print_released; terminal states are never left; any change is a child of the latest version (no branches). Imports may start at any number and state, stamped. |
 | D-#1594 | **Direct-fix path:** a version whose every change cites only direct_fix / verbal_errata items may be approved by a `finalize` holder without a round, stamped `reviewSkipped`; the next memo lists those fixes FYI. `sacred_text` items can never be direct fixes. |
-| D-#1595 | **The memo is generated from records** (changes since the reviewer's last returned version, items asked, open decisions) in the offline memo's shape, editable before send, frozen at send; memo numbers continue the book's offline numbering. |
-| D-#1596 | **Permissions: catalogue feature `book_lifecycle`** — view, manage, review (assigned reviewer), finalize (**LOCKED**), release, ai_edit (PRINCIPAL_DEFAULT), teacher_view, report — all off for TEACHER and OFFICE at ship. An OFFICE login is refused `review` by a role check; reviewers see only their assigned books' rounds; Principal self-review is stamped (D-#424 pattern). |
+| D-#1595 | **The memo is generated from records** (changes since the last returned round's version, items asked, open decisions) in the offline memo's shape, editable until the packet is made, then frozen; page numbers come from the packet's page map; every row prints its code and a short quote; memo numbers continue the book's offline numbering. *(Revised R2 for owner Q1: printed, not read in-app.)* |
+| D-#1596 | **Permissions: catalogue feature `book_lifecycle`** — view, manage, finalize (**LOCKED**), release, ai_edit (PRINCIPAL_DEFAULT), teacher_view, report — all off for TEACHER and OFFICE at ship. Recording the reviewer's verdict and rulings is `finalize`, so Office can never approve; Principal self-review is stamped (D-#424 pattern). *(Revised R2 for owner Q1: the `review` action, its assigned-reviewer designation and its OFFICE role check are removed — the reviewer has no login.)* |
 | D-#1597 | **One feedback inbox** for reviewer, teacher, school, print-error and proof-read items, triaged needs_reviewer / direct_fix / verbal_errata / rejected / duplicate; teachers report only on books they teach now (`bookTeachersNow`: routine class+subject, plus class teachers of the level). |
 | D-#1598 | **Verbal errata** belong to the print release teachers hold: announced by a `finalize` holder, notified to readers, acknowledged per teacher, carried into the next version; a new release is refused while an announced erratum is not carried. |
 | D-#1599 | **Editions and the print package are uploaded in v1**; the app never runs the IDML engine; each file records `fromMasterHash`; mark final is refused while a required edition is missing or stale. Edition derivation (BL-7) and an in-app IDML worker (BL-8) are later decisions. |
@@ -1115,16 +1219,20 @@ before each commit and move the block up if any number is taken.
 | D-#1601 | **One edit pipeline for every door:** `BookEditDraft` → validator VR-1…VR-15 → diff → per-chapter human accept → a draft version. `submit_book_version` and job completion never create a version. |
 | D-#1602 | **The editing method is one versioned asset** `server/assets/book-lifecycle/edit_method_vN.md`, embedded byte for byte by the API prompt, the MCP reply and the bundle; hashed and stamped; changed only by PR + D-#; examples invented. |
 | D-#1603 | **Path A — AI edit job:** chapter by chapter through `aiSend` feature `book_edit` (OFF at ship), in the AI worker (which also opens the book plane); output = exact-quote edit operations citing F/I/D refs; provider and model pinned per job; **no cross-provider fallback**; same-provider retries ×2; ≤ 2 validator fix rounds; caps per job and per month. |
-| D-#1604 | **Path B — MCP book tools on the existing `/mcp` server** (not the read-only `/mcp/data`): list_books, get_book_version, start_book_edit, edit_chapter, put_chapter, submit_book_version, add_feedback_items, propose_decision, request_upload_url. Principal-only in v1 through the existing authorise gate; each tool also checks its own book action; non-generic registration. |
+| D-#1604 | **Path B — MCP book tools on the existing `/mcp` server** (not the read-only `/mcp/data`): list_books, get_book_version, start_book_edit, edit_chapter, put_chapter, submit_book_version, add_feedback_items, list_round_scans, get_scan_page, propose_decision, request_upload_url *(R2 adds the two scan tools and the reviewer-transcription fields of add_feedback_items, owner Q1)*. Principal-only in v1 through the existing authorise gate; each tool also checks its own book action; non-generic registration. |
 | D-#1605 | **Path B manual — bundle zip** (method, master, outline, de-identified feedback, rules, decisions, output schema) with a nonce and base hash; results upload back into a draft through the same validator; the zip is never stored. |
 | D-#1606 | **AI privacy for books:** book text is sent as written (name protection off, D-#1207 precedent; `deidentified: false` on its log rows); feedback text is de-identified against the whole school, fail-closed per item; reporter names are never sent. |
 | D-#1607 | **Sacred-text guard:** any change inside a `bl:sacred` region or an Arabic-script run must cite a reviewer-ruled `sacred_text` item or ruled decision, and the new text must appear verbatim in it; the model never writes Qur'an, hadith or du'a text itself; every sacred change is flagged for a human check and sent to the reviewer FYI. |
 | D-#1608 | **Audit:** `BookEvent` for every write and one `CONTENT_READ` per user/version/surface/day; main `Audit` for version created, finalized, released, bundle downloaded, upload URL issued, protected text changed — never text. |
 | D-#1609 | **Ops precondition:** before the first real book, prod connects the book plane, the book plane is back in the backup and restore check, and the AI worker has `BOOK_MONGODB_URI`. |
-| D-#1610 | **Notifications:** BOOK_REVIEW_SENT, BOOK_REVIEW_RETURNED, BOOK_FEEDBACK_FILED (daily digest per book after the first), BOOK_FEEDBACK_ANSWERED, BOOK_ERRATUM, BOOK_RELEASED, BOOK_EDIT_READY. |
+| D-#1610 | **Notifications:** BOOK_FEEDBACK_FILED (daily digest per book after the first), BOOK_FEEDBACK_ANSWERED, BOOK_ERRATUM, BOOK_RELEASED, BOOK_EDIT_READY. *(Revised R2 for owner Q1: BOOK_REVIEW_SENT and BOOK_REVIEW_RETURNED dropped — no reviewer login; an overdue round shows a badge instead.)* |
 | D-#1611 | **The old lesson-JSON module is kept and hidden**: its drawer entry is removed and it is reached from a footer link on the new book list; code, data, permissions and tests unchanged. |
-| D-#1612 | **Build order BL-0 → BL-1 → … → BL-6; ships OFF** (Principal-only at ship; teacher switches on via the role editor; `book_edit` off until the owner approves the method and sets caps). Owner-question defaults Q1–Q16 apply until answered. |
-| D-#1613–#1619 | Reserved for build-time decisions. |
+| D-#1612 | **Build order BL-0 → BL-1 → … → BL-6; ships OFF** (Principal-only at ship; teacher switches on via the role editor; `book_edit` off until the owner approves the method and sets caps). Answered questions (Q1, Q4, Q5, Q7, Q9, Q11; D-#1616) bind; the other questions' recommendations apply until answered. *(Revised R2.)* |
+| D-#1613 | **Review rounds are on paper (owner Q1, 13 Nov).** The reviewer has no login, no screen and no notification; the app knows her as `reviewerName` text. A round is built in the app, its print packet made, marked "sent on paper" with a date; her marked copy comes back on paper and is recorded in the app. |
+| D-#1614 | **The print packet:** a memo PDF (drawn with `pdfkit`, the offline memo's shape, codes and quotes on every row, a closing verdict box) + the version's fresh master PDF, whole or only the changed chapters (`pdf-lib`, original page numbers kept, divider pages); chapter start pages found with `pdftotext` and confirmed by a person; frozen once sent. No line numbers are added in v1. |
+| D-#1615 | **Her return is recorded on her behalf, with the scan as evidence:** ≥ 1 scan required; her points become feedback items with `evidence` (scan + page, who recorded, by hand / MCP / bundle); every transcribed row needs a "checked against scan" tick before the verdict; her verdict and rulings are recorded only by a `finalize` holder, stamped `recordedFromPaper`; Claude may propose rows (unchecked) but never records a verdict; corrections keep history. **A version becomes final only with an approval basis:** her recorded approval of a round, inherited by direct-fix children, or `imported` for books approved offline before the app. |
+| D-#1616 | **Owner answers 13 Nov recorded:** Q4 only the Principal skips the reviewer, each such fix listed in her next memo; Q5 readers = that class and subject's routine teachers + the class teacher; Q7 class-books publish OFF, switch per book; Q9 Claude Opus 5.5, $10/month, $3/job, OFF until the method is approved; Q11 pilot = a printed book with post-print fixes waiting. |
+| D-#1617–#1619 | Reserved for build-time decisions. |
 
 ---
 
@@ -1134,7 +1242,10 @@ before each commit and move the block up if any number is taken.
   and `README.md` (where `book_production` is listed today) in step; verifier LOCKED list gains `book_lifecycle:finalize`.
 - `shared/vocab.ts`: `NOTIFICATION_KINDS` + labels (§16); verifier pinned list updated; `shared/bookLifecycle.ts`,
   `shared/bookDiff.ts` exported from `shared/index.ts`; rebuild `shared` before server typecheck.
-- `server/src/modules/platform/models/StoredFile.ts`: `book_lc_*` kinds; `routes/files.ts` read gate + upload routes.
+- `server/src/modules/platform/models/StoredFile.ts`: `book_lc_*` kinds (incl. `book_lc_packet`); `routes/files.ts` read gate + upload routes.
+- Print packet: `pdfkit` (memo PDF, the staff-letter Bangla fonts), `pdf-lib` (page extraction), `pdftotext` (page map;
+  poppler-utils is on the VM — the build session confirms `scripts/vm-bootstrap.sh` installs it and the CI runner has
+  it, else the page-map test skips with a named reason).
 - `server/src/modules/platform/models/Audit.ts` + `auditLabels.ts`: the §18 kinds.
 - `server/src/modules/support-book/models/BookEvent.ts`: `flow`, kinds, refs (additive; old rows valid).
 - `server/src/modules/book-lifecycle/` (new): models, services (version, upload/normalise, memo, rounds, feedback,
