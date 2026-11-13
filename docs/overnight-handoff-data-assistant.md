@@ -213,8 +213,8 @@ shared build 0; shared typecheck 0; server tsc 0 (Instantiations 8,680,052; Memo
 Targeted (--runInBand), 34 suites incl. dataAssistantMcp 13/13 and aiWorkspaceW5 10/10 (unchanged):
   first run 1 failed (offboarding: the awaited token cut hit a DB-less test) → made fire-and-forget;
   offboarding rerun Tests 25 passed, 25 total
-Full suite (--maxWorkers=2) + expo export: started before this commit; result recorded in the
-  next commit's handoff update.
+Full suite (--maxWorkers=2), run on the tree of 9133bb01: Test Suites 461 passed, 461 total;
+  Tests 7465 passed, 7465 total (EXIT 0). expo export --platform web → App exported … EXPO_EXIT 0
 ```
 
 ### Not done
@@ -224,3 +224,36 @@ Full suite (--maxWorkers=2) + expo export: started before this commit; result re
 
 ### Decisions
 D-#1535, D-#1536 (PRD rows as built), D-#1575 build details.
+
+---
+
+## DA-4 — screens + help guides
+
+- **Commits:** one `[DA-4]` commit after 9133bb01.
+
+### Built
+- **Home** (`app/src/screens/dataAssistant/DataAssistantHomeScreen.tsx`): chat list + new chat
+  (needs `use` or View-as), then `DataAssistantLinks`: **Claude-এর সঙ্গে সংযোগ** (steps 1–4 in Bangla,
+  the `…/mcp/data` address, the 90-day / plan / other-connectors note; `data_assistant:connect`),
+  **সংযুক্ত অ্যাপ** (own connections, last used, calls in 30 days, end date, Disconnect with
+  confirm), and for `data_assistant:audit` links to the two Principal screens.
+- **তথ্য সহকারীর লগ** (`DataAssistantLogScreen.tsx`): `dataToolCallsPage`, filters tool / outcome /
+  door / from / to (Dhaka keys), paged 50, View-as rows marked.
+- **সব সংযোগ** (`DataConnectionsScreen.tsx`): `allDataConnectionsPage`, paged, Disconnect anyone.
+- Drawer item and tab open for `use`, `connect` or `audit` (or View-as).
+- Help guides (all `draft: true`, no pictures): `data-assistant-claude` (connect), `-apps`
+  (connect), `-log` (audit), with `-chat` (use) and `-access` (audit) from DA-1/DA-2. Every
+  `data_assistant:*` action now has a guide (coverage 315 of 467).
+
+### Not done
+- One local UI walk (Expo + Mongo) and the guide pictures: not done in the cloud session (no
+  `.env` / DB to sign in against); the guides stay drafts until a walk.
+- CSV export of the log filter (web) — not built (D-#1576).
+- My-account placement of "connected apps" (PRD §11) — on the assistant home instead (D-#1576).
+
+### Decisions
+D-#1576.
+
+### Questions
+4. Keep "connected apps" on the assistant home, or also show it on My account?
+5. Is a CSV of the log needed in v1?

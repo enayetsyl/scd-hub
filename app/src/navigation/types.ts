@@ -352,6 +352,9 @@ export type AiAssistStackParamList = {
 export type DataAssistantStackParamList = {
   DataAssistantHome: undefined;
   DataChat: { sessionId: string };
+  /** DA-4, the Principal (data_assistant:audit): the tool-call log and every connection. */
+  DataAssistantLog: undefined;
+  DataConnections: undefined;
 };
 
 export type AiWorkspaceStackParamList = {

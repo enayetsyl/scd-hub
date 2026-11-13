@@ -171,6 +171,8 @@ import AiAssistChatScreen from "../screens/aiAssist/AiAssistChatScreen";
 import AiWorkspaceHomeScreen from "../screens/aiWorkspace/AiWorkspaceHomeScreen";
 import DataAssistantHomeScreen from "../screens/dataAssistant/DataAssistantHomeScreen";
 import DataChatScreen from "../screens/dataAssistant/DataChatScreen";
+import DataAssistantLogScreen from "../screens/dataAssistant/DataAssistantLogScreen";
+import DataConnectionsScreen from "../screens/dataAssistant/DataConnectionsScreen";
 import AiProjectNewScreen from "../screens/aiWorkspace/AiProjectNewScreen";
 import AiProjectScreen from "../screens/aiWorkspace/AiProjectScreen";
 import AiProjectFileTextScreen from "../screens/aiWorkspace/AiProjectFileTextScreen";
@@ -1903,6 +1905,8 @@ function DataAssistantNavigator(): React.ReactElement {
     <DataAssistantStack.Navigator screenOptions={stackOptions}>
       <DataAssistantStack.Screen name="DataAssistantHome" component={DataAssistantHomeScreen} options={{ title: STR.daHomeTitle }} />
       <DataAssistantStack.Screen name="DataChat" component={DataChatScreen} options={{ title: STR.daChatTitle }} />
+      <DataAssistantStack.Screen name="DataAssistantLog" component={DataAssistantLogScreen} options={{ title: STR.daLogTitle }} />
+      <DataAssistantStack.Screen name="DataConnections" component={DataConnectionsScreen} options={{ title: STR.daAllConnTitle }} />
     </DataAssistantStack.Navigator>
   );
 }
@@ -2263,7 +2267,7 @@ export function AppTabs(): React.ReactElement {
   const canAiWorkspace = any("ai_workspace:use", "ai_workspace:admin");
   // Data assistant (D-#1537): the switch holder; during "View as" the Principal may test the chat
   // as a login without the switch (D-#1570) — the server checks the real person.
-  const canDataAssistant = any("data_assistant:use") || !!viewAs;
+  const canDataAssistant = any("data_assistant:use", "data_assistant:connect", "data_assistant:audit") || !!viewAs;
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
