@@ -1,6 +1,6 @@
 # Foundation & platform — build checklist
 
-Features: `students`, `guardians`, `classes_sections`, `teaching_assignments`, `staff_logins`, `view_as`, `access_control`, `audit_log`, `system_health`, `guardian_engagement`, `message_templates`, `admin_dashboard`, `archive`, `notifications` (SELF), `my_account` (SELF) (owner rows: see README). The proxy-grant rows (`cover:assign_proxy`) also live here; the rest of the `cover` feature is in hr-finance.md. Source: inventory B, origin/dev 2026-10-20.
+Features: `students`, `guardians`, `classes_sections`, `teaching_assignments`, `staff_logins`, `view_as`, `access_control`, `audit_log`, `system_health`, `data_assistant`, `guardian_engagement`, `message_templates`, `admin_dashboard`, `archive`, `notifications` (SELF), `my_account` (SELF) (owner rows: see README). The proxy-grant rows (`cover:assign_proxy`) also live here; the rest of the `cover` feature is in hr-finance.md. Source: inventory B, origin/dev 2026-10-20.
 Counts: 61 mutations (49 in (a), 12 in (e)), 76 queries (53 in (b), 23 in (e)), 3 REST. The inventory's other 2 mutations, 2 queries and 1 SSE topic are listed elsewhere (see the end of this file).
 
 ## (a) Mutations
@@ -95,6 +95,8 @@ Counts: 61 mutations (49 in (a), 12 in (e)), 76 queries (53 in (b), 23 in (e)), 
 | `server/src/modules/platform/resolvers/activity.ts:220` | activitySources | audit:read | `audit_log:view_activity` (static list) |
 | `server/src/modules/platform/resolvers/systemHealth.ts:207` | systemHealth | audit:read | `system_health:view` |
 | `server/src/modules/platform/resolvers/aiSettings.ts` | aiSettings / setAiSettings / clearAiKey (optional `provider`, D-#1090) / aiFeatureSettings / setAiFeatureSetting (AI-1) | (new, D-#967) | `system_health:ai_key` (LOCKED); the key is write-only |
+| `server/src/modules/data-assistant/resolvers/dataAssistant.ts` | dataToolCallsPage / myDataToolCallsPage (DA-1) | (new, D-#1538) | `dataToolCallsPage`: `data_assistant:audit` (LOCKED); `myDataToolCallsPage`: `my_account:view` (SELF, own rows only) |
+| `server/src/modules/data-assistant/runTool.ts` | every data-assistant tool (DA-1, both doors) | (new, D-#1534) | door: `data_assistant:use` (in-app) / `data_assistant:connect` (Claude); then each tool's own screen gate, pinned by `dataAssistantGateParity.test.ts`; `payroll_summary` `person` mode also needs `data_assistant:individual_pay` (D-#1577, stricter than the screen) |
 | `server/src/modules/platform/resolvers/aiPolicies.ts` | aiPolicySummaries / activeAiPolicy / aiPolicyVersionsPage / aiPolicyVersion / saveAiPolicyVersion / activateAiPolicyVersion / deactivateAiPolicy (AI-3) | (new, D-#1093) | reads: `ai_assist:read_rules` or `ai_assist:edit_rules`; versions + writes: `ai_assist:edit_rules` |
 | `server/src/modules/templates/resolvers/messageTemplates.ts:76` | messageTemplates | template:manage (RESERVED) | `message_templates:view` (LOCKED) |
 | `server/src/modules/templates/resolvers/messageTemplates.ts:85` | messageTemplate | template:manage | `message_templates:view` (LOCKED) |

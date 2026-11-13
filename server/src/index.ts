@@ -16,8 +16,10 @@ import { connectDb } from "./db";
 import { refreshAiConfig } from "./modules/platform/services/AiSettingService";
 import { seedAiPolicies } from "./modules/platform/services/AiPolicyService";
 import { startWorkspaceQueue } from "./modules/ai-workspace/services/workspaceQueue";
+import { failOrphanedDataAnswers } from "./modules/data-assistant/services/DataChatService";
 import { oauthRouter } from "./modules/ai-workspace/mcp/oauth";
 import { mcpRouter } from "./modules/ai-workspace/mcp/mcpRoute";
+import { dataMcpRouter } from "./modules/data-assistant/mcp/dataMcpRoute";
 import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -222,6 +224,9 @@ app.use("/events", eventsRouter);
 // AI Workspace W-5 (D-#1214): the MCP bridge for Claude + its OAuth 2.1 (Hub login, Principal only).
 // Caddy must pass /mcp*, /oauth* and /.well-known/oauth-* to the API.
 app.use(oauthRouter);
+// Data assistant DA-3 (D-#1535): read-only school data for Claude, data-bound tokens. Mounted
+// BEFORE /mcp; Caddy's /mcp* already covers /mcp/data.
+app.use("/mcp/data", dataMcpRouter);
 app.use("/mcp", mcpRouter);
 
 // MON-2: capture faults thrown by the thin REST surface (pdf/files/triggers) + the
@@ -270,6 +275,8 @@ async function start() {
   startNotificationTicker();
   // AI Workspace W-2/W-3: answer off-peak chat turns and draft revisions once DeepSeek is off-peak (60s).
   startWorkspaceQueue();
+  // Data chat answers left "running" by a restart become failed (DA-2).
+  void failOrphanedDataAnswers().catch(() => undefined);
   app.listen(PORT, () => {
     console.log(`SCD Hub server listening on http://localhost:${PORT}/graphql`);
   });

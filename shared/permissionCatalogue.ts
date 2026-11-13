@@ -1105,6 +1105,22 @@ export const FEATURE_CATALOGUE = {
       admin: { en: "Manage every AI project", bn: "সব এআই প্রকল্প পরিচালনা", desc: "Open, change or archive any AI project and its members, whoever created it", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
+  // Data assistant (docs/prd-data-assistant-mcp.md, DA-1, D-#1537): read-only answers about the
+  // school from curated tools, in the app and over Claude. These switches only open the door —
+  // what each tool returns is decided by the screens' own permissions. Office `use` and `connect`
+  // are OFF at ship (owner Q1/Q2): the Principal switches `use` on per person later; `audit`
+  // (every person's tool-call log and connections) is LOCKED to the Principal.
+  data_assistant: {
+    group: "admin_and_access",
+    en: "Data assistant",
+    bn: "তথ্য সহকারী",
+    actions: {
+      use: { en: "Use the data assistant", bn: "তথ্য সহকারী ব্যবহার", desc: "Ask questions about school data in the app's data chat; answers show only what your own permissions allow", teacher: false, office: false, flags: [] },
+      connect: { en: "Connect Claude", bn: "Claude-এর সঙ্গে সংযোগ", desc: "Let an outside chat (Claude) read school data as you, only what your own permissions allow", teacher: false, office: false, flags: [] },
+      individual_pay: { en: "See one person's pay (data assistant)", bn: "ব্যক্তির বেতন দেখা (তথ্য সহকারী)", desc: "Let the data assistant show a named person's pay lines (gross, deductions, net). Needs payroll:view as well; monthly totals need only payroll:view (owner 13 Nov)", teacher: false, office: false, flags: [] },
+      audit: { en: "Data assistant log & connections", bn: "তথ্য সহকারীর লগ দেখা", desc: "Read every person's data-assistant tool calls and connections, and disconnect anyone", teacher: false, office: false, flags: ["LOCKED"] },
+    },
+  },
   guardian_engagement: {
     group: "admin_and_access",
     en: "Guardian app usage",

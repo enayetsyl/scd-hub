@@ -80,6 +80,8 @@ type NavLeaf = {
   hidden?: boolean;
   /** GH-4: shown only while the school's lesson-progress switch is on (guardian entries). */
   needsLessonProgress?: boolean;
+  /** Data assistant (D-#1570): also shown while the Principal uses "View as" (the server decides). */
+  orViewAs?: boolean;
 };
 type NavSection =
   | ({ type: "item" } & NavLeaf)
@@ -170,6 +172,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "AiAssistTab", labelKey: "aasNav", icon: "🤖", perms: ["ai_assist:chat", "ai_assist:read_all_chats"] },
   // AI Workspace (docs/prd-ai-workspace.md, D-#1208): projects + files + instructions; the Principal at launch.
   { type: "item", route: "AiWorkspaceTab", labelKey: "awNav", icon: "🧠", perms: ["ai_workspace:use", "ai_workspace:admin"] },
+  // Data assistant (docs/prd-data-assistant-mcp.md, D-#1537): read-only answers from school data.
+  { type: "item", route: "DataAssistantTab", labelKey: "daNav", icon: "📊", perms: ["data_assistant:use", "data_assistant:connect", "data_assistant:audit"], orViewAs: true },
   // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
   {
     type: "group",
@@ -425,7 +429,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const basket = useBasket();
-  const { role, can } = useAuth();
+  const { role, can, viewAs } = useAuth();
   const lessonProgressOn = useLessonProgressOn();
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
   /** Route-gate + the optional per-leaf effective-permission gate (see NavLeaf). */
@@ -434,9 +438,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
       !leaf.hidden &&
       (!leaf.needsLessonProgress || lessonProgressOn) &&
       present.has(leaf.route) &&
-      (!leaf.perms || leaf.perms.some(can)) &&
+      (!leaf.perms || leaf.perms.some(can) || (!!leaf.orViewAs && !!viewAs)) &&
       (leaf.allOf ?? []).every(can),
-    [present, can, lessonProgressOn],
+    [present, can, lessonProgressOn, viewAs],
   );
   const focusedTab = props.state.routes[props.state.index];
   const activeRoute = focusedTab?.name as RouteName | undefined;

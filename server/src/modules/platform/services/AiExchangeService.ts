@@ -26,7 +26,7 @@ const EXPORT_LIMIT = 5000;
 const MAX_TEXT = 60_000;
 
 /** AI Workspace chat (W-2) is logged in reference mode: no history copy, no prefix text (D-#1228). */
-export const LOGGED_AI_FEATURES = ["comment_check", "assistant", "workspace_chat"] as const;
+export const LOGGED_AI_FEATURES = ["comment_check", "assistant", "workspace_chat", "data_assistant"] as const;
 
 export function textHash(text: string): string {
   return createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -57,6 +57,9 @@ export interface AiExchangeInput {
   request: string;
   reply: string;
   attempts: IAiExchangeAttempt[];
+  /** Data assistant (DA-2): tool names + swept arguments + AiDataCall ids; never results. */
+  toolCalls?: Array<{ name: string; args: string; dataCallId?: string | null }>;
+  impersonatorId?: string | null;
 }
 
 /** One call → one row. Never throws. */
@@ -94,6 +97,8 @@ export async function recordAiExchange(x: AiExchangeInput): Promise<void> {
       deidentified: x.deidentified ?? true,
       request: x.request.slice(0, MAX_TEXT) || "(empty)",
       reply: x.reply.slice(0, MAX_TEXT),
+      ...(x.toolCalls?.length ? { toolCalls: x.toolCalls.slice(0, 50).map((t) => ({ name: t.name, args: t.args.slice(0, 2048), dataCallId: t.dataCallId ?? null })) } : {}),
+      ...(x.impersonatorId && Types.ObjectId.isValid(x.impersonatorId) ? { impersonatorId: new Types.ObjectId(x.impersonatorId) } : {}),
     });
   } catch (err) {
     console.error("[AiExchangeService] could not log an AI exchange:", (err as Error)?.message);

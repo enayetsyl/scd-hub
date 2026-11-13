@@ -1144,7 +1144,7 @@ ConfirmResultRef.implement({
 // teacher, per-section delegate, school-wide supervisor, Principal) may also view it —
 // they don't necessarily hold ordinary teaching read-scope for that section. Falls back
 // to normal read-scope for everyone else (subject teachers viewing their own class).
-async function assertCanViewHomeworkDay(
+export async function assertCanViewHomeworkDay(
   ctx: Parameters<typeof assertCanConfirmHomework>[0],
   sectionId: string,
   classId: string,

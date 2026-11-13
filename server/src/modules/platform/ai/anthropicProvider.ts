@@ -55,7 +55,7 @@ interface ClaudeUsage {
 interface ClaudeMessage {
   model?: string;
   stop_reason?: string | null;
-  content?: Array<{ type: string; text?: string }>;
+  content?: Array<{ type: string; text?: string; id?: string; name?: string; input?: unknown }>;
   usage?: ClaudeUsage;
 }
 interface ClaudeStream {
@@ -99,14 +99,35 @@ export function claudeBody(input: AiSendInput, model: string): Record<string, un
     ...(input.stablePrefix ? [{ type: "text", text: input.stablePrefix, cache_control: { type: "ephemeral" } }] : []),
     ...(input.context ? [{ type: "text", text: input.context, cache_control: { type: "ephemeral" } }] : []),
   ];
-  const messages = [
+  const messages: Array<Record<string, unknown>> = [
     ...(input.history ?? []).filter((t) => t.text).map((t) => ({ role: t.role, content: t.text })),
     { role: "user", content: [...(input.files ?? []).map(fileBlock), { type: "text", text: input.variablePart }] },
   ];
+  // DA-2 tool rounds: the assistant content goes back UNCHANGED (thinking blocks included), then
+  // ALL of the round's results in ONE user message; a failed tool is is_error, never dropped.
+  for (const r of input.toolRounds ?? []) {
+    messages.push({ role: "assistant", content: r.assistant });
+    messages.push({
+      role: "user",
+      content: [
+        ...r.results.map((x) => ({ type: "tool_result", tool_use_id: x.id, content: x.content, ...(x.isError ? { is_error: true } : {}) })),
+        ...(r.note ? [{ type: "text", text: r.note }] : []),
+      ],
+    });
+  }
+  const tools = input.tools?.length
+    ? {
+        // Tools render before the system prompt, so the cached prefix covers them too.
+        tools: input.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
+        // Never a forced choice (a 400 on Opus/Sonnet 5.5): "auto", or "none" for the last round.
+        tool_choice: { type: input.toolChoice ?? "auto" },
+      }
+    : {};
   return {
     model,
     max_tokens: input.maxOutputTokens + CLAUDE_THINKING_ALLOWANCE[input.reasoning],
     ...(system.length ? { system } : {}),
+    ...tools,
     messages,
     // Automatic caching of the conversation tail (the explicit breakpoints keep the prefix).
     cache_control: { type: "ephemeral" },
@@ -156,6 +177,26 @@ export class AnthropicProvider implements AiProvider {
 
     const stop = msg.stop_reason ?? null;
     if (stop === "refusal") throw new AiProviderError("bad_response", "Claude declined this request", this.name);
+    const u0 = msg.usage ?? {};
+    const usageOf = () => {
+      const write = u0.cache_creation_input_tokens ?? 0;
+      return { cacheHitTokens: u0.cache_read_input_tokens ?? 0, cacheMissTokens: (u0.input_tokens ?? 0) + write, cacheWriteTokens: write, outputTokens: u0.output_tokens ?? 0, reasoningTokens: null };
+    };
+    if (stop === "tool_use" && input.tools?.length) {
+      const calls = (msg.content ?? []).filter((b) => b.type === "tool_use" && b.id && b.name);
+      if (calls.length === 0) throw new AiProviderError("bad_response", "Claude asked for a tool but named none", this.name);
+      return {
+        provider: this.name,
+        model,
+        resolvedModel: msg.model || model,
+        text: (msg.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim(),
+        usage: usageOf(),
+        finishReason: "tool_calls",
+        toolCalls: calls.map((b) => ({ id: b.id!, name: b.name!, argsJson: JSON.stringify(b.input ?? {}) })),
+        assistantRaw: msg.content,
+        latencyMs: Date.now() - started,
+      };
+    }
     if (stop !== "end_turn" && stop !== "stop_sequence") {
       throw new AiProviderError("truncated", `Claude stopped early (${stop ?? "no stop reason"})`, this.name);
     }

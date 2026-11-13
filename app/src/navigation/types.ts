@@ -347,6 +347,15 @@ export type AiAssistStackParamList = {
   AiAssistChat: { sessionId: string };
 };
 
+/** Data assistant (docs/prd-data-assistant-mcp.md §11): the data chat + (DA-4) Claude, apps, log. */
+export type DataAssistantStackParamList = {
+  DataAssistantHome: undefined;
+  DataChat: { sessionId: string };
+  /** DA-4, the Principal (data_assistant:audit): the tool-call log and every connection. */
+  DataAssistantLog: undefined;
+  DataConnections: undefined;
+};
+
 /** AI Workspace (docs/prd-ai-workspace.md). AiWorkspaceHome stays first: the initial route takes no params. */
 export type AiWorkspaceStackParamList = {
   AiWorkspaceHome: undefined;
@@ -916,4 +925,5 @@ export type TabParamList = {
   VivaTab: NavigatorScreenParams<VivaStackParamList>;
   AiAssistTab: NavigatorScreenParams<AiAssistStackParamList>;
   AiWorkspaceTab: NavigatorScreenParams<AiWorkspaceStackParamList>;
+  DataAssistantTab: NavigatorScreenParams<DataAssistantStackParamList>;
 };
