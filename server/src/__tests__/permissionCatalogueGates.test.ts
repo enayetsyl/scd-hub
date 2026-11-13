@@ -103,6 +103,10 @@ const DECLARED_AHEAD: Record<string, string> = {};
  *  self-review stamp, and the pre-matrix fallback inside the scope helpers (used only when
  *  a call site passes no reach). */
 const ROLE_CHECK_BASELINE: Record<string, number> = {
+  // Support profile (D-#1548, docs/prd-child-support-profile.md §8.1): Office and guardians are
+  // refused on every support-profile resolver WHATEVER is stored — a target-protection guard, so a
+  // stale or mistaken grant can never leak a child's profile. The only role check in the feature.
+  "modules/support-profile/services/supportAccess.ts": 1,
   "middleware/authz.ts": 6,
   "modules/attendance/services/AttendanceReminderService.ts": 1,
   "modules/foundation/services/ImpersonationService.ts": 2,

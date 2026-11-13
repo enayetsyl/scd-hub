@@ -287,6 +287,11 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianHomeTab", screen: "ChildMissedLessons", params: refs?.studentId ? { studentId: refs.studentId } : undefined }
         : { tab: "HomeTab", screen: "Today" };
+    // Student support profile (D-#1546): staff only; the notice names no child (§9.7). The feature's
+    // own screens arrive with CSP-5; until then the row opens the staff home.
+    case "SUPPORT_PROFILE":
+    case "SAFEGUARDING":
+      return guardian ? null : { tab: "HomeTab", screen: "Today" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
