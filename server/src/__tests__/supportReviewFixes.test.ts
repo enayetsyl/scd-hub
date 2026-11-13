@@ -193,6 +193,22 @@ describe("3 — audit privacy: SUPPORT_* / SAFEGUARDING_* only for the right hol
     await writeAudit({ eventKind: "SUPPORT_PROFILE_VIEWED", actorId: actor, targetId: String(fx.child), targetKind: "Student", meta: { surface: "CARD" } });
     await writeAudit({ eventKind: "SAFEGUARDING_REFERRAL_RAISED", actorId: actor, targetKind: "Student", meta: {} });
     await writeAudit({ eventKind: "PROXY_EXPIRED", actorId: actor, meta: {} });
+    // every kind CSP-2 added (batches, packs, results, previews, evaluations) is a SUPPORT_* row
+    for (const k of NEW_KINDS) await writeAudit({ eventKind: k, actorId: actor, targetKind: "SupportBatch", meta: { batchId: "x" } });
+  });
+  const NEW_KINDS = [
+    "SUPPORT_BATCH_CREATED", "SUPPORT_BATCH_CANCELLED", "SUPPORT_BATCH_EXPIRED", "SUPPORT_PACK_DOWNLOADED",
+    "SUPPORT_RESULT_UPLOADED", "SUPPORT_RESULT_APPLIED", "SUPPORT_RESULT_DISCARDED", "SUPPORT_EVALUATION_RECORDED",
+  ] as const;
+  it("every CSP-2 audit kind is hidden from Office and shown to the Principal", async () => {
+    const office: string[] = (await run(LOG, OFFICE())).data?.auditLog.map((x: any) => x.eventKind);
+    for (const k of NEW_KINDS) expect(office).not.toContain(k);
+    expect(office).toContain("PROXY_EXPIRED");
+    const principal: string[] = (await run(LOG, P())).data?.auditLog.map((x: any) => x.eventKind);
+    for (const k of NEW_KINDS) expect(principal).toContain(k);
+    // naming one of them in the filter finds nothing for Office
+    const asked = await run(`query { auditLog(limit: 50, eventKind: "SUPPORT_PACK_DOWNLOADED") { eventKind } }`, OFFICE());
+    expect(asked.data?.auditLog).toEqual([]);
   });
   it("an Office user with audit_log:view / view_activity sees none of them", async () => {
     const log = await run(LOG, OFFICE());

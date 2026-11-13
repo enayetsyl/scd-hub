@@ -34,8 +34,15 @@ OFFICE and GUARDIAN refused whatever is stored; "view as" refused unless the rea
 | safeguardingReferralsPage | `safeguarding:receive` | never under "view as" |
 | markSafeguardingReferral | `safeguarding:receive` | never under "view as" |
 
-## (d) Batches (CSP-2) — `support_profile:process`
-Added with CSP-2: batch create/cancel, pack download, result upload/apply. Refused in every "view as" session.
+## (d) Batches (CSP-2) — `server/src/modules/support-profile/resolvers/supportBatch.ts`
+Every field `support_profile:process` (LOCKED) and refused in every "view as" session (`assertProcess`).
+| resolver | gate | extra rule |
+|---|---|---|
+| supportBatchesPage | `support_profile:process` | |
+| createSupportBatch / cancelSupportBatch | `support_profile:process` | one open batch at a time |
+| downloadSupportPack | `support_profile:process` | fail-closed name scan; built in memory, hash + download entry + audit only |
+| uploadSupportResult / supportImportPreview / applySupportImport / discardSupportImport | `support_profile:process` | the producer needs a passed evaluation for the method version |
+| downloadSupportEvalPack / recordSupportEvaluation / supportMethodInfo | `support_profile:process` | |
 
 ## (e) App gates
 Screens arrive with CSP-5 (teacher surfaces) and CSP-2/3 (batch, queue). Each button checks its action with `can("support_profile:…")`.

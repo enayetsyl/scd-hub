@@ -454,6 +454,7 @@ export type AuditEventKind =
   | "SUPPORT_RESULT_UPLOADED" // a batch result uploaded and validated — fileHash, producer, valid/rejected counts (D-#1587)
   | "SUPPORT_RESULT_APPLIED" // a validated batch result applied (D-#1587)
   | "SUPPORT_RESULT_DISCARDED" // an uploaded batch result discarded before apply (D-#1587)
+  | "SUPPORT_EVALUATION_RECORDED" // a chat/model evaluation scored and stored — producer, methodVersion, passed; never text (§16.9)
   | "SUPPORT_PROFILE_OPENED" // a support profile opened — first report or by the Principal (D-#1546)
   | "SUPPORT_PROFILE_CLOSED" // a support profile closed by the Principal, or LEFT by the leaver sweep (D-#1558)
   | "SUPPORT_PROFILE_REOPENED" // a support profile reopened by the Principal (D-#1558)

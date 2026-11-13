@@ -1,0 +1,151 @@
+{
+ "schema": "support-result/v1",
+ "batch": "{{BATCH}}",
+ "nonce": "{{NONCE}}",
+ "methodVersion": "{{METHOD}}",
+ "complete": true,
+ "reports": [
+  {
+   "report": "{{R1}}",
+   "check": {
+    "verdict": "READY",
+    "flags": [],
+    "toneCheck": {
+     "teacherTone": "POSITIVE",
+     "textReads": "POSITIVE"
+    },
+    "strategyCandidate": {
+     "present": false,
+     "titleBn": "",
+     "starterKey": null,
+     "punitive": false
+    },
+    "safeguarding": {
+     "present": false,
+     "signs": [],
+     "confidence": "LOW",
+     "quote": ""
+    }
+   },
+   "compare": null
+  },
+  {
+   "report": "{{R2}}",
+   "check": {
+    "verdict": "READY",
+    "flags": [],
+    "toneCheck": {
+     "teacherTone": "CONCERN",
+     "textReads": "CONCERN"
+    },
+    "strategyCandidate": {
+     "present": false,
+     "titleBn": "",
+     "starterKey": null,
+     "punitive": false
+    },
+    "safeguarding": {
+     "present": false,
+     "signs": [],
+     "confidence": "LOW",
+     "quote": ""
+    }
+   },
+   "compare": null
+  }
+ ],
+ "children": [
+  {
+   "child": "{{C1}}",
+   "profileDraft": {
+    "sections": {
+     "strengths": [
+      {
+       "ref": "n1",
+       "textBn": "{{DATE:{{A1}}}} দলে অঙ্কের কাজে [S] পাশের জনকে দুটি অঙ্ক দেখিয়ে দিয়েছে।",
+       "evidence": [
+        "{{A1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n2",
+       "textBn": "{{DATE:{{R1}}}} অঙ্কের ক্লাসে [S] নিজের অংশ শেষ করে সাহায্য করেছে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      },
+      {
+       "ref": "n3",
+       "textBn": "[S] বলেছে বাসায় মারে।",
+       "evidence": [
+        "{{R1}}"
+       ],
+       "counterEvidence": [],
+       "claimedLevel": "SINGLE",
+       "settings": [
+        "MATH"
+       ],
+       "strategyId": null,
+       "kind": null,
+       "insteadOfItem": null,
+       "needTag": null,
+       "functionTag": null,
+       "skillKey": null,
+       "actionable": null,
+       "replacesItemId": null,
+       "baselineBn": null,
+       "expectedBn": null
+      }
+     ]
+    },
+    "card": {
+     "doItems": [],
+     "avoidItems": [],
+     "strengthItems": [
+      "n1"
+     ],
+     "goalItem": null
+    },
+    "changeNoteBn": "শক্তির দিক যোগ হলো।"
+   }
+  }
+ ],
+ "selfCheck": {
+  "reportsDone": 2,
+  "childrenDone": 1,
+  "everySentenceCited": true,
+  "noNamesOrCodesInSentences": true,
+  "noNewFacts": true,
+  "safeguardingMarked": true
+ }
+}
