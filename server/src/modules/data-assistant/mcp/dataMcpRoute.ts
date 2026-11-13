@@ -32,9 +32,10 @@ export function buildDataMcpServer(auth: AuthPayload, client: { name: string; id
   const register = (server.registerTool as unknown as PlainRegister).bind(server);
   for (const tool of TOOL_REGISTRY) {
     if (!toolVisible(tool, auth)) continue;
+    const view = tool.trimmed?.when(auth) ? tool.trimmed : tool;
     register(
       tool.name,
-      { description: tool.description, inputSchema: tool.input, annotations: { title: tool.label_en, readOnlyHint: true, openWorldHint: false } },
+      { description: view.description, inputSchema: view.input, annotations: { title: tool.label_en, readOnlyHint: true, openWorldHint: false } },
       async (args: never): Promise<Reply> => {
         try {
           const r = await runTool(auth, tool.name, args ?? {}, { surface: "claude", clientName: client.name, clientId: client.id });
