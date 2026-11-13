@@ -384,6 +384,12 @@ export type AuditEventKind =
   | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
   | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
   | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)
+  | "WINTER_BOOKLET_IMPORTED"  // a winter booklet imported / re-imported (D-#1620) — meta code/version/kept/stale
+  | "WINTER_CHANGE_SUGGESTED"  // reviewer suggested an edit or left a page note (D-#1620) — meta bookletId/pageN/blockId
+  | "WINTER_CHANGE_EDITED"     // reviewer edited her own open suggestion (D-#1620) — meta before/after
+  | "WINTER_CHANGE_DELETED"    // reviewer deleted her own open suggestion (D-#1620)
+  | "WINTER_CHANGE_DECIDED"    // Principal accepted / rejected a suggestion (D-#1620) — meta accepted
+  | "WINTER_BOOKLET_STATUS"    // booklet moved DRAFT / IN_REVIEW / APPROVED (D-#1620) — meta before/after
   | "REFERENCE_PAPER_UPLOADED" // another branch's paper uploaded for reading (D-#1030) — meta term/year/classLevel/subject
   | "REFERENCE_PAPER_EDITED"   // its class / subject / term / title corrected (D-#1030) — meta before/after
   | "REFERENCE_PAPER_DELETED"  // removed with its pages and original (D-#1030)
