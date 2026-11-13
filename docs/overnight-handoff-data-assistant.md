@@ -169,3 +169,58 @@ row per question, DeepSeek unconfirmed).
 ### Questions
 3. Is it fine that data chats live in their own collections (not in "read every assistant
    conversation")? The Principal still sees every question + answer in the AI request log.
+
+---
+
+## DA-3 — `/mcp/data` + OAuth resource binding + the Claude connector
+
+- **Commits:** one `[DA-3]` commit after 899c566f.
+
+### Built
+- **Resource binding** (`ai-workspace/models/AiOAuth.ts`, `mcp/oauth.ts`): `resource: "workspace" | "data"`
+  on codes and tokens (default workspace, no migration), `grantedAt` on tokens. RFC 8707
+  `resource` (…/mcp/data) or `scope=data.read` picks data. `verifyAccessToken(raw, resource)`
+  refuses a token of the other resource; `/mcp` now passes "workspace" explicitly.
+- **Metadata**: `GET /.well-known/oauth-protected-resource/mcp/data`; AS metadata scopes
+  `["mcp", "data.read"]`.
+- **Sign-in**: same Hub page (email/phone + password, lockout), data text in Bangla + English;
+  data needs an active staff login with `data_assistant:connect` (permission, not role) —
+  refusal "এই সংযোগের অনুমতি আপনার নেই / You don't have permission to connect."
+  `DATA_MCP_AUTHORIZED` audit row.
+- **Lifetimes**: access 1 h, refresh 30 d rotated, 90-day absolute cap from `grantedAt` (kept across
+  rotations; both expiries capped at it; past it access → 401, refresh → invalid_grant).
+- **Revocation**: Disconnect (own; anyone's with `data_assistant:audit`); automatic at the next call
+  when `data_assistant:connect` is gone or the login is inactive; on `resetUserPassword` /
+  `resetStaffPassword`; at offboarding (fire-and-forget). `DATA_MCP_REVOKED` + `meta.reason`.
+- **`POST /mcp/data`** (`data-assistant/mcp/dataMcpRoute.ts`): stateless, 64 KB body limit, only the
+  person's visible tools, `readOnlyHint: true`, `openWorldHint: false`, instructions = PRD §4.6 text,
+  every call through `runTool` (surface `claude`, client name + id). Mounted before `/mcp`.
+- **GraphQL**: `myDataConnections` (own), `allDataConnectionsPage` (`data_assistant:audit`, paged),
+  `revokeDataConnection(clientId, userId?)`.
+
+### Deploy notes
+- No Caddy change (`/mcp*` covers `/mcp/data`). If Cloudflare challenges Anthropic's calls, add the
+  skip rule for `/mcp*`, `/oauth/*`, `/.well-known/oauth-*` (DA-0, owner). Probe from outside:
+  `curl -i https://<host>/.well-known/oauth-protected-resource/mcp/data` → JSON, not HTML.
+- Feature `data_assistant` must be ON for the tools to answer (otherwise every call says `off`).
+
+### Verified (executed)
+```
+verify_shared_vocab → RESULT: PASS — all checks green
+verify_help_guides → ALL CHECKS PASSED
+verify_descriptive_carriers → RESULT: PASS — all 11 descriptive cases gate as intended
+shared build 0; shared typecheck 0; server tsc 0 (Instantiations 8,680,052; Memory used 3,728,297K); app tsc 0
+Targeted (--runInBand), 34 suites incl. dataAssistantMcp 13/13 and aiWorkspaceW5 10/10 (unchanged):
+  first run 1 failed (offboarding: the awaited token cut hit a DB-less test) → made fire-and-forget;
+  offboarding rerun Tests 25 passed, 25 total
+Full suite (--maxWorkers=2) + expo export: started before this commit; result recorded in the
+  next commit's handoff update.
+```
+
+### Not done
+- Owner checks on the dev site / prod (DA-0 and the manual connector test) — owner steps.
+- Argument errors at the Claude door are answered by the MCP SDK and not logged as `invalid`
+  (D-#1575).
+
+### Decisions
+D-#1535, D-#1536 (PRD rows as built), D-#1575 build details.

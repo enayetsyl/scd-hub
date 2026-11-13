@@ -30,7 +30,7 @@ export const mcpRouter: Router = express.Router();
 mcpRouter.post("/", express.json({ limit: "4mb" }), async (req: Request, res: Response) => {
   const header = req.header("authorization") ?? "";
   const raw = /^Bearer\s+(.+)$/i.exec(header)?.[1]?.trim() ?? null;
-  const who = await verifyAccessToken(raw);
+  const who = await verifyAccessToken(raw, "workspace");
   if (!who) {
     res.setHeader("WWW-Authenticate", `Bearer resource_metadata="${baseUrlOf(req)}/.well-known/oauth-protected-resource"`);
     res.status(401).json({ error: "invalid_token" });
