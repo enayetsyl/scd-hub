@@ -499,7 +499,7 @@ import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
 import DrawerContent from "./DrawerContent";
-import { HELP_BUTTON_WIDTH, HelpHeaderButton, useScreenGuides } from "../components/HelpHeaderButton";
+import { HELP_BUTTON_WIDTH, HelpGuidesProvider, HelpHeaderButton, useScreenGuides } from "../components/HelpHeaderButton";
 import { screenKey } from "../lib/helpGuides";
 import HelpHomeScreen from "../screens/help/HelpHomeScreen";
 import HelpGuideScreen from "../screens/help/HelpGuideScreen";
@@ -2389,6 +2389,8 @@ export function AppTabs(): React.ReactElement {
 
   return (
     <GuardianChildProvider enabled={role === "GUARDIAN"}>
+      {/* One myHelpGuides read for every header ? (GlitchTip #77). */}
+      <HelpGuidesProvider>
       {/* VA-1 (D-#638): while the Principal is inside someone else's account this sits
           above everything and never scrolls away. Nothing is refused during a View-as
           session (the owner's G6 decision), so being unmistakably told whose account you
@@ -2484,6 +2486,7 @@ export function AppTabs(): React.ReactElement {
         {/* Help is for every login; the server decides which guides each person gets. */}
         <Drawer.Screen name="HelpTab" component={HelpNavigator} />
       </Drawer.Navigator>
+      </HelpGuidesProvider>
     </GuardianChildProvider>
   );
 }
