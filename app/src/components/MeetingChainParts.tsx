@@ -69,7 +69,7 @@ export function Expander({
           <Body style={{ fontWeight: "700" }}>{title}</Body>
           {subtitle ? <Muted>{subtitle}</Muted> : null}
         </View>
-        <Text style={{ color: c.info, fontWeight: "600" }}>{open ? STR.mcHide : STR.mcShow}</Text>
+        <Text style={{ flexShrink: 1, color: c.info, fontWeight: "600" }}>{open ? STR.mcHide : STR.mcShow}</Text>
       </Pressable>
       {open ? <View style={{ paddingBottom: space(2) }}>{children}</View> : null}
     </View>
@@ -228,7 +228,7 @@ export function NumbersTiles({
                   {t.sub ? <Text style={{ color: t.bad ? c.warning : c.textSecondary }}>{t.sub}</Text> : null}
                   {bestLine(t.key) ? <Text style={{ color: c.info, fontWeight: "600" }}>{bestLine(t.key)}</Text> : null}
                 </View>
-                <Text style={{ color: c.info, fontWeight: "600" }}>{isOpen ? STR.mcHide : STR.mcDetails}</Text>
+                <Text style={{ flexShrink: 1, color: c.info, fontWeight: "600" }}>{isOpen ? STR.mcHide : STR.mcDetails}</Text>
               </Pressable>
               {isOpen ? <View style={{ paddingHorizontal: space(4), paddingBottom: space(3) }}>{t.rows}</View> : null}
             </View>

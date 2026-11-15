@@ -68,8 +68,8 @@ export function MiniStackedBars({
         return (
           <View key={row.label}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Muted style={{ fontSize: 12 }}>{row.label}</Muted>
-              <Muted style={{ fontSize: 12 }}>
+              <Muted style={{ flexShrink: 1, fontSize: 12 }}>{row.label}</Muted>
+              <Muted style={{ flexShrink: 1, fontSize: 12 }}>
                 {row.segments
                   .filter((s) => s.value > 0)
                   .map((s) => `${s.label} ${s.value}`)
@@ -114,7 +114,7 @@ export function ChartLegend({ items }: { items: StackSegment[] }): React.ReactEl
           <View
             style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: toneColor(it.tone) }}
           />
-          <Muted style={{ fontSize: 12 }}>{it.label}</Muted>
+          <Muted style={{ flexShrink: 1, fontSize: 12 }}>{it.label}</Muted>
         </View>
       ))}
     </View>

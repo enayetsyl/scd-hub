@@ -440,7 +440,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
         {traj ? (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Body style={{ fontWeight: "700" }}>{STR.wpTrajectoryChild}</Body>
+              <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.wpTrajectoryChild}</Body>
               <Badge
                 text={
                   traj.overall === "improving"
@@ -488,13 +488,13 @@ export default function GuardianHomeScreen(): React.ReactElement {
           {selected.quranGroup ? (
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(1) }}>
               <Muted>{STR.gpQuranGroup}</Muted>
-              <Body>{selected.quranGroup.name}</Body>
+              <Body style={{ flexShrink: 1 }}>{selected.quranGroup.name}</Body>
             </View>
           ) : null}
           {selected.arabicGroup ? (
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(1) }}>
               <Muted>{STR.gpArabicGroup}</Muted>
-              <Body>{selected.arabicGroup.name}</Body>
+              <Body style={{ flexShrink: 1 }}>{selected.arabicGroup.name}</Body>
             </View>
           ) : null}
         </Card>
@@ -521,7 +521,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 key={`${s.periodNumber}-${s.subject}`}
                 style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}
               >
-                <Body>
+                <Body style={{ flexShrink: 1 }}>
                   {bnNum(s.periodNumber)}. {subjectLabel(s.subject)}
                 </Body>
                 <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}–${s.endHHMM}` : ""}</Muted>

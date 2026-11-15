@@ -32,7 +32,7 @@ export function WholePictureCard({ wp }: { wp: WholePictureT }): React.ReactElem
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700" }}>{STR.wpTitle}</Body>
+        <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.wpTitle}</Body>
         <View style={{ flexDirection: "row", gap: space(2) }}>
           {ct.atRisk ? <Badge text={STR.wpAtRisk} tone="danger" /> : null}
           <Badge text={overallLabel(wp.overall)} tone={overallTone(wp.overall)} />

@@ -136,7 +136,7 @@ export function ColumnChart({
           {legend.map((l) => (
             <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={{ width: 11, height: 11, borderRadius: 2, backgroundColor: l.color }} />
-              <Muted style={{ fontSize: 12 }}>{l.label}</Muted>
+              <Muted style={{ flexShrink: 1, fontSize: 12 }}>{l.label}</Muted>
             </View>
           ))}
         </View>
@@ -199,7 +199,7 @@ export function ColumnChart({
       {divider ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
           <View style={{ width: 2, height: 14, borderLeftWidth: 2, borderStyle: "dashed", borderColor: colors.error }} />
-          <Muted style={{ fontSize: 12 }}>{divider.label}</Muted>
+          <Muted style={{ flexShrink: 1, fontSize: 12 }}>{divider.label}</Muted>
         </View>
       ) : null}
     </View>

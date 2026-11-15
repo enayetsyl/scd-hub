@@ -254,7 +254,7 @@ function History({ mode, anchor }: { mode: Mode; anchor: string }): React.ReactE
         {h.repeated.map((r, i) => (
           <View key={`${r.key}-${r.title}-${i}`} style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), paddingVertical: space(1) }}>
             <Text style={{ color: c.textPrimary, flex: 1 }}>{`${partLabel(r.key)} — ${r.title}${r.subtitle ? ` · ${r.subtitle}` : ""}`}</Text>
-            <Text style={{ color: c.warning, fontWeight: "700" }}>{fill(STR.drpRepeatedDays, { n: num(r.days) })}</Text>
+            <Text style={{ flexShrink: 1, color: c.warning, fontWeight: "700" }}>{fill(STR.drpRepeatedDays, { n: num(r.days) })}</Text>
           </View>
         ))}
       </Card>
@@ -265,7 +265,7 @@ function History({ mode, anchor }: { mode: Mode; anchor: string }): React.ReactE
           return (
             <View key={p.key} style={{ flexDirection: "row", gap: space(2), paddingVertical: space(1), alignItems: "center" }}>
               <Text style={{ color: c.textPrimary, flex: 1 }}>{partLabel(p.key)}</Text>
-              <Text style={{ color: c.textSecondary }}>
+              <Text style={{ flexShrink: 1, color: c.textSecondary }}>
                 {p.key === "MISTAKES" ? `${STR.drpMistakes} ${num(p.mistakes)}` : p.rate == null ? "—" : `${num(p.rate)}%`}
               </Text>
               <Text style={{ width: 44, textAlign: "right", color: diff == null ? c.textDisabled : diff >= 0 ? c.primary : c.error }}>

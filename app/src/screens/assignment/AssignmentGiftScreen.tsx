@@ -271,7 +271,7 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Chip label="◀" onPress={() => shiftBlock(-1)} />
-                <Body style={{ fontWeight: "700" }}>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>
                   {STR.asWeek} {bnNum(report.weekFrom)}–{bnNum(report.weekTo)}
                 </Body>
                 <Chip label="▶" onPress={() => shiftBlock(1)} />

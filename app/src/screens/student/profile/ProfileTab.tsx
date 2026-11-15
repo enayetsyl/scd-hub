@@ -79,7 +79,7 @@ export function IdentityCard({
           <View key={label} style={{ gap: space(2) }}>
             <View style={{ height: 1, backgroundColor: colors.onPrimary, opacity: 0.25 }} />
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2) }}>
-              <Text style={{ color: colors.onPrimary, fontWeight: "700" }}>{label}</Text>
+              <Text style={{ flexShrink: 1, color: colors.onPrimary, fontWeight: "700" }}>{label}</Text>
               <Text style={{ color: colors.onPrimary, flexShrink: 1, textAlign: "right" }}>{value}</Text>
             </View>
           </View>

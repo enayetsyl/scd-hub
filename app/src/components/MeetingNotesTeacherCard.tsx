@@ -48,7 +48,7 @@ function Group({ meetingId, g, initiallyOpen }: { meetingId: string; g: NoteWork
             <View style={{ flex: 1, height: 6, borderRadius: 999, backgroundColor: c.surfaceAlt, overflow: "hidden" }}>
               <View style={{ width: `${pct}%`, height: 6, backgroundColor: c.primary }} />
             </View>
-            <Muted>
+            <Muted style={{ flexShrink: 1 }}>
               {bnNum(g.written)}/{bnNum(g.total)} {STR.mcWrittenOf}
             </Muted>
           </View>

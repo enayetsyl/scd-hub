@@ -91,7 +91,7 @@ export function MeetingSummaryTeacherCard(): React.ReactElement | null {
                       {bnNum(x.written + x.skipped)}/{bnNum(x.total)} {STR.mcSubjectsIn}
                     </Muted>
                   </View>
-                  <Text style={{ color: c.info, fontWeight: "700" }}>{STR.mcWriteSummary}</Text>
+                  <Text style={{ flexShrink: 1, color: c.info, fontWeight: "700" }}>{STR.mcWriteSummary}</Text>
                 </Pressable>
               ))}
 
@@ -118,7 +118,7 @@ export function MeetingSummaryTeacherCard(): React.ReactElement | null {
                       style={{ minHeight: 40, marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space(3), borderRadius: 8, backgroundColor: c.surfaceAlt }}
                     >
                       <Text style={{ color: c.textPrimary, flex: 1 }}>{x.name}</Text>
-                      <Text style={{ color: c.onPrimaryContainer, fontWeight: "600", fontSize: 13 }}>{x.finalDone ? STR.mcStateDone : STR.mcEdit}</Text>
+                      <Text style={{ flexShrink: 1, color: c.onPrimaryContainer, fontWeight: "600", fontSize: 13 }}>{x.finalDone ? STR.mcStateDone : STR.mcEdit}</Text>
                     </Pressable>
                   ))
                 : null}

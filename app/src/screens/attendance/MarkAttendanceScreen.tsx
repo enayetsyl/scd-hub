@@ -140,10 +140,10 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
         <>
           <Card style={{ marginTop: space(3) }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Body>
+              <Body style={{ flexShrink: 1 }}>
                 {STR.attPresentWord}: <Body style={{ fontWeight: "700" }}>{bnNum(presentCount)}</Body>
               </Body>
-              <Body>
+              <Body style={{ flexShrink: 1 }}>
                 {STR.attAbsentWord}: <Body style={{ fontWeight: "700" }}>{bnNum(absent.size)}</Body>
               </Body>
             </View>

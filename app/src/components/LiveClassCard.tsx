@@ -180,7 +180,7 @@ export function LiveClassCard(): React.ReactElement | null {
           pressed && { opacity: 0.7 },
         ]}
       >
-        <Body style={{ fontWeight: "600" }}>{STR.lcbBoardOpen}</Body>
+        <Body style={{ flexShrink: 1, fontWeight: "600" }}>{STR.lcbBoardOpen}</Body>
         <Icon name="chevron-right" size={18} color={colors.textSecondary} />
       </Pressable>
     </FoldCard>

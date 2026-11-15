@@ -176,7 +176,7 @@ export default function SyllabusMatrix({
                 {GLYPH[st]}
               </Body>
             </View>
-            <Muted>{label}</Muted>
+            <Muted style={{ flexShrink: 1 }}>{label}</Muted>
           </View>
         ))}
       </View>

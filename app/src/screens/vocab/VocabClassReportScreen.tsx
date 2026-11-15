@@ -93,7 +93,7 @@ export default function VocabClassReportScreen(): React.ReactElement {
                             </Body>
                             <Muted>{isoDateLabel(e.test.testDate)}</Muted>
                           </View>
-                          <Muted>
+                          <Muted style={{ flexShrink: 1 }}>
                             {STR.vbAvgScore}: {bnNum(e.rollup.averageScore)}/{bnNum(e.rollup.averageTotal)}
                           </Muted>
                         </View>

@@ -180,7 +180,7 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Body style={{ fontWeight: "700" }}>{preview.dateKey}</Body>
-              <Muted>
+              <Muted style={{ flexShrink: 1 }}>
                 {STR.attMatchedCount}: {bnNum(preview.matched)} · {STR.attUnmatchedCount}: {bnNum(preview.unmatched)} ·{" "}
                 {STR.attSkippedCount}: {bnNum(preview.skipped)}
               </Muted>
@@ -233,7 +233,7 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
               .map((r) => (
                 <View key={r.name} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: space(1) }}>
                   <Body style={{ flex: 1 }} >{r.staffName ?? r.name}</Body>
-                  <Muted>
+                  <Muted style={{ flexShrink: 1 }}>
                     {teacherAttendanceStatusLabel(r.status)}
                     {r.punchIn ? ` · ${r.punchIn}` : ""}
                     {r.punchOut ? ` → ${r.punchOut}` : ""}

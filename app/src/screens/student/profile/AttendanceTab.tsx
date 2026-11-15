@@ -239,12 +239,12 @@ export function AttendanceTab({
         ].map((l) => (
           <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: space(1) }}>
             <View style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: l.color, borderWidth: 1, borderColor: CAL.border }} />
-            <Muted style={{ fontSize: 12 }}>{l.label}</Muted>
+            <Muted style={{ flexShrink: 1, fontSize: 12 }}>{l.label}</Muted>
           </View>
         ))}
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(1) }}>
           <Text style={{ fontSize: 11, fontWeight: "800", color: CAL.leaveMark }}>{STR.spCalLeaveMark}</Text>
-          <Muted style={{ fontSize: 12 }}>= {STR.spAbsentWithLeave}</Muted>
+          <Muted style={{ flexShrink: 1, fontSize: 12 }}>= {STR.spAbsentWithLeave}</Muted>
         </View>
       </View>
 

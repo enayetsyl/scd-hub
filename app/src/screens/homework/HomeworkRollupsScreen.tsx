@@ -101,7 +101,7 @@ export default function HomeworkRollupsScreen({ navigation }: Props): React.Reac
               ) : (
                 (trim?.flags ?? []).map((f) => (
                   <View key={f.subject} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-                    <Muted>
+                    <Muted style={{ flexShrink: 1 }}>
                       {hwSubjectLabel(f.subject)} · {STR.hwTrimmedDays} {bnNum(f.trimmedDays)}/{bnNum(f.schoolDays)}
                     </Muted>
                     <Badge text={`${bnNum(Math.round(f.ratio * 100))}%`} tone={f.flagged ? "danger" : "muted"} />

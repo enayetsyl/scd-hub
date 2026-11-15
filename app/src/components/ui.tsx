@@ -692,8 +692,13 @@ const useStyles = makeStyles((colors) => ({
   body: { ...typeScale.body, color: colors.textPrimary },
   muted: { ...typeScale.secondary, color: colors.textSecondary },
 
+  // maxWidth + flexShrink: a button with a long title (e.g. "Brief: <three children's names>")
+  // kept its full one-line width and ran off the right edge of the card on a phone (owner
+  // 2026-11-15, meeting list). Capped at its container, it shrinks and its title wraps.
   btn: {
     minHeight: 48,
+    maxWidth: "100%",
+    flexShrink: 1,
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: "center",
@@ -701,11 +706,13 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: space(4),
     paddingVertical: space(2),
   },
-  btnText: typeScale.button,
+  btnText: { ...typeScale.button, textAlign: "center", flexShrink: 1 },
   btnDisabled: { backgroundColor: colors.surfaceAlt, borderColor: colors.surfaceAlt },
 
   chip: {
     minHeight: 36,
+    maxWidth: "100%", // a long chip label wraps inside the row instead of running off a phone screen
+    flexShrink: 1,
     justifyContent: "center",
     borderRadius: radius.pill,
     borderWidth: 1,

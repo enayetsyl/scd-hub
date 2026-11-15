@@ -197,7 +197,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             {/* Day total vs ceiling */}
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.hwDayTotal}</Body>
                 <Badge
                   text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? HW_DAILY_CEILING_MIN)} ${STR.hwMinutes}`}
                   tone={over ? "danger" : "ok"}
@@ -230,7 +230,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                 return (
                   <Card key={it.itemId}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                      <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
+                      <Body style={{ flexShrink: 1, fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
                       <Badge text={it.status === "issued" ? STR.hwIssued : STR.hwDeclared} tone={it.status === "issued" ? "ok" : "muted"} />
                     </View>
                     <Muted style={{ marginTop: 4 }}>
@@ -392,7 +392,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 function SummaryRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-      <Muted>{label}</Muted>
+      <Muted style={{ flexShrink: 1 }}>{label}</Muted>
       <Body>{value}</Body>
     </View>
   );

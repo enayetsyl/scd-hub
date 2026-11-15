@@ -45,7 +45,7 @@ export function SlotList({
                     <Muted>{s.startTime}–{s.endTime}</Muted>
                   ) : null}
                 </View>
-                <Muted>{s.isBreak ? "" : s.teacherName ?? s.teacherId ?? "—"}</Muted>
+                <Muted style={{ flexShrink: 1 }}>{s.isBreak ? "" : s.teacherName ?? s.teacherId ?? "—"}</Muted>
               </View>
             ))}
           </View>

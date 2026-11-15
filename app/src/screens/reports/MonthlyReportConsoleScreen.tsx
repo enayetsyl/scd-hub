@@ -340,7 +340,7 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
           ) : (
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: space(2) }}>
-                <Muted>
+                <Muted style={{ flexShrink: 1 }}>
                   {bnNum(selectedIds.length)} {STR.mrSelected}
                 </Muted>
                 <Pressable
@@ -380,7 +380,7 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
                   accessibilityRole="button"
                   style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
                 >
-                  <Body style={{ fontWeight: "700" }}>{STR.mrDesktopTitle}</Body>
+                  <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.mrDesktopTitle}</Body>
                   <Body style={{ color: colors.primary }}>{desktopOpen ? "▾" : "▸"}</Body>
                 </Pressable>
 

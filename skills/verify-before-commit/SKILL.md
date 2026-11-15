@@ -13,6 +13,7 @@ Run the checks relevant to what changed and PASTE THE REAL OUTPUT:
   is added or updated in the SAME commit (D-#973; re-shoot the picture with
   `server/scripts/help/capture.cjs` when a step's button moved or was renamed), then
   `node skills/_tools/verify_help_guides.mjs` must print ALL CHECKS PASSED. No guide change = not done.
+- Any new or changed screen: run the phone overflow scan (`node skills/_tools/scan_phone_overflow.cjs app/src node_modules/typescript`) and look at it at 360 dp width; no text or control may run off the screen.
 
 Rules:
 - If a check can't be run, say so explicitly — do not assert success.

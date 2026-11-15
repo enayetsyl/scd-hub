@@ -131,7 +131,7 @@ export default function ExamHomeScreen({ navigation }: Props): React.ReactElemen
       {pendingCount > 0 ? (
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700" }}>{STR.exWaitingOnYou}</Body>
+            <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.exWaitingOnYou}</Body>
             <Badge text={bnNum(pendingCount)} tone="warn" />
           </View>
           <View style={{ marginTop: space(2) }}>
@@ -203,7 +203,7 @@ export default function ExamHomeScreen({ navigation }: Props): React.ReactElemen
                 {i > 0 ? <Divider /> : null}
                 <View style={{ marginTop: space(2) }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Body style={{ fontWeight: "700" }}>{routineSubjectLabel(p.subject)}</Body>
+                    <Body style={{ flexShrink: 1, fontWeight: "700" }}>{routineSubjectLabel(p.subject)}</Body>
                     <Badge
                       text={p.tabulatedAt ? STR.exTabulated : STR.exNotTabulated}
                       tone={p.tabulatedAt ? "ok" : "muted"}
