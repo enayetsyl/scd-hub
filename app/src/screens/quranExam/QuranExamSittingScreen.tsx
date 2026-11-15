@@ -68,8 +68,13 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
     const n = p.sections.reduce((a, x) => a + x.items.length, 0);
     return s.itemMarks && s.itemMarks.length === n ? s.itemMarks : Array(n).fill(0);
   });
+  // Rebuild each count FIELD BY FIELD: urql's cacheExchange stamps __typename onto the
+  // saved rows, and `QuranExamHifzCountInput` rejects it when a re-opened sitting is saved.
   const [counts, setCounts] = React.useState(() =>
-    s.paras.map((para) => s.hifzCounts.find((c) => c.para === para) ?? { para, tanbih: 0, fath: 0 }),
+    s.paras.map((para) => {
+      const c = s.hifzCounts.find((x) => x.para === para);
+      return { para, tanbih: c?.tanbih ?? 0, fath: c?.fath ?? 0 };
+    }),
   );
   // তানবীহ/ফাত্হ for sections marked the Hifz way (D-#881), by section index.
   const [secCounts, setSecCounts] = React.useState<Record<number, { tanbih: number; fath: number }>>(() => {
