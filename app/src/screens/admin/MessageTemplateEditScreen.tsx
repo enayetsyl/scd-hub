@@ -195,7 +195,7 @@ export default function MessageTemplateEditScreen({ route, navigation }: Props):
         (historyQ.data?.messageTemplateHistory ?? []).map((h, i) => (
           <Card key={i}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Body style={{ fontWeight: "700" }}>{h.action === "reset" ? STR.mtActionReset : STR.mtActionEdit}</Body>
+              <Body style={{ flexShrink: 1, fontWeight: "700" }}>{h.action === "reset" ? STR.mtActionReset : STR.mtActionEdit}</Body>
               <Muted>{isoDateTimeLabel(h.at)}</Muted>
             </View>
             {h.priorBnBody ? (

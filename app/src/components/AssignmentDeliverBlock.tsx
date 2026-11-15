@@ -213,7 +213,7 @@ export function AssignmentDeliverBlock({
               }}
               style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}
             >
-              <Body>
+              <Body style={{ flexShrink: 1 }}>
                 {s.name} <Muted>({s.schoolId})</Muted>
               </Body>
               <Badge text={absent[s.id] ? STR.asAbsent : STR.asPresent} tone={absent[s.id] ? "warn" : "ok"} />

@@ -95,7 +95,7 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
           sets.map((s) => (
             <Card key={s.id} onPress={() => navigation.navigate("SetDetail", { setId: s.id })}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{s.name || setTypeLabel(s.setType)}</Body>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>{s.name || setTypeLabel(s.setType)}</Body>
                 <Badge
                   text={s.status === "assembled" ? STR.statusAssembled : STR.statusDraft}
                   tone={s.status === "assembled" ? "ok" : "warn"}

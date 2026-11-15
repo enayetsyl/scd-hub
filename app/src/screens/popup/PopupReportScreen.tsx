@@ -310,7 +310,7 @@ function Legend({ color, label, n }: { color: string; label: string; n: number }
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: space(1) }}>
       <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: color }} />
-      <Muted>{`${label} ${bnNum(n)}`}</Muted>
+      <Muted style={{ flexShrink: 1 }}>{`${label} ${bnNum(n)}`}</Muted>
     </View>
   );
 }

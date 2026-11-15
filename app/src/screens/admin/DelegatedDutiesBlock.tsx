@@ -302,7 +302,7 @@ export default function DelegatedDutiesBlock({ userId }: { userId: string }): Re
                 key={`${p.classId}-${p.subjectId}`}
                 style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(1) }}
               >
-                <Body>
+                <Body style={{ flexShrink: 1 }}>
                   {className(p.classId)} · {subjectName(p.subjectId)}
                 </Body>
                 <Button

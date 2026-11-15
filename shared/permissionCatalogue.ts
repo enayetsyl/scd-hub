@@ -853,6 +853,24 @@ export const FEATURE_CATALOGUE = {
       override: { en: "Force a build", bn: "গেট উপেক্ষা করে বিল্ড", desc: "`force` past the assembly gate", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
+  // Book lifecycle (docs/prd-book-lifecycle.md, BL-1, D-#1596): the school's own books as versions,
+  // paper review rounds, feedback, final, print and errata — beside the old lesson-JSON flow. All off
+  // for TEACHER and OFFICE at ship; `finalize` (record the paper reviewer's verdict and rulings,
+  // direct-fix approve, mark final, announce errata) is LOCKED to the Principal (owner Q1/Q4).
+  book_lifecycle: {
+    group: "content_and_books",
+    en: "Book versions & review",
+    bn: "বইয়ের সংস্করণ ও পর্যালোচনা",
+    actions: {
+      view: { en: "View books and versions", bn: "বই ও সংস্করণ দেখা", desc: "Books, versions, master text and files, rounds, feedback, decisions, rule sets, releases, errata, timeline", teacher: false, office: false, flags: [] },
+      manage: { en: "Manage books and versions", bn: "বই ও সংস্করণ সামলানো", desc: "Create/import a book, upload a version, build a paper round and its print packet, mark it sent, upload the returned scans and transcribe her points, tick checked-against-scan, triage feedback, decisions, rule sets, errata drafts, edit drafts and accept one into a draft version", teacher: false, office: false, flags: [] },
+      finalize: { en: "Record approval & mark final", bn: "চূড়ান্ত ঘোষণা", desc: "Record the paper reviewer's verdict and rulings, approve a direct-fix version, mark a version final, announce errata", teacher: false, office: false, flags: ["LOCKED"] },
+      release: { en: "Print and distribute", bn: "ছাপা ও বিতরণ", desc: "Record a print release and its files, press statuses, tell teachers, publish the Student PDF to class books when the book's switch is on", teacher: false, office: false, flags: [] },
+      ai_edit: { en: "AI book edit", bn: "এআই দিয়ে সংশোধন", desc: "Start an AI edit job on a book (spend capped)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      teacher_view: { en: "My class books & errata", bn: "আমার শ্রেণির বই ও ভুল-সংশোধনী", desc: "For books of the class and subject you teach now: the released Teacher edition, the errata list, acknowledge an erratum", teacher: false, office: false, flags: [] },
+      report: { en: "Report a book error", bn: "বইয়ের ভুল জানানো", desc: "Report an error in a book you teach now; see your own reports and their outcome", teacher: false, office: false, flags: [] },
+    },
+  },
   teaching_notes: {
     group: "content_and_books",
     en: "Notes & guides",

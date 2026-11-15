@@ -94,7 +94,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
               <Loader label={STR.loading} />
             ) : current ? (
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}>
-                <Body>{teacherName(current.assignedTeacherId)}</Body>
+                <Body style={{ flexShrink: 1 }}>{teacherName(current.assignedTeacherId)}</Body>
                 <Badge text={vocabAssignmentSourceLabel(current.source)} tone="brand" />
               </View>
             ) : (

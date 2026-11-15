@@ -130,7 +130,7 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
   return (
     <Screen scroll>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(2) }}>
-        <H2>{route.params.name}</H2>
+        <View style={{ flexShrink: 1 }}><H2>{route.params.name}</H2></View>
         <Badge text={offboardingStatusLabel(c.status)} tone={c.status === "completed" ? "ok" : c.status === "cancelled" ? "muted" : "info"} />
       </View>
       {ok ? <Notice message={ok} tone="ok" /> : null}
@@ -214,7 +214,7 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrAccess}</Body>
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Body style={{ fontWeight: "700" }}>{c.accessRevoked ? STR.hrAccessRevokedBadge : STR.hrAccessActive}</Body>
+          <Body style={{ flexShrink: 1, fontWeight: "700" }}>{c.accessRevoked ? STR.hrAccessRevokedBadge : STR.hrAccessActive}</Body>
           <Badge text={c.accessRevoked ? STR.hrAccessRevokedBadge : STR.hrAccessActive} tone={c.accessRevoked ? "danger" : "ok"} />
         </View>
         {c.accessRevoked ? (

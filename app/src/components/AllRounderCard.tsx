@@ -38,7 +38,7 @@ function Body_({ r }: { r: AllRounderT }): React.ReactElement {
     <Card>
       <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
         <Body style={{ fontWeight: "700", flex: 1 }}>{STR.allrTitle}</Body>
-        <Muted style={{ fontSize: 12 }}>{STR.allrWindow}</Muted>
+        <Muted style={{ flexShrink: 1, fontSize: 12 }}>{STR.allrWindow}</Muted>
       </View>
       {r.score === null ? (
         <Muted style={{ marginTop: space(2) }}>{STR.allrNoData}</Muted>

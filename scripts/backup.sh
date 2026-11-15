@@ -16,6 +16,10 @@
 # beside the nightly one). Once the source is the VM's own mongod it runs every hour; no
 # cron change is needed at the cutover.
 #
+# The BOOK PLANE (BOOK_MONGODB_URI, database scdhub_books_prod — the book lifecycle's text and files'
+# metadata) is dumped beside the main database: its own archive, Drive folder SCD-Hub-Backups-Books (daily)
+# and the hourly pool, and the weekly restore check restores it into a scratch database too.
+#
 # Every failure is logged to /opt/scdhub/backup.log AND emailed via scripts/send-alert.mjs
 # (ALERT_EMAIL + ALERT_SMTP_URL in .env; unset = log only).
 set -uo pipefail
@@ -31,13 +35,16 @@ HOURLY_FOLDER="SCD-Hub-Backups-Hourly"
 HOURLY_KEEP=48
 STAMP="$(date +%Y-%m-%d_%H%M%S)"
 ARCHIVE="/tmp/scdhub_prod-${STAMP}.archive.gz"
+BOOK_ARCHIVE="/tmp/scdhub_books_prod-${STAMP}.archive.gz"
+BOOK_FOLDER="SCD-Hub-Backups-Books"
+BOOK_DB="scdhub_books_prod"
 
 envval(){ grep -E "^$1=" "$ENVF" | head -1 | cut -d= -f2-; }
 say(){ echo "$(date '+%F %T %Z') backup[$MODE]: $*" >>"$LOG"; }
 alert(){ node "$SCRIPTS/send-alert.mjs" "[scdhub] backup $MODE FAILED on $(hostname)" "$1" >>"$LOG" 2>&1 || true; }
 fail(){ say "FAILED: $*"; alert "$*
 
-Log: $LOG"; rm -f "$ARCHIVE"; exit 1; }
+Log: $LOG"; rm -f "$ARCHIVE" "$BOOK_ARCHIVE"; exit 1; }
 
 URI="$(envval BACKUP_MONGODB_URI)"
 [ -n "$URI" ] || URI="$(envval MONGODB_URI)"
@@ -48,6 +55,15 @@ source_is_local(){
     mongodb://127.0.0.1*|mongodb://localhost*|mongodb://*@127.0.0.1*|mongodb://*@localhost*) return 0 ;;
   esac
   return 1
+}
+
+BOOK_URI="$(envval BOOK_MONGODB_URI)"
+
+# The book plane: absent URI = not configured on this box (logged, not an error); present = must dump.
+dump_books(){
+  if [ -z "$BOOK_URI" ]; then say "no BOOK_MONGODB_URI — book plane not dumped"; return 1; fi
+  mongodump --uri="$BOOK_URI" --archive="$BOOK_ARCHIVE" --gzip --quiet </dev/null || fail "mongodump error (book plane)"
+  BOOK_SIZE="$(du -h "$BOOK_ARCHIVE" | cut -f1)"
 }
 
 dump(){
@@ -79,8 +95,12 @@ case "$MODE" in
     else
       say "WARN glitchtip pg_dump failed (non-fatal)"; rm -f "$GTAR"
     fi
-    # The book plane (D-#404) is no longer dumped: the pipeline was retired 2026-10-22 and its
-    # database is kept untouched as an archive (the last copies are in SCD-Hub-Backups-Books).
+    # The book plane (D-#404) is dumped again — the book lifecycle keeps its text there.
+    if dump_books; then
+      node "$SCRIPTS/drive-backup.mjs" "$BOOK_ARCHIVE" "$BOOK_FOLDER" >>"$LOG" 2>&1 || fail "drive upload/rotate error (book plane)"
+      rm -f "$BOOK_ARCHIVE"
+      say "book plane dumped + uploaded ($BOOK_SIZE)"
+    fi
     ;;
 
   hourly)
@@ -98,6 +118,11 @@ case "$MODE" in
     mkdir -p "$LOCAL_DIR"
     mv "$ARCHIVE" "$LOCAL_DIR/"
     ls -1t "$LOCAL_DIR"/scdhub_prod-*.archive.gz 2>/dev/null | tail -n +$((LOCAL_KEEP + 1)) | xargs -r rm -f
+    if dump_books; then
+      node "$SCRIPTS/drive-backup.mjs" "$BOOK_ARCHIVE" "$BOOK_FOLDER" "--keep-newest=$HOURLY_KEEP" >>"$LOG" 2>&1 || fail "drive upload/rotate error (book plane, hourly)"
+      mv "$BOOK_ARCHIVE" "$LOCAL_DIR/"
+      ls -1t "$LOCAL_DIR"/scdhub_books_prod-*.archive.gz 2>/dev/null | tail -n +$((LOCAL_KEEP + 1)) | xargs -r rm -f
+    fi
     say "done ($SIZE uploaded; newest $LOCAL_KEEP kept locally in $LOCAL_DIR)"
     ;;
 
@@ -121,6 +146,22 @@ case "$MODE" in
     [ "${BADN:-0}" = "0" ] && [ "${OKN:-0}" -gt 0 ] \
       || fail "restorecheck of $(basename "$NEWEST"): restored=${OKN:-?} failed=${BADN:-?} collections=${COLLS:-?}"
     say "restorecheck OK: $(basename "$NEWEST") -> $OKN documents in $COLLS collections, 0 failed (scratch DB dropped)"
+
+    # The book plane's newest local copy too (a young plane may hold few documents: zero FAILED is the rule).
+    BOOK_NEWEST="$(ls -1t "$LOCAL_DIR"/scdhub_books_prod-*.archive.gz 2>/dev/null | head -1)"
+    if [ -n "$BOOK_NEWEST" ]; then
+      BSCRATCH=scdhub_books_restorecheck
+      BOUT="$(mongorestore --uri="$ADMIN" --archive="$BOOK_NEWEST" --gzip --drop \
+        --nsInclude="$BOOK_DB.*" --nsFrom="$BOOK_DB.*" --nsTo="$BSCRATCH.*" </dev/null 2>&1)" \
+        || fail "mongorestore error on $(basename "$BOOK_NEWEST"): $(echo "$BOUT" | tail -3)"
+      BBAD="$(echo "$BOUT" | grep -oE '[0-9]+ document\(s\) failed to restore' | grep -oE '^[0-9]+' | tail -1)"
+      BOK="$(echo "$BOUT" | grep -oE '[0-9]+ document\(s\) restored successfully' | grep -oE '^[0-9]+' | tail -1)"
+      mongosh --quiet "$ADMIN" --eval "db.getSiblingDB('$BSCRATCH').dropDatabase()" </dev/null >/dev/null 2>&1
+      [ "${BBAD:-0}" = "0" ] || fail "restorecheck of $(basename "$BOOK_NEWEST"): failed=${BBAD:-?}"
+      say "restorecheck OK (book plane): $(basename "$BOOK_NEWEST") -> ${BOK:-0} documents, 0 failed (scratch DB dropped)"
+    else
+      say "restorecheck: no local book-plane copy yet (BOOK_MONGODB_URI unset or first hourly not run)"
+    fi
     ;;
 
   *)

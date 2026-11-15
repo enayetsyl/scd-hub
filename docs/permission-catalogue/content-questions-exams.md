@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `exam_results`, `exam_custody`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `exam_results`, `exam_custody`, `mastery`, `book_production`, `book_lifecycle` (owner rows: see README; `book_lifecycle` gates: docs/prd-book-lifecycle.md §7.4). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations

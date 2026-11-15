@@ -69,7 +69,7 @@ export default function MeetingFinalQueueScreen({ route, navigation }: Props): R
               opacity: pressed ? 0.75 : 1,
             })}
           >
-            <Text style={{ color: c.textSecondary, minWidth: 48 }}>{r.slotTime != null ? minutesToHHMM(r.slotTime) : "—"}</Text>
+            <Text style={{ flexShrink: 1, color: c.textSecondary, minWidth: 48 }}>{r.slotTime != null ? minutesToHHMM(r.slotTime) : "—"}</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ color: c.textPrimary, fontWeight: "600" }}>{r.name}</Text>
               <Muted>

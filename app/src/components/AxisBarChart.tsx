@@ -95,7 +95,7 @@ export function AxisBarChart({
       {reference ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
           <View style={{ width: 18, height: 0, borderTopWidth: 2, borderStyle: "dashed", borderColor: colors.gold }} />
-          <Muted style={{ fontSize: 12 }}>
+          <Muted style={{ flexShrink: 1, fontSize: 12 }}>
             {reference.label}: {bnNum(Math.round(reference.value))}%
           </Muted>
         </View>

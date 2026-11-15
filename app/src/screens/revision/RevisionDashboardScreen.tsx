@@ -207,7 +207,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
                   style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}
                 >
                   <Muted>{bnNum(p.date)}</Muted>
-                  <Body>
+                  <Body style={{ flexShrink: 1 }}>
                     {STR.revTanbih} {bnNum(p.tanbih)} · {STR.revFath} {bnNum(p.fath)} · {STR.revMistakes}{" "}
                     {bnNum(p.mistakes)} · {STR.revSabaqAyahs} {bnNum(p.sabaqAyahs)}
                   </Body>

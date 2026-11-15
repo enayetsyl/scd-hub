@@ -280,7 +280,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <Body style={{ fontWeight: "700" }}>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>
                   {open ? "▾" : "▸"} {g.name}
                 </Body>
                 <Muted>{g.families.length}</Muted>

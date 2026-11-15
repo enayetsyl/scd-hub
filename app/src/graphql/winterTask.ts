@@ -14,6 +14,9 @@ export interface WinterBookletRowT {
   /** DRAFT | IN_REVIEW | APPROVED */
   status: string;
   pageCount: number;
+  /** The printed PDF's stored-file id (GET /files/:id), null when none is attached. */
+  pdfFileId: string | null;
+  pdfUpdatedAt: string | null;
   openChanges: number;
   acceptedChanges: number;
 }
@@ -46,6 +49,8 @@ export interface WinterBookletDetailT {
   titleBn: string;
   version: number;
   status: string;
+  pdfFileId: string | null;
+  pdfUpdatedAt: string | null;
   pagesJson: string;
 }
 
@@ -66,7 +71,7 @@ export interface WinterChangeT {
   editedAt: string | null;
 }
 
-const ROW = `id code classLevel classLabelBn titleBn version status pageCount openChanges acceptedChanges`;
+const ROW = `id code classLevel classLabelBn titleBn version status pageCount pdfFileId pdfUpdatedAt openChanges acceptedChanges`;
 const CHANGE = `id bookletId pageN blockId before after note byName mine status stale createdAt editedAt`;
 
 export const WINTER_BOOKLETS_QUERY = gql<{ winterBooklets: WinterBookletRowT[] }>`
@@ -75,7 +80,7 @@ export const WINTER_BOOKLETS_QUERY = gql<{ winterBooklets: WinterBookletRowT[] }
 
 export const WINTER_BOOKLET_QUERY = gql<{ winterBooklet: WinterBookletDetailT }, { id: string }>`
   query WinterBooklet($id: String!) {
-    winterBooklet(id: $id) { id code classLevel classLabelBn titleBn version status pagesJson }
+    winterBooklet(id: $id) { id code classLevel classLabelBn titleBn version status pdfFileId pdfUpdatedAt pagesJson }
   }
 `;
 

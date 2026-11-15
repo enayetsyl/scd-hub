@@ -146,7 +146,7 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
             return (
               <Card key={sec.title}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Body style={{ fontWeight: "700" }}>{sec.title}</Body>
+                  <Body style={{ flexShrink: 1, fontWeight: "700" }}>{sec.title}</Body>
                   <Body style={{ fontWeight: "700" }}>
                     {bnNum(got)} / {bnNum(max)}
                   </Body>

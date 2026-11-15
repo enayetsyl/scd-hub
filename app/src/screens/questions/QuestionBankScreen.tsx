@@ -216,7 +216,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
     return (
       <>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-          <Muted style={{ fontWeight: "700" }}>
+          <Muted style={{ flexShrink: 1, fontWeight: "700" }}>
             {q.qid ?? q.id.slice(-6)} · {bnNum(q.marks ?? 0)} {STR.marks}
           </Muted>
           <Badge text={reviewStatusLabel(q.reviewStatus)} tone={reviewTone(q.reviewStatus)} />

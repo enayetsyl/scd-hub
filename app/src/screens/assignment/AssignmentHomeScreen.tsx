@@ -244,10 +244,10 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 <Muted>{STR.asPrepHint}</Muted>
                 {prompts.map((p) => (
                   <View key={p.entryId} style={{ marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Body>
+                    <Body style={{ flexShrink: 1 }}>
                       {classSectionLabel(p.classLevel, sectionName(p.sectionId))} — {hwSubjectLabel(p.subject)}
                     </Body>
-                    <Muted>
+                    <Muted style={{ flexShrink: 1 }}>
                       {STR.asDeliverBy} {day(p.deliveryDate)}
                     </Muted>
                   </View>
@@ -272,7 +272,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 <Body style={{ fontWeight: "700", flexShrink: 1 }}>{STR.asThisWeek}</Body>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexShrink: 0 }}>
                   <Chip label="◀" onPress={() => setWeek(Math.max(1, weekNumber - 1))} />
-                  <Body>
+                  <Body style={{ flexShrink: 1 }}>
                     {expected
                       ? `${monthLabel(expected.month)} · ${STR.asWeek} ${bnNum(expected.weekOfMonth)}`
                       : `${STR.asWeek} ${bnNum(weekNumber)}`}

@@ -9,3 +9,5 @@ export * from "./helpGuides";
 export * from "./dailyReport";
 export * from "./masteryPartners";
 export * from "./supportProfile";
+export * from "./bookLifecycle";
+export * from "./bookDiff";

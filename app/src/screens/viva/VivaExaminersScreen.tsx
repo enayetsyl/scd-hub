@@ -87,7 +87,7 @@ export default function VivaExaminersScreen({ route, navigation }: Props): React
               <Card key={id}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                   <Body style={{ flex: 1, fontWeight: "700" }}>{label(id)}</Body>
-                  <Muted>{STR.vivaChildrenN.replace("{n}", bnNum(rows.filter((r) => who[r.studentId] === id).length))}</Muted>
+                  <Muted style={{ flexShrink: 1 }}>{STR.vivaChildrenN.replace("{n}", bnNum(rows.filter((r) => who[r.studentId] === id).length))}</Muted>
                 </View>
                 {ro || order.length < 2 ? null : <Button title={STR.vivaRemoveExaminer} variant="ghost" onPress={() => remove(id)} />}
               </Card>

@@ -7126,6 +7126,9 @@ export interface NotificationRefsT {
   examPaperId: string | null;
   /** D-#1072 — a school notice's page, "Tab/Screen" (the pop-up OPEN_SCREEN convention). */
   screenTarget: string | null;
+  /** Book lifecycle (D-#1610) — the book; the AI edit draft for BOOK_EDIT_READY. */
+  bookId: string | null;
+  bookDraftId: string | null;
 }
 
 export interface NotificationT {
@@ -7148,7 +7151,7 @@ const NOTIFICATION_FIELDS = `
     classTestId ctId taskId
     syllabusId examId classId subject
     improvementActionId masteryActionId masteryReviewId examPaperId
-    screenTarget
+    screenTarget bookId bookDraftId
   }
 `;
 

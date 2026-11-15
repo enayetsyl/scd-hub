@@ -131,7 +131,7 @@ export default function AssignmentChaseScreen(_props: Props): React.ReactElement
                       {followUps.map((f) => (
                         <View key={f.id} style={{ marginTop: 6 }}>
                           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                            <Body>
+                            <Body style={{ flexShrink: 1 }}>
                               {STR.asStep} {bnNum(f.stepNumber)} — {f.step}
                             </Body>
                             <Badge

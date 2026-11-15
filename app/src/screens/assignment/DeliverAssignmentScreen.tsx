@@ -245,7 +245,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
                     minHeight: 48,
                   }}
                 >
-                  <Body>
+                  <Body style={{ flexShrink: 1 }}>
                     {s.name} <Muted>({s.schoolId})</Muted>
                   </Body>
                   <Badge text={isAbsent ? STR.asAbsent : STR.asPresent} tone={isAbsent ? "warn" : "ok"} />

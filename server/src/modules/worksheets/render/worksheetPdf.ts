@@ -402,9 +402,13 @@ function drawBody(
       // Owner 2026-10-16: one line per set, the boxes spread across the full page width.
       const topH = 28;
       const ansH = ruled ? ruledHeight(ruling) : 30;
+      // The direction label prints once per block of same-direction sets (owner 15 Nov).
+      let lastLabel: string | null | undefined;
       for (const set of s.sets ?? []) {
-        breakIfNeeded(topH + ansH + 4 + (set.label ? 16 : 0));
-        if (set.label) {
+        const showLabel = !!set.label && set.label !== lastLabel;
+        lastLabel = set.label;
+        breakIfNeeded(topH + ansH + 4 + (showLabel ? 16 : 0));
+        if (showLabel && set.label) {
           line(doc, set.label, MARGIN + 4, y, 10.5, "#333333");
           y += 16;
         }

@@ -93,7 +93,7 @@ export default function DailyReportSettingsScreen(_props: Props): React.ReactEle
                   >
                     {on ? <Text style={{ color: c.onPrimary, fontSize: 12, fontWeight: "700" }}>✓</Text> : null}
                   </View>
-                  <Text style={{ color: c.textPrimary }}>{partLabel(k)}</Text>
+                  <Text style={{ flexShrink: 1, color: c.textPrimary }}>{partLabel(k)}</Text>
                 </Pressable>
               );
             })}

@@ -1669,6 +1669,15 @@ export const NOTIFICATION_KINDS = [
   // (safeguarding:receive). Title and body never carry a child's name or any detail.
   "SUPPORT_PROFILE",
   "SAFEGUARDING",
+  // Book lifecycle (docs/prd-book-lifecycle.md §16, D-#1610). FEEDBACK_FILED → manage holders
+  // (one per book per Dhaka day after the first); ANSWERED → the reporter; ERRATUM / RELEASED →
+  // the book's readers (bookTeachersNow); EDIT_READY → the AI job's starter. No review-round
+  // kinds: the reviewer works on paper and has no login (owner Q1, R2).
+  "BOOK_FEEDBACK_FILED",
+  "BOOK_FEEDBACK_ANSWERED",
+  "BOOK_ERRATUM",
+  "BOOK_RELEASED",
+  "BOOK_EDIT_READY",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1764,6 +1773,11 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LESSON_MISSED: "ক্লাসের পাঠ মিস হয়েছে",
   SUPPORT_PROFILE: "শিক্ষার্থী সহায়তা",
   SAFEGUARDING: "শিশু সুরক্ষা",
+  BOOK_FEEDBACK_FILED: "বইয়ের নতুন মতামত",
+  BOOK_FEEDBACK_ANSWERED: "আপনার জানানো ভুলের উত্তর",
+  BOOK_ERRATUM: "বইয়ের ভুল-সংশোধনী",
+  BOOK_RELEASED: "বইয়ের নতুন সংস্করণ",
+  BOOK_EDIT_READY: "এআই সংশোধনের খসড়া তৈরি",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1857,6 +1871,11 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LESSON_MISSED: "Missed a lesson",
   SUPPORT_PROFILE: "Student support",
   SAFEGUARDING: "Safeguarding",
+  BOOK_FEEDBACK_FILED: "New book feedback",
+  BOOK_FEEDBACK_ANSWERED: "Your book report was answered",
+  BOOK_ERRATUM: "Book errata",
+  BOOK_RELEASED: "New book version",
+  BOOK_EDIT_READY: "AI edit draft ready",
 };
 
 /**

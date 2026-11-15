@@ -192,7 +192,7 @@ export default function HwLifecycleReportScreen(): React.ReactElement {
                     <Body style={{ fontWeight: "700", color: active ? colors.onErrorContainer : colors.textSecondary }}>
                       {bnNum(p.count)}
                     </Body>
-                    <Muted style={{ color: active ? colors.onErrorContainer : colors.textSecondary }}>{p.label}</Muted>
+                    <Muted style={{ flexShrink: 1, color: active ? colors.onErrorContainer : colors.textSecondary }}>{p.label}</Muted>
                   </Pressable>
                 );
               })}

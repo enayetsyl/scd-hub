@@ -242,7 +242,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
               <>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{STR.ctCurrent}</Body>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.ctCurrent}</Body>
                 <Badge text={currentCt ? "✓" : STR.ctNone} tone={currentCt ? "ok" : "muted"} />
               </View>
               {currentCt ? <Muted style={{ marginTop: 4 }}>{nameOf(currentCt)}</Muted> : null}

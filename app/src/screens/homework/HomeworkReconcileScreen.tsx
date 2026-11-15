@@ -185,7 +185,7 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
           <>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.hwDayTotal}</Body>
                 <Badge text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? HW_DAILY_CEILING_MIN)}`} tone={over ? "danger" : "ok"} />
               </View>
               {over ? <Muted style={{ color: colors.error, marginTop: 4 }}>{STR.hwOverCeiling} · {STR.hwTrimPanel}</Muted> : null}
@@ -197,8 +197,8 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
             {(tally?.items ?? []).filter((it) => it.status === "declared").map((it) => (
               <Card key={it.itemId}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
-                  <Muted>{bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}</Muted>
+                  <Body style={{ flexShrink: 1, fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
+                  <Muted style={{ flexShrink: 1 }}>{bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}</Muted>
                 </View>
                 {/* D-#317: the teacher's brief "what is the homework". */}
                 {it.description ? <Muted style={{ marginTop: 2 }}>📝 {it.description}</Muted> : null}

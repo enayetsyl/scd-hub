@@ -215,7 +215,7 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
                 style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), marginTop: space(1) }}
               >
                 <Muted style={{ flexShrink: 1 }}>{c.name}</Muted>
-                <Muted>
+                <Muted style={{ flexShrink: 1 }}>
                   {bytesLabel(c.storageSizeBytes)} · {bnNum(c.docCount)} {STR.shDocs}
                 </Muted>
               </View>

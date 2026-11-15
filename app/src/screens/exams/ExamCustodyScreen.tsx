@@ -237,7 +237,7 @@ export default function ExamCustodyScreen({ route }: Props): React.ReactElement 
       {paperId && balance ? (
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700" }}>{STR.exCustodyBoard}</Body>
+            <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.exCustodyBoard}</Body>
             <Badge text={balance.balanced ? STR.exBalanced : STR.exNotBalanced} tone={balance.balanced ? "ok" : "danger"} />
           </View>
           <Muted>
@@ -255,7 +255,7 @@ export default function ExamCustodyScreen({ route }: Props): React.ReactElement 
                   style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(1) }}
                 >
                   <Muted>{custodyStageLabel(t.stage)}</Muted>
-                  <Muted>
+                  <Muted style={{ flexShrink: 1 }}>
                     {STR.exDeclared} {bnNum(t.declared)} · {STR.exCounted} {bnNum(t.counted)}
                     {t.pending ? ` · ${STR.exPending} ${bnNum(t.pending)}` : ""}
                     {t.disputed ? ` · ${STR.exDisputed} ${bnNum(t.disputed)}` : ""}

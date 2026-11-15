@@ -157,11 +157,17 @@ function orderNumbers(row: RowSpec, k: KgCtx): KgBuilt {
   const size = Math.max(4, Math.min(row.setSize ?? 8, 10));
   const span = Math.max(size + 4, 15);
   const sets: NonNullable<Section["sets"]> = [];
+  // Both directions named: ALL small → big sets first, then all big → small (owner 15 Nov: switching every set
+  // confused Nursery children). Each block climbs through the number window on its own. One named: that one throughout.
+  const both = up && down;
+  const half = Math.ceil(row.count / 2);
   for (let i = 0; i < row.count; i++) {
-    const start = 1 + Math.floor((i * Math.max(0, top - span)) / Math.max(1, row.count - 1));
+    const second = both && i >= half;
+    const j = second ? i - half : i;
+    const n = both ? (second ? row.count - half : half) : row.count;
+    const start = 1 + Math.floor((j * Math.max(0, top - span)) / Math.max(1, n - 1));
     const nums = pickIndices(k.rng, start, Math.min(top, start + span - 1), size);
-    // Both directions named: alternate, starting small → big. One named: that one throughout.
-    const descending = up && down ? i % 2 === 1 : down;
+    const descending = both ? second : down;
     const sorted = [...nums].sort((a, b) => (descending ? b - a : a - b));
     sets.push({
       shown: nums.map((n) => fmt(n, en)),

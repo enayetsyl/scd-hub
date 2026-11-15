@@ -347,6 +347,9 @@ export const AI_FEATURES = [
   // $5 a month, 300 model calls (rounds) per person per day (owner Q12); Claude Sonnet 5.5 by
   // default (Q6). OFF at ship; OFF also stops the Claude connector's tools (they answer `off`).
   { key: "data_assistant", bn: "তথ্য সহকারী", en: "Data assistant", dailyPerUser: 300, monthlyUsd: 5, perSessionTurns: 40, defaultProvider: "anthropic", defaultModel: "claude-sonnet-5-5", defaultFallback: false },
+  // Book lifecycle Path A (docs/prd-book-lifecycle.md §14.4, D-#1603): the AI edit job, run by the AI
+  // worker; $10 a month, 400 calls a day (owner Q9); OFF at ship; never a cross-provider fallback.
+  { key: "book_edit", bn: "বই সংশোধন (এআই)", en: "Book edit (AI)", dailyPerUser: 400, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "anthropic", defaultModel: "claude-opus-5-5", defaultFallback: false },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 

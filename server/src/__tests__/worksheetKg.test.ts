@@ -183,7 +183,8 @@ describe("KG maths rules are right", () => {
     for (const seed of seeds) {
       const d = paper(KG_MATH, "MATH", seed);
       const sets = sec(d, KG_MATH[5].label).sets!;
-      expect(sets.map((s) => s.label)).toEqual(["ছোট থেকে বড়", "বড় থেকে ছোট", "ছোট থেকে বড়", "বড় থেকে ছোট", "ছোট থেকে বড়"]);
+      // Grouped, not alternating (owner 15 Nov): all small → big first, then all big → small.
+      expect(sets.map((s) => s.label)).toEqual(["ছোট থেকে বড়", "ছোট থেকে বড়", "ছোট থেকে বড়", "বড় থেকে ছোট", "বড় থেকে ছোট"]);
       for (const s of sets) {
         const ans = s.answer.map(toN);
         const sorted = [...ans].sort((a, b) => (s.label === "বড় থেকে ছোট" ? b - a : a - b));

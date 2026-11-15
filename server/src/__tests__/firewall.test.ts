@@ -754,6 +754,35 @@ describe("Support-profile firewall (ADR-005 / CSP-1, D-#1548)", () => {
   });
 });
 
+/**
+ * Book lifecycle (docs/prd-book-lifecycle.md §18, D-#1590): the module reads the identity plane only
+ * for display names — in its resolvers and the one `services/names.ts` helper — and never imports
+ * Student / Guardian / GuardianLink / StaffProfile; the corpus module imports nothing from it.
+ */
+describe("Firewall — book lifecycle", () => {
+  const blDir = path.resolve(__dirname, "../modules/book-lifecycle");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+  test("the module exists and is scanned", () => {
+    expect(walkDir(blDir).length).toBeGreaterThan(10);
+  });
+  test("no Student / Guardian / GuardianLink / StaffProfile import anywhere in it", () => {
+    for (const f of walkDir(blDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      for (const m of ["models/Student", "models/Guardian", "models/GuardianLink", "models/StaffProfile"]) expect(content).not.toMatch(importPattern(m));
+    }
+  });
+  test("the User model only in resolvers and services/names.ts (display names)", () => {
+    for (const f of walkDir(blDir)) {
+      const rel = path.relative(blDir, f).split(path.sep).join("/");
+      if (rel.startsWith("resolvers/") || rel === "services/names.ts") continue;
+      expect(fs.readFileSync(f, "utf8")).not.toMatch(importPattern("models/User"));
+    }
+  });
+  test("corpus imports nothing from the book lifecycle", () => {
+    for (const f of walkDir(corpusDir)) expect(fs.readFileSync(f, "utf8")).not.toMatch(importPattern("book-lifecycle/"));
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

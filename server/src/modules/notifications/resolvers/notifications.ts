@@ -67,6 +67,9 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     masteryReviewId: t.string({ nullable: true, resolve: (r) => r.masteryReviewId ?? null }),
     examPaperId: t.string({ nullable: true, resolve: (r) => r.examPaperId ?? null }),
     screenTarget: t.string({ nullable: true, resolve: (r) => r.screenTarget ?? null }),
+    // Book lifecycle (D-#1610): the book, and the AI edit draft for BOOK_EDIT_READY.
+    bookId: t.string({ nullable: true, resolve: (r) => r.bookId ?? null }),
+    bookDraftId: t.string({ nullable: true, resolve: (r) => r.bookDraftId ?? null }),
   }),
 });
 

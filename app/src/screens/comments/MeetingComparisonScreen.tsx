@@ -120,7 +120,7 @@ export default function MeetingComparisonScreen({ route }: Props): React.ReactEl
                 key={r.type}
                 style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}
               >
-                <Muted>{commentTypeLabel(r.type)}</Muted>
+                <Muted style={{ flexShrink: 1 }}>{commentTypeLabel(r.type)}</Muted>
                 <Body>{bnNum(r.count)}</Body>
               </View>
             ))

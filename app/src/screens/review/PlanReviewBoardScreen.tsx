@@ -423,7 +423,7 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
           <Muted>{STR.rvClear}</Muted>
         </Pressable>
         <View style={{ flex: 1 }} />
-        <Muted>{`${bnNum(selected.size)} ${STR.qrSelected} · ${bnNum(total)}`}</Muted>
+        <Muted style={{ flexShrink: 1 }}>{`${bnNum(selected.size)} ${STR.qrSelected} · ${bnNum(total)}`}</Muted>
       </View>
       {selected.size > 0 ? (
         <Card style={{ marginBottom: space(3) }}>
