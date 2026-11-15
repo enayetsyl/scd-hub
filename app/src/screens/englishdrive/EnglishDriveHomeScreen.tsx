@@ -141,7 +141,7 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
                     onPress={() => setOpenBlock(isOpen ? 0 : blockNumber)}
                     style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                   >
-                    <Body style={{ fontWeight: "700" }}>
+                    <Body style={{ flexShrink: 1, fontWeight: "700" }}>
                       {isOpen ? "▾" : "▸"}{" "}
                       {blockNumber === PT_SECTION
                         ? STR.edPtSection

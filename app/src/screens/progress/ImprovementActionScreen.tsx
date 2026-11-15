@@ -107,7 +107,7 @@ function Legend(): React.ReactElement {
             <View style={{ width: 18, height: 18, borderRadius: 4, backgroundColor: l.bg, borderWidth: 1, borderColor: l.border, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: l.fg }}>{l.mark}</Text>
             </View>
-            <Text style={{ fontSize: 12, color: c.textSecondary }}>{l.label}</Text>
+            <Text style={{ flexShrink: 1, fontSize: 12, color: c.textSecondary }}>{l.label}</Text>
           </View>
         );
       })}

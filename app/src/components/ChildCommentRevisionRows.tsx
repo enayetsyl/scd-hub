@@ -41,7 +41,7 @@ export function ChildCommentRows({
       {rows.map((c) => (
         <View key={c.id} style={{ marginTop: space(2) }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Muted>
+            <Muted style={{ flexShrink: 1 }}>
               {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
             </Muted>
             <Muted>{isoDateLabel(c.createdAt)}</Muted>

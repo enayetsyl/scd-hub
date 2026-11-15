@@ -502,7 +502,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                     disabled={page === 0}
                     onPress={() => setPageAt(page - 1)}
                   />
-                  <Muted>
+                  <Muted style={{ flexShrink: 1 }}>
                     {STR.pageLabel} {bnNum(page + 1)} / {bnNum(pageCount)} · {bnNum(from + 1)}–
                     {bnNum(from + pageRows.length)} / {bnNum(rows.length)}
                   </Muted>
@@ -526,7 +526,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                     key={r.teacherId}
                     style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
                   >
-                    <Body>{r.teacherName}</Body>
+                    <Body style={{ flexShrink: 1 }}>{r.teacherName}</Body>
                     <Badge text={bnNum(r.overdueCount)} tone="danger" />
                   </View>
                 ))

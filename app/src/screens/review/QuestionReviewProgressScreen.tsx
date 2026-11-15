@@ -202,7 +202,7 @@ function ReviewerCard({
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Body style={{ fontWeight: "700", flexShrink: 1 }}>{row.reviewerName ?? "—"}</Body>
-        <Muted>{`${bnNum(row.assigned)} ${STR.qpAssigned} · ${bnNum(row.decided)} ${STR.qpDecided}`}</Muted>
+        <Muted style={{ flexShrink: 1 }}>{`${bnNum(row.assigned)} ${STR.qpAssigned} · ${bnNum(row.decided)} ${STR.qpDecided}`}</Muted>
       </View>
 
       <View

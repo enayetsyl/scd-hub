@@ -54,7 +54,7 @@ function StageChip({ label, state }: { label: string; state: string }): React.Re
   return (
     <View style={{ flexDirection: "row", alignItems: "center", marginRight: space(3), marginTop: 4 }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tone, marginRight: 4 }} />
-      <Muted style={{ fontSize: 12 }}>{`${label} · ${stageLabel(state)}`}</Muted>
+      <Muted style={{ flexShrink: 1, fontSize: 12 }}>{`${label} · ${stageLabel(state)}`}</Muted>
     </View>
   );
 }

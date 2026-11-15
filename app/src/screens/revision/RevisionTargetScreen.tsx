@@ -123,7 +123,7 @@ function LevelCard({
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: space(2) }}>
         <Body style={{ fontWeight: "700" }}>{hifzLevelLabel(row.level)}</Body>
-        <Muted>
+        <Muted style={{ flexShrink: 1 }}>
           {bnNum(row.studentCount)} {STR.revTargetStudents}
         </Muted>
       </View>

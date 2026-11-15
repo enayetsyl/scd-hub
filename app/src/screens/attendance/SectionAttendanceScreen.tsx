@@ -71,7 +71,7 @@ export default function SectionAttendanceScreen({ navigation: nav }: Props): Rea
               style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2, marginTop: 2 }}
             >
               <Body style={{ flex: 1 }}>{personName(a)}</Body>
-              <Muted>
+              <Muted style={{ flexShrink: 1 }}>
                 {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
                 {a.leaveCovered ? " · ✓" : ""}
               </Muted>

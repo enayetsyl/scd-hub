@@ -94,7 +94,7 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
           list.map((a) => (
             <Card key={a.recordId}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(a.subject)}</Body>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>{hwSubjectLabel(a.subject)}</Body>
                 <Badge
                   text={
                     a.daysLate > 0

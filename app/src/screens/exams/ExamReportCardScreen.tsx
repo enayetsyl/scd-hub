@@ -99,7 +99,7 @@ export default function ExamReportCardScreen({ route }: Props): React.ReactEleme
             {i > 0 ? <Divider /> : null}
             <View style={{ marginTop: space(2) }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{routineSubjectLabel(r.subject)}</Body>
+                <Body style={{ flexShrink: 1, fontWeight: "700" }}>{routineSubjectLabel(r.subject)}</Body>
                 <Badge text={gradeLetterLabel(r.letter)} tone={r.letter === "F" ? "danger" : "ok"} />
               </View>
               {/* One line per component the paper actually has — a Nursery card shows no

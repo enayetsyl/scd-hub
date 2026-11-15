@@ -111,7 +111,7 @@ export default function AssignmentReconcileScreen({ route, navigation }: Props):
             {load.items.map((it) => (
               <Card key={it.itemId}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
+                  <Body style={{ flexShrink: 1, fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
                   <Badge
                     text={it.status === "ISSUED" ? STR.asDelivered : STR.asDraft}
                     tone={it.status === "ISSUED" ? "ok" : "brand"}

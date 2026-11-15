@@ -752,7 +752,7 @@ export default function TodayScreen(): React.ReactElement {
                   </Body>
                   {!sec.complete ? <Badge text={STR.presenceIncomplete} tone="warn" /> : null}
                 </View>
-                <Muted>
+                <Muted style={{ flexShrink: 1 }}>
                   {STR.presentWord}: {bnNum(sec.presentCount)} · {STR.absentWord}: {bnNum(sec.absentCount)} /{" "}
                   {bnNum(sec.totalCount)}
                 </Muted>
@@ -801,7 +801,7 @@ export default function TodayScreen(): React.ReactElement {
                     <Body style={{ fontWeight: "700", color: active ? colors.error : colors.textSecondary }}>
                       {bnNum(p.count)}
                     </Body>
-                    <Muted style={{ color: active ? colors.textPrimary : colors.textSecondary }}>{p.label}</Muted>
+                    <Muted style={{ flexShrink: 1, color: active ? colors.textPrimary : colors.textSecondary }}>{p.label}</Muted>
                   </Pressable>
                 );
               })}
@@ -867,7 +867,7 @@ export default function TodayScreen(): React.ReactElement {
                     <Body style={{ fontWeight: "700", color: active ? colors.error : colors.textSecondary }}>
                       {bnNum(p.count)}
                     </Body>
-                    <Muted style={{ color: active ? colors.textPrimary : colors.textSecondary }}>{p.label}</Muted>
+                    <Muted style={{ flexShrink: 1, color: active ? colors.textPrimary : colors.textSecondary }}>{p.label}</Muted>
                   </Pressable>
                 );
               })}

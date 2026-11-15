@@ -197,7 +197,7 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
       <H1>{title}</H1>
       {artifact ? (
         <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1) }}>
-          <Muted>
+          <Muted style={{ flexShrink: 1 }}>
             {subjectLabel(artifact.subject)} · {classLevelLabel(artifact.classLevel)}
           </Muted>
           <Badge

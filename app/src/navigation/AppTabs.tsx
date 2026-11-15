@@ -634,7 +634,7 @@ function AvatarMenu(): React.ReactElement {
       }}
     >
       <Text style={{ fontSize: 18 }}>{icon}</Text>
-      <Text style={{ ...typeScale.button, color: danger ? colors.error : colors.textPrimary }}>{label}</Text>
+      <Text style={{ flexShrink: 1, ...typeScale.button, color: danger ? colors.error : colors.textPrimary }}>{label}</Text>
     </Pressable>
   );
 
@@ -2168,7 +2168,7 @@ function ViewAsBanner(): React.ReactElement | null {
       <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
         {STR.viewAsBanner} {viewAs.name}
       </Text>
-      <Text style={{ ...typeScale.caption, color: colors.textSecondary }}>
+      <Text style={{ flexShrink: 1, ...typeScale.caption, color: colors.textSecondary }}>
         {remainingLabel(viewAs.expiresAt - now)}
       </Text>
       <Pressable

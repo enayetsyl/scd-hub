@@ -133,7 +133,7 @@ export default function ExamRecheckScreen({ route }: Props): React.ReactElement 
       {readiness ? (
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700" }}>{STR.exReadyToTabulate}</Body>
+            <Body style={{ flexShrink: 1, fontWeight: "700" }}>{STR.exReadyToTabulate}</Body>
             <Badge
               text={readiness.ready ? STR.exBalanced : STR.exNotBalanced}
               tone={readiness.ready ? "ok" : "warn"}

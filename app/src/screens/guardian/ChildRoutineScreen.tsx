@@ -63,7 +63,7 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
             key={`${s.periodNumber}-${s.subject}`}
             style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}
           >
-            <Body>
+            <Body style={{ flexShrink: 1 }}>
               {bnNum(s.periodNumber)}. {subjectLabel(s.subject)}
             </Body>
             <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}–${s.endHHMM}` : ""}</Muted>

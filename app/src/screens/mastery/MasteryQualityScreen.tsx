@@ -173,7 +173,7 @@ export default function MasteryQualityScreen({ route }: Props): React.ReactEleme
                     <View style={{ width: 90, height: 8, borderRadius: 999, backgroundColor: colors.surfaceAlt, overflow: "hidden" }}>
                       <View style={{ width: `${it.facility ?? 0}%`, height: "100%", backgroundColor: colors.primary }} />
                     </View>
-                    <Muted>
+                    <Muted style={{ flexShrink: 1 }}>
                       {STR.msFullMarks} {it.facility === null ? "—" : `${bnNum(it.facility)}%`}
                     </Muted>
                   </View>

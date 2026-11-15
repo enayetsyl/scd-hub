@@ -236,7 +236,7 @@ export default function SupervisoryGrantScreen(_props: Props): React.ReactElemen
                 key={`${p.classId}-${p.subjectId}`}
                 style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(1) }}
               >
-                <Body>
+                <Body style={{ flexShrink: 1 }}>
                   {className(p.classId)} · {subjectName(p.subjectId)}
                 </Body>
                 <Button title={STR.remove} variant="danger" onPress={() => removePair(i)} />

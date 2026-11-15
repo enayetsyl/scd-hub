@@ -50,7 +50,7 @@ export default function ActivityStickersScreen(): React.ReactElement {
                 accessibilityState={{ checked: on }}
                 style={{ flexDirection: "row", alignItems: "center", gap: space(2), paddingVertical: space(2) }}
               >
-                <Text style={{ fontSize: 18 }}>{on ? "☑" : "☐"}</Text>
+                <Text style={{ flexShrink: 1, fontSize: 18 }}>{on ? "☑" : "☐"}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary }}>{r.studentName}</Text>
                   <Muted style={{ fontSize: 12 }}>

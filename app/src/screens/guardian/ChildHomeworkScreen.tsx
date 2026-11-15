@@ -82,7 +82,7 @@ const STEP_DAYS = 14;
 function StageRow({ label, at }: { label: string; at: string | null }): React.ReactElement {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Muted>{label}</Muted>
+      <Muted style={{ flexShrink: 1 }}>{label}</Muted>
       <Muted>{at ? bnNum(at.slice(0, 10)) : "—"}</Muted>
     </View>
   );

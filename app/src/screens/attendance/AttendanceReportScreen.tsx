@@ -143,7 +143,7 @@ export default function AttendanceReportScreen({ route }: Props): React.ReactEle
           carries the school-wide absent total; class cards fold to name + count
           and expand to the section/name detail on tap. */}
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <H2>{STR.attReportTitle}</H2>
+        <View style={{ flexShrink: 1 }}><H2>{STR.attReportTitle}</H2></View>
         <View style={{ flexDirection: "row", gap: space(1) }}>
           {/* D-#318: the present total beside the absent total. */}
           <Badge text={`${STR.presentWord}: ${bnNum(report.reduce((s, c) => s + c.presentCount, 0))}`} tone="ok" />
@@ -195,7 +195,7 @@ export default function AttendanceReportScreen({ route }: Props): React.ReactEle
                         style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}
                       >
                         <Body style={{ flex: 1 }}>{personName(a)}</Body>
-                        <Muted>
+                        <Muted style={{ flexShrink: 1 }}>
                           {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
                           {a.leaveCovered ? " · ✓" : ""}
                         </Muted>
@@ -233,7 +233,7 @@ export default function AttendanceReportScreen({ route }: Props): React.ReactEle
                 {p.unitType === "subjectgroup" ? "🕌 " : ""}
                 {p.label}
               </Body>
-              <Muted>
+              <Muted style={{ flexShrink: 1 }}>
                 {STR.attMarkerWord}: {p.markerName ?? STR.attNoMarker}
               </Muted>
             </View>
@@ -250,7 +250,7 @@ export default function AttendanceReportScreen({ route }: Props): React.ReactEle
         <Card key={s.studentId}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Body style={{ fontWeight: "700", flex: 1 }}>{personName(s)}</Body>
-            <Muted>
+            <Muted style={{ flexShrink: 1 }}>
               {STR.attRoll}: {s.rollNumber ? bnNum(s.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(s.schoolId)}
             </Muted>
           </View>

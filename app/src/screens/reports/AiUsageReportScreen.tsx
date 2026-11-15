@@ -53,7 +53,7 @@ function BucketTable({ title, rows }: { title: string; rows: AiUsageBucketT[] })
       {rows.map((r) => (
         <View key={r.key} style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), paddingVertical: space(0.5) }}>
           <Body style={{ flexShrink: 1 }}>{r.label}</Body>
-          <Muted>{fill(STR.aurRow, { calls: r.calls, usd: usd(r.usd), capped: r.capped, errors: r.errors })}</Muted>
+          <Muted style={{ flexShrink: 1 }}>{fill(STR.aurRow, { calls: r.calls, usd: usd(r.usd), capped: r.capped, errors: r.errors })}</Muted>
         </View>
       ))}
     </Card>

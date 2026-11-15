@@ -51,7 +51,7 @@ export default function VivaResultsScreen({ route }: Props): React.ReactElement 
                     <View key={s.key} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                       <Badge text={s.label} tone={setTone(sheet.paper, s.key)} />
                       <Body style={{ flex: 1 }}>{STR.vivaSetDrawn.replace("{n}", bnNum(s.drawn))}</Body>
-                      <Muted>{avg == null ? "—" : STR.vivaSetAvg.replace("{a}", bnNum(avg))}</Muted>
+                      <Muted style={{ flexShrink: 1 }}>{avg == null ? "—" : STR.vivaSetAvg.replace("{a}", bnNum(avg))}</Muted>
                     </View>
                   );
                 })}
