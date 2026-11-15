@@ -6,7 +6,7 @@
 import React from "react";
 import { View } from "react-native";
 import type { ExamRoutineQuranDayT, ExamRoutineSlotT } from "../graphql/examRoutine";
-import { Body, Card, Muted } from "./ui";
+import { Body, Card, Divider, Muted } from "./ui";
 import { STR, fullDateLabel, routineSubjectLabel } from "../lib/labels";
 import { qxLevelLabel, qxRange } from "../lib/quranExam";
 import { space, typeScale } from "../theme/tokens";
@@ -19,15 +19,20 @@ export function slotWhen(s: Pick<ExamRoutineSlotT, "kind" | "start" | "end">): s
 
 export function RoutineSlots({ slots }: { slots: ExamRoutineSlotT[] }): React.ReactElement {
   if (slots.length === 0) return <Muted>{STR.exrNoSlots}</Muted>;
+  // Subject first, then its date, then kind · time (owner 15 Nov): with the date on top, a family read
+  // each date as belonging to the subject above it. A divider closes each entry.
   return (
     <View style={{ gap: space(2) }}>
-      {slots.map((s) => (
-        <View key={`${s.dateKey}|${s.subject}|${s.kind}`} style={{ gap: 2 }}>
-          <Muted>{fullDateLabel(s.dateKey)}</Muted>
-          <Body style={{ ...typeScale.bodyStrong }}>{routineSubjectLabel(s.subject)}</Body>
-          <Muted>{slotWhen(s)}</Muted>
-          {s.note ? <Muted>{s.note}</Muted> : null}
-        </View>
+      {slots.map((s, i) => (
+        <React.Fragment key={`${s.dateKey}|${s.subject}|${s.kind}`}>
+          {i > 0 ? <Divider /> : null}
+          <View style={{ gap: 2 }}>
+            <Body style={{ ...typeScale.bodyStrong }}>{routineSubjectLabel(s.subject)}</Body>
+            <Muted>{fullDateLabel(s.dateKey)}</Muted>
+            <Muted>{slotWhen(s)}</Muted>
+            {s.note ? <Muted>{s.note}</Muted> : null}
+          </View>
+        </React.Fragment>
       ))}
     </View>
   );
