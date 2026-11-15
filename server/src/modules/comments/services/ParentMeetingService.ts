@@ -53,6 +53,8 @@ export interface ParentMeetingShape {
   status: ParentMeetingStatus;
   includeClassIds: string[];
   includeSectionIds: string[];
+  /** D-#1633: when the Principal published the results to guardians; null = not (or withdrawn). */
+  guardianPublishedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -130,6 +132,7 @@ function meetingShape(d: IParentMeeting): ParentMeetingShape {
     status: d.status,
     includeClassIds: (d.includeScope?.classIds ?? []).map((x) => x.toString()),
     includeSectionIds: (d.includeScope?.sectionIds ?? []).map((x) => x.toString()),
+    guardianPublishedAt: d.guardianPublishedAt && !d.guardianWithdrawnAt ? new Date(d.guardianPublishedAt).toISOString() : null,
     createdAt: new Date(d.createdAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };

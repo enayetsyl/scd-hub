@@ -204,6 +204,8 @@ export type AuditEventKind =
   | "PARENT_MEETING_SLOTS_GENERATED" // per-family slots (re)generated wholesale for a meeting (CM-3, J-CM3, D-#175)
   | "PARENT_MEETING_SLOTS_REORDERED" // slots reordered / a family flagged On-Call → re-timed (CM-3, J-CM4, D-#123)
   | "PARENT_MEETING_SCHEDULED"  // a meeting dispatched (draft → scheduled) — timing notices fanned out (CM-4, §6/J-CM5, D-#176)
+  | "PARENT_MEETING_RELEASED"   // the Principal published a meeting's figures + final comment to guardians (D-#1633)
+  | "PARENT_MEETING_RELEASE_WITHDRAWN" // the Principal withdrew that release (D-#1633)
   | "MEETING_SLOT_ATTENDANCE_SET" // a family slot's present/absent captured at the meeting (CM-4, §6, D-#176)
   | "MEETING_SLOT_RESPONDED"    // a guardian answered the family's slot: confirmed / change requested / can't come (D-#840)
   | "MEETING_CHANGE_APPROVED"   // Principal/VP approved a change request — the two families swapped (D-#842)

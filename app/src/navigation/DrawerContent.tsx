@@ -412,6 +412,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "ChildAttendance", labelKey: "gpAttendance", icon: "🙋" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildLeave", labelKey: "gpLeave", icon: "📝" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
+  // D-#1634: the published parents'-meeting result (figures + the Principal's final comment).
+  { type: "item", route: "GuardianHomeTab", screen: "ChildMeetingResults", labelKey: "mgrTitle", icon: "🤝" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
   // D-#855: every pop-up the school sent this family, to read again.
