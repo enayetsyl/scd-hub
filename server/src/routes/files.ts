@@ -101,6 +101,7 @@ import {
 import { LibraryError } from "../modules/library/errors";
 import { storyStickerCodes, storyStickerPdf } from "../modules/library/services/StoryDeskService";
 import { registerActivityFileRoutes } from "./activityFiles";
+import { assertWinterBookletFileReadAccess } from "../modules/winter-task/services/WinterBookletService";
 import { registerBookLcFileRoutes, assertBookLcFileReadAccess, recordBookLcFileRead, bookLcServeHeaders } from "../modules/book-lifecycle/routes/bookLcFiles";
 import { assertActivityFileReadAccess } from "../modules/activity-sheets/services/ActivityBankService";
 import { assertAiWorkspaceFileReadAccess, startAiProjectFileUpload } from "../modules/ai-workspace/services/FileIngestService";
@@ -1540,6 +1541,9 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       }
     } else if (file.kind === "assignment_attachment") {
       await assertAssignmentFileReadAccess(ctx, file);
+    } else if (file.kind === "winter_booklet_pdf") {
+      // The printed winter booklet (D-#1620): the people who may open the booklet screen.
+      await assertWinterBookletFileReadAccess(ctx, file);
     } else if (file.kind.startsWith("book_lc_")) {
       // Book lifecycle (§5.13): checked BEFORE the old `book_` prefix — its own gate
       // (book_lifecycle:view; print files to release; teacher readers per BL-2 rules).

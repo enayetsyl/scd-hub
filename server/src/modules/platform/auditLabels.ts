@@ -511,6 +511,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   WINTER_CHANGE_EDITED: { bn: "শীতের খাতার নিজের প্রস্তাব বদলেছেন", en: "Edited own winter booklet suggestion", group: "CONTENT" },
   WINTER_CHANGE_DELETED: { bn: "শীতের খাতার নিজের প্রস্তাব মুছেছেন", en: "Deleted own winter booklet suggestion", group: "CONTENT" },
   WINTER_CHANGE_DECIDED: { bn: "শীতের খাতার প্রস্তাব গ্রহণ / বাতিল করেছেন", en: "Accepted or rejected a winter booklet suggestion", group: "CONTENT" },
+  WINTER_BOOKLET_PDF_ATTACHED: { bn: "শীতের খাতার ছাপা PDF যুক্ত হয়েছে", en: "Attached the printed PDF to a winter booklet", group: "CONTENT" },
   WINTER_BOOKLET_STATUS: { bn: "শীতের খাতার অবস্থা বদলেছেন", en: "Changed a winter booklet status", group: "CONTENT" },
   REFERENCE_PAPER_UPLOADED: { bn: "মোহাম্মদপুরের প্রশ্নপত্র আপলোড করেছেন", en: "Uploaded another branch's paper", group: "EXAM" },
   REFERENCE_PAPER_EDITED: { bn: "মোহাম্মদপুরের প্রশ্নপত্রের তথ্য বদলেছেন", en: "Edited another branch's paper", group: "EXAM" },

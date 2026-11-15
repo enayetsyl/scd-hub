@@ -396,6 +396,7 @@ export type AuditEventKind =
   | "WINTER_CHANGE_EDITED"     // reviewer edited her own open suggestion (D-#1620) — meta before/after
   | "WINTER_CHANGE_DELETED"    // reviewer deleted her own open suggestion (D-#1620)
   | "WINTER_CHANGE_DECIDED"    // Principal accepted / rejected a suggestion (D-#1620) — meta accepted
+  | "WINTER_BOOKLET_PDF_ATTACHED" // the printed PDF attached / replaced on a winter booklet (D-#1620) — meta code/fileId/previousFileId/bytes
   | "WINTER_BOOKLET_STATUS"    // booklet moved DRAFT / IN_REVIEW / APPROVED (D-#1620) — meta before/after
   | "REFERENCE_PAPER_UPLOADED" // another branch's paper uploaded for reading (D-#1030) — meta term/year/classLevel/subject
   | "REFERENCE_PAPER_EDITED"   // its class / subject / term / title corrected (D-#1030) — meta before/after
