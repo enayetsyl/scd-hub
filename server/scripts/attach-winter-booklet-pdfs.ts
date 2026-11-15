@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   console.log(`database: ${mongoose.connection.name}  mode: ${apply ? "APPLY" : "dry run"}`);
   let actor = process.env.ATTACH_AS ?? "";
   if (!actor) {
-    const p = await User.findOne({ role: "PRINCIPAL" }).select("_id").lean();
+    const p = await User.findOne({ role: "PRINCIPAL", active: { $ne: false } }).sort({ _id: 1 }).select("_id").lean();
     if (!p) {
       console.error("no PRINCIPAL user found; set ATTACH_AS=<userId>");
       process.exit(1);

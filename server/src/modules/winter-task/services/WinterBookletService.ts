@@ -712,8 +712,9 @@ export interface AttachWinterPdfResult {
 /**
  * Store `data` as the booklet's printed PDF. The booklet row points at the new file; the previous
  * StoredFile row and its Drive bytes are left in place (history), only the reference moves.
- * `actor` is a user id (a person, or the Principal when a server script runs). Booklet text and
- * suggestions are never touched.
+ * `actor` is an AppContext (needs winter_task manage) OR a plain user id string. A string actor is
+ * for SERVER SCRIPTS ONLY — it skips the permission check, so a resolver must always pass its
+ * AppContext. Booklet text and suggestions are never touched.
  */
 export async function attachWinterBookletPdf(
   actor: AppContext | string,
@@ -723,6 +724,8 @@ export async function attachWinterBookletPdf(
   let actorId: string;
   if (typeof actor === "string") actorId = actor;
   else actorId = requireManage(actor);
+  // Check the actor id BEFORE any upload, so a bad id never leaves an orphan Drive file.
+  if (!Types.ObjectId.isValid(actorId)) throw new Error(`invalid actor user id: ${actorId}`);
   if (input.data.length < 1) throw new Error(WINTER_ERRORS_BN.pdfEmpty);
   if (input.data.length > WINTER_PDF_MAX_BYTES) throw new Error(WINTER_ERRORS_BN.pdfTooBig);
   if (input.data.subarray(0, 5).toString("latin1") !== "%PDF-") throw new Error(WINTER_ERRORS_BN.pdfNotPdf);

@@ -35,7 +35,7 @@ import { usePullRefresh } from "../../lib/useRefresh";
 import { friendlyError } from "../../lib/errors";
 import { FILE_VIEW_SUPPORTED, openStoredFile } from "../../lib/files";
 import { plainWinterText } from "../../lib/winterText";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, dhakaDateKey, fullDateLabel } from "../../lib/labels";
 import { winterStatusLabel } from "./WinterBookletsScreen";
 import type { WinterTaskStackParamList } from "../../navigation/types";
 import { radius, space, typeScale, useColors } from "../../theme";
@@ -227,7 +227,7 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
                   onPress={() => void openStoredFile(book.pdfFileId!).catch(() => setMsg({ tone: "danger", text: STR.wtPdfFailed }))}
                 />
                 {book.pdfUpdatedAt ? (
-                  <Muted style={{ flexShrink: 1 }}>{STR.wtPdfUpdated.replace("{date}", book.pdfUpdatedAt.slice(0, 10))}</Muted>
+                  <Muted style={{ flexShrink: 1 }}>{STR.wtPdfUpdated.replace("{date}", fullDateLabel(dhakaDateKey(book.pdfUpdatedAt)))}</Muted>
                 ) : null}
               </View>
             ) : null}
