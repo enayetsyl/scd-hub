@@ -26,7 +26,7 @@ const EXPORT_LIMIT = 5000;
 const MAX_TEXT = 60_000;
 
 /** AI Workspace chat (W-2) is logged in reference mode: no history copy, no prefix text (D-#1228). */
-export const LOGGED_AI_FEATURES = ["comment_check", "assistant", "workspace_chat", "data_assistant"] as const;
+export const LOGGED_AI_FEATURES = ["comment_check", "assistant", "workspace_chat", "data_assistant", "book_edit"] as const;
 
 export function textHash(text: string): string {
   return createHash("sha256").update(text).digest("hex").slice(0, 24);

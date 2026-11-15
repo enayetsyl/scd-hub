@@ -19,7 +19,7 @@ import { chapterTextsBySha, loadBook, loadVersion, putChapterTexts, versionChapt
 import { activeRuleSetsFor } from "./feedbackService";
 import { applyOps, ChapterEditSchema, ChangeListRowSchema, schemaFindings, type ChangeListRow } from "./editOps";
 import { coverageFindings, validateChapter, type ValidationContext } from "./validator";
-import { assertDraftBaseFresh, loadDraft, resolveRefs } from "./versionService";
+import { assertDraftBaseFresh, assertNoLiveJob, loadDraft, resolveRefs } from "./versionService";
 import { methodText } from "./method";
 import { sha256 } from "./markdown";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -145,8 +145,10 @@ export interface ChapterEditResult {
  * re-edit replaces the chapter's earlier edit). VR-2 schema, VR-1 baseSha, VR-4 ops, then the
  * chapter-level validator. Blocking findings mark the chapter `failed` (it cannot be accepted).
  */
-export async function applyChapterEdit(auth: AuthPayload, draftId: string, edit: unknown, origin: "app" | "claude" = "app"): Promise<ChapterEditResult> {
+export async function applyChapterEdit(auth: AuthPayload, draftId: string, edit: unknown, origin: "app" | "claude" | "ai_job" = "app"): Promise<ChapterEditResult> {
   const draft = await openDraftFor(auth, draftId);
+  // The AI job writes its own draft; a person (app / MCP) waits for it or stops it first.
+  if (origin !== "ai_job") await assertNoLiveJob(draft._id);
   routeCache.clear();
   const parsed = ChapterEditSchema.safeParse(edit);
   const key = (edit as { chapter?: unknown })?.chapter;
@@ -211,8 +213,9 @@ export async function applyChapterEdit(auth: AuthPayload, draftId: string, edit:
 }
 
 /** A whole-text replacement with its change list (`book-change-list/v1`); VR-7 coverage. */
-export async function putChapter(auth: AuthPayload, draftId: string, key: string, markdown: string, changesIn: unknown[], origin: "app" | "claude" = "app"): Promise<{ findings: DraftFinding[]; unexplained: number; newSha: string; status: string }> {
+export async function putChapter(auth: AuthPayload, draftId: string, key: string, markdown: string, changesIn: unknown[], origin: "app" | "claude" | "ai_job" = "app"): Promise<{ findings: DraftFinding[]; unexplained: number; newSha: string; status: string }> {
   const draft = await openDraftFor(auth, draftId);
+  if (origin !== "ai_job") await assertNoLiveJob(draft._id);
   routeCache.clear();
   const rows: ChangeListRow[] = [];
   const schemaErr: DraftFinding[] = [];
