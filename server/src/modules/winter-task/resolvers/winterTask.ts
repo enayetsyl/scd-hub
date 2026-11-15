@@ -37,6 +37,8 @@ BookletRowRef.implement({
     // DRAFT | IN_REVIEW | APPROVED
     status: t.exposeString("status"),
     pageCount: t.exposeInt("pageCount"),
+    pdfFileId: t.string({ nullable: true, resolve: (r) => r.pdfFileId }),
+    pdfUpdatedAt: t.string({ nullable: true, resolve: (r) => r.pdfUpdatedAt }),
     openChanges: t.exposeInt("openChanges"),
     acceptedChanges: t.exposeInt("acceptedChanges"),
   }),
@@ -52,6 +54,8 @@ BookletDetailRef.implement({
     titleBn: t.exposeString("titleBn"),
     version: t.exposeInt("version"),
     status: t.exposeString("status"),
+    pdfFileId: t.string({ nullable: true, resolve: (r) => r.pdfFileId }),
+    pdfUpdatedAt: t.string({ nullable: true, resolve: (r) => r.pdfUpdatedAt }),
     pagesJson: t.exposeString("pagesJson"),
   }),
 });

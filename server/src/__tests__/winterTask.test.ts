@@ -17,12 +17,31 @@
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import type { AppContext } from "../context";
+
+const driveStore = new Map<string, Buffer>();
+let driveSeq = 0;
+jest.mock("../modules/platform/services/DriveStore", () => {
+  const actual = jest.requireActual("../modules/platform/services/DriveStore");
+  return {
+    ...actual,
+    uploadToDrive: async (i: { data: Buffer }) => {
+      driveSeq += 1;
+      const id = `drive-${driveSeq}`;
+      driveStore.set(id, i.data);
+      return id;
+    },
+  };
+});
 import { Audit } from "../modules/platform/models/Audit";
 import { User } from "../modules/foundation/models/User";
 import { WinterBooklet } from "../modules/winter-task/models/WinterBooklet";
 import { WinterBookletChange } from "../modules/winter-task/models/WinterBookletChange";
+import { StoredFile } from "../modules/platform/models/StoredFile";
+import { ForbiddenError } from "../middleware/authz";
 import {
   WINTER_ERRORS_BN,
+  assertWinterBookletFileReadAccess,
+  attachWinterBookletPdf,
   decideWinterChange,
   deleteWinterChange,
   editWinterChange,
@@ -50,7 +69,7 @@ afterAll(async () => {
   await mongo.stop();
 });
 beforeEach(async () => {
-  await Promise.all([WinterBooklet, WinterBookletChange, Audit, User].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})));
+  await Promise.all([WinterBooklet, WinterBookletChange, Audit, User, StoredFile].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})));
 });
 
 const ctxOf = (userId: string, role: string, granted: string[] = []): AppContext =>
@@ -482,5 +501,73 @@ describe("audit meta carries no booklet text", () => {
     expect(rows.length).toBeGreaterThanOrEqual(2);
     for (const r of rows) expect(JSON.stringify(r.meta)).not.toMatch(/দীর্ঘ/);
     expect(rows.find((r) => r.eventKind === "WINTER_CHANGE_EDITED")!.meta).toMatchObject({ prevAfterLen: expect.any(Number), afterLen: expect.any(Number) });
+  });
+});
+
+describe("printed PDF", () => {
+  const pdf = (tag: string) => Buffer.from(`%PDF-1.4 ${tag}`);
+
+  it("attach stores a winter_booklet_pdf file, sets the fields, audits, and shows in the list and detail", async () => {
+    const bid = await load();
+    const r = await attachWinterBookletPdf(principal.auth!.userId, "T9-2026", { name: "T9-2026.pdf", data: pdf("a") });
+    const b = (await WinterBooklet.findById(bid))!;
+    expect(b.pdfFileId!.toString()).toBe(r.fileId);
+    expect(b.pdfUpdatedAt).toBeInstanceOf(Date);
+    const f = (await StoredFile.findById(r.fileId))!;
+    expect(f.kind).toBe("winter_booklet_pdf");
+    expect(f.mime).toBe("application/pdf");
+    expect(await Audit.countDocuments({ eventKind: "WINTER_BOOKLET_PDF_ATTACHED" })).toBe(1);
+    const row = (await listWinterBooklets(reviewer))[0];
+    expect(row.pdfFileId).toBe(r.fileId);
+    expect(row.pdfUpdatedAt).toEqual(expect.any(String));
+    const detail = await getWinterBooklet(reviewer, bid);
+    expect(detail.pdfFileId).toBe(r.fileId);
+    expect(b.pages.length).toBe(2);
+  });
+
+  it("a booklet with no PDF reports null", async () => {
+    await load();
+    const row = (await listWinterBooklets(reviewer))[0];
+    expect(row.pdfFileId).toBeNull();
+    expect(row.pdfUpdatedAt).toBeNull();
+  });
+
+  it("a second attach moves the pointer and keeps the old file row", async () => {
+    await load();
+    const one = await attachWinterBookletPdf(principal.auth!.userId, "T9-2026", { name: "x.pdf", data: pdf("1") });
+    const two = await attachWinterBookletPdf(principal.auth!.userId, "T9-2026", { name: "x.pdf", data: pdf("2") });
+    expect(two.previousFileId).toBe(one.fileId);
+    expect((await WinterBooklet.findOne({ code: "T9-2026" }))!.pdfFileId!.toString()).toBe(two.fileId);
+    expect(await StoredFile.countDocuments({ kind: "winter_booklet_pdf" })).toBe(2);
+  });
+
+  it("refuses an empty file, a non-PDF, and an unknown booklet; text and suggestions are untouched", async () => {
+    const bid = await load();
+    const ch = await suggestWinterChange(reviewer, { bookletId: bid, pageN: 2, blockId: "d1-t1", after: "দুই" });
+    const uid = principal.auth!.userId;
+    await expect(attachWinterBookletPdf(uid, "T9-2026", { name: "a.pdf", data: Buffer.alloc(0) })).rejects.toThrow(WINTER_ERRORS_BN.pdfEmpty);
+    await expect(attachWinterBookletPdf(uid, "T9-2026", { name: "a.pdf", data: Buffer.from("hello") })).rejects.toThrow(WINTER_ERRORS_BN.pdfNotPdf);
+    await expect(attachWinterBookletPdf(uid, "NOPE", { name: "a.pdf", data: pdf("z") })).rejects.toThrow(WINTER_ERRORS_BN.notFound);
+    await attachWinterBookletPdf(uid, "T9-2026", { name: "a.pdf", data: pdf("z") });
+    expect(await WinterBookletChange.countDocuments({ _id: ch.id })).toBe(1);
+    expect((await WinterBooklet.findById(bid))!.pages[1].blocks[1].textBn).toBe("এক যোগ এক = {box}");
+  });
+
+  it("only a manage caller may attach through a context", async () => {
+    await load();
+    await expect(attachWinterBookletPdf(reviewer, "T9-2026", { name: "a.pdf", data: pdf("z") })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(attachWinterBookletPdf(principal, "T9-2026", { name: "a.pdf", data: pdf("z") })).resolves.toMatchObject({ code: "T9-2026" });
+  });
+
+  it("read gate: the booklet viewers pass; a plain teacher, Office and a stray file are refused", async () => {
+    await load();
+    const r = await attachWinterBookletPdf(principal.auth!.userId, "T9-2026", { name: "a.pdf", data: pdf("z") });
+    const file = (await StoredFile.findById(r.fileId))!;
+    await expect(assertWinterBookletFileReadAccess(principal, file)).resolves.toBeUndefined();
+    await expect(assertWinterBookletFileReadAccess(reviewer, file)).resolves.toBeUndefined();
+    await expect(assertWinterBookletFileReadAccess(teacher, file)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(assertWinterBookletFileReadAccess(office, file)).rejects.toBeInstanceOf(ForbiddenError);
+    const stray = await StoredFile.create({ kind: "winter_booklet_pdf", mime: "application/pdf", sizeBytes: 5, originalName: "s.pdf", driveFileId: "d", uploadedBy: new Types.ObjectId() });
+    await expect(assertWinterBookletFileReadAccess(principal, stray)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });

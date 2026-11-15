@@ -23,6 +23,9 @@ import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
+import { StoredFile } from "../../platform/models/StoredFile";
+import type { IStoredFile } from "../../platform/models/StoredFile";
+import { uploadToDrive } from "../../platform/services/DriveStore";
 import {
   WINTER_BLOCK_KINDS,
   WINTER_BOOKLET_STATUSES,
@@ -50,6 +53,10 @@ export const WINTER_ERRORS_BN = {
   changed: "প্রস্তাবটি এর মধ্যে বদলে গেছে — পাতাটি আবার খুলে দেখুন",
   approvedLocked: "খাতাটি অনুমোদিত — আবার পর্যালোচনায় না নিলে প্রস্তাব বদলানো যায় না",
   badStatus: "অবস্থা ঠিক নয়",
+  pdfEmpty: "PDF ফাইলটি খালি",
+  pdfNotPdf: "ফাইলটি PDF নয়",
+  pdfTooBig: "PDF ফাইলটি অনেক বড়ো",
+  pdfNoFile: "PDF ফাইলটি পাওয়া যায়নি",
 } as const;
 
 export const MAX_TEXT = 2000;
@@ -334,6 +341,9 @@ export interface WinterBookletRow {
   version: number;
   status: string;
   pageCount: number;
+  /** The printed PDF's StoredFile id, or null when none is attached. */
+  pdfFileId: string | null;
+  pdfUpdatedAt: string | null;
   /** Review: my open suggestions. Manage: everyone's open suggestions. */
   openChanges: number;
   acceptedChanges: number;
@@ -377,6 +387,8 @@ export async function listWinterBooklets(ctx: AppContext): Promise<WinterBooklet
     version: b.version,
     status: b.status,
     pageCount: b.pages.length,
+    pdfFileId: b.pdfFileId ? b.pdfFileId.toString() : null,
+    pdfUpdatedAt: b.pdfUpdatedAt ? b.pdfUpdatedAt.toISOString() : null,
     openChanges: get(b._id, "OPEN"),
     acceptedChanges: get(b._id, "ACCEPTED"),
   }));
@@ -390,6 +402,8 @@ export interface WinterBookletDetail {
   titleBn: string;
   version: number;
   status: string;
+  pdfFileId: string | null;
+  pdfUpdatedAt: string | null;
   /** JSON: pages [{ n, kind, dateKey?, subject?, week?, blocks: [{ id, kind, textBn, labelBn?, acceptedBn? }] }] */
   pagesJson: string;
 }
@@ -411,6 +425,8 @@ export async function getWinterBooklet(ctx: AppContext, id: string): Promise<Win
     titleBn: b.titleBn,
     version: b.version,
     status: b.status,
+    pdfFileId: b.pdfFileId ? b.pdfFileId.toString() : null,
+    pdfUpdatedAt: b.pdfUpdatedAt ? b.pdfUpdatedAt.toISOString() : null,
     pagesJson: JSON.stringify(pages),
   };
 }
@@ -670,3 +686,75 @@ export async function exportAcceptedWinterBooklet(ctx: AppContext, id: string): 
 }
 
 export type { IWinterBooklet };
+
+// ---------------------------------------------------------------------------
+// The printed PDF (owner 2026-11-15): attached by a server script, read through GET /files/:id
+// ---------------------------------------------------------------------------
+
+export const WINTER_PDF_MAX_BYTES = 40 * 1024 * 1024;
+
+/**
+ * Read gate for a `winter_booklet_pdf` stored file: exactly the people who may open the booklet
+ * screen (winter_task:review | manage), and only for a file a booklet currently points at.
+ */
+export async function assertWinterBookletFileReadAccess(ctx: AppContext, file: IStoredFile): Promise<void> {
+  requireAny(ctx);
+  if (!(await WinterBooklet.exists({ pdfFileId: file._id }))) throw new ForbiddenError(WINTER_ERRORS_BN.pdfNoFile);
+}
+
+export interface AttachWinterPdfResult {
+  code: string;
+  fileId: string;
+  previousFileId: string | null;
+  bytes: number;
+}
+
+/**
+ * Store `data` as the booklet's printed PDF. The booklet row points at the new file; the previous
+ * StoredFile row and its Drive bytes are left in place (history), only the reference moves.
+ * `actor` is a user id (a person, or the Principal when a server script runs). Booklet text and
+ * suggestions are never touched.
+ */
+export async function attachWinterBookletPdf(
+  actor: AppContext | string,
+  code: string,
+  input: { name: string; data: Buffer },
+): Promise<AttachWinterPdfResult> {
+  let actorId: string;
+  if (typeof actor === "string") actorId = actor;
+  else actorId = requireManage(actor);
+  if (input.data.length < 1) throw new Error(WINTER_ERRORS_BN.pdfEmpty);
+  if (input.data.length > WINTER_PDF_MAX_BYTES) throw new Error(WINTER_ERRORS_BN.pdfTooBig);
+  if (input.data.subarray(0, 5).toString("latin1") !== "%PDF-") throw new Error(WINTER_ERRORS_BN.pdfNotPdf);
+  const b = await WinterBooklet.findOne({ code });
+  if (!b) throw new Error(WINTER_ERRORS_BN.notFound);
+  const safeName = input.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 180) || `${code}.pdf`;
+  const driveFileId = await uploadToDrive({
+    name: `${Date.now()}_${safeName}`,
+    mime: "application/pdf",
+    data: input.data,
+    year: "winter-booklets",
+    subfolder: code,
+    appProperties: { winterBooklet: code },
+  });
+  const file = await StoredFile.create({
+    kind: "winter_booklet_pdf",
+    mime: "application/pdf",
+    sizeBytes: input.data.length,
+    originalName: safeName,
+    driveFileId,
+    uploadedBy: new Types.ObjectId(actorId),
+  });
+  const previous = b.pdfFileId ?? null;
+  b.pdfFileId = file._id;
+  b.pdfUpdatedAt = new Date();
+  await b.save();
+  await writeAudit({
+    eventKind: "WINTER_BOOKLET_PDF_ATTACHED",
+    actorId,
+    targetId: b._id,
+    targetKind: "WinterBooklet",
+    meta: { code, fileId: file._id.toString(), previousFileId: previous ? previous.toString() : null, bytes: input.data.length },
+  });
+  return { code, fileId: file._id.toString(), previousFileId: previous ? previous.toString() : null, bytes: input.data.length };
+}

@@ -33,6 +33,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useConfirm } from "../../state/ConfirmContext";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { friendlyError } from "../../lib/errors";
+import { FILE_VIEW_SUPPORTED, openStoredFile } from "../../lib/files";
 import { plainWinterText } from "../../lib/winterText";
 import { STR, bnNum } from "../../lib/labels";
 import { winterStatusLabel } from "./WinterBookletsScreen";
@@ -216,6 +217,20 @@ export default function WinterBookletScreen({ route }: Props): React.ReactElemen
             {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
             {locked ? <Notice tone="warn" message={STR.wtApprovedLocked} /> : null}
             {exportJson ? <Field label={STR.wtExportBox} value={exportJson} onChangeText={() => undefined} editable={false} multiline /> : null}
+
+            {book.pdfFileId && FILE_VIEW_SUPPORTED ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginBottom: space(3) }}>
+                <Button
+                  title={STR.wtViewPdf}
+                  variant="secondary"
+                  disabled={busy}
+                  onPress={() => void openStoredFile(book.pdfFileId!).catch(() => setMsg({ tone: "danger", text: STR.wtPdfFailed }))}
+                />
+                {book.pdfUpdatedAt ? (
+                  <Muted style={{ flexShrink: 1 }}>{STR.wtPdfUpdated.replace("{date}", book.pdfUpdatedAt.slice(0, 10))}</Muted>
+                ) : null}
+              </View>
+            ) : null}
 
             {manage ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginBottom: space(3) }}>
