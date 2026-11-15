@@ -95,7 +95,7 @@ function withMarkBases(doc: WorksheetDocT): WorksheetDocT {
       rows: s.rows?.map((r) => r.map(markCell)),
       columns: s.columns?.map((col) => col.map((r) => r.map(markCell))),
       groups: s.groups?.map((g) => ({ ...g, cells: g.cells.map(markCell) })),
-      sets: s.sets?.map((x) => ({ shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
+      sets: s.sets?.map((x) => ({ ...x, shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
       pictures: s.pictures?.map((p) => ({ ...p, a: markBase(p.a) })),
       choices: s.choices?.map((x) => ({ ...x, options: x.options.map((t) => markBase(t)) })),
       left: s.left?.map((l) => ({ ...l, t: markBase(l.t) ?? null })),
@@ -281,7 +281,10 @@ function Body({
         <View style={{ gap: 10 }}>
           {(s.sets ?? []).map((set, k) => (
             <View key={k}>
-              {set.label ? <Text style={[txt(13, "#333333"), { marginBottom: 2 }]}>{set.label}</Text> : null}
+              {/* Direction label once per block of same-direction sets (owner 15 Nov). */}
+              {set.label && set.label !== s.sets?.[k - 1]?.label ? (
+                <Text style={[txt(13, "#333333"), { marginBottom: 2 }]}>{set.label}</Text>
+              ) : null}
               <View style={{ flexDirection: row }}>
                 {set.shown.map((t, i) => (
                   <View key={i} style={[box(`${100 / set.shown.length}%`, 34), overlap(i > 0)]}>
