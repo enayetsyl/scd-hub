@@ -13,7 +13,7 @@ export async function lcEvent(p: {
   actorId: Types.ObjectId | string;
   summary: string;
   reason?: string;
-  origin?: "app" | "claude";
+  origin?: "app" | "claude" | "ai_job";
   refs?: IBookEvent["refs"];
 }): Promise<void> {
   try {

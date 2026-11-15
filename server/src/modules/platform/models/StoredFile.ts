@@ -90,7 +90,9 @@ export type StoredFileKind =
   | "book_lc_packet"
   | "book_lc_feedback"
   | "book_lc_print"
-  | "book_lc_history";
+  | "book_lc_history"
+  /** The printed PDF of a winter-holiday booklet (D-#1620). Read-gated by winter_task:review | manage. */
+  | "winter_booklet_pdf";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -130,6 +132,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "book_lc_feedback",
   "book_lc_print",
   "book_lc_history",
+  "winter_booklet_pdf",
 ];
 
 

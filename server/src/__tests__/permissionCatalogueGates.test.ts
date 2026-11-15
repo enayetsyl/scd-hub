@@ -97,8 +97,6 @@ const OPEN_FIELDS: Record<string, string> = {
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
 const DECLARED_AHEAD: Record<string, string> = {
-  // Book lifecycle (docs/prd-book-lifecycle.md §19): ai_edit is gated by BL-5 (the AI edit job).
-  "book_lifecycle:ai_edit": "BL-5 AI edit job",
 };
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):

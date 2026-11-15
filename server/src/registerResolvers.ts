@@ -145,6 +145,7 @@ import "./modules/support-book/resolvers/supportBookContent";
 import "./modules/book-lifecycle/resolvers/bookLifecycle";
 import "./modules/book-lifecycle/resolvers/bookLifecycleRelease";
 import "./modules/book-lifecycle/resolvers/bookLifecycleEdit";
+import "./modules/book-lifecycle/resolvers/bookLifecycleJob";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";

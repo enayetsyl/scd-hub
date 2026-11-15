@@ -41,6 +41,9 @@ export interface IWinterBooklet extends Document {
   version: number;
   status: WinterBookletStatus;
   pages: IWinterPage[];
+  /** The printed PDF (StoredFile kind winter_booklet_pdf) — optional, attached by a server script. */
+  pdfFileId?: Types.ObjectId;
+  pdfUpdatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +78,8 @@ const WinterBookletSchema = new Schema<IWinterBooklet>(
     version: { type: Number, default: 1 },
     status: { type: String, enum: WINTER_BOOKLET_STATUSES, default: "IN_REVIEW" },
     pages: { type: [PageSchema], default: [] },
+    pdfFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
+    pdfUpdatedAt: { type: Date },
   },
   { timestamps: true },
 );

@@ -32,6 +32,7 @@ import { BookVersion, BookMediaAsset, type BookChange, type BookVersionFile, typ
 import { BookFeedback, BookInstruction, BookDecision } from "../models/BookFeedback";
 import { BookEditDraft, type DraftChapter, type IBookEditDraft } from "../models/BookEditDraft";
 import { BookMemoRound } from "../models/BookMemoRound";
+import { BookEditJob } from "../models/BookEditJob";
 import { requireBookLc, canBookLc, uid, oid } from "./access";
 import { BookLcError } from "./errors";
 import { lcEvent } from "./events";
@@ -481,6 +482,16 @@ export async function assertDraftBaseFresh(draft: IBookEditDraft, book?: ISchool
 
 const OPEN_DRAFT = ["open", "submitted", "ready"];
 
+/** A draft whose AI job is queued or running belongs to the job: a person's write would race it. */
+export async function assertNoLiveJob(draftId: Types.ObjectId): Promise<void> {
+  if (await BookEditJob.exists({ draftId, status: { $in: ["queued", "running"] } })) throw new BookLcError("LIVE_JOB", "এই খসড়ায় এআই কাজ চলছে — আগে কাজটি থামান বা শেষ হওয়া পর্যন্ত অপেক্ষা করুন");
+}
+
+/** Asks a live job on the draft to stop (rejecting or abandoning the draft ends the paid work). */
+export async function stopLiveJob(draftId: Types.ObjectId): Promise<void> {
+  await BookEditJob.updateMany({ draftId, status: { $in: ["queued", "running"] } }, { $set: { stopRequested: true } });
+}
+
 export interface ChangeRowInput {
   chapterKey: string;
   where?: string | null;
@@ -576,6 +587,7 @@ export async function decideDraftChapter(auth: AuthPayload, draftId: string, cha
   const draft = await loadDraft(draftId);
   if (!OPEN_DRAFT.includes(draft.status)) throw new BookLcError("DRAFT_CLOSED", "খসড়াটি আর খোলা নেই");
   await assertDraftBaseFresh(draft);
+  await assertNoLiveJob(draft._id);
   const ch = draft.chapters.find((c) => c.key === chapterKey);
   if (!ch) throw new BookLcError("BAD_CHAPTER", "অধ্যায় পাওয়া যায়নি");
   if (ch.status === "unchanged" || ch.status === "pending") throw new BookLcError("NOTHING", "এই অধ্যায়ে কোনো পরিবর্তন নেই");
@@ -606,6 +618,7 @@ export async function rejectDraft(auth: AuthPayload, draftId: string): Promise<I
   if (!OPEN_DRAFT.includes(draft.status) && draft.status !== "stale") throw new BookLcError("DRAFT_CLOSED", "খসড়াটি আর খোলা নেই");
   draft.status = "rejected";
   await draft.save();
+  await stopLiveJob(draft._id);
   await lcEvent({ bookId: draft.bookId, kind: "DRAFT_REJECTED", actorId: uid(auth), summary: "draft rejected", refs: { draftId: draft._id } });
   return draft;
 }
@@ -635,6 +648,7 @@ export async function acceptDraft(auth: AuthPayload, draftId: string, input: { b
   if (!OPEN_DRAFT.includes(draft.status)) throw new BookLcError("DRAFT_CLOSED", "খসড়াটি আর খোলা নেই");
   const book = await loadBook(draft.bookId);
   await assertDraftBaseFresh(draft, book);
+  await assertNoLiveJob(draft._id);
   if (await BookMemoRound.exists({ bookId: book._id, versionId: draft.baseVersionId, status: { $in: BOOK_OPEN_ROUND_STATUSES } })) throw new BookLcError("ROUND_OPEN", "এই সংস্করণের পর্যালোচনা চলছে — ফেরত লিপিবদ্ধ বা প্রত্যাহারের পরে খসড়া গ্রহণ করুন");
   if (needsRekeyConfirm(draft)) throw new BookLcError("REKEY", `নতুন/হারানো অধ্যায় নিশ্চিত করুন: নতুন ${draft.rekey?.newChapters?.join(", ") || "—"}; হারানো ${draft.rekey?.missingChapters?.join(", ") || "—"}`);
   if (draft.protectedChange?.changed && !draft.protectedChange.confirmedBy) throw new BookLcError("PROTECTED", "সুরক্ষিত লেখা বদলেছে — চূড়ান্তকারী নিশ্চিত না করলে গ্রহণ করা যাবে না");
