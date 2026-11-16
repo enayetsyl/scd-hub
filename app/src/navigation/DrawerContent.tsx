@@ -107,6 +107,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "QuestionsTab", labelKey: "tabQuestions", icon: "❓" },
       { route: "SetsTab", labelKey: "tabSets", icon: "🗂️" },
       { route: "ReviewTab", labelKey: "tabReview", icon: "📝" },
+      // RS-4: the daily supervision view of the teacher review program (Principal; the deputy by grant).
+      { route: "ReviewTab", labelKey: "rspNav", icon: "📈", screen: "ReviewSupervision", perms: ["review_program:supervise"] },
       { route: "RoutineTab", labelKey: "tabRoutine", icon: "📅" },
       { route: "VocabTab", labelKey: "tabVocab", icon: "🔤" },
       // English Drive (D-#344) — entry point per owner decision #9.

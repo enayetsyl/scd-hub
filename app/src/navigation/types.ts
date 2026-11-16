@@ -137,6 +137,9 @@ export type ReviewStackParamList = {
     classLevel: number | null;
     subject: string | null;
   };
+  // --- Review supervision (RS-4). Both AFTER ReviewHome (the Reviewer page takes params).
+  ReviewSupervision: undefined;
+  ReviewSupervisionReviewer: { programId: string; batch: number; reviewerId: string; reviewerName: string | null };
 };
 
 export type HomeworkStackParamList = {
