@@ -35,6 +35,7 @@ import {
   captureReviewSnapshots,
   dhakaDateKey,
   projectFinish,
+  reviewChangeRounds,
   reviewProgressSeries,
   supervisionOverview,
 } from "../modules/review-program/services/ReviewProgressService";
@@ -175,7 +176,7 @@ beforeEach(async () => {
   );
   ACTOR = { id: (await user("Owner", "PRINCIPAL")).toString(), role: "PRINCIPAL" };
   SAJEDA = await user("Sajeda");
-  const p = await createProgram({ name: "2027", batches: [{ batch: 1, name: "Batch 1", targetDate: "2026-12-15" }], actor: ACTOR });
+  const p = await createProgram({ name: "2027", batches: [{ batch: 1, name: "Batch 1", targetDate: "2026-12-15", startAt: "2026-11-10" }], actor: ACTOR });
   programId = p.id;
   // Chapter 1: 4 plans (2 approved Tue 17th, 1 changes Wed 18th, 1 open) + 10 questions (6 done Wed 18th).
   await rounds({ reviewer: SAJEDA, n: 2, verdict: "APPROVE", submitted: "2026-11-17" });
@@ -266,6 +267,19 @@ describe("supervisionOverview", () => {
     expect((await supervisionOverview(programId, 1, NOW)).reviewers[0].status).toBe("FAR_BEHIND");
   });
 
+  test("required pace = remaining minutes over the school days left to the target, holidays skipped", async () => {
+    // 14 minutes left; target 2026-11-24 (Tue). School days from Thu 19th: 19, 22, 23, 24 = 4 (Fri/Sat off).
+    await updateBatch({ programId, batch: 1, targetDate: "2026-11-24", actor: ACTOR });
+    let o = await supervisionOverview(programId, 1, NOW);
+    expect(o.reviewers[0].requiredPacePerDay).toBeCloseTo(14 / 4);
+    expect(o.batchProjection.requiredPacePerDay).toBeCloseTo(14 / 4);
+    await HolidayException.create({ fromDate: new Date(2026, 10, 23), toDate: new Date(2026, 10, 23), type: "special", nameBn: "x", active: true });
+    o = await supervisionOverview(programId, 1, NOW);
+    expect(o.reviewers[0].requiredPacePerDay).toBeCloseTo(14 / 3);
+    await updateBatch({ programId, batch: 1, targetDate: "2026-11-18", actor: ACTOR });
+    expect((await supervisionOverview(programId, 1, NOW)).reviewers[0].requiredPacePerDay).toBeNull(); // target passed
+  });
+
   test("a holiday pushes the projected finish; no recent work is NO_DATA", async () => {
     await HolidayException.create({ fromDate: new Date(2026, 10, 22), toDate: new Date(2026, 10, 22), type: "special", nameBn: "x", active: true });
     const o = await supervisionOverview(programId, 1, NOW);
@@ -350,5 +364,72 @@ describe("daily done is exact (the submittedAt aggregation)", () => {
     expect(err).toHaveBeenCalled();
     bw.mockRestore();
     err.mockRestore();
+  });
+});
+
+describe("reviewChangeRounds (the changes feed)", () => {
+  async function addJerin(): Promise<Types.ObjectId> {
+    const jerin = await user("Jerin");
+    // Decided 00:30 on the 19th in Dhaka = 18:30 UTC on the 18th: the Dhaka day is what counts.
+    await rounds({ reviewer: jerin, docType: "question", n: 1, verdict: "APPROVE_WITH_CONDITION", submitted: new Date("2026-11-19T00:30:00+06:00") });
+    await rounds({ reviewer: jerin, docType: "question", n: 1, verdict: "APPROVE", submitted: "2026-11-19" });
+    await adoptOpenAssignments({ programId, batch: 1, actor: ACTOR });
+    return jerin;
+  }
+
+  test("only change verdicts, only the latest round of a thread, with the open-thread fields the app needs", async () => {
+    const out = await reviewChangeRounds(programId, 1, {}, NOW);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      reviewerId: SAJEDA.toString(), reviewerName: "Sajeda", dateKey: "2026-11-18", docType: "session_plan",
+      isQuestion: false, subject: "BAN", classLevel: 1, anchorWord: "পাঠ", chapter: "1", verdict: "CHANGES_REQUESTED", qid: null,
+    });
+    expect(out[0].artifactId).toMatch(/^[0-9a-f]{24}$/);
+    expect(typeof out[0].sessionIndex).toBe("number");
+  });
+
+  test("a thread whose latest round was approved after a change request no longer shows", async () => {
+    const first = await ReviewAssignment.findOne({ verdict: "CHANGES_REQUESTED" }).lean();
+    await ReviewAssignment.create({
+      docType: first!.docType, subject: first!.subject, classLevel: first!.classLevel, anchorWord: first!.anchorWord,
+      addressNumber: first!.addressNumber, sessionIndex: first!.sessionIndex, artifactId: oid(), reviewerId: SAJEDA,
+      assignedBy: oid(), assignedAt: at("2026-11-18"), roundNumber: 2, status: "submitted", verdict: "APPROVE", submittedAt: at("2026-11-19"),
+    });
+    expect(await reviewChangeRounds(programId, 1, {}, NOW)).toHaveLength(0);
+  });
+
+  test("date range is in Dhaka time, both ends inclusive", async () => {
+    const jerin = await addJerin();
+    const all = await reviewChangeRounds(programId, 1, { fromKey: "2026-11-18", toKey: "2026-11-19" }, NOW);
+    expect(all.map((r) => [r.dateKey, r.reviewerName, r.verdict])).toEqual([
+      ["2026-11-19", "Jerin", "APPROVE_WITH_CONDITION"],
+      ["2026-11-18", "Sajeda", "CHANGES_REQUESTED"],
+    ]);
+    expect(all[0].isQuestion).toBe(true);
+    expect(all[0].qid).toMatch(/^Q/);
+    expect((await reviewChangeRounds(programId, 1, { fromKey: "2026-11-19", toKey: "2026-11-19" }, NOW)).map((r) => r.reviewerId)).toEqual([jerin.toString()]);
+    expect(await reviewChangeRounds(programId, 1, { fromKey: "2026-11-10", toKey: "2026-11-17" }, NOW)).toHaveLength(0);
+  });
+
+  test("reviewer filter, the 7-day default and bad input", async () => {
+    const jerin = await addJerin();
+    expect((await reviewChangeRounds(programId, 1, { reviewerId: SAJEDA.toString() }, NOW)).map((r) => r.reviewerName)).toEqual(["Sajeda"]);
+    expect((await reviewChangeRounds(programId, 1, { reviewerId: jerin.toString() }, NOW)).map((r) => r.reviewerName)).toEqual(["Jerin"]);
+    // A decision 9 days before NOW is outside the default 7-day window.
+    await rounds({ reviewer: SAJEDA, n: 1, verdict: "CHANGES_REQUESTED", submitted: "2026-11-10" });
+    await adoptOpenAssignments({ programId, batch: 1, actor: ACTOR });
+    expect((await reviewChangeRounds(programId, 1, {}, NOW)).every((r) => r.dateKey >= "2026-11-13")).toBe(true);
+    await expect(reviewChangeRounds(programId, 1, { reviewerId: "nope" }, NOW)).rejects.toThrow("valid reviewer");
+    await expect(reviewChangeRounds(programId, 1, { fromKey: "11/18" }, NOW)).rejects.toThrow("YYYY-MM-DD");
+    await expect(reviewChangeRounds(programId, 1, { toKey: "2026-02-31" }, NOW)).rejects.toThrow("YYYY-MM-DD");
+    await expect(reviewChangeRounds(programId, 1, { fromKey: "2026-11-19", toKey: "2026-11-18" }, NOW)).rejects.toThrow("after");
+  });
+
+  test("long feedback is cut to about 400 characters; a batch with no tasks answers empty", async () => {
+    await ReviewAssignment.updateMany({ verdict: "CHANGES_REQUESTED" }, { $set: { feedback: "x".repeat(900) } });
+    const [row] = await reviewChangeRounds(programId, 1, {}, NOW);
+    expect(row.feedback!.length).toBeLessThanOrEqual(403);
+    const empty = await createProgram({ name: "Empty", batches: [{ batch: 1, name: "B" }], actor: ACTOR });
+    expect(await reviewChangeRounds(empty.id, 1, {}, NOW)).toEqual([]);
   });
 });

@@ -392,6 +392,11 @@ export async function createProgram(input: {
 
 function parseStartAt(raw: string | null | undefined): Date | null {
   if (raw == null || raw === "") return null;
+  // A bare date means that Dhaka day's midnight (the school's calendar), not UTC midnight.
+  if (DATE_KEY_RE.test(raw)) {
+    if (!isRealDateKey(raw)) throw new ReviewError("Start date must be a real date, YYYY-MM-DD");
+    return new Date(`${raw}T00:00:00+06:00`);
+  }
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) throw new ReviewError("Start time must be an ISO date-time");
   return d;
@@ -458,6 +463,10 @@ export async function adoptOpenAssignments(input: {
 }): Promise<AdoptResult> {
   const program = await loadProgram(input.programId);
   const batchDef = batchOf(program, input.batch);
+  // Without a cut-off every open round of the whole school would be swept into this batch.
+  if (!input.assignedAfter && !batchDef.startAt) {
+    throw new ReviewError("Set the batch start date first - adopting needs a cut-off so older open rounds are not swept in");
+  }
   const live = await ReviewTask.find({ programId: program._id, status: { $ne: "CANCELLED" } })
     .select({ reviewerId: 1, subject: 1, classLevel: 1, anchorWord: 1, chapter: 1 })
     .lean();
