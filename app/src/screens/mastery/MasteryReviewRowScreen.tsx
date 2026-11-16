@@ -24,12 +24,12 @@ import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
-import { ReviewThreads, TapText, codeTail, exerciseLines, formatExerciseRef, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
+import { ReviewThreads, TapText, codeTail, exerciseLines, formatExerciseRef, practisedLabel, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
 import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryReviewRow">;
-type Mode = null | "EDIT" | "SPLIT" | "UNSPLIT" | "MERGE" | "MOVE" | "REJECT";
+type Mode = null | "EDIT" | "SPLIT" | "UNSPLIT" | "MERGE" | "MOVE" | "STRAND" | "REJECT";
 
 const isOut = (r: ReviewRow) => r.reviewState === "REJECTED" || !!r.mergedInto;
 const lines = (t: string) =>
@@ -119,6 +119,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   const [target, setTarget] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [adding, setAdding] = useState(false);
+  const [newStrand, setNewStrand] = useState("");
   const r = q?.rows.find((x) => x.code === code) ?? null;
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: r?.level === "SUB" ? levels.sub : levels.objective });
@@ -141,6 +142,13 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   // objective is split instead, never given one lone child), or on a step, under its own objective.
   const addParent = r.level !== "SUB" ? (kids.length > 0 ? r : null) : parent && parent.status === "DRAFT" && !isOut(parent) ? parent : null;
   const canAddHere = q.canWrite && !!addParent && addParent.status === "DRAFT" && !isOut(addParent);
+  // The Principal may also move a row on a SUBMITTED round (canAssign = Principal, OPEN or SUBMITTED).
+  const canStrand = (q.canWrite || q.canAssign) && r.status === "DRAFT" && !r.mergedInto && r.reviewState !== "REJECTED" && r.level !== "SUB" && !r.strand;
+  const strandNames = [...new Set(q.rows.filter((x) => x.strand && !isOut(x)).map((x) => x.strand as string))].sort();
+  const strandOptions = [...strandNames.map((n) => ({ label: `SK-${n}`, value: n })), { label: STR.msRvStrandNew, value: "NEW" }];
+  const strandName = target === "NEW" ? newStrand.trim().toUpperCase() : target;
+  const strandMoves = [r.code, ...kids.map((k) => k.code)].map(codeTail).join(", ");
+  const practised = practisedLabel(r.bookRef.exercises);
   const canUnsplit = live && r.level !== "SUB" && kids.length > 0 && kids.every((k) => k.status === "DRAFT");
   const run = (input: ReviewDecisionInput) =>
     void act.run({ reviewId: q.id, input }, STR.msRvSaved).then((ok) => {
@@ -148,6 +156,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
       setMode(null);
       setReason("");
       setTarget(null);
+      setNewStrand("");
     });
 
   // Merge targets: tagged live leaves (and the parent, for "merge back"); move targets: objectives / domains.
@@ -185,6 +194,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             .filter(Boolean)
             .join(" · ")}
         />
+        {practised && (r.strand || r.bookRef.exercises.length > 0) ? <Row label={STR.msRvPractised} value={practised} /> : null}
         {r.sourceText ? <Row label={STR.msRvBookWording} value={r.sourceText} /> : null}
         {r.prereqCodes.length ? (
           <Row label={STR.msRvPrereq} value={r.prereqCodes.map((c) => `${byCode.get(c)?.labelBn ?? extLabel.get(c) ?? ""} (${codeTail(c)})`).join("\n")} />
@@ -243,10 +253,10 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
         <Button title={`${STR.msRvDetails}: ${codeTail(r.mergedInto)}`} variant="secondary" onPress={() => navigation.replace("MasteryReviewRow", { reviewId: q.id, code: r.mergedInto! })} />
       ) : null}
 
-      {editable ? (
+      {editable || canStrand ? (
         <Card>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
-            {r.reviewState === "PROPOSED" || (r.reviewState === "REJECTED" && !r.mergedInto) ? (
+            {editable && (r.reviewState === "PROPOSED" || (r.reviewState === "REJECTED" && !r.mergedInto)) ? (
               <Button title={STR.msRvAccept} loading={act.busy} onPress={() => run({ action: "ACCEPT", code: r.code })} />
             ) : null}
             {live ? <Button title={STR.msRvEdit} variant={mode === "EDIT" ? "primary" : "secondary"} onPress={() => setMode(mode === "EDIT" ? null : "EDIT")} /> : null}
@@ -258,6 +268,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             ) : null}
             {live ? <Button title={STR.msRvMerge} variant={mode === "MERGE" ? "primary" : "secondary"} onPress={() => setMode(mode === "MERGE" ? null : "MERGE")} /> : null}
             {live ? <Button title={STR.msRvMove} variant={mode === "MOVE" ? "primary" : "secondary"} onPress={() => setMode(mode === "MOVE" ? null : "MOVE")} /> : null}
+            {canStrand ? <Button title={STR.msRvToStrand} variant={mode === "STRAND" ? "primary" : "secondary"} onPress={() => setMode(mode === "STRAND" ? null : "STRAND")} /> : null}
             {live ? <Button title={STR.msRvRejectFull} variant="ghost" onPress={() => setMode(mode === "REJECT" ? null : "REJECT")} /> : null}
           </View>
           {mode === "EDIT" ? <EditForm q={q} r={r} run={run} busy={act.busy} /> : null}
@@ -295,6 +306,20 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
                       : { action: "MOVE", code: r.code, toParentCode: (target ?? "").slice(2) },
                   )
                 }
+              />
+            </View>
+          ) : null}
+          {mode === "STRAND" && canStrand ? (
+            <View style={{ gap: space(2) }}>
+              <Muted>{STR.msRvStrandHint}</Muted>
+              <Select label={STR.msRvStrandPick} value={target} options={strandOptions} onChange={setTarget} />
+              {target === "NEW" ? <Field value={newStrand} onChangeText={setNewStrand} placeholder={STR.msRvStrandNewPh} autoCapitalize="characters" /> : null}
+              <Muted>{fill(STR.msRvStrandMovesTpl, { codes: strandMoves })}</Muted>
+              <Button
+                title={STR.msRvStrandConfirm}
+                loading={act.busy}
+                disabled={!/^[A-Z]{2,8}$/.test(strandName ?? "")}
+                onPress={() => run({ action: "MOVE_TO_STRAND", code: r.code, strand: strandName })}
               />
             </View>
           ) : null}

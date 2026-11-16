@@ -26,6 +26,7 @@ import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader,
 import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { levelFill } from "./masteryStateUi";
+import { practisedLabel } from "./masteryReviewUi";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -128,7 +129,10 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
     return (
       <Card key={o.code}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), flexWrap: "wrap" }}>
-          <Muted>{o.code}</Muted>
+          <Muted>
+            {o.code}
+            {o.strand && o.bookRef ? (practisedLabel(o.bookRef.exercises) ? ` · ${practisedLabel(o.bookRef.exercises)}` : "") : ""}
+          </Muted>
           <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap" }}>
             {o.tagged ? (
               <Badge text={o.assess === "RUBRIC" ? STR.msAssessRubric : STR.msAssessQuestion} tone={o.assess === "RUBRIC" ? "info" : "brand"} />

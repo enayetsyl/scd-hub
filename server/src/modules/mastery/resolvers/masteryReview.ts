@@ -247,7 +247,7 @@ const SplitChildInput = builder.inputType("MasteryReviewSplitChildInput", {
 const DecisionInput = builder.inputType("MasteryReviewDecisionInput", {
   description: "One review decision. `action` picks which fields are read (prd-objective-tree §7).",
   fields: (t) => ({
-    action: t.string({ required: true, description: "ACCEPT | BULK_ACCEPT | EDIT | SPLIT | MERGE | MOVE | REJECT | ADD" }),
+    action: t.string({ required: true, description: "ACCEPT | BULK_ACCEPT | EDIT | SPLIT | MERGE | MOVE | MOVE_TO_STRAND | REJECT | ADD" }),
     code: t.string({ required: false }),
     labelBn: t.string({ required: false }),
     labelEn: t.string({ required: false }),
@@ -269,7 +269,7 @@ const DecisionInput = builder.inputType("MasteryReviewDecisionInput", {
   }),
 });
 
-const DECISIONS = new Set<ReviewDecisionAction>(["ACCEPT", "BULK_ACCEPT", "EDIT", "SPLIT", "MERGE", "MOVE", "REJECT", "ADD"]);
+const DECISIONS = new Set<ReviewDecisionAction>(["ACCEPT", "BULK_ACCEPT", "EDIT", "SPLIT", "MERGE", "MOVE", "MOVE_TO_STRAND", "REJECT", "ADD"]);
 const COMMENT_ACTIONS = new Set<ReviewCommentAction>(["COMMENT", "REPLY", "RESOLVE", "REOPEN"]);
 
 // ---------------------------------------------------------------------------

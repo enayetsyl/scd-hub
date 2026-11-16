@@ -7,7 +7,7 @@
  *   assignReviewers       — Principal (mastery:settings); notifies each newly added reviewer
  *   getReviewQueue        — one round: rows + book evidence, threads, unmapped exercises,
  *                           decision counts, lock gate
- *   reviewDecide          — ACCEPT / BULK_ACCEPT / EDIT / SPLIT / MERGE / MOVE / REJECT / ADD
+ *   reviewDecide          — ACCEPT / BULK_ACCEPT / EDIT / SPLIT / MERGE / MOVE / MOVE_TO_STRAND / REJECT / ADD
  *   reviewComment         — COMMENT / REPLY / RESOLVE / REOPEN on a thread (notifies the
  *                           Principal + assigned reviewers on COMMENT and REPLY)
  *   resolveUnmapped       — map an unmapped exercise to a row, or "not assessed this year"
@@ -764,7 +764,7 @@ export async function assignReviewers(reviewId: string, reviewerIds: string[], c
 // Decisions on rows
 // ---------------------------------------------------------------------------
 
-export type ReviewDecisionAction = "ACCEPT" | "BULK_ACCEPT" | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "REJECT" | "ADD";
+export type ReviewDecisionAction = "ACCEPT" | "BULK_ACCEPT" | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "MOVE_TO_STRAND" | "REJECT" | "ADD";
 
 export interface ReviewDecisionInput {
   action: ReviewDecisionAction;
@@ -787,6 +787,7 @@ export interface ReviewDecisionInput {
   toDomainCode?: string | null;
   /** SPLIT: two or more children. */
   children?: { labelBn: string; exercises: string[]; assess?: string | null; questionTypeCodes?: string[] | null }[] | null;
+  /** MOVE_TO_STRAND: the strand — "VOC" (next free number) or "SK-VOC-02" (that exact code); ADD: see below. */
   /** ADD: OBJECTIVE (chapterNumber or strand) or SUB (parentCode). */
   level?: string | null;
   parentCode?: string | null;
@@ -828,9 +829,11 @@ const ruleFail = (rule: string, code: string, detail: string): never => fail(`�
 
 export async function reviewDecide(reviewId: string, input: ReviewDecisionInput, caller: ReviewCaller): Promise<void> {
   const r = await loadRound(reviewId);
-  assertWriter(r, caller, ["OPEN"]);
+  // MOVE_TO_STRAND (owner rule): the Principal may also act on a SUBMITTED round, without reopening it.
+  assertWriter(r, caller, input.action === "MOVE_TO_STRAND" && caller.canSettings ? ["OPEN", "SUBMITTED"] : ["OPEN"]);
   const [ws, L] = await Promise.all([loadPair(r.classToken, r.subject), masteryLevelLabels()]);
   const events: ReviewEventInput[] = [];
+  let outsidePrereqs: { code: string; next: string[] }[] = [];
   const note = trimOrNull(input.reason) ?? undefined;
   const ev = (action: MasteryReviewEventAction, code: string | null, before: Record<string, unknown> | null, after: Record<string, unknown> | null, comment?: string) =>
     events.push({ reviewId: r._id, code, action, before, after, comment });
@@ -1062,6 +1065,68 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       break;
     }
 
+    case "MOVE_TO_STRAND": {
+      // The owner rule: a skill every lesson practises is a skill-strand row (SK-<NAME>-NN), not a
+      // chapter row. The objective and all its steps are re-coded together; nothing else changes.
+      const row = ws.liveDraft(input.code);
+      if (row.level === "SUB") fail(`${row.code} একটি ${L.subBn} — তার ${L.objectiveBn} সরান, ${L.subBn} নিজে সরে যাবে।`);
+      if (row.strand) fail(`${row.code} আগেই দক্ষতা-ধারায় আছে।`);
+      const sm = /^(?:SK-)?([A-Z]{2,8})(?:-(\d{1,2}))?$/.exec((input.strand ?? "").trim().toUpperCase());
+      if (!sm) return fail('দক্ষতা-ধারার নাম লিখুন, যেমন "VOC" বা "SK-VOC-02" (২–৮টি ইংরেজি বড় হাতের অক্ষর)।');
+      const strand = sm[1];
+      let newCode: string;
+      if (sm[2]) {
+        newCode = `LO-${ws.ctx.classToken}-${ws.ctx.subject}-SK-${strand}-${sm[2].padStart(2, "0")}`;
+        if (ws.allCodes.has(newCode)) fail(`কোড ${newCode} আগেই ব্যবহৃত।`);
+      } else {
+        newCode = ws.nextObjectiveCode(null, strand);
+      }
+      const kids = ws.children(row.code).sort((a, b) => (parseMasteryLoCode(a.code)?.sub ?? 0) - (parseMasteryLoCode(b.code)?.sub ?? 0));
+      const pairs: [Row, string][] = [[row, newCode], ...kids.map((k, i) => [k, `${newCode}.${i + 1}`] as [Row, string])];
+      const codeMap = new Map<string, string | null>(pairs.map(([o, n]) => [o.code, n]));
+      // Who cites the old codes: a LOCKED row is never edited (refuse); other DRAFT rows are re-pointed.
+      const citers = await MasteryOutcome.find({ prereqCodes: { $in: [...codeMap.keys()] }, status: { $ne: "RETIRED" } })
+        .select("code status classToken subject prereqCodes")
+        .lean<{ code: string; status: string; classToken: string; subject: string; prereqCodes: string[] }[]>();
+      const lockedCiters = citers.filter((c) => c.status === "LOCKED");
+      if (lockedCiters.length > 0) fail(`লক করা সারি এই কোড ব্যবহার করে (${lockedCiters.slice(0, 5).map((c) => c.code).join(", ")}) — সরানো যায় না।`);
+      const outside = citers.filter((c) => !(c.classToken === ws.ctx.classToken && c.subject === ws.ctx.subject) && !codeMap.has(c.code));
+      const strandRows = [...ws.rows.values()].filter((o) => o.strand === strand);
+      const order = strandRows.reduce((m, o) => Math.max(m, o.order), 0) || row.order;
+      const before = rowSnapshot(row);
+      for (const [old, code] of pairs) {
+        const book = outcomeBookRef(old);
+        const {
+          _id, __v, createdAt, updatedAt, lockedAt, lockedBy, retiredAt, retiredBy, mergedInto, rejectReason, ...keep
+        } = old as unknown as Record<string, unknown>;
+        void [_id, __v, createdAt, updatedAt, lockedAt, lockedBy, retiredAt, retiredBy, mergedInto, rejectReason];
+        ws.create({
+          ...keep,
+          code,
+          chapterNumber: null,
+          strand,
+          order,
+          status: "DRAFT",
+          parentCode: old.level === "SUB" ? newCode : null,
+          questionTypeCodes: [...(old.questionTypeCodes ?? [])],
+          prereqCodes: [...(old.prereqCodes ?? [])],
+          bookRef: { version: book.version, chapter: book.chapter, lesson: book.lesson ?? null, exercises: [...book.exercises] },
+          legacyCodes: [...new Set([...(old.legacyCodes ?? []), old.code])],
+          reviewState: old.reviewState,
+          draftHash: null,
+        } as unknown as Row);
+      }
+      for (const [old, code] of pairs) ws.patch(old.code, { reviewState: "REJECTED", rejectReason: `${MOVED_TO}${code}`, mergedInto: code });
+      const prereqRewritten = ws.rewritePrereqs(codeMap);
+      ws.assertSound();
+      for (const [old, code] of pairs) {
+        ev("MOVE", old.code, old === row ? before : rowSnapshot(old), { code, strand, chapterNumber: null, movedToStrand: true, ...(old === row ? { prereqRewritten, childrenMoved: kids.map((k) => k.code) } : {}) }, note);
+      }
+      // Rows of OTHER class x subject pairs (e.g. C6 citing a C5 row): re-point after the write.
+      outsidePrereqs = outside.map((c) => ({ code: c.code, next: [...new Set(c.prereqCodes.map((p) => (codeMap.has(p) ? (codeMap.get(p) as string) : p)))] }));
+      break;
+    }
+
     case "REJECT": {
       const row = ws.liveDraft(input.code);
       const reason = trimOrNull(input.reason);
@@ -1157,6 +1222,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
   }
 
   await ws.commit();
+  for (const o of outsidePrereqs) await MasteryOutcome.updateOne({ code: o.code, status: "DRAFT" }, { $set: { prereqCodes: o.next } });
   await appendReviewEvents(events, caller);
 }
 
