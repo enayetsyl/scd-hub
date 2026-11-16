@@ -1062,8 +1062,8 @@ function ReviewNavigator(): React.ReactElement {
         options={{ title: STR.qpTitle }}
       />
       {/* Review supervision (RS-4) - after ReviewHome, same initial-route rule. */}
-      <ReviewStack.Screen name="ReviewSupervision" component={ReviewSupervisionScreen} options={{ title: STR.rspNav }} />
-      <ReviewStack.Screen name="ReviewSupervisionReviewer" component={ReviewSupervisionReviewerScreen} options={{ title: STR.rspReviewerTitle }} />
+      <ReviewStack.Screen name="ReviewSupervision" component={ReviewSupervisionScreen} options={{ title: STR.rspHeader }} />
+      <ReviewStack.Screen name="ReviewSupervisionReviewer" component={ReviewSupervisionReviewerScreen} options={{ title: STR.rspReviewerHeader }} />
     </ReviewStack.Navigator>
   );
 }
