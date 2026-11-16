@@ -266,6 +266,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   PARENT_MEETING_SLOTS_GENERATED: { bn: "সভার সময়সূচি তৈরি করেছেন", en: "Generated meeting slots", group: "MESSAGING" },
   PARENT_MEETING_SLOTS_REORDERED: { bn: "সভার সময়সূচি সাজিয়েছেন", en: "Reordered meeting slots", group: "MESSAGING" },
   PARENT_MEETING_SCHEDULED: { bn: "অভিভাবক সভা ঘোষণা করেছেন", en: "Scheduled a parents' meeting", group: "MESSAGING" },
+  PARENT_MEETING_RELEASED: { bn: "সভার ফলাফল অভিভাবকদের জন্য প্রকাশ করেছেন", en: "Published meeting results to guardians", group: "MESSAGING" },
+  PARENT_MEETING_RELEASE_WITHDRAWN: { bn: "সভার ফলাফল প্রকাশ ফিরিয়ে নিয়েছেন", en: "Withdrew published meeting results", group: "MESSAGING" },
   MEETING_SLOT_ATTENDANCE_SET: { bn: "সভায় উপস্থিতি লিখেছেন", en: "Set meeting slot attendance", group: "MESSAGING" },
   MEETING_SLOT_RESPONDED: { bn: "সভার সময়ের উত্তর দিয়েছেন", en: "Answered a meeting slot", group: "MESSAGING" },
   MEETING_CHANGE_APPROVED: { bn: "সভার সময় পরিবর্তন অনুমোদন করেছেন", en: "Approved a meeting time change", group: "MESSAGING" },

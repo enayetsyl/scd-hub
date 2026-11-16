@@ -488,6 +488,7 @@ import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
 import ChildFeesScreen from "../screens/guardian/ChildFeesScreen";
 import ChildLeaveScreen from "../screens/guardian/ChildLeaveScreen";
 import ChildCommentsScreen from "../screens/guardian/ChildCommentsScreen";
+import ChildMeetingResultsScreen from "../screens/guardian/ChildMeetingResultsScreen";
 import ChildRevisionScreen from "../screens/guardian/ChildRevisionScreen";
 import ChildMasteryScreen from "../screens/guardian/ChildMasteryScreen";
 import MyPopupsScreen from "../screens/popup/MyPopupsScreen";
@@ -1842,6 +1843,7 @@ function GuardianHomeNavigator(): React.ReactElement {
         <GuardianHomeStack.Screen name="ChildFees" component={ChildFeesScreen} options={{ title: STR.gpFees }} />
         <GuardianHomeStack.Screen name="ChildLeave" component={ChildLeaveScreen} options={{ title: STR.gpLeave }} />
         <GuardianHomeStack.Screen name="ChildComments" component={ChildCommentsScreen} options={{ title: STR.gpComments }} />
+        <GuardianHomeStack.Screen name="ChildMeetingResults" component={ChildMeetingResultsScreen} options={{ title: STR.mgrTitle }} />
         <GuardianHomeStack.Screen name="ChildRevision" component={ChildRevisionScreen} options={{ title: STR.gpRevision }} />
         <GuardianHomeStack.Screen name="ChildMastery" component={ChildMasteryScreen} options={{ title: STR.gpMsProgress }} />
         <GuardianHomeStack.Screen name="MyPopups" component={MyPopupsScreen} options={{ title: STR.ppMineTitle }} />

@@ -93,6 +93,8 @@ const OPEN_FIELDS: Record<string, string> = {
   questionReviewThread: "reviewer/assigner of THIS round, checked in the body",
   // Guardian plane (guardian:read_child is checked in the body).
   childLibraryLoans: "guardian plane",
+  // A published meeting result: the guardian's own linked child, or meeting-view staff — checked in the body (D-#1634).
+  guardianMeetingResults: "own child (guardian link) or meeting staff, checked in the body",
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
