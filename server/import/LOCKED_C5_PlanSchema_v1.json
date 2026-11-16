@@ -21,7 +21,7 @@
     },
     "plan_type": { "enum": ["chapter_plan", "session_plan"] },
     "subject": { "enum": ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"] },
-    "class_level": { "type": "integer", "minimum": 1, "maximum": 6 },
+    "class_level": { "oneOf": [ { "type": "integer", "minimum": 1, "maximum": 6 }, { "enum": ["NUR", "KG"] } ], "description": "1..6, or NUR (Nursery) / KG (D-#NKG); the envelope carries -1 / 0 for NUR / KG." },
     "curation_tag": { "enum": ["KEEP_AS_IS", "NEEDS_REPLACEMENT", "FLEXIBLE"] },
 
     "division": {
@@ -29,7 +29,7 @@
       "required": ["anchor_word", "number", "title"],
       "additionalProperties": false,
       "properties": {
-        "anchor_word": { "enum": ["পাঠ", "অধ্যায়", "Unit", "Lesson"] },
+        "anchor_word": { "enum": ["পাঠ", "অধ্যায়", "Unit", "Lesson", "অংশ"] },
         "number": { "type": "integer", "minimum": 1 },
         "title": { "type": "string", "minLength": 1 },
         "replacement_label": { "type": "string", "description": "e.g. '(প্রতিস্থাপন; ইসলামি গল্প)' on a whole-lesson NEEDS-REPLACEMENT chapter" }
@@ -52,25 +52,30 @@
       "then": { "required": ["session_plan"] }
     },
     {
+      "comment": "D-#NKG: Nursery / KG plans divide every subject into অংশ (part); Classes 1..6 keep their subject's own word.",
+      "if": { "properties": { "class_level": { "enum": ["NUR", "KG"] } }, "required": ["class_level"] },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অংশ" } } } } }
+    },
+    {
       "comment": "Anchor-word must match the subject's book hierarchy.",
-      "if": { "properties": { "subject": { "enum": ["BAN"] } } },
+      "if": { "properties": { "subject": { "enum": ["BAN"] }, "class_level": { "type": "integer" } }, "required": ["class_level"] },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "পাঠ" } } } } }
     },
     {
-      "if": { "properties": { "subject": { "enum": ["MATH", "SCI"] } } },
+      "if": { "properties": { "subject": { "enum": ["MATH", "SCI"] }, "class_level": { "type": "integer" } }, "required": ["class_level"] },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অধ্যায়" } } } } }
     },
     {
-      "if": { "properties": { "subject": { "const": "ENG" } } },
+      "if": { "properties": { "subject": { "const": "ENG" }, "class_level": { "type": "integer" } }, "required": ["class_level"] },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "enum": ["Unit", "Lesson"] } } } } }
     },
     {
       "comment": "D-#1440: Class 6 second papers — BAN2 divides into অধ্যায়, ENG2 into Unit.",
-      "if": { "properties": { "subject": { "const": "BAN2" } } },
+      "if": { "properties": { "subject": { "const": "BAN2" }, "class_level": { "type": "integer" } }, "required": ["class_level"] },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অধ্যায়" } } } } }
     },
     {
-      "if": { "properties": { "subject": { "const": "ENG2" } } },
+      "if": { "properties": { "subject": { "const": "ENG2" }, "class_level": { "type": "integer" } }, "required": ["class_level"] },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "Unit" } } } } }
     }
   ],

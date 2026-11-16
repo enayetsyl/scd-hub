@@ -23,7 +23,11 @@ check("question_type",  eq(V.QUESTION_TYPES,  D.questionPayload.properties.quest
 check("paper_role",     eq(V.PAPER_ROLES,     P.tags.properties.paper_role.enum));
 check("source_project", eq(V.SOURCE_PROJECTS, P.provenance.properties.source_project.enum));
 check("anchor_word",    eq(V.ANCHOR_WORDS,    D.addressBlock.properties.anchor_word.enum));
-check("class_level min/max", V.CLASS_LEVEL_MIN === P.class_level.minimum && V.CLASS_LEVEL_MAX === P.class_level.maximum);
+// D-#NKG: the root range is the PLAN axis (-1..6); the allOf rule pins question/stimulus/question_set to CLASS_LEVEL_MIN.
+const nonPlanRule = (SCHEMA.allOf || []).find((b) => JSON.stringify(b.if || {}).includes("question_set"));
+check("class_level min/max (plans: root)", V.CONTENT_PLAN_CLASS_LEVEL_MIN === P.class_level.minimum && V.CLASS_LEVEL_MAX === P.class_level.maximum
+  && V.CONTENT_PLAN_CLASS_LEVELS[0] === V.CONTENT_PLAN_CLASS_LEVEL_MIN && V.CONTENT_PLAN_CLASS_LEVELS.at(-1) === V.CLASS_LEVEL_MAX);
+check("class_level min (non-plans: allOf rule)", nonPlanRule?.then?.properties?.class_level?.minimum === V.CLASS_LEVEL_MIN);
 
 console.log("=== B. RBAC invariants ===");
 const allRolePerms = Object.values(V.ROLE_PERMISSIONS).flat();

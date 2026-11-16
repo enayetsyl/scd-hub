@@ -154,6 +154,14 @@ def layer1_batch(env):
         fail("BATCH-SIZE", f"batch carries {len(items)} items; the size guard is {BATCH_MAX_ITEMS} — split the upload")
 
 
+# D-#NKG: Nursery / KG plans — payload "NUR"/"KG", envelope -1/0, LO-code class token NUR/KG.
+PRE_PRIMARY_LEVEL = {"NUR": -1, "KG": 0}
+
+
+def class_token(level):
+    return {-1: "NUR", 0: "KG"}.get(level, f"C{level}")
+
+
 # ---- L2: payload schema (dispatch by doc_type) --------------------------
 def layer2_payload(env, schema, code):
     payload = env.get("payload", {})
@@ -171,6 +179,8 @@ def consistency(env):
             ev, pv = env.get(field), p.get(field)
             if field == "subject":
                 ev, pv = _canon_subject(ev), _canon_subject(pv)
+            if field == "class_level":  # D-#NKG: payload "NUR"/"KG" == envelope -1/0
+                pv = PRE_PRIMARY_LEVEL.get(pv, pv)
             if field in env and field in p and ev != pv:
                 fail("XF", f"envelope.{field}={env[field]!r} != payload.{field}={p[field]!r}")
         addr, div = env.get("address"), p.get("division")
@@ -222,7 +232,7 @@ def lo_code_semantics(env, p):
         if len(parts) < 4:
             continue
         token, csubj = parts[1], parts[2]
-        if isinstance(cls, int) and token != f"C{cls}":
+        if isinstance(cls, int) and token != class_token(cls):
             fail("LO", f"{code}: class {token} does not match envelope class_level {cls}")
         if isinstance(subj, str) and csubj != subj:
             fail("LO", f"{code}: subject {csubj} does not match envelope subject {subj}")
@@ -294,7 +304,7 @@ def plan_lo_semantics(env):
         if len(parts) < 4:
             continue
         token, csubj = parts[1], parts[2]
-        if isinstance(cls, int) and token != f"C{cls}":
+        if isinstance(cls, int) and token != class_token(cls):
             fail("LO", f"{code}: class {token} does not match plan class_level {cls}")
         if isinstance(subj, str) and csubj != subj:
             fail("LO", f"{code}: subject {csubj} does not match plan subject {subj}")
