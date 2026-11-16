@@ -41,6 +41,7 @@ import { friendlyError } from "../../lib/errors";
 import { rsvpStatus } from "../../lib/meetingRsvp";
 import { useAuth } from "../../auth/AuthContext";
 import { MeetingReleaseCard } from "../../components/MeetingReleaseCard";
+import { dateKey } from "../../lib/dates";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -230,7 +231,7 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
         {error ? <Notice message={error} tone="danger" /> : null}
 
         {/* D-#1635: publish the results to guardians (Principal only) — after dispatch, once there are slots. */}
-        {!isDraft && slots.length > 0 ? <MeetingReleaseCard meetingId={meetingId} /> : null}
+        {!isDraft && slots.length > 0 && meeting && meeting.meetingDate.slice(0, 10) <= dateKey(new Date()) ? <MeetingReleaseCard meetingId={meetingId} /> : null}
 
         {genResult ? (
           <Card>

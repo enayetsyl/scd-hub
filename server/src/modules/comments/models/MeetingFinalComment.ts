@@ -11,7 +11,7 @@
  *            The class teacher's own row (MeetingComment) is never overwritten.
  *   authorUserId — the last Principal/Office who saved it (shown on the brief).
  *
- * Staff-only (D-#124): the guardian sees it only on a printed brief handed over.
+ * Staff-only until the Principal publishes the meeting (D-#1634): then the guardian sees THIS comment (read live) in the app, and nothing else the teachers wrote; before that it reaches a family only on a printed brief (D-#124).
  * Identity plane — no corpus path (ADR-005). No schoolId (D-#145).
  */
 import { Schema, model, Document, Types } from "mongoose";

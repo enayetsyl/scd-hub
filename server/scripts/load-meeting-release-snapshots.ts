@@ -17,6 +17,7 @@ import "dotenv/config";
 import { promises as fs } from "fs";
 import { connectDb, disconnectDb } from "../src/db";
 import { ParentMeeting } from "../src/modules/comments/models/ParentMeeting";
+import { ParentMeetingSlot } from "../src/modules/comments/models/ParentMeetingSlot";
 import { ParentMeetingRelease } from "../src/modules/comments/models/ParentMeetingRelease";
 import { saveMeetingReleaseSnapshots, snapshotRowsFromBriefs } from "../src/modules/comments/services/MeetingReleaseService";
 
@@ -35,6 +36,21 @@ async function main(): Promise<void> {
     if (!meeting) throw new Error(`meeting ${meetingId} not found`);
     const existing = await ParentMeetingRelease.countDocuments({ meetingId: meeting._id });
     console.log(`${apply ? "APPLY" : "DRY RUN"}: "${meeting.instanceLabel}" — ${rows.length} printed rows (${existing} snapshot rows exist now)`);
+    // Safety report: rows for children NOT on this meeting's slots, and rows that replace a snapshot.
+    const slots = (await ParentMeetingSlot.find({ meetingId: meeting._id }).select("studentIds").lean()) as unknown as Array<{ studentIds: Array<{ toString(): string }> }>;
+    const onSlots = new Set(slots.flatMap((s) => s.studentIds.map((i) => i.toString())));
+    const offSlot = rows.filter((r) => !onSlots.has(r.studentId));
+    const have = new Set(
+      (await ParentMeetingRelease.find({ meetingId: meeting._id }).select("studentId").lean()).map((r) => r.studentId.toString()),
+    );
+    const overwrite = rows.filter((r) => have.has(r.studentId));
+    console.log(`rows not on this meeting's slots: ${offSlot.length}${offSlot.length ? ` (${offSlot.slice(0, 5).map((r) => r.studentId).join(", ")}${offSlot.length > 5 ? ", ..." : ""})` : ""}`);
+    console.log(`rows that would overwrite an existing snapshot: ${overwrite.length}`);
+    if (offSlot.length > 0 && !force) {
+      console.error("refusing: some rows are for children not on this meeting — fix the file, or pass --force to load them anyway");
+      process.exitCode = 1;
+      return;
+    }
     const sample = rows[0];
     if (sample) console.log("first row:", JSON.stringify({ studentId: sample.studentId, window: sample.window, numbers: sample.numbers, classBest: sample.classBest }));
     if (!apply) {

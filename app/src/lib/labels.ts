@@ -10190,6 +10190,9 @@ const STR_BN = {
   mgrWithdrawOk: "প্রকাশ ফিরিয়ে নেওয়া হয়েছে",
   mgrPrincipalOnly: "শুধু প্রধান শিক্ষক প্রকাশ করতে পারেন।",
   mgrConfirmYes: "প্রকাশ করুন",
+  mgrNotifyFailed: "প্রকাশ হয়েছে, কিন্তু অভিভাবকদের বার্তা পাঠানো যায়নি। “আবার জানান” চাপুন।",
+  mgrNotifyAgain: "আবার জানান",
+  mgrNotifiedOk: "অভিভাবকদের জানানো হয়েছে",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -18932,6 +18935,9 @@ const STR_EN: StrTable = {
   mgrWithdrawOk: "Release withdrawn",
   mgrPrincipalOnly: "Only the Principal can publish.",
   mgrConfirmYes: "Publish",
+  mgrNotifyFailed: "Published, but the families could not be messaged. Tap \"Tell them again\".",
+  mgrNotifyAgain: "Tell them again",
+  mgrNotifiedOk: "Families notified",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

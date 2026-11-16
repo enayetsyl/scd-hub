@@ -34,11 +34,12 @@ import {
 import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { PopupNoticeRecipient } from "../../popup-notices/models/PopupNoticeRecipient";
-import { savePopupDraft, publishPopupNotice } from "../../popup-notices/services/PopupNoticeService";
+import { savePopupDraft, publishPopupNotice, deletePopupDraft, withdrawPopupNotice } from "../../popup-notices/services/PopupNoticeService";
+import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
-import { meetingWindow, childNumbers, sectionClassBest, type BriefNumbers, type BriefClassBest } from "./MeetingBriefService";
+import { meetingWindow, meetingDayKey, childNumbers, sectionClassBest, type BriefNumbers, type BriefClassBest } from "./MeetingBriefService";
 
 export class MeetingReleaseError extends Error {}
 
@@ -102,6 +103,17 @@ export function snapshotRowsFromBriefs(raw: unknown): ReleaseSnapshotRow[] {
       classBest: releaseClassBestOf(o.classBest ?? null),
     };
   });
+}
+
+/** The last instant of a Dhaka calendar day (UTC+6, no DST). */
+export function endOfDhakaDay(dayKey: string): Date {
+  return new Date(`${dayKey}T23:59:59.999+06:00`);
+}
+
+/** The clock the numbers are read at: the end of the meeting day when that is earlier than now. */
+export function snapshotAsOf(meetingDay: string, now: Date): Date {
+  const end = endOfDhakaDay(meetingDay);
+  return end.getTime() < now.getTime() ? end : now;
 }
 
 function assertPrincipal(ctx: AppContext): string {
@@ -179,7 +191,8 @@ async function fillMissingSnapshots(meeting: IParentMeeting, now: Date): Promise
   const missing = ids.filter((id) => !have.has(str(id)));
   if (missing.length === 0) return 0;
 
-  const window = await meetingWindow(meeting, now); // ends at the meeting day, not "now"
+  const asOf = snapshotAsOf(meetingDayKey(meeting), now); // read the numbers as at the end of the meeting day
+  const window = await meetingWindow(meeting, asOf); // ends at the meeting day, not "now"
   const students = (await Student.find({ _id: { $in: missing } }).select("sectionId").lean()) as unknown as Array<{ _id: Types.ObjectId; sectionId?: Types.ObjectId }>;
   let added = 0;
   for (let i = 0; i < students.length; i += 5) {
@@ -187,9 +200,9 @@ async function fillMissingSnapshots(meeting: IParentMeeting, now: Date): Promise
     const rows = await Promise.all(
       chunk.map(async (s): Promise<ReleaseSnapshotRow> => {
         const [numbers, best] = await Promise.all([
-          childNumbers(str(s._id), window.fromKey, window.toKey, null, now),
+          childNumbers(str(s._id), window.fromKey, window.toKey, null, asOf),
           // A comparator must never sink the release — no section best beats no release.
-          s.sectionId ? sectionClassBest(str(s.sectionId), window.fromKey, window.toKey, now).catch(() => null) : Promise.resolve(null),
+          s.sectionId ? sectionClassBest(str(s.sectionId), window.fromKey, window.toKey, asOf).catch(() => null) : Promise.resolve(null),
         ]);
         return {
           studentId: str(s._id),
@@ -244,34 +257,60 @@ export async function meetingReleaseStatus(meetingId: string): Promise<MeetingRe
   };
 }
 
-/** Tell every reachable guardian of the meeting's children — pop-up first (it can refuse), then the notification. */
+/**
+ * Tell every reachable guardian of the meeting's children. The pop-up is created ONCE: its id is
+ * stored on the meeting (`guardianPopupNoticeId`) and a retry reuses it, re-running only the
+ * per-recipient notifications (their dedupe keys make that safe). A draft whose publish throws
+ * is deleted, so a failed attempt leaves no stray notice.
+ */
 async function notifyFamilies(ctx: AppContext, meeting: IParentMeeting, studentIds: Types.ObjectId[], now: Date): Promise<void> {
   const label = meeting.instanceLabel;
-  const draft = await savePopupDraft(ctx, null, {
-    titleBn: "অভিভাবক সভার ফলাফল প্রকাশ হয়েছে",
-    bodyBn: `${label} — {সন্তান}-এর সংখ্যা ও প্রধান শিক্ষকের মন্তব্য এখন অ্যাপে দেখা যাবে। নিচের বোতাম চাপলে খুলবে।`,
-    tone: "info",
-    audience: { studentIds: studentIds.map(str) },
-    rules: { closeButton: true },
-    actions: [{ kind: "OPEN_SCREEN", labelBn: "ফলাফল দেখুন", labelEn: "See the result", target: MEETING_RESULTS_TARGET }],
-    endsOn: dhakaDayKey(new Date(now.getTime() + POPUP_DAYS * DAY_MS)),
-    repeat: "once",
-  });
-  const published = await publishPopupNotice(ctx, draft.id, now);
+  let noticeId: string | null = meeting.guardianPopupNoticeId ? str(meeting.guardianPopupNoticeId) : null;
+  if (!noticeId) {
+    const draft = await savePopupDraft(ctx, null, {
+      titleBn: "অভিভাবক সভার ফলাফল প্রকাশ হয়েছে",
+      bodyBn: `${label} — {সন্তান}-এর সংখ্যা ও প্রধান শিক্ষকের মন্তব্য এখন অ্যাপে দেখা যাবে। নিচের বোতাম চাপলে খুলবে।`,
+      tone: "info",
+      audience: { studentIds: studentIds.map(str) },
+      rules: { closeButton: true },
+      actions: [{ kind: "OPEN_SCREEN", labelBn: "ফলাফল দেখুন", labelEn: "See the result", target: MEETING_RESULTS_TARGET }],
+      endsOn: dhakaDayKey(new Date(now.getTime() + POPUP_DAYS * DAY_MS)),
+      repeat: "once",
+    });
+    try {
+      const published = await publishPopupNotice(ctx, draft.id, now);
+      noticeId = published.id;
+    } catch (e) {
+      await deletePopupDraft(ctx, draft.id).catch(() => undefined);
+      throw e;
+    }
+    await ParentMeeting.updateOne({ _id: meeting._id }, { $set: { guardianPopupNoticeId: new Types.ObjectId(noticeId) } });
+  }
 
   // The notification goes to the notice's FROZEN guardian recipients (never a second audience
   // resolve), and its key carries the RECIPIENT, never the meeting alone.
-  const rows = await PopupNoticeRecipient.find({ noticeId: new Types.ObjectId(published.id), recipientKind: "GUARDIAN", reachable: true, test: { $ne: true } })
+  const rows = await PopupNoticeRecipient.find({ noticeId: new Types.ObjectId(noticeId), recipientKind: "GUARDIAN", reachable: true, test: { $ne: true } })
     .select({ recipientId: 1, vars: 1 })
     .lean();
+  // A guardian with exactly ONE child on this meeting opens that child's result directly.
+  const links = (await GuardianLink.find({
+    guardianId: { $in: rows.map((r) => r.recipientId) },
+    studentId: { $in: studentIds },
+    active: { $ne: false },
+  })
+    .select("guardianId studentId")
+    .lean()) as unknown as Array<{ guardianId: Types.ObjectId; studentId: Types.ObjectId }>;
+  const kidsOf = new Map<string, string[]>();
+  for (const l of links) kidsOf.set(str(l.guardianId), [...(kidsOf.get(str(l.guardianId)) ?? []), str(l.studentId)]);
   for (const r of rows) {
     const kids = (r.vars?.childNames ?? []).join(" ও ");
+    const mine = kidsOf.get(str(r.recipientId)) ?? [];
     await emit({
       recipientGuardianId: str(r.recipientId),
       kind: "SCHOOL_NOTICE",
       titleBn: "অভিভাবক সভার ফলাফল প্রকাশ হয়েছে",
       bodyBn: `${label} — ${kids ? `${kids}-এর ` : ""}সংখ্যা ও প্রধান শিক্ষকের মন্তব্য দেখুন।`,
-      refs: { screenTarget: MEETING_RESULTS_TARGET },
+      refs: mine.length === 1 ? { screenTarget: MEETING_RESULTS_TARGET, studentId: mine[0] } : { screenTarget: MEETING_RESULTS_TARGET },
       dedupeKey: `meeting-release:${str(meeting._id)}:${str(r.recipientId)}`,
     });
   }
@@ -288,6 +327,8 @@ export interface PublishMeetingResult {
 export async function publishMeetingToGuardians(ctx: AppContext, meetingId: string, now = new Date()): Promise<PublishMeetingResult> {
   const actorId = assertPrincipal(ctx);
   const meeting = await mustMeeting(meetingId);
+  if (meeting.status === "draft") throw new MeetingReleaseError("সভাটি এখনো খসড়া — আগে সময় পাঠান");
+  if (meetingDayKey(meeting) > dhakaDayKey(now)) throw new MeetingReleaseError("সভার দিন আসেনি — সভার পর প্রকাশ করুন");
   const computed = await fillMissingSnapshots(meeting, now);
 
   const alreadyLive = !!meeting.guardianPublishedAt && !meeting.guardianWithdrawnAt;
@@ -308,13 +349,13 @@ export async function publishMeetingToGuardians(ctx: AppContext, meetingId: stri
 
   // ONCE per meeting: claim the stamp first so a double tap or a second Principal never re-notifies.
   let notified = false;
-  const claimed = await ParentMeeting.findOneAndUpdate(
+  const claimed = (await ParentMeeting.findOneAndUpdate(
     { _id: meeting._id, guardianNotifiedAt: null },
     { $set: { guardianNotifiedAt: now } },
-  );
+  ).lean()) as IParentMeeting | null;
   if (claimed) {
     try {
-      await notifyFamilies(ctx, meeting, await meetingStudentIds(meeting._id), now);
+      await notifyFamilies(ctx, claimed, await meetingStudentIds(meeting._id), now);
       notified = true;
     } catch (e) {
       // Release the claim so the next publish can tell them; the release itself stands.
@@ -330,6 +371,10 @@ export async function withdrawMeetingRelease(ctx: AppContext, meetingId: string,
   const meeting = await mustMeeting(meetingId);
   if (!meeting.guardianPublishedAt || meeting.guardianWithdrawnAt) return meetingReleaseStatus(meetingId);
   await ParentMeeting.updateOne({ _id: meeting._id }, { $set: { guardianWithdrawnAt: now } });
+  // The pop-up stops showing too (notifications already in an inbox cannot be unsent).
+  if (meeting.guardianPopupNoticeId) {
+    await withdrawPopupNotice(ctx, str(meeting.guardianPopupNoticeId), now).catch((e) => console.warn("meeting release: pop-up not withdrawn:", (e as Error)?.message));
+  }
   await writeAudit({
     eventKind: "PARENT_MEETING_RELEASE_WITHDRAWN",
     actorId,

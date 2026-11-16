@@ -267,7 +267,8 @@ export type GuardianHomeStackParamList = {
   ChildLeave: undefined;
   ChildComments: undefined;
   /** D-#1634: the published parents'-meeting result (figures + final comment); the pop-up's OPEN_SCREEN target. */
-  ChildMeetingResults: undefined;
+  /** `studentId`: open that child (a notification for a one-child guardian); optional because this stack is entered without it too. */
+  ChildMeetingResults: { studentId?: string } | undefined;
   ChildRevision: undefined;
   /** M-6 (D-#812): the child's learning progress per subject, in plain words. */
   ChildMastery: undefined;

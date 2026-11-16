@@ -103,8 +103,13 @@ function ResultCard({ r }: { r: GuardianMeetingResultT }): React.ReactElement {
   );
 }
 
-export default function ChildMeetingResultsScreen(): React.ReactElement {
-  const { selected, fetching } = useGuardianChild();
+export default function ChildMeetingResultsScreen({ route }: { route?: { params?: { studentId?: string } } }): React.ReactElement {
+  const { selected, selectChild, fetching } = useGuardianChild();
+  // A notification for a one-child guardian names its child (D-#1634).
+  const deepLinkedChild = route?.params?.studentId;
+  React.useEffect(() => {
+    if (deepLinkedChild) selectChild(deepLinkedChild);
+  }, [deepLinkedChild, selectChild]);
   const sid = selected?.studentId ?? "";
   const [q, refetch] = useQuery({
     query: GUARDIAN_MEETING_RESULTS_QUERY,

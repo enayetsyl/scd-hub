@@ -77,6 +77,8 @@ export interface IParentMeeting extends Document {
   guardianWithdrawnAt?: Date | null;
   /** First (and only) time the families were told (notification + pop-up) — a re-publish never re-notifies. */
   guardianNotifiedAt?: Date | null;
+  /** The ONE pop-up created for this release; a retry reuses it (never a second). */
+  guardianPopupNoticeId?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -120,6 +122,7 @@ const ParentMeetingSchema = new Schema<IParentMeeting>(
     guardianPublishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     guardianWithdrawnAt: { type: Date, default: null },
     guardianNotifiedAt: { type: Date, default: null },
+    guardianPopupNoticeId: { type: Schema.Types.ObjectId, ref: "PopupNotice", default: null },
   },
   { timestamps: true },
 );

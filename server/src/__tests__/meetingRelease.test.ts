@@ -31,6 +31,9 @@ import { User } from "../modules/foundation/models/User";
 import { AcademicYear } from "../modules/foundation/models/AcademicYear";
 import { Notification } from "../modules/notifications/models/Notification";
 import { PopupNotice } from "../modules/popup-notices/models/PopupNotice";
+import { PopupNoticeRecipient } from "../modules/popup-notices/models/PopupNoticeRecipient";
+import * as notificationService from "../modules/notifications/services/NotificationService";
+import * as popupService from "../modules/popup-notices/services/PopupNoticeService";
 import {
   publishMeetingToGuardians,
   withdrawMeetingRelease,
@@ -308,6 +311,85 @@ describe("publishing", () => {
     await expect(saveMeetingReleaseSnapshots(m.toString(), [rowFor(kid, 5)], "printed")).rejects.toThrow();
     await saveMeetingReleaseSnapshots(m.toString(), [rowFor(kid, 5)], "printed", { force: true });
     expect((await ParentMeetingRelease.findOne({ studentId: kid }).lean())!.numbers.attendance.presentDays).toBe(5);
+  });
+});
+
+describe("review fixes (D-#1635)", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("refuses a draft meeting and a meeting whose day has not come", async () => {
+    const draft = await meeting();
+    await ParentMeeting.collection.updateOne({ _id: draft }, { $set: { status: "draft" } });
+    await expect(publishMeetingToGuardians(principal, draft.toString())).rejects.toThrow();
+    const future = await meeting();
+    await expect(publishMeetingToGuardians(principal, future.toString(), new Date("2026-11-13T06:00:00.000Z"))).rejects.toThrow();
+    expect((await ParentMeeting.findById(future).lean())!.guardianPublishedAt).toBeNull();
+    await publishMeetingToGuardians(principal, future.toString(), new Date("2026-11-14T06:00:00.000Z")); // the day itself is fine
+  });
+
+  it("the pop-up reaches guardians only, and its button opens the results screen", async () => {
+    const { m, g } = await publishedFamily();
+    const notice = (await PopupNotice.findOne({}).lean())!;
+    expect(notice.actions.map((a) => [a.kind, a.target])).toEqual([["OPEN_SCREEN", MEETING_RESULTS_TARGET]]);
+    const rows = await PopupNoticeRecipient.find({ noticeId: notice._id }).lean();
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.recipientKind !== "USER")).toBe(true);
+    expect(rows.some((r) => r.recipientKind === "GUARDIAN" && String(r.recipientId) === g)).toBe(true);
+    expect(String((await ParentMeeting.findById(m).lean())!.guardianPopupNoticeId)).toBe(String(notice._id));
+    // a one-child guardian's notification names the child
+    const note = (await Notification.findOne({ recipientGuardianId: g }).lean())!;
+    expect(note.refs?.studentId).toBeTruthy();
+  });
+
+  it("computed numbers are read as at the meeting day when publishing later", async () => {
+    const m = await meeting();
+    const kid = await student("Late Kid");
+    await slot(m, 1, [kid]);
+    await publishMeetingToGuardians(principal, m.toString(), new Date("2026-12-20T06:00:00.000Z"));
+    const row = (await ParentMeetingRelease.findOne({ studentId: kid }).lean())!;
+    expect(row.snapshotSource).toBe("computed");
+    expect(row.window.toKey).toBe("2026-11-14");
+  });
+
+  it("a retry after a failed notification reuses the pop-up and tells the families once", async () => {
+    const m = await meeting();
+    const kid = await student("Asila");
+    const g = await guardian([kid]);
+    await slot(m, 1, [kid]);
+    await saveMeetingReleaseSnapshots(m.toString(), [rowFor(kid)], "printed");
+    jest.spyOn(notificationService, "emit").mockRejectedValueOnce(new Error("boom"));
+    const first = await publishMeetingToGuardians(principal, m.toString());
+    expect(first.notified).toBe(false);
+    expect(first.status.published).toBe(true);
+    expect(first.status.notifiedAt).toBeNull();
+    expect(await PopupNotice.countDocuments({})).toBe(1);
+    const retry = await publishMeetingToGuardians(principal, m.toString());
+    expect(retry.notified).toBe(true);
+    expect(await PopupNotice.countDocuments({})).toBe(1);
+    expect(await Notification.countDocuments({ recipientGuardianId: g })).toBe(1);
+    const again = await publishMeetingToGuardians(principal, m.toString());
+    expect(again.notified).toBe(false);
+  });
+
+  it("a pop-up that fails to publish leaves no stray draft, and a retry then works", async () => {
+    const m = await meeting();
+    const kid = await student("Asila");
+    await guardian([kid]);
+    await slot(m, 1, [kid]);
+    await saveMeetingReleaseSnapshots(m.toString(), [rowFor(kid)], "printed");
+    jest.spyOn(popupService, "publishPopupNotice").mockRejectedValueOnce(new Error("refused"));
+    const first = await publishMeetingToGuardians(principal, m.toString());
+    expect(first.notified).toBe(false);
+    expect(await PopupNotice.countDocuments({})).toBe(0);
+    const retry = await publishMeetingToGuardians(principal, m.toString());
+    expect(retry.notified).toBe(true);
+    expect(await PopupNotice.countDocuments({})).toBe(1);
+  });
+
+  it("withdrawing also withdraws the pop-up", async () => {
+    const { m } = await publishedFamily();
+    await withdrawMeetingRelease(principal, m.toString());
+    expect((await PopupNotice.findOne({}).lean())!.status).toBe("WITHDRAWN");
   });
 });
 

@@ -50,7 +50,26 @@ export function MeetingReleaseCard({ meetingId }: { meetingId: string }): React.
     setBusy(false);
     if (res.error) setError(friendlyError(res.error));
     else {
-      setOk(STR.mgrPublishOk);
+      const r = res.data?.publishMeetingToGuardians;
+      // Published, but the families could not be told: say so; the button below retries.
+      if (r && !r.notified && !r.status.notifiedAt) setError(STR.mgrNotifyFailed);
+      else setOk(STR.mgrPublishOk);
+      refetch({ requestPolicy: "network-only" });
+    }
+  }
+
+  /** Re-run publish for an already-published meeting whose families were not told (the server dedupes). */
+  async function onNotifyAgain(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    const res = await publish({ meetingId });
+    setBusy(false);
+    if (res.error) setError(friendlyError(res.error));
+    else {
+      const r = res.data?.publishMeetingToGuardians;
+      if (r && !r.notified && !r.status.notifiedAt) setError(STR.mgrNotifyFailed);
+      else setOk(STR.mgrNotifiedOk);
       refetch({ requestPolicy: "network-only" });
     }
   }
@@ -86,12 +105,16 @@ export function MeetingReleaseCard({ meetingId }: { meetingId: string }): React.
           {s.publishedByName ? ` · ${s.publishedByName}` : ""}
         </Muted>
       ) : null}
+      {s.published && !s.notifiedAt ? <Notice message={STR.mgrNotifyFailed} tone="warn" /> : null}
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}
       {isPrincipal ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
           {s.published ? (
-            <Button title={STR.mgrWithdrawBtn} variant="secondary" onPress={() => void onWithdraw()} disabled={busy} />
+            <>
+              {!s.notifiedAt ? <Button title={STR.mgrNotifyAgain} onPress={() => void onNotifyAgain()} loading={busy} disabled={busy} /> : null}
+              <Button title={STR.mgrWithdrawBtn} variant="secondary" onPress={() => void onWithdraw()} disabled={busy} />
+            </>
           ) : (
             <Button title={STR.mgrPublishBtn} onPress={() => void onPublish()} loading={busy} disabled={busy} />
           )}
