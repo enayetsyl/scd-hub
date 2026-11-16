@@ -132,6 +132,7 @@ import "./modules/staff-mistakes/resolvers/staffMistakes";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
 import "./modules/comments/resolvers/meetingResponse";
+import "./modules/comments/resolvers/meetingRelease";
 import "./modules/comments/resolvers/meetingComment";
 import "./modules/comments/resolvers/meetingChain";
 import "./modules/access-control/resolvers/accessControl";

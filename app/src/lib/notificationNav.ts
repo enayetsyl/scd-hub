@@ -409,7 +409,7 @@ export function notificationTarget(
       // D-#1072 — the page the school named, "Tab/Screen" like a pop-up's OPEN_SCREEN button.
       // No page = a plain message: the detail screen shows it whole with no button.
       const [tab, screen] = (refs?.screenTarget ?? "").split("/");
-      return tab && screen ? { tab, screen } : null;
+      return tab && screen ? { tab, screen, params: refs?.studentId ? { studentId: refs.studentId } : undefined } : null;
     }
 
     default:

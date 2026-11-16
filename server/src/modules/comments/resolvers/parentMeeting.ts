@@ -64,6 +64,7 @@ ParentMeetingRef.implement({
     status: t.exposeString("status"),
     includeClassIds: t.exposeStringList("includeClassIds"),
     includeSectionIds: t.exposeStringList("includeSectionIds"),
+    guardianPublishedAt: t.string({ nullable: true, resolve: (m) => m.guardianPublishedAt }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),

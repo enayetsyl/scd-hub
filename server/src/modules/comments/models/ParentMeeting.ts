@@ -70,6 +70,15 @@ export interface IParentMeeting extends Document {
   status: ParentMeetingStatus;
   includeScope: IMeetingScope;
   commentCollection?: IMeetingCommentCollection | null;
+  /** Guardian release (D-#1633): the Principal published the figures + FINAL comment to every family. */
+  guardianPublishedAt?: Date | null;
+  guardianPublishedBy?: Types.ObjectId | null;
+  /** Set when the Principal withdrew the release; cleared on a re-publish. */
+  guardianWithdrawnAt?: Date | null;
+  /** First (and only) time the families were told (notification + pop-up) — a re-publish never re-notifies. */
+  guardianNotifiedAt?: Date | null;
+  /** The ONE pop-up created for this release; a retry reuses it (never a second). */
+  guardianPopupNoticeId?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -109,6 +118,11 @@ const ParentMeetingSchema = new Schema<IParentMeeting>(
       ),
       default: null,
     },
+    guardianPublishedAt: { type: Date, default: null },
+    guardianPublishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    guardianWithdrawnAt: { type: Date, default: null },
+    guardianNotifiedAt: { type: Date, default: null },
+    guardianPopupNoticeId: { type: Schema.Types.ObjectId, ref: "PopupNotice", default: null },
   },
   { timestamps: true },
 );

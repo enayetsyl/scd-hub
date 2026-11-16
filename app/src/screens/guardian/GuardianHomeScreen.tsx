@@ -27,6 +27,7 @@ import { CHILD_REVISION_QUERY } from "../../graphql/revision";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { GuardianMeetingCard } from "../../components/GuardianMeetingCard";
+import { GuardianMeetingResultCard } from "../../components/GuardianMeetingResultCard";
 import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
@@ -375,6 +376,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
       >
         <ChildSwitcher />
         <GuardianMeetingCard />
+        <GuardianMeetingResultCard />
         {/* Quran oral exam (D-#877): the child's sittings from publish to the last day. */}
         <GuardianQuranExamCard studentId={selected?.studentId ?? null} />
 
