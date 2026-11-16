@@ -20,7 +20,7 @@ import { addDays, cap, checkRange, classLabelBn, CLASS_LEVEL, DATE_KEY, iso, lim
 const FIND_STUDENTS_GATE = { anyOf: ["students:view_all"] } as const;
 
 /** Bangla-variant tolerant match: exact substring, or the spelling-blind skeleton of each word. */
-function nameMatches(q: string, ...names: Array<string | null | undefined>): boolean {
+export function nameMatches(q: string, ...names: Array<string | null | undefined>): boolean {
   const needle = q.trim().toLowerCase();
   const sk = needle.split(/\s+/).map(skeleton).filter(Boolean);
   return names.some((n) => {
