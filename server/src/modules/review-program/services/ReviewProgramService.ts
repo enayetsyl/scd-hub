@@ -37,7 +37,7 @@ import {
 import { emitReviewTaskNotice } from "../../notifications/services/emitters";
 import { writeAudit, writeAuditMany } from "../../platform/services/AuditService";
 
-const OPEN_STATUSES = ["assigned", "submitted"] as const;
+export const OPEN_STATUSES = ["assigned", "submitted"] as const;
 const PLAN_TYPES = PLAN_DOC_TYPES as readonly string[];
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -121,7 +121,7 @@ export interface ReviewProgramView {
 }
 
 /** One aggregated group of open rounds. */
-interface RoundGroup {
+export interface RoundGroup {
   reviewerId: string;
   subject: string;
   classLevel: number;
@@ -152,13 +152,13 @@ function oid(raw: string, what: string): Types.ObjectId {
  *     belongs to that book's chapter-N task, whatever anchorWord the round carries;
  *   - more than one -> the question round's OWN anchorWord decides (no match, no task).
  */
-const keyOf = (t: { subject: string; classLevel: number; anchorWord: string; chapter?: string; addressNumber?: string }): string =>
+export const keyOf = (t: { subject: string; classLevel: number; anchorWord: string; chapter?: string; addressNumber?: string }): string =>
   `${t.subject}|${t.classLevel}|${t.anchorWord}|${t.chapter ?? t.addressNumber}`;
 
 const scKey = (subject: string, classLevel: number): string => `${subject}|${classLevel}`;
 
 /** Rewrite question groups' anchorWord to the single plan anchorWord of their subject x class. */
-function resolveQuestionAnchors(
+export function resolveQuestionAnchors(
   groups: RoundGroup[],
   extra: { subject: string; classLevel: number; anchorWord: string }[],
 ): RoundGroup[] {
@@ -188,13 +188,13 @@ async function questionAnchorFilter(subject: string, classLevel: number, anchorW
   return all.size === 1 ? {} : { anchorWord };
 }
 
-function batchOf(p: IReviewProgram, batch: number): IReviewBatch {
+export function batchOf(p: IReviewProgram, batch: number): IReviewBatch {
   const b = p.batches.find((x) => x.batch === batch);
   if (!b) throw new ReviewError("That batch is not in the program");
   return b;
 }
 
-function viewProgram(p: IReviewProgram): ReviewProgramView {
+export function viewProgram(p: IReviewProgram): ReviewProgramView {
   return {
     id: p._id.toString(),
     name: p.name,
@@ -210,7 +210,7 @@ function viewProgram(p: IReviewProgram): ReviewProgramView {
   };
 }
 
-async function loadProgram(programId: string): Promise<IReviewProgram> {
+export async function loadProgram(programId: string): Promise<IReviewProgram> {
   const p = await ReviewProgram.findById(oid(programId, "program"));
   if (!p) throw new ReviewError("Review program not found");
   return p;
@@ -227,7 +227,7 @@ async function assertReviewer(userId: string): Promise<void> {
   if (!u || u.active === false || u.role === "GUARDIAN") throw new ReviewError("That person cannot review");
 }
 
-async function namesOf(ids: string[]): Promise<Map<string, string>> {
+export async function namesOf(ids: string[]): Promise<Map<string, string>> {
   const uniq = [...new Set(ids)].filter((i) => Types.ObjectId.isValid(i));
   if (uniq.length === 0) return new Map();
   const users = await User.find({ _id: { $in: uniq } }).select({ name: 1 }).lean();
@@ -241,7 +241,7 @@ async function namesOf(ids: string[]): Promise<Map<string, string>> {
  * question he published - rounds flipped to superseded with the verdict kept, D-#537 - stay
  * counted as done); cancelled never counts. `assignedAfter` is the batch window.
  */
-async function roundGroups(scope: {
+export async function roundGroups(scope: {
   subjects?: string[];
   classLevels?: number[];
   assignedAfter?: Date | null;
@@ -543,7 +543,7 @@ export async function adoptOpenAssignments(input: {
 // Reads
 // ---------------------------------------------------------------------------
 
-function groupScope(tasks: { subject: string; classLevel: number }[], startAt: Date | null) {
+export function groupScope(tasks: { subject: string; classLevel: number }[], startAt: Date | null) {
   return {
     subjects: [...new Set(tasks.map((t) => t.subject))],
     classLevels: [...new Set(tasks.map((t) => t.classLevel))],
@@ -596,12 +596,26 @@ export async function reviewTasks(input: { programId: string; batch: number; rev
 
 /** Per-reviewer totals for a batch. Decided rounds stay with the reviewer who decided them. */
 export async function reviewerSummary(programId: string, batch: number): Promise<ReviewerSummaryRow[]> {
+  return (await reviewerSummaryDetailed(programId, batch)).rows;
+}
+
+export interface SummaryDetail {
+  program: IReviewProgram;
+  tasks: IReviewTask[];
+  rows: ReviewerSummaryRow[];
+  /** The batch's round groups BEFORE question-anchor resolution and key filtering (RS-3 reuses them so it applies the exact same book rule). */
+  rawGroups: RoundGroup[];
+}
+
+/** reviewerSummary plus what it was computed from, so RS-3 does not query the rounds twice. */
+export async function reviewerSummaryDetailed(programId: string, batch: number): Promise<SummaryDetail> {
   const program = await loadProgram(programId);
   const startAt = batchOf(program, batch).startAt ?? null;
-  const tasks = await ReviewTask.find({ programId: program._id, batch, status: { $ne: "CANCELLED" } }).lean();
-  if (tasks.length === 0) return [];
+  const tasks = (await ReviewTask.find({ programId: program._id, batch, status: { $ne: "CANCELLED" } }).lean()) as unknown as IReviewTask[];
+  if (tasks.length === 0) return { program, tasks, rows: [], rawGroups: [] };
   const keys = new Set(tasks.map((t) => keyOf(t)));
-  const groups = resolveQuestionAnchors(await roundGroups(groupScope(tasks, startAt)), tasks).filter((g) => keys.has(keyOf(g)));
+  const rawGroups = await roundGroups(groupScope(tasks, startAt));
+  const groups = resolveQuestionAnchors(rawGroups, tasks).filter((g) => keys.has(keyOf(g)));
 
   const rows = new Map<string, ReviewerSummaryRow>();
   const row = (id: string): ReviewerSummaryRow => {
@@ -642,14 +656,14 @@ export async function reviewerSummary(programId: string, batch: number): Promise
     r.minutesDone = r.plansDone * w.planMin + r.questionsDone * w.questionMin;
     r.minutesRemaining = r.minutesTotal - r.minutesDone;
   }
-  return [...rows.values()].sort((a, b) => (a.reviewerName ?? "").localeCompare(b.reviewerName ?? ""));
+  const sorted = [...rows.values()].sort((a, b) => (a.reviewerName ?? "").localeCompare(b.reviewerName ?? ""));
+  return { program, tasks, rows: sorted, rawGroups };
 }
 
-export async function reviewProgramOverview(programId: string, batch: number): Promise<ReviewProgramOverview> {
-  const program = await loadProgram(programId);
-  const b = batchOf(program, batch);
-  const reviewers = await reviewerSummary(programId, batch);
-  const totals = reviewers.reduce(
+const ZERO_TOTALS: ReviewProgramOverview["totals"] = { tasks: 0, tasksDone: 0, plansTotal: 0, plansDone: 0, questionsTotal: 0, questionsDone: 0, changes: 0, minutesTotal: 0, minutesDone: 0, minutesRemaining: 0 };
+
+export function totalsOf(reviewers: readonly ReviewerSummaryRow[]): ReviewProgramOverview["totals"] {
+  return reviewers.reduce(
     (a, r) => ({
       tasks: a.tasks + r.tasks,
       tasksDone: a.tasksDone + r.tasksDone,
@@ -662,8 +676,15 @@ export async function reviewProgramOverview(programId: string, batch: number): P
       minutesDone: a.minutesDone + r.minutesDone,
       minutesRemaining: a.minutesRemaining + r.minutesRemaining,
     }),
-    { tasks: 0, tasksDone: 0, plansTotal: 0, plansDone: 0, questionsTotal: 0, questionsDone: 0, changes: 0, minutesTotal: 0, minutesDone: 0, minutesRemaining: 0 },
+    { ...ZERO_TOTALS },
   );
+}
+
+export async function reviewProgramOverview(programId: string, batch: number): Promise<ReviewProgramOverview> {
+  const program = await loadProgram(programId);
+  const b = batchOf(program, batch);
+  const reviewers = await reviewerSummary(programId, batch);
+  const totals = totalsOf(reviewers);
   return { program: viewProgram(program), batch, targetDate: b.targetDate ?? null, totals, reviewers };
 }
 

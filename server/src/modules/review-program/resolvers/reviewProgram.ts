@@ -16,18 +16,24 @@ import {
   createProgram,
   listPrograms,
   moveTask,
-  reviewProgramOverview,
   reviewTasks,
-  reviewerSummary,
   setTaskDue,
   updateBatch,
   type AdoptResult,
-  type ReviewProgramOverview,
   type ReviewProgramView,
   type ReviewTaskView,
-  type ReviewerSummaryRow,
   type TaskProgress,
 } from "../services/ReviewProgramService";
+import {
+  backfillReviewSnapshots,
+  reviewProgressSeries,
+  supervisionOverview,
+  supervisionRows,
+  type ProgressSeriesRow,
+  type Projection,
+  type SupervisionOverview,
+  type SupervisionRow,
+} from "../services/ReviewProgressService";
 
 function mapError(err: unknown): never {
   if (err instanceof ReviewError) throw expectedGraphQLError(err.message);
@@ -123,7 +129,7 @@ TaskRef.implement({
   }),
 });
 
-type Totals = ReviewProgramOverview["totals"];
+type Totals = SupervisionOverview["totals"];
 const TotalsRef = builder.objectRef<Totals>("ReviewTotals");
 TotalsRef.implement({
   fields: (t) => ({
@@ -140,7 +146,7 @@ TotalsRef.implement({
   }),
 });
 
-const ReviewerRowRef = builder.objectRef<ReviewerSummaryRow>("ReviewerSupervisionRow");
+const ReviewerRowRef = builder.objectRef<SupervisionRow>("ReviewerSupervisionRow");
 ReviewerRowRef.implement({
   fields: (t) => ({
     reviewerId: t.exposeString("reviewerId"),
@@ -155,10 +161,50 @@ ReviewerRowRef.implement({
     minutesTotal: t.exposeFloat("minutesTotal"),
     minutesDone: t.exposeFloat("minutesDone"),
     minutesRemaining: t.exposeFloat("minutesRemaining"),
+    doneToday: t.exposeInt("doneToday"),
+    doneThisWeek: t.exposeInt("doneThisWeek"),
+    pacePerDay: t.float({ nullable: true, description: "Weighted minutes done per school day, last 10 school days", resolve: (r) => r.pacePerDay }),
+    daysLeft: t.float({ nullable: true, resolve: (r) => r.daysLeft }),
+    projectedFinishKey: t.string({ nullable: true, resolve: (r) => r.projectedFinishKey }),
+    status: t.exposeString("status", { description: "ON_TRACK | BEHIND | FAR_BEHIND | NO_DATA" }),
+    weeklyPeriods: t.int({ nullable: true, description: "Distinct weekly teaching periods from the routine; null if unreadable", resolve: (r) => r.weeklyPeriods }),
   }),
 });
 
-const OverviewRef = builder.objectRef<ReviewProgramOverview>("ReviewProgramOverview");
+type BatchProjection = SupervisionOverview["batchProjection"];
+const BatchProjectionRef = builder.objectRef<BatchProjection>("ReviewBatchProjection");
+BatchProjectionRef.implement({
+  fields: (t) => ({
+    doneToday: t.exposeInt("doneToday"),
+    doneThisWeek: t.exposeInt("doneThisWeek"),
+    pacePerDay: t.float({ nullable: true, resolve: (r: Projection) => r.pacePerDay }),
+    daysLeft: t.float({ nullable: true, resolve: (r: Projection) => r.daysLeft }),
+    projectedFinishKey: t.string({ nullable: true, resolve: (r: Projection) => r.projectedFinishKey }),
+    status: t.exposeString("status"),
+  }),
+});
+
+const SeriesRowRef = builder.objectRef<ProgressSeriesRow>("ReviewProgressPoint");
+SeriesRowRef.implement({
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    reviewerId: t.string({ nullable: true, resolve: (r) => r.reviewerId }),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName }),
+    plansDone: t.exposeInt("plansDone"),
+    chapterPlansDone: t.exposeInt("chapterPlansDone"),
+    questionsDone: t.exposeInt("questionsDone"),
+    doneCount: t.exposeInt("doneCount"),
+    cumulativeDone: t.exposeInt("cumulativeDone"),
+    remaining: t.exposeInt("remaining"),
+    doneWeightMin: t.exposeFloat("doneWeightMin"),
+    cumulativeDoneWeightMin: t.exposeFloat("cumulativeDoneWeightMin"),
+    remainingWeightMin: t.exposeFloat("remainingWeightMin"),
+    changes: t.exposeInt("changes"),
+    estimated: t.exposeBoolean("estimated"),
+  }),
+});
+
+const OverviewRef = builder.objectRef<SupervisionOverview>("ReviewProgramOverview");
 OverviewRef.implement({
   fields: (t) => ({
     program: t.field({ type: ProgramRef, resolve: (o) => o.program }),
@@ -166,6 +212,7 @@ OverviewRef.implement({
     targetDate: t.string({ nullable: true, resolve: (o) => o.targetDate }),
     totals: t.field({ type: TotalsRef, resolve: (o) => o.totals }),
     reviewers: t.field({ type: [ReviewerRowRef], resolve: (o) => o.reviewers }),
+    batchProjection: t.field({ type: BatchProjectionRef, resolve: (o) => o.batchProjection }),
   }),
 });
 
@@ -219,7 +266,7 @@ builder.queryField("reviewProgramOverview", (t) =>
     args: { programId: t.arg.string({ required: true }), batch: t.arg.int({ required: true }) },
     resolve: async (_r, a) => {
       try {
-        return await reviewProgramOverview(a.programId, a.batch);
+        return await supervisionOverview(a.programId, a.batch);
       } catch (e) {
         return mapError(e);
       }
@@ -247,6 +294,27 @@ builder.queryField("reviewTasks", (t) =>
   }),
 );
 
+builder.queryField("reviewProgressSeries", (t) =>
+  t.field({
+    type: [SeriesRowRef],
+    description: "Daily done / cumulative / remaining for the chart: one row per day for the batch, or per day for one reviewer. Requires review_program:supervise.",
+    authScopes: { hasPermission: "review_program:supervise" },
+    args: {
+      programId: t.arg.string({ required: true }),
+      batch: t.arg.int({ required: true }),
+      reviewerId: t.arg.string({ required: false }),
+      perReviewer: t.arg.boolean({ required: false, description: "One row per reviewer per day (stacked chart)" }),
+    },
+    resolve: async (_r, a) => {
+      try {
+        return await reviewProgressSeries(a.programId, a.batch, { reviewerId: a.reviewerId ?? null, perReviewer: a.perReviewer ?? false });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
 builder.queryField("reviewerSupervisionRows", (t) =>
   t.field({
     type: [ReviewerRowRef],
@@ -255,7 +323,7 @@ builder.queryField("reviewerSupervisionRows", (t) =>
     args: { programId: t.arg.string({ required: true }), batch: t.arg.int({ required: true }) },
     resolve: async (_r, a) => {
       try {
-        return await reviewerSummary(a.programId, a.batch);
+        return await supervisionRows(a.programId, a.batch);
       } catch (e) {
         return mapError(e);
       }
@@ -307,6 +375,21 @@ builder.mutationField("updateReviewBatch", (t) =>
     resolve: async (_r, a, ctx) => {
       try {
         return await updateBatch({ programId: a.programId, batch: a.batch, name: a.name, targetDate: a.targetDate, startAt: a.startAt, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("backfillReviewSnapshots", (t) =>
+  t.int({
+    description: "Rebuild the estimated daily history of a batch from the rounds submit times (never touches real rows). Returns rows written. Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: { programId: t.arg.string({ required: true }), batch: t.arg.int({ required: true }) },
+    resolve: async (_r, a) => {
+      try {
+        return await backfillReviewSnapshots(a.programId, a.batch);
       } catch (e) {
         return mapError(e);
       }
