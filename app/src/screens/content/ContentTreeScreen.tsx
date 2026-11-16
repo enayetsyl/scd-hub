@@ -12,7 +12,7 @@ import type { ViewStyle } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { SUBJECTS, CLASS_LEVELS, CURATION_TAGS, PLAN_DOC_TYPES } from "@scd/shared";
+import { SUBJECTS, CONTENT_PLAN_CLASS_LEVELS, CURATION_TAGS, PLAN_DOC_TYPES } from "@scd/shared";
 import { CONTENT_TREE_PAGE_QUERY } from "../../graphql/operations";
 import { Pager } from "../../components/Pager";
 import type { ContentStackParamList } from "../../navigation/types";
@@ -163,7 +163,7 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
 
           <FilterGroup title={STR.classLevel} width={groupWidth}>
             <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
-            {CLASS_LEVELS.map((c) => (
+            {CONTENT_PLAN_CLASS_LEVELS.map((c) => (
               <Chip
                 key={c}
                 label={bnNum(c)}
