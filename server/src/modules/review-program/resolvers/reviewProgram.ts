@@ -1,0 +1,411 @@
+/**
+ * Review supervision resolvers (RS-1, .claude/plans/review-supervision.md).
+ *
+ * Reads  - review_program:supervise: reviewPrograms, reviewProgramOverview, reviewTasks
+ * Writes - review_program:manage:    createReviewProgram, updateReviewBatch,
+ *          adoptOpenReviewRounds, moveReviewTask, cancelReviewTask, addReviewTask, setReviewTaskDue
+ */
+import { builder } from "../../../schema";
+import { ForbiddenError } from "../../../middleware/authz";
+import { expectedGraphQLError } from "../../../observability/sentry";
+import { ReviewError } from "../../content/services/ReviewService";
+import {
+  addTask,
+  adoptOpenAssignments,
+  cancelTask,
+  createProgram,
+  listPrograms,
+  moveTask,
+  reviewProgramOverview,
+  reviewTasks,
+  reviewerSummary,
+  setTaskDue,
+  updateBatch,
+  type AdoptResult,
+  type ReviewProgramOverview,
+  type ReviewProgramView,
+  type ReviewTaskView,
+  type ReviewerSummaryRow,
+  type TaskProgress,
+} from "../services/ReviewProgramService";
+
+function mapError(err: unknown): never {
+  if (err instanceof ReviewError) throw expectedGraphQLError(err.message);
+  throw err;
+}
+
+function actorOf(ctx: { auth?: { userId: string; role: string } | null }) {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  return { id: ctx.auth.userId, role: ctx.auth.role };
+}
+
+// ---------------------------------------------------------------------------
+// Object shapes
+// ---------------------------------------------------------------------------
+
+const WeightsRef = builder.objectRef<ReviewProgramView["weights"]>("ReviewWeights");
+WeightsRef.implement({
+  fields: (t) => ({
+    planMin: t.exposeFloat("planMin"),
+    questionMin: t.exposeFloat("questionMin"),
+    hintMin: t.exposeFloat("hintMin"),
+    examItemMin: t.exposeFloat("examItemMin"),
+    bookletPageMin: t.exposeFloat("bookletPageMin"),
+  }),
+});
+
+const BatchRef = builder.objectRef<ReviewProgramView["batches"][number]>("ReviewBatch");
+BatchRef.implement({
+  fields: (t) => ({
+    batch: t.exposeInt("batch"),
+    name: t.exposeString("name"),
+    targetDate: t.string({ nullable: true, resolve: (b) => b.targetDate }),
+    startAt: t.string({ nullable: true, resolve: (b) => b.startAt }),
+  }),
+});
+
+const ProgramRef = builder.objectRef<ReviewProgramView>("ReviewProgram");
+ProgramRef.implement({
+  description: "The teacher review program the Principal supervises (RS-1). Identity plane.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    name: t.exposeString("name"),
+    batches: t.field({ type: [BatchRef], resolve: (p) => p.batches }),
+    weights: t.field({ type: WeightsRef, resolve: (p) => p.weights }),
+    createdAt: t.exposeString("createdAt"),
+  }),
+});
+
+const ProgressRef = builder.objectRef<TaskProgress>("ReviewTaskProgress");
+ProgressRef.implement({
+  fields: (t) => ({
+    plansTotal: t.exposeInt("plansTotal"),
+    plansDone: t.exposeInt("plansDone"),
+    questionsTotal: t.exposeInt("questionsTotal"),
+    questionsDone: t.exposeInt("questionsDone"),
+    changes: t.exposeInt("changes"),
+    doneByOthers: t.exposeInt("doneByOthers"),
+    minutesTotal: t.exposeFloat("minutesTotal"),
+    minutesDone: t.exposeFloat("minutesDone"),
+    minutesRemaining: t.exposeFloat("minutesRemaining"),
+  }),
+});
+
+const HistoryRef = builder.objectRef<ReviewTaskView["history"][number]>("ReviewTaskHistory");
+HistoryRef.implement({
+  fields: (t) => ({
+    at: t.exposeString("at"),
+    by: t.exposeString("by"),
+    action: t.exposeString("action"),
+    fromReviewer: t.string({ nullable: true, resolve: (h) => h.fromReviewer }),
+    toReviewer: t.string({ nullable: true, resolve: (h) => h.toReviewer }),
+    note: t.string({ nullable: true, resolve: (h) => h.note }),
+  }),
+});
+
+const TaskRef = builder.objectRef<ReviewTaskView>("ReviewTask");
+TaskRef.implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    programId: t.exposeString("programId"),
+    batch: t.exposeInt("batch"),
+    reviewerId: t.exposeString("reviewerId"),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName }),
+    subject: t.exposeString("subject"),
+    classLevel: t.exposeInt("classLevel"),
+    anchorWord: t.exposeString("anchorWord"),
+    chapter: t.exposeString("chapter"),
+    dueKey: t.string({ nullable: true, resolve: (r) => r.dueKey }),
+    status: t.exposeString("status"),
+    assignedAt: t.exposeString("assignedAt"),
+    history: t.field({ type: [HistoryRef], resolve: (r) => r.history }),
+    progress: t.field({ type: ProgressRef, resolve: (r) => r.progress }),
+  }),
+});
+
+type Totals = ReviewProgramOverview["totals"];
+const TotalsRef = builder.objectRef<Totals>("ReviewTotals");
+TotalsRef.implement({
+  fields: (t) => ({
+    tasks: t.exposeInt("tasks"),
+    tasksDone: t.exposeInt("tasksDone"),
+    plansTotal: t.exposeInt("plansTotal"),
+    plansDone: t.exposeInt("plansDone"),
+    questionsTotal: t.exposeInt("questionsTotal"),
+    questionsDone: t.exposeInt("questionsDone"),
+    changes: t.exposeInt("changes"),
+    minutesTotal: t.exposeFloat("minutesTotal"),
+    minutesDone: t.exposeFloat("minutesDone"),
+    minutesRemaining: t.exposeFloat("minutesRemaining"),
+  }),
+});
+
+const ReviewerRowRef = builder.objectRef<ReviewerSummaryRow>("ReviewerSupervisionRow");
+ReviewerRowRef.implement({
+  fields: (t) => ({
+    reviewerId: t.exposeString("reviewerId"),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName }),
+    tasks: t.exposeInt("tasks"),
+    tasksDone: t.exposeInt("tasksDone"),
+    plansTotal: t.exposeInt("plansTotal"),
+    plansDone: t.exposeInt("plansDone"),
+    questionsTotal: t.exposeInt("questionsTotal"),
+    questionsDone: t.exposeInt("questionsDone"),
+    changes: t.exposeInt("changes"),
+    minutesTotal: t.exposeFloat("minutesTotal"),
+    minutesDone: t.exposeFloat("minutesDone"),
+    minutesRemaining: t.exposeFloat("minutesRemaining"),
+  }),
+});
+
+const OverviewRef = builder.objectRef<ReviewProgramOverview>("ReviewProgramOverview");
+OverviewRef.implement({
+  fields: (t) => ({
+    program: t.field({ type: ProgramRef, resolve: (o) => o.program }),
+    batch: t.exposeInt("batch"),
+    targetDate: t.string({ nullable: true, resolve: (o) => o.targetDate }),
+    totals: t.field({ type: TotalsRef, resolve: (o) => o.totals }),
+    reviewers: t.field({ type: [ReviewerRowRef], resolve: (o) => o.reviewers }),
+  }),
+});
+
+const AdoptRef = builder.objectRef<AdoptResult>("AdoptReviewRoundsResult");
+AdoptRef.implement({
+  fields: (t) => ({
+    created: t.exposeInt("created"),
+    alreadyTasks: t.exposeInt("alreadyTasks"),
+    creditedLeftovers: t.exposeInt("creditedLeftovers"),
+  }),
+});
+
+interface CancelResult { cancelledPlans: number; cancelledQuestions: number }
+const CancelRef = builder.objectRef<CancelResult>("CancelReviewTaskResult");
+CancelRef.implement({
+  fields: (t) => ({
+    cancelledPlans: t.exposeInt("cancelledPlans"),
+    cancelledQuestions: t.exposeInt("cancelledQuestions"),
+  }),
+});
+
+interface AddResult { task: ReviewTaskView; assignedPlans: number; assignedQuestions: number; skippedPlans: number }
+const AddRef = builder.objectRef<AddResult>("AddReviewTaskResult");
+AddRef.implement({
+  fields: (t) => ({
+    task: t.field({ type: TaskRef, resolve: (r) => r.task }),
+    assignedPlans: t.exposeInt("assignedPlans"),
+    assignedQuestions: t.exposeInt("assignedQuestions"),
+    skippedPlans: t.exposeInt("skippedPlans"),
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Queries (review_program:supervise)
+// ---------------------------------------------------------------------------
+
+builder.queryField("reviewPrograms", (t) =>
+  t.field({
+    type: [ProgramRef],
+    description: "Every review program, newest first. Requires review_program:supervise.",
+    authScopes: { hasPermission: "review_program:supervise" },
+    resolve: async () => listPrograms(),
+  }),
+);
+
+builder.queryField("reviewProgramOverview", (t) =>
+  t.field({
+    type: OverviewRef,
+    description: "A batch's totals and per-reviewer rows, computed from the real rounds. Requires review_program:supervise.",
+    authScopes: { hasPermission: "review_program:supervise" },
+    args: { programId: t.arg.string({ required: true }), batch: t.arg.int({ required: true }) },
+    resolve: async (_r, a) => {
+      try {
+        return await reviewProgramOverview(a.programId, a.batch);
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.queryField("reviewTasks", (t) =>
+  t.field({
+    type: [TaskRef],
+    description: "A batch's tasks with computed progress, optionally one reviewer's. Requires review_program:supervise.",
+    authScopes: { hasPermission: "review_program:supervise" },
+    args: {
+      programId: t.arg.string({ required: true }),
+      batch: t.arg.int({ required: true }),
+      reviewerId: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, a) => {
+      try {
+        return await reviewTasks({ programId: a.programId, batch: a.batch, reviewerId: a.reviewerId ?? null });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.queryField("reviewerSupervisionRows", (t) =>
+  t.field({
+    type: [ReviewerRowRef],
+    description: "Per-reviewer totals of a batch (the same rows as the overview). Requires review_program:supervise.",
+    authScopes: { hasPermission: "review_program:supervise" },
+    args: { programId: t.arg.string({ required: true }), batch: t.arg.int({ required: true }) },
+    resolve: async (_r, a) => {
+      try {
+        return await reviewerSummary(a.programId, a.batch);
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutations (review_program:manage)
+// ---------------------------------------------------------------------------
+
+const BatchInput = builder.inputType("ReviewBatchInput", {
+  fields: (t) => ({
+    batch: t.int({ required: true }),
+    name: t.string({ required: false }),
+    targetDate: t.string({ required: false }),
+    startAt: t.string({ required: false }),
+  }),
+});
+
+builder.mutationField("createReviewProgram", (t) =>
+  t.field({
+    type: ProgramRef,
+    description: "Create a review program with its batches. Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: { name: t.arg.string({ required: true }), batches: t.arg({ type: [BatchInput], required: false }) },
+    resolve: async (_r, a, ctx) => {
+      try {
+        return await createProgram({ name: a.name, batches: a.batches ?? [], actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("updateReviewBatch", (t) =>
+  t.field({
+    type: ProgramRef,
+    description: "Set a batch's name / target date (null clears the date). Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: {
+      programId: t.arg.string({ required: true }),
+      batch: t.arg.int({ required: true }),
+      name: t.arg.string({ required: false }),
+      targetDate: t.arg.string({ required: false }),
+      startAt: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, a, ctx) => {
+      try {
+        return await updateBatch({ programId: a.programId, batch: a.batch, name: a.name, targetDate: a.targetDate, startAt: a.startAt, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("adoptOpenReviewRounds", (t) =>
+  t.field({
+    type: AdoptRef,
+    description: "Turn the existing open rounds into tasks of a batch. Idempotent; creates no rounds. Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: {
+      programId: t.arg.string({ required: true }),
+      batch: t.arg.int({ required: true }),
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      assignedAfter: t.arg.string({ required: false, description: "ISO instant; overrides the batch start as the cut-off" }),
+    },
+    resolve: async (_r, a, ctx) => {
+      try {
+        const after = a.assignedAfter ? new Date(a.assignedAfter) : null;
+        if (after && Number.isNaN(after.getTime())) throw new ReviewError("assignedAfter must be an ISO date-time");
+        return await adoptOpenAssignments({ programId: a.programId, batch: a.batch, subject: a.subject, classLevel: a.classLevel, assignedAfter: after, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("moveReviewTask", (t) =>
+  t.field({
+    type: TaskRef,
+    description: "Hand a task's untouched rounds to another reviewer; reviewed rounds stay credited. Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: { taskId: t.arg.string({ required: true }), toReviewerId: t.arg.string({ required: true }), note: t.arg.string({ required: false }) },
+    resolve: async (_r, a, ctx) => {
+      try {
+        return await moveTask({ taskId: a.taskId, toReviewerId: a.toReviewerId, note: a.note, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("cancelReviewTask", (t) =>
+  t.field({
+    type: CancelRef,
+    description: "Cancel a task and its untouched rounds. Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: { taskId: t.arg.string({ required: true }), note: t.arg.string({ required: false }) },
+    resolve: async (_r, a, ctx) => {
+      try {
+        return await cancelTask({ taskId: a.taskId, note: a.note, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("addReviewTask", (t) =>
+  t.field({
+    type: AddRef,
+    description: "Give a reviewer a chapter: assigns its draft plans and questions that have no open round. Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: {
+      programId: t.arg.string({ required: true }),
+      batch: t.arg.int({ required: true }),
+      reviewerId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      classLevel: t.arg.int({ required: true }),
+      anchorWord: t.arg.string({ required: true }),
+      chapter: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, a, ctx) => {
+      try {
+        return await addTask({ ...a, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+builder.mutationField("setReviewTaskDue", (t) =>
+  t.field({
+    type: TaskRef,
+    description: "Set or clear a task's due date (YYYY-MM-DD). Requires review_program:manage.",
+    authScopes: { hasPermission: "review_program:manage" },
+    args: { taskId: t.arg.string({ required: true }), dueKey: t.arg.string({ required: false }) },
+    resolve: async (_r, a, ctx) => {
+      try {
+        return await setTaskDue({ taskId: a.taskId, dueKey: a.dueKey ?? null, actor: actorOf(ctx) });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);

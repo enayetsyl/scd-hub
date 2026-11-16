@@ -428,6 +428,12 @@ Guardians read their child's class routine (published only) and their own Quran 
 | `exam_papers:review` | Review a paper given to me | আমাকে দেওয়া প্রশ্নপত্র রিভিউ করা | Confirm each item matches the syllabus; suggest an edit, a deletion or a new question | on | on | SELF | new |
 `review` is SELF because the reviewer is chosen per paper: the service lets only that paper's reviewer (or a manager) act, and a reviewer lists only their own papers.
 
+#### `review_program` — পর্যালোচনা তদারকি (RS-1, .claude/plans/review-supervision.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `review_program:supervise` | Watch the review program | পর্যালোচনা তদারকি দেখা | Batches, per-reviewer progress and the task list (read only) | — | — | PRINCIPAL-DEFAULT | new |
+| `review_program:manage` | Manage the review program | পর্যালোচনা কাজ সরানো ও যোগ করা | Create a program, adopt open rounds into tasks, move/cancel/add a task, change a due date | — | — | PRINCIPAL-DEFAULT | new |
+
 #### `exam_results` — পরীক্ষার নম্বর ও রিপোর্ট কার্ড (EX-1..EX-9, D-#375–#382, docs/prd-exams.md)
 Creating the exam row itself stays `exam_syllabus:settings` (one exam record, SY-1). These gate the marking cycle on top of it.
 | permission | EN | BN | what it allows | T | O | flags | replaces |
