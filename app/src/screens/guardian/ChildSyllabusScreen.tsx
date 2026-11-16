@@ -24,6 +24,8 @@ import SyllabusView from "../../components/SyllabusView";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useSyllabusPickers } from "../../lib/useSyllabusPickers";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { useFileOpen } from "../../lib/useFileOpen";
+import { openPdfOnDevice } from "../../lib/files";
 import { STR, bnNum, routineSubjectLabel, examTermLabel } from "../../lib/labels";
 import { useColors } from "../../theme";
 import { space, typeScale, radius } from "../../theme/tokens";
@@ -34,6 +36,7 @@ export default function ChildSyllabusScreen(): React.ReactElement {
   const { selected } = useGuardianChild();
   const pick = useSyllabusPickers();
   const [openSubject, setOpenSubject] = useState<string | null>(null);
+  const { openingId, runOpen } = useFileOpen();
 
   const [q, refetch] = useQuery({
     query: GUARDIAN_CHILD_SYLLABUS,
@@ -121,6 +124,26 @@ export default function ChildSyllabusScreen(): React.ReactElement {
                     })}
                   </View>
                 )}
+
+                {view.subjects.length > 0 && pick.examId && selected ? (
+                  <Button
+                    title={STR.syPackPdf}
+                    variant="secondary"
+                    loading={openingId === "syllabus-pdf"}
+                    disabled={!!openingId}
+                    onPress={() => {
+                      const examId = pick.examId;
+                      const studentId = selected.studentId;
+                      if (!examId) return;
+                      void runOpen("syllabus-pdf", () =>
+                        openPdfOnDevice(
+                          `/pdf/syllabus/${encodeURIComponent(examId)}?studentId=${encodeURIComponent(studentId)}`,
+                          `syllabus-${examId}-${studentId}`,
+                        ),
+                      );
+                    }}
+                  />
+                ) : null}
 
                 {opened ? <SyllabusView row={opened} /> : null}
               </View>
