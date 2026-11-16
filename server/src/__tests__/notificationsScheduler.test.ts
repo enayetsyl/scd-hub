@@ -93,6 +93,12 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/staff-mistakes/services/StaffMistakeService", () => ({
   settleOverdueMistakes: jest.fn().mockResolvedValue(0),
 }));
+// RS-3: the review-program daily snapshot family (DB-backed - stubbed so this suite stays DB-free;
+// its own tests are in reviewProgress.test.ts).
+const mockCaptureReviewSnapshots = jest.fn((_now: Date) => Promise.resolve(0));
+jest.mock("../modules/review-program/services/ReviewProgressService", () => ({
+  captureReviewSnapshots: (n: Date) => mockCaptureReviewSnapshots(n),
+}));
 // D-#1052/#1054: the daily report + share-expiry families (own tests in dailyReport.test.ts).
 const mockRunDailyReport = jest.fn((_now: Date) => Promise.resolve(0));
 const mockDailyReportSettings = jest.fn(() => Promise.resolve({ sendMinutes: 18 * 60, headlineSections: [] as string[], notifyPrincipal: true }));
@@ -681,6 +687,17 @@ describe("assignment auto-ISSUE sweep (D-#839)", () => {
 // ---------------------------------------------------------------------------
 // Pure timing helpers (D-#73 stale policy)
 // ---------------------------------------------------------------------------
+
+describe("review snapshot family (RS-3)", () => {
+  it("runs once a day after 21:00, even on a day off, and not before", async () => {
+    mockResolveDayType.mockResolvedValue("OFF");
+    expect((await runSchedulerTick(at(20, 59))).reviewSnapshotRan).toBe(false);
+    expect(mockCaptureReviewSnapshots).not.toHaveBeenCalled();
+    expect((await runSchedulerTick(at(21, 0))).reviewSnapshotRan).toBe(true);
+    expect((await runSchedulerTick(at(21, 5))).reviewSnapshotRan).toBe(false);
+    expect(mockCaptureReviewSnapshots).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("windowOpen / minutesOfDay", () => {
   it("fires from the due minute through due+30, never before, never after", () => {

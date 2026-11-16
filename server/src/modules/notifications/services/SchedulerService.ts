@@ -81,6 +81,7 @@ import {
 import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAutoIssueService";
 import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
+import { captureReviewSnapshots } from "../../review-program/services/ReviewProgressService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
   emitPendingDigest as emitImprovementPendingDigest,
@@ -182,6 +183,9 @@ export function minutesOfDay(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+/** RS-3: the review snapshot is taken from 21:00, after the end of the school and review day. */
+export const REVIEW_SNAPSHOT_MINUTES = 21 * 60;
+
 /** Is a fixed-time trigger due now? Due ⇒ fire; > STALE_MINUTES past ⇒ skip. */
 export function windowOpen(nowMin: number, dueMin: number, staleMin = STALE_MINUTES): boolean {
   return nowMin >= dueMin && nowMin - dueMin <= staleMin;
@@ -256,6 +260,8 @@ export interface TickSummary {
   netSnapshotRan: boolean;
   /** SH-4: whether the daily health gauges were captured this pass. */
   healthSnapshotRan: boolean;
+  /** RS-3: whether the review-program daily snapshot ran this pass (once a day after 21:00). */
+  reviewSnapshotRan: boolean;
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
@@ -322,6 +328,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     observationEscalationRan: false,
     netSnapshotRan: false,
     healthSnapshotRan: false,
+    reviewSnapshotRan: false,
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
@@ -400,6 +407,16 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("health snapshot", async () => {
     summary.healthSnapshotRan = await runOnce(dateKey, "HEALTHSNAP", async () => {
       await captureDailyHealth(now);
+    });
+  });
+
+  // --- Review-program daily snapshot (RS-3) - per reviewer done/remaining for the supervision
+  // chart. Calendar cadence (a reviewer can finish work on a Friday), once a day after 21:00
+  // Dhaka, before the school-day gate; idempotent upsert on (program, batch, reviewer, day).
+  await family("review snapshot", async () => {
+    if (minutesOfDay(now) < REVIEW_SNAPSHOT_MINUTES) return;
+    summary.reviewSnapshotRan = await runOnce(dateKey, "REVIEWSNAP", async () => {
+      await captureReviewSnapshots(now);
     });
   });
 
