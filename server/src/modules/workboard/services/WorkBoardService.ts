@@ -692,18 +692,20 @@ async function videoReviewCards(userIds: string[], todayKey: string): Promise<Wo
   }));
 }
 
-/** Plan/chapter reviews are one card each. QUESTION reviews share the same model
+/** Plan reviews are one card per reviewer x book x chapter (RS-1). QUESTION reviews share the same model
  *  (QuestionReviewService writes a ReviewAssignment per question) and a reviewer can
  *  hold thousands at once — those become ONE card per reviewer with the count. */
-async function planReviewCards(userIds: string[], todayKey: string): Promise<WorkCard[]> {
+export async function planReviewCards(userIds: string[], todayKey: string): Promise<WorkCard[]> {
   const rows = (await ReviewAssignment.find({
     reviewerId: { $in: userIds.map((u) => new Types.ObjectId(u)) },
     status: "assigned",
   })
-    .select("reviewerId docType subject classLevel anchorWord addressNumber artifactId assignedAt")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId; reviewerId: Types.ObjectId; docType: string; subject: string; classLevel: number; anchorWord: string; addressNumber: string; artifactId: Types.ObjectId; assignedAt: Date }>;
+    .select("reviewerId docType subject classLevel anchorWord addressNumber artifactId assignedAt sessionIndex")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; reviewerId: Types.ObjectId; docType: string; subject: string; classLevel: number; anchorWord: string; addressNumber: string; artifactId: Types.ObjectId; assignedAt: Date; sessionIndex?: number | null }>;
   const out: WorkCard[] = [];
   const questions = new Map<string, { n: number; oldest: Date }>();
+  type PlanRow = (typeof rows)[number];
+  const planGroups = new Map<string, { first: PlanRow; n: number; oldest: Date }>();
   for (const r of rows) {
     if (r.docType === "question") {
       const id = r.reviewerId.toString();
@@ -713,16 +715,31 @@ async function planReviewCards(userIds: string[], todayKey: string): Promise<Wor
       questions.set(id, cur);
       continue;
     }
+    // RS-1: one card per reviewer x subject x class x chapter (a book's chapter holds ~30
+    // session plans; thirty cards buried the board). Projection only - same PLAN_REVIEW kind.
+    const gk = `${r.reviewerId.toString()}|${r.subject}|${r.classLevel}|${r.anchorWord}|${r.addressNumber}`;
+    const g = planGroups.get(gk);
+    if (g) {
+      g.n += 1;
+      // The card opens the LOWEST session of the chapter.
+      if ((r.sessionIndex ?? Number.MAX_SAFE_INTEGER) < (g.first.sessionIndex ?? Number.MAX_SAFE_INTEGER)) g.first = r;
+      if (new Date(r.assignedAt) < g.oldest) g.oldest = new Date(r.assignedAt);
+    } else {
+      planGroups.set(gk, { first: r, n: 1, oldest: new Date(r.assignedAt) });
+    }
+  }
+  for (const [gk, g] of planGroups) {
+    const r = g.first;
     out.push({
-      key: `PLAN_REVIEW:${r._id.toString()}`,
+      key: `PLAN_REVIEW:${gk}`,
       kind: "PLAN_REVIEW",
       userId: r.reviewerId.toString(),
-      titleBn: `পরিকল্পনা রিভিউ · ${bn(r.classLevel)}ম শ্রেণি ${subjectBn(r.subject)} · ${r.anchorWord} ${r.addressNumber}`,
-      detailBn: `বরাদ্দ ${dateKeyOf(new Date(r.assignedAt))}`,
+      titleBn: `পরিকল্পনা রিভিউ · ${bn(r.classLevel)}ম শ্রেণি ${subjectBn(r.subject)} · ${r.anchorWord === "পাঠ" ? "পাঠ" : r.anchorWord} ${bn(r.addressNumber)}${g.n > 1 ? ` · ${bn(g.n)}টি পরিকল্পনা` : ""}`,
+      detailBn: `সবচেয়ে পুরোনো বরাদ্দ ${dateKeyOf(g.oldest)}`,
       dateKey: todayKey,
       slot: "ANY",
       startMin: null,
-      effortMin: WORK_EFFORT_MIN.planReview,
+      effortMin: g.n * WORK_EFFORT_MIN.planReview,
       status: "TODO",
       overdue: false,
       priority: null,
