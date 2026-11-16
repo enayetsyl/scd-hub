@@ -7,7 +7,7 @@
  *   assignReviewers       — Principal (mastery:settings); notifies each newly added reviewer
  *   getReviewQueue        — one round: rows + book evidence, threads, unmapped exercises,
  *                           decision counts, lock gate
- *   reviewDecide          — ACCEPT / BULK_ACCEPT / EDIT / SPLIT / MERGE / MOVE / REJECT / ADD
+ *   reviewDecide          — ACCEPT / BULK_ACCEPT / EDIT / SPLIT / MERGE / MOVE / MOVE_TO_STRAND / REJECT / ADD
  *   reviewComment         — COMMENT / REPLY / RESOLVE / REOPEN on a thread (notifies the
  *                           Principal + assigned reviewers on COMMENT and REPLY)
  *   resolveUnmapped       — map an unmapped exercise to a row, or "not assessed this year"
@@ -50,6 +50,10 @@ import { MasteryReviewEvent, type IMasteryReviewEvent } from "../models/MasteryR
 import { MasteryDomain } from "../models/MasteryDomain";
 import { MasteryChapter } from "../models/MasteryChapter";
 import { MasteryQuestionType } from "../models/MasteryQuestionType";
+import { MasteryEvidence } from "../models/MasteryEvidence";
+import { ContentArtifact } from "../../content/models/ContentArtifact";
+import { LessonDelivery } from "../../lesson-progress/models/LessonDelivery";
+import { loCodeMongoFilter } from "../bank";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emit } from "../../notifications/services/NotificationService";
@@ -176,6 +180,10 @@ class WorkSet {
   readonly allCodes = new Set<string>();
   readonly sets = new Map<string, Record<string, unknown>>();
   readonly created: Row[] = [];
+  /** The values a patch overwrote (per code) and the codes commit() really wrote — for rollback(). */
+  readonly before = new Map<string, Record<string, unknown>>();
+  readonly written: string[] = [];
+  readonly applied: string[] = [];
   baseline = new Set<string>();
 
   constructor(readonly ctx: PairContext, rows: Row[]) {
@@ -208,6 +216,11 @@ class WorkSet {
 
   patch(code: string, fields: Record<string, unknown>): void {
     const r = this.get(code);
+    if (!this.created.includes(r)) {
+      const b = this.before.get(code) ?? {};
+      for (const k of Object.keys(fields)) if (!(k in b)) b[k] = (r as unknown as Record<string, unknown>)[k];
+      this.before.set(code, b);
+    }
     Object.assign(r, fields);
     if (this.created.includes(r)) return;
     this.sets.set(code, { ...(this.sets.get(code) ?? {}), ...fields });
@@ -298,7 +311,10 @@ class WorkSet {
   }
 
   async commit(): Promise<void> {
-    for (const r of this.created) await MasteryOutcome.create(r);
+    for (const r of this.created) {
+      await MasteryOutcome.create(r);
+      this.written.push(r.code);
+    }
     for (const [code, fields] of this.sets) {
       const $set: Record<string, unknown> = {};
       const $unset: Record<string, 1> = {};
@@ -310,6 +326,28 @@ class WorkSet {
       if ("parentCode" in fields && fields.parentCode === null) {
         delete $unset.parentCode;
         $set.parentCode = null;
+      }
+      const update: Record<string, unknown> = {};
+      if (Object.keys($set).length) update.$set = $set;
+      if (Object.keys($unset).length) update.$unset = $unset;
+      if (Object.keys(update).length) {
+        await MasteryOutcome.updateOne({ code, status: "DRAFT" }, update);
+        this.applied.push(code);
+      }
+    }
+  }
+
+  /** Undo a failed commit: delete the rows it created, put the patched rows back as they were. */
+  async rollback(): Promise<void> {
+    if (this.written.length) await MasteryOutcome.deleteMany({ code: { $in: this.written }, status: "DRAFT" });
+    for (const code of this.applied) {
+      const b = this.before.get(code);
+      if (!b) continue;
+      const $set: Record<string, unknown> = {};
+      const $unset: Record<string, 1> = {};
+      for (const [k, v] of Object.entries(b)) {
+        if (v === undefined) $unset[k] = 1;
+        else $set[k] = v;
       }
       const update: Record<string, unknown> = {};
       if (Object.keys($set).length) update.$set = $set;
@@ -764,7 +802,7 @@ export async function assignReviewers(reviewId: string, reviewerIds: string[], c
 // Decisions on rows
 // ---------------------------------------------------------------------------
 
-export type ReviewDecisionAction = "ACCEPT" | "BULK_ACCEPT" | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "REJECT" | "ADD";
+export type ReviewDecisionAction = "ACCEPT" | "BULK_ACCEPT" | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "MOVE_TO_STRAND" | "REJECT" | "ADD";
 
 export interface ReviewDecisionInput {
   action: ReviewDecisionAction;
@@ -787,11 +825,43 @@ export interface ReviewDecisionInput {
   toDomainCode?: string | null;
   /** SPLIT: two or more children. */
   children?: { labelBn: string; exercises: string[]; assess?: string | null; questionTypeCodes?: string[] | null }[] | null;
+  /** MOVE_TO_STRAND, service callers only (not in the GraphQL input): compute and return the plan, write nothing. */
+  dryRun?: boolean;
+  /** MOVE_TO_STRAND: the strand — "VOC" (next free number) or "SK-VOC-02" (that exact code); ADD: see below. */
   /** ADD: OBJECTIVE (chapterNumber or strand) or SUB (parentCode). */
   level?: string | null;
   parentCode?: string | null;
   chapterNumber?: number | null;
   strand?: string | null;
+}
+
+/** What a MOVE_TO_STRAND does (or, with dryRun, would do). */
+export interface MoveToStrandPlan {
+  dryRun: boolean;
+  strand: string;
+  /** objective first, then each step: old code to new code. */
+  pairs: { from: string; to: string }[];
+  /** Same-pair DRAFT rows whose prerequisites are re-pointed. */
+  prereqRewritten: string[];
+  /** DRAFT rows of other class x subject pairs whose prerequisites are re-pointed. */
+  outsidePrereqRewritten: { code: string; from: string[]; to: string[] }[];
+  /** LOCKED rows citing an old code — a real run refuses while this is not empty. */
+  lockedCiters: string[];
+  /** Unmapped-exercise resolutions that named an old code and now name the new one. */
+  unmappedRewritten: string[];
+  /** Records outside the tree still naming an old code (the read side aliases them; nothing is rewritten). */
+  outsideReferences: { questions: number; sessionPlans: number; lessonDeliveries: number; evidence: number };
+}
+
+/** Current questions, session plans, marked lessons and evidence that still name any of the old codes. */
+export async function countOutsideReferences(oldCodes: string[]): Promise<MoveToStrandPlan["outsideReferences"]> {
+  const [questions, sessionPlans, lessonDeliveries, evidence] = await Promise.all([
+    ContentArtifact.countDocuments({ docType: "question", current: true, retiredAt: null, ...loCodeMongoFilter(oldCodes) }),
+    ContentArtifact.countDocuments({ docType: "session_plan", current: true, retiredAt: null, "tags.lo_codes": { $in: oldCodes } }),
+    LessonDelivery.countDocuments({ "sessions.loCodes": { $in: oldCodes } }),
+    MasteryEvidence.countDocuments({ loCode: { $in: oldCodes } }),
+  ]);
+  return { questions, sessionPlans, lessonDeliveries, evidence };
 }
 
 const trimOrNull = (s: string | null | undefined) => (typeof s === "string" && s.trim() ? s.trim() : null);
@@ -826,11 +896,13 @@ function checkQts(ws: WorkSet, qts: string[]): string[] {
 /** A refusal named by a tree rule, in the same "[RULE] CODE: detail" shape the invariant check uses. */
 const ruleFail = (rule: string, code: string, detail: string): never => fail(`এই পরিবর্তনে বৃক্ষের নিয়ম ভাঙে:\n[${rule}] ${code}: ${detail}`);
 
-export async function reviewDecide(reviewId: string, input: ReviewDecisionInput, caller: ReviewCaller): Promise<void> {
+export async function reviewDecide(reviewId: string, input: ReviewDecisionInput, caller: ReviewCaller): Promise<MoveToStrandPlan | void> {
   const r = await loadRound(reviewId);
-  assertWriter(r, caller, ["OPEN"]);
+  // MOVE_TO_STRAND (owner rule): the Principal may also act on a SUBMITTED round, without reopening it.
+  assertWriter(r, caller, input.action === "MOVE_TO_STRAND" && caller.canSettings ? ["OPEN", "SUBMITTED"] : ["OPEN"]);
   const [ws, L] = await Promise.all([loadPair(r.classToken, r.subject), masteryLevelLabels()]);
   const events: ReviewEventInput[] = [];
+  let followUp: { outside: { code: string; from: string[]; to: string[] }[]; unmapped: { from: string; to: string }[] } | null = null;
   const note = trimOrNull(input.reason) ?? undefined;
   const ev = (action: MasteryReviewEventAction, code: string | null, before: Record<string, unknown> | null, after: Record<string, unknown> | null, comment?: string) =>
     events.push({ reviewId: r._id, code, action, before, after, comment });
@@ -1062,6 +1134,100 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       break;
     }
 
+    case "MOVE_TO_STRAND": {
+      // The owner rule: a skill every lesson practises is a skill-strand row (SK-<NAME>-NN), not a
+      // chapter row. The objective and all its steps are re-coded together; nothing else changes.
+      const first = ws.draft(input.code);
+      if (first.mergedInto && (first.rejectReason ?? "").startsWith(MOVED_TO)) fail(`${first.code} আগেই ${first.mergedInto}-এ সরানো হয়েছে।`);
+      const row = ws.liveDraft(input.code);
+      if (row.level === "SUB") fail(`${row.code} একটি ${L.subBn} — তার ${L.objectiveBn} সরান, ${L.subBn} নিজে সরে যাবে।`);
+      if (row.strand) fail(`${row.code} আগেই দক্ষতা-ধারায় আছে।`);
+      const sm = /^(?:SK-)?([A-Z]{2,8})(?:-(\d{1,2}))?$/.exec((input.strand ?? "").trim().toUpperCase());
+      if (!sm || sm[1] === "SK") return fail('দক্ষতা-ধারার নাম লিখুন, যেমন "VOC" বা "SK-VOC-02" (২–৮টি ইংরেজি বড় হাতের অক্ষর; "SK" একা নয়)।');
+      const strand = sm[1];
+      let newCode: string;
+      if (sm[2]) {
+        if (Number(sm[2]) < 1) fail("ধারার নম্বর ০১ বা তার বেশি হবে।");
+        newCode = `LO-${ws.ctx.classToken}-${ws.ctx.subject}-SK-${strand}-${sm[2].padStart(2, "0")}`;
+        if (ws.allCodes.has(newCode)) fail(`কোড ${newCode} আগেই ব্যবহৃত।`);
+      } else {
+        newCode = ws.nextObjectiveCode(null, strand);
+      }
+      const kids = ws.children(row.code).sort((a, b) => (parseMasteryLoCode(a.code)?.sub ?? 0) - (parseMasteryLoCode(b.code)?.sub ?? 0));
+      const pairs: [Row, string][] = [[row, newCode], ...kids.map((k, i) => [k, `${newCode}.${i + 1}`] as [Row, string])];
+      const codeMap = new Map<string, string | null>(pairs.map(([o, n]) => [o.code, n]));
+      const oldCodes = [...codeMap.keys()];
+      // Who cites the old codes: a LOCKED row is never edited (refuse); other DRAFT rows are re-pointed.
+      const citers = await MasteryOutcome.find({ prereqCodes: { $in: oldCodes }, status: { $ne: "RETIRED" } })
+        .select("code status classToken subject prereqCodes")
+        .lean<{ code: string; status: string; classToken: string; subject: string; prereqCodes: string[] }[]>();
+      const lockedCiters = citers.filter((c) => c.status === "LOCKED").map((c) => c.code);
+      if (lockedCiters.length > 0 && !input.dryRun) fail(`লক করা সারি এই কোড ব্যবহার করে (${lockedCiters.slice(0, 5).join(", ")}) — সরানো যায় না।`);
+      const mapped = (p: string): string => (codeMap.has(p) ? (codeMap.get(p) as string) : p);
+      const outsidePlan = citers
+        .filter((c) => c.status === "DRAFT" && !(c.classToken === ws.ctx.classToken && c.subject === ws.ctx.subject))
+        .map((c) => ({ code: c.code, from: [...c.prereqCodes], to: [...new Set(c.prereqCodes.map(mapped))] }));
+      const unmappedPlan = (r.coverage?.unmapped ?? []).filter((u) => u.resolvedCode && codeMap.has(u.resolvedCode)).map((u) => ({ from: u.resolvedCode as string, to: mapped(u.resolvedCode as string) }));
+      const strandRows = [...ws.rows.values()].filter((o) => o.strand === strand);
+      const order = strandRows.reduce((m, o) => Math.max(m, o.order), 0) || row.order;
+      const before = rowSnapshot(row);
+      for (const [old, code] of pairs) {
+        const book = outcomeBookRef(old);
+        const {
+          _id, __v, createdAt, updatedAt, lockedAt, lockedBy, retiredAt, retiredBy, mergedInto, rejectReason, ...keep
+        } = old as unknown as Record<string, unknown>;
+        void [_id, __v, createdAt, updatedAt, lockedAt, lockedBy, retiredAt, retiredBy, mergedInto, rejectReason];
+        ws.create({
+          ...keep,
+          code,
+          chapterNumber: null,
+          strand,
+          order,
+          status: "DRAFT",
+          parentCode: old.level === "SUB" ? newCode : null,
+          questionTypeCodes: [...(old.questionTypeCodes ?? [])],
+          prereqCodes: [...(old.prereqCodes ?? [])],
+          bookRef: { version: book.version, chapter: book.chapter, lesson: book.lesson ?? null, exercises: [...book.exercises] },
+          legacyCodes: [...new Set([...(old.legacyCodes ?? []), old.code])],
+          reviewState: old.reviewState,
+          draftHash: null,
+        } as unknown as Row);
+      }
+      for (const [old, code] of pairs) ws.patch(old.code, { reviewState: "REJECTED", rejectReason: `${MOVED_TO}${code}`, mergedInto: code });
+      const prereqRewritten = ws.rewritePrereqs(codeMap);
+      ws.assertSound();
+      // What outside the tree still names the old codes (nothing is rewritten there — the read side aliases them).
+      const outsideReferences = await countOutsideReferences(oldCodes);
+      const plan: MoveToStrandPlan = {
+        dryRun: input.dryRun === true,
+        strand,
+        pairs: pairs.map(([o, n]) => ({ from: o.code, to: n })),
+        prereqRewritten,
+        outsidePrereqRewritten: outsidePlan,
+        lockedCiters,
+        unmappedRewritten: unmappedPlan.map((u) => u.from),
+        outsideReferences,
+      };
+      if (input.dryRun) return plan; // nothing is written
+      for (const [old, code] of pairs) {
+        ev(
+          "MOVE",
+          old.code,
+          old === row ? before : rowSnapshot(old),
+          {
+            code,
+            strand,
+            chapterNumber: null,
+            movedToStrand: true,
+            ...(old === row ? { prereqRewritten, outsidePrereqRewritten: outsidePlan, unmappedRewritten: unmappedPlan, outsideReferences, childrenMoved: kids.map((k) => k.code) } : {}),
+          },
+          note,
+        );
+      }
+      followUp = { outside: outsidePlan, unmapped: unmappedPlan };
+      break;
+    }
+
     case "REJECT": {
       const row = ws.liveDraft(input.code);
       const reason = trimOrNull(input.reason);
@@ -1156,7 +1322,29 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       fail("অজানা সিদ্ধান্ত।");
   }
 
-  await ws.commit();
+  const outsideDone: { code: string; from: string[]; to: string[] }[] = [];
+  const unmappedDone: { from: string; to: string }[] = [];
+  try {
+    await ws.commit();
+    // Rows of OTHER class x subject pairs (e.g. C6 citing a C5 row), each guarded by the value we read.
+    for (const o of followUp?.outside ?? []) {
+      const res = await MasteryOutcome.updateOne({ code: o.code, status: "DRAFT", prereqCodes: o.from }, { $set: { prereqCodes: o.to } });
+      if (res.modifiedCount !== 1) fail(`${o.code} এর মধ্যে বদলে গেছে — আবার চেষ্টা করুন।`);
+      outsideDone.push(o);
+    }
+    for (const u of followUp?.unmapped ?? []) {
+      await MasteryCatalogueReview.updateOne({ _id: r._id }, { $set: { "coverage.unmapped.$[e].resolvedCode": u.to } }, { arrayFilters: [{ "e.resolvedCode": u.from }] });
+      unmappedDone.push(u);
+    }
+  } catch (e) {
+    // All-or-nothing: put every row and reference back exactly as it was, then report the failure.
+    for (const u of unmappedDone) {
+      await MasteryCatalogueReview.updateOne({ _id: r._id }, { $set: { "coverage.unmapped.$[e].resolvedCode": u.from } }, { arrayFilters: [{ "e.resolvedCode": u.to }] });
+    }
+    for (const o of outsideDone) await MasteryOutcome.updateOne({ code: o.code, status: "DRAFT", prereqCodes: o.to }, { $set: { prereqCodes: o.from } });
+    await ws.rollback();
+    throw e;
+  }
   await appendReviewEvents(events, caller);
 }
 

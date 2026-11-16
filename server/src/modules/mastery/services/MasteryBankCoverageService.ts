@@ -17,7 +17,7 @@ import { MasteryChapter } from "../models/MasteryChapter";
 import { MasteryCatalogueReview } from "../models/MasteryCatalogueReview";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { MasteryQuestionType } from "../models/MasteryQuestionType";
-import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../bank";
+import { loCodeMongoFilter, loCodesOf, movedAliases, questionTypeCodeOf } from "../bank";
 import { masteryLevelLabels } from "./MasteryReviewService";
 
 export interface BankCoveragePair {
@@ -150,7 +150,9 @@ export async function bankCoverage(
   const held = new Map<string, number>();
   const heldByType = new Map<string, number>();
   if (codes.length > 0) {
-    const arts = await ContentArtifact.find({ docType: "question", current: true, retiredAt: null, ...loCodeMongoFilter(codes) })
+    // A question still tagged with the OLD code of a moved row counts for the row it moved to.
+    const alias = await movedAliases(codes);
+    const arts = await ContentArtifact.find({ docType: "question", current: true, retiredAt: null, ...loCodeMongoFilter(alias.all) })
       .select("reviewStatus examPoolAt envelopeJson.tags envelopeJson.payload.lesson_ref")
       .lean(); // bounded: one class × subject's questions, tags only
     const want = new Set(codes);
@@ -161,7 +163,7 @@ export async function bankCoverage(
       const isHeld = a.reviewStatus === "gold" && a.examPoolAt != null;
       const into = isHeld ? held : a.reviewStatus === "gold" ? gold : pending;
       const byType = isHeld ? heldByType : a.reviewStatus === "gold" ? goldByType : pendingByType;
-      for (const c of new Set(loCodesOf(tags, null))) {
+      for (const c of new Set(loCodesOf(tags, null).map(alias.canon))) {
         if (!want.has(c)) continue;
         into.set(c, (into.get(c) ?? 0) + 1);
         byType.set(`${c}|${qt}`, (byType.get(`${c}|${qt}`) ?? 0) + 1);

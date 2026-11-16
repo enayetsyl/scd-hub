@@ -17,10 +17,10 @@
  * Identity plane (names studentIds); no corpus path (ADR-005).
  */
 import { Types } from "mongoose";
-import type { MasteryClassToken, MasterySubject } from "@scd/shared";
+import { practisedChapters, type MasteryClassToken, type MasterySubject } from "@scd/shared";
 import { ClassTest } from "../models/ClassTest";
 import { ClassTestResult } from "../models/ClassTestResult";
-import { MasteryOutcome } from "../../mastery/models/MasteryOutcome";
+import { MasteryOutcome, outcomeBookRef } from "../../mastery/models/MasteryOutcome";
 import { MasteryChapter } from "../../mastery/models/MasteryChapter";
 import { classTokenForLevel } from "../../mastery/services/MasteryWorkService";
 import { objectiveGrain } from "../../mastery/services/MasteryGuardianService";
@@ -64,6 +64,8 @@ export interface WeakLoOption {
   chapterNumber: number | null;
   chapterTitleBn: string | null;
   strand: string | null;
+  /** Derived from the row's exercise refs: where a skill-strand row is practised (a strand row is listed under each). */
+  practisedChapters: { number: number; titleBn: string | null }[];
 }
 
 export interface WeakLoOptions {
@@ -78,7 +80,7 @@ export async function weakLoOptions(test: TestLike): Promise<WeakLoOptions> {
   const scope = weakLoScope(test);
   if (!scope) return { available: false, max: CT_WEAK_LO_MAX, options: [] };
   const [rows, chapters] = await Promise.all([
-    MasteryOutcome.find(pickableFilter(scope)).select("code labelBn level chapterNumber strand order").sort({ order: 1, code: 1 }).lean(),
+    MasteryOutcome.find(pickableFilter(scope)).select("code labelBn level chapterNumber strand order bookRef").sort({ order: 1, code: 1 }).lean(),
     MasteryChapter.find({ classToken: scope.classToken, subject: scope.subject }).select("number titleBn").lean(),
   ]);
   const titleOf = new Map(chapters.map((c) => [c.number, c.titleBn]));
@@ -92,6 +94,7 @@ export async function weakLoOptions(test: TestLike): Promise<WeakLoOptions> {
       chapterNumber: r.chapterNumber ?? null,
       chapterTitleBn: r.chapterNumber != null ? titleOf.get(r.chapterNumber) ?? null : null,
       strand: r.strand ?? null,
+      practisedChapters: r.strand ? practisedChapters(outcomeBookRef(r).exercises).map((n) => ({ number: n, titleBn: titleOf.get(n) ?? null })) : [],
     })),
   };
 }

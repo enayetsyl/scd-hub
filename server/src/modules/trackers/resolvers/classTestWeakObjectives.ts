@@ -25,6 +25,10 @@ import {
 import { assertAnchorRead, CLASS_TEST_REACH } from "../classTestAnchor";
 import { assertReportRead, CLASS_TEST_REPORT_GATE, holdsViewAll } from "./classTestSummary";
 
+const WeakLoChapterRef = builder.objectRef<WeakLoOption["practisedChapters"][number]>("ClassTestWeakObjectiveChapter").implement({
+  fields: (t) => ({ number: t.exposeInt("number"), titleBn: t.string({ nullable: true, resolve: (r) => r.titleBn }) }),
+});
+
 const WeakLoOptionRef = builder.objectRef<WeakLoOption>("ClassTestWeakObjectiveOption").implement({
   description: "One pickable weak objective: a tagged, LOCKED row of the test's class × subject (D-#1360).",
   fields: (t) => ({
@@ -34,6 +38,7 @@ const WeakLoOptionRef = builder.objectRef<WeakLoOption>("ClassTestWeakObjectiveO
     chapterNumber: t.int({ nullable: true, resolve: (r) => r.chapterNumber }),
     chapterTitleBn: t.string({ nullable: true, resolve: (r) => r.chapterTitleBn }),
     strand: t.string({ nullable: true, resolve: (r) => r.strand }),
+    practisedChapters: t.field({ type: [WeakLoChapterRef], description: "Strand rows only: the chapters whose exercises cite the row (derived).", resolve: (r) => r.practisedChapters }),
   }),
 });
 

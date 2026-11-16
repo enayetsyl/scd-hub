@@ -51,7 +51,7 @@ import {
   type ItemQuality,
   type OutcomeState,
 } from "../diagnosis";
-import { loCodeMongoFilter } from "../bank";
+import { loCodeMongoFilterAliased } from "../bank";
 import { clearExclusion, reapplyExclusions } from "../exclusions";
 import { MasteryDomain } from "../models/MasteryDomain";
 import {
@@ -663,7 +663,7 @@ export async function outcomeTrail(studentId: string, loCode: string, auth: Auth
     diagnosisPolicy(ctx.classToken, subject),
     MasteryEvidence.find({ studentId: oid(studentId), loCode, supersededAt: null }).sort({ at: -1, itemNo: 1 }).lean(),
     MasteryTag.find({}).select("code labelBn").lean(),
-    ContentArtifact.find({ docType: "question", current: true, retiredAt: null, reviewStatus: "gold", examPoolAt: null, ...loCodeMongoFilter([loCode]) })
+    ContentArtifact.find({ docType: "question", current: true, retiredAt: null, reviewStatus: "gold", examPoolAt: null, ...(await loCodeMongoFilterAliased([loCode])) })
       .select("envelopeJson.payload.qid")
       .lean(), // bounded: one outcome's gold questions
   ]);

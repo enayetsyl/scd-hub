@@ -40,6 +40,7 @@ import {
   roundStateTone,
   useReviewAction,
   useReviewQueue,
+  practisedLabel,
 } from "./masteryReviewUi";
 import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -137,6 +138,7 @@ function RowLine({
           <Muted>
             {codeTail(r.code)}
             {r.bookRef.exercises.length ? ` · ${r.bookRef.exercises.slice(0, 3).map(formatExerciseRef).join("; ")}${r.bookRef.exercises.length > 3 ? " …" : ""}` : ""}
+            {r.strand && practisedLabel(r.bookRef.exercises) ? ` · ${practisedLabel(r.bookRef.exercises)}` : ""}
           </Muted>
         </View>
         <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap", alignItems: "center" }}>

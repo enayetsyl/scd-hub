@@ -15,6 +15,7 @@ import {
   type ReviewQueue,
   type ReviewThread,
 } from "../../graphql/masteryReview";
+import { practisedChapters } from "@scd/shared";
 import { Body, Muted, Badge, Button, Field, Notice } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { fill } from "./masteryStateUi";
@@ -89,6 +90,12 @@ export function formatExerciseRef(ref: string): string {
   const chapter = /^\d+$/.test(ch) ? fill(STR.msRvRefChapterShort, { n: bnNum(ch) }) : ch;
   const tail = !no || no === "—" ? ` (${STR.msRvRefActivity})` : ` · ${fill(STR.msRvRefExercise, { n: /^\d+$/.test(no) ? bnNum(no) : no })}`;
   return `${chapter} · ${lesson}${tail}`;
+}
+
+/** "অধ্যায় ২, ৫, ৭" — where a row is practised, derived from its exercise refs (null when none is numbered). */
+export function practisedLabel(exercises: readonly string[]): string | null {
+  const ch = practisedChapters(exercises);
+  return ch.length ? fill(STR.msRvPractisedTpl, { list: ch.map((n) => bnNum(n)).join(", ") }) : null;
 }
 
 /** Tappable body text (opens a row). */

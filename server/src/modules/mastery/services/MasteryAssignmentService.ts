@@ -44,7 +44,7 @@ import {
 import { computeSection, liveSectionRows, lockedOutcomes, sectionLabel } from "./MasteryDiagnosisService";
 import { buildPartA, buildPartB, pickQuestion, type BankQuestion, type BuilderContext, type OutcomeInfo } from "../assignmentBuilder";
 import { sectionOutcomeSummary } from "../diagnosis";
-import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../bank";
+import { loCodeMongoFilter, loCodesOf, movedAliases, questionTypeCodeOf } from "../bank";
 import { groupStimulusParts, partLabelsByItem, printLabel, printPlan, stimulusRefOf } from "../parts";
 import { isoWeekKey } from "../evidence";
 import { notifyAssignmentSent } from "../notify";
@@ -78,8 +78,9 @@ export async function marksTable(classToken: MasteryClassToken, subject: Mastery
  */
 export async function goldBank(codes: string[], examPool: ExamPoolLens = "exclude"): Promise<(BankQuestion & { textBn: string | null })[]> {
   if (codes.length === 0) return [];
+  const alias = await movedAliases(codes); // old codes of moved rows still resolve (read-side alias)
   const arts = await ContentArtifact.find({
-    docType: "question", current: true, retiredAt: null, reviewStatus: "gold", ...(examPoolClause(examPool) ?? {}), ...loCodeMongoFilter(codes),
+    docType: "question", current: true, retiredAt: null, reviewStatus: "gold", ...(examPoolClause(examPool) ?? {}), ...loCodeMongoFilter(alias.all),
   })
     .select("envelopeJson.tags envelopeJson.payload")
     .lean(); // bounded: one class × subject's gold questions
@@ -99,7 +100,7 @@ export async function goldBank(codes: string[], examPool: ExamPoolLens = "exclud
     return [{
       artifactId: String(a._id),
       qid,
-      loCodes: loCodesOf(env.tags as Record<string, unknown>, payload),
+      loCodes: [...new Set(loCodesOf(env.tags as Record<string, unknown>, payload).map(alias.canon))],
       textBn: typeof text === "string" ? text : null,
       stimulusRef: stimulusRefOf(payload),
       qtCode: questionTypeCodeOf(payload),
