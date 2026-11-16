@@ -30,7 +30,7 @@ import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
 import { QUESTION_CATEGORIES, callerHasPermission } from "@scd/shared";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
-import { loCodeMongoFilter, loCodesOf, questionTypeCodeOf } from "../../mastery/bank";
+import { loCodeMongoFilterAliased, loCodesOf, questionTypeCodeOf } from "../../mastery/bank";
 import { examPoolClause } from "../../mastery/examHold";
 
 type LeanArtifact = FlattenMaps<IContentArtifact> & { _id: Types.ObjectId };
@@ -257,7 +257,7 @@ export async function buildQuestionsFilter(
 
   // Mastery LO filter (D-#785) — ANDed like every other $or clause.
   const loCodes = (args.loCodes ?? []).filter((c) => c.trim());
-  if (loCodes.length > 0) ands.push(loCodeMongoFilter(loCodes) as FilterQuery<IContentArtifact>);
+  if (loCodes.length > 0) ands.push((await loCodeMongoFilterAliased(loCodes)) as FilterQuery<IContentArtifact>);
   // PR-G: the school question type, from the payload's lesson_ref.
   if (args.qtCode) ands.push({ "envelopeJson.payload.lesson_ref": args.qtCode } as FilterQuery<IContentArtifact>);
 

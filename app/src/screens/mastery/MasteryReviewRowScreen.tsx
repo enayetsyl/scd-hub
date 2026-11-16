@@ -19,6 +19,7 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MASTERY_REVIEW_DECIDE, type ReviewDecisionInput, type ReviewQueue, type ReviewRow } from "../../graphql/masteryReview";
+import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Row, Select } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
@@ -120,6 +121,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   const [reason, setReason] = useState("");
   const [adding, setAdding] = useState(false);
   const [newStrand, setNewStrand] = useState("");
+  const [confirmStrand, setConfirmStrand] = useState(false);
   const r = q?.rows.find((x) => x.code === code) ?? null;
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: r?.level === "SUB" ? levels.sub : levels.objective });
@@ -147,7 +149,11 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   const strandNames = [...new Set(q.rows.filter((x) => x.strand && !isOut(x)).map((x) => x.strand as string))].sort();
   const strandOptions = [...strandNames.map((n) => ({ label: `SK-${n}`, value: n })), { label: STR.msRvStrandNew, value: "NEW" }];
   const strandName = target === "NEW" ? newStrand.trim().toUpperCase() : target;
-  const strandMoves = [r.code, ...kids.map((k) => k.code)].map(codeTail).join(", ");
+  const strandValid = /^[A-Z]{2,8}$/.test(strandName ?? "") && strandName !== "SK";
+  // The code the server will give: the next free number of that strand (it re-checks when it writes).
+  const nextSeq = Math.max(0, ...q.rows.filter((x) => x.strand === strandName && x.level !== "SUB").map((x) => Number(x.code.slice(x.code.lastIndexOf("-") + 1)) || 0)) + 1;
+  const newObjectiveCode = `${r.code.replace(/^(LO-[A-Z0-9]+-[A-Z0-9]+-).*$/, "$1")}SK-${strandName}-${String(nextSeq).padStart(2, "0")}`;
+  const strandPairs = [r.code, ...kids.map((k) => k.code)].map((c, i) => `${codeTail(c)} → ${codeTail(i === 0 ? newObjectiveCode : `${newObjectiveCode}.${i}`)}`);
   const practised = practisedLabel(r.bookRef.exercises);
   const canUnsplit = live && r.level !== "SUB" && kids.length > 0 && kids.every((k) => k.status === "DRAFT");
   const run = (input: ReviewDecisionInput) =>
@@ -157,6 +163,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
       setReason("");
       setTarget(null);
       setNewStrand("");
+      setConfirmStrand(false);
     });
 
   // Merge targets: tagged live leaves (and the parent, for "merge back"); move targets: objectives / domains.
@@ -314,13 +321,8 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
               <Muted>{STR.msRvStrandHint}</Muted>
               <Select label={STR.msRvStrandPick} value={target} options={strandOptions} onChange={setTarget} />
               {target === "NEW" ? <Field value={newStrand} onChangeText={setNewStrand} placeholder={STR.msRvStrandNewPh} autoCapitalize="characters" /> : null}
-              <Muted>{fill(STR.msRvStrandMovesTpl, { codes: strandMoves })}</Muted>
-              <Button
-                title={STR.msRvStrandConfirm}
-                loading={act.busy}
-                disabled={!/^[A-Z]{2,8}$/.test(strandName ?? "")}
-                onPress={() => run({ action: "MOVE_TO_STRAND", code: r.code, strand: strandName })}
-              />
+              {target === "NEW" && newStrand.trim() && !strandValid ? <Notice message={STR.msRvStrandBad} tone="warn" /> : null}
+              <Button title={STR.msRvStrandConfirm} loading={act.busy} disabled={!strandValid} onPress={() => setConfirmStrand(true)} />
             </View>
           ) : null}
           {mode === "REJECT" ? (
@@ -332,6 +334,16 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
           {act.error ? <Notice message={act.error} tone="danger" /> : null}
         </Card>
       ) : null}
+
+      <ConfirmSheet
+        visible={confirmStrand && strandValid}
+        title={STR.msRvToStrand}
+        message={[...strandPairs, "", STR.msRvStrandConfirmNote].join("\n")}
+        confirmLabel={STR.msRvToStrand}
+        tone="primary"
+        onCancel={() => setConfirmStrand(false)}
+        onConfirm={() => run({ action: "MOVE_TO_STRAND", code: r.code, strand: strandName })}
+      />
 
       <Card>
         <ReviewThreads queue={q} code={r.code} title={STR.msRvComments} />
