@@ -206,3 +206,5 @@ import "./modules/support-profile/resolvers/supportBatch";
 import "./modules/support-profile/resolvers/supportVersions";
 import "./modules/support-profile/resolvers/supportLifecycle";
 import "./modules/platform/safeguarding/safeguardingResolvers";
+// Review supervision RS-1 (.claude/plans/review-supervision.md): program, tasks, move/cancel/add.
+import "./modules/review-program/resolvers/reviewProgram";

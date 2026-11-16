@@ -321,6 +321,8 @@ export interface AssignReviewInput {
   reviewerId: string;
   assignedBy: string;
   actorRole?: string;
+  /** Skip the per-plan notice - the caller sends ONE summary for the whole action (RS-1). */
+  quiet?: boolean;
 }
 
 export async function assignPlanReview(input: AssignReviewInput): Promise<ReviewAssignmentDTO> {
@@ -361,7 +363,7 @@ export async function assignPlanReview(input: AssignReviewInput): Promise<Review
   });
 
   // N1.5: tell the reviewer. Best-effort — never blocks the assignment (D-#72).
-  await emitReviewAssigned({
+  if (!input.quiet) await emitReviewAssigned({
     _id: created._id,
     reviewerId: created.reviewerId,
     artifactId: created.artifactId,
@@ -757,6 +759,8 @@ export async function movePlanReviews(input: {
   toReviewerId: string;
   actorId: string;
   actorRole?: string;
+  /** Skip the per-plan notice - the caller sends ONE summary for the whole action (RS-1). */
+  quiet?: boolean;
 }): Promise<PlanReviewMoveResult> {
   if (!Types.ObjectId.isValid(input.toReviewerId)) throw new ReviewError("Pick a reviewer");
   const to = await User.findById(input.toReviewerId).select({ active: 1, role: 1 }).lean();
@@ -804,7 +808,7 @@ export async function movePlanReviews(input: {
         docType: round.docType,
       },
     });
-    await emitReviewAssigned(
+    if (!input.quiet) await emitReviewAssigned(
       {
         _id: round._id,
         reviewerId: round.reviewerId,

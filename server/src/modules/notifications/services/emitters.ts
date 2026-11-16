@@ -14,7 +14,7 @@
  * Identity-plane only (reads roster/guardian linkage to resolve recipients);
  * no corpus path (N5.1).
  */
-import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS, WORK_CLAIM_REJECT_REASON_LABELS_BN, HW_SUBJECT_LABELS_BN } from "@scd/shared";
+import { ROUTINE_SUBJECT_LABELS_BN, ROSTER_CLASS_LABELS_BN, subjectLabel, NOTIFICATION_KINDS, WORK_CLAIM_REJECT_REASON_LABELS_BN, HW_SUBJECT_LABELS_BN } from "@scd/shared";
 import type { WorkClaimRejectReason, HwSubject, StaffMistakeKind } from "@scd/shared";
 import { STAFF_MISTAKE_KIND_TITLE_BN } from "@scd/shared";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
@@ -560,6 +560,47 @@ export interface QuestionReviewAssignedEvent {
   sampleAssignmentId: string;
   /** Stable per-batch stamp for the dedupe key. */
   batchStamp: string;
+}
+
+/**
+ * Review supervision (RS-1): ONE summary notice per task action (add / move). The per-plan
+ * and per-question notices are suppressed by the services (`quiet`), so a task of 30 plans
+ * and 600 questions is one push.
+ */
+export interface ReviewTaskNoticeEvent {
+  reviewerId: string;
+  subject: string;
+  classLevel: number;
+  chapter: string;
+  /** The task's own word for a chapter (Unit / পাঠ / অধ্যায় / অংশ). */
+  anchorWord?: string | null;
+  plans: number;
+  questions: number;
+  /** Per action, so two actions to the same reviewer are two notices (recipient + stamp). */
+  stamp: string;
+}
+
+/** The Bangla body of the task notice: ordinal class, the task's own anchor word, Bangla digits, a zero side left out. */
+export function reviewTaskNoticeBody(ev: ReviewTaskNoticeEvent): string {
+  const cls = (ROSTER_CLASS_LABELS_BN as Record<number, string>)[ev.classLevel] ?? `${bnNum(ev.classLevel)}ম শ্রেণি`;
+  const parts: string[] = [];
+  if (ev.plans > 0) parts.push(`${bnNum(ev.plans)}টি পাঠ পরিকল্পনা`);
+  if (ev.questions > 0) parts.push(`${bnNum(ev.questions)}টি প্রশ্ন`);
+  const word = ev.anchorWord?.trim() || "অধ্যায়";
+  return `${cls} · ${subjectLabel(ev.subject, ev.classLevel)} · ${word} ${bnNum(ev.chapter)}: ${parts.join(" ও ")} আপনাকে দেওয়া হয়েছে।`;
+}
+
+export async function emitReviewTaskNotice(ev: ReviewTaskNoticeEvent): Promise<void> {
+  return bestEffort("review task notice", async () => {
+    await emit({
+      recipientUserId: ev.reviewerId,
+      kind: "REVIEW_ASSIGNED",
+      titleBn: "নতুন পর্যালোচনার কাজ",
+      bodyBn: reviewTaskNoticeBody(ev),
+      refs: {},
+      dedupeKey: `RTASK:${ev.reviewerId}:${ev.stamp}`,
+    });
+  });
 }
 
 export async function emitQuestionReviewAssigned(ev: QuestionReviewAssignedEvent): Promise<void> {
