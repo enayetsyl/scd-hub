@@ -16,6 +16,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { REST_BASE } from "../graphql/client";
 import { getToken } from "./tokenStore";
 import { STR } from "./labels";
+import { openPdf } from "./pdf";
 import * as FileSystem from "expo-file-system";
 import * as IntentLauncher from "expo-intent-launcher";
 
@@ -918,17 +919,12 @@ function headerValue(headers: Record<string, string>, name: string): string | un
 /** Monotonic suffix so two opens of the SAME file never share a temp path. */
 let tmpSeq = 0;
 
-async function openStoredFileAndroid(fileId: string): Promise<void> {
+/** Download an authenticated REST url to `target` (Android). Resumable only so a stalled
+ *  download can be STOPPED; a denial arrives as a JSON body, surfaced as its Bangla message. */
+async function androidDownload(url: string, target: string): Promise<FileSystem.FileSystemDownloadResult> {
   const token = getToken();
-  // The temp path used to be `scdhub-tmp-${fileId}` — FIXED per file. Two overlapping
-  // opens of the same attachment therefore downloaded to the same path, the first
-  // moveAsync renamed it away, and the second failed with "File ... could not be moved"
-  // (GlitchTip, prod). A per-call suffix makes the download private to this invocation.
-  const target = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}-${++tmpSeq}`;
-  // Resumable only so a stalled download can be STOPPED: a bare downloadAsync on a
-  // dropped phone connection never settles, and the button spins forever.
   const download = FileSystem.createDownloadResumable(
-    `${REST_BASE}/files/${encodeURIComponent(fileId)}`,
+    url,
     target,
     { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
@@ -956,6 +952,50 @@ async function openStoredFileAndroid(fileId: string): Promise<void> {
     await FileSystem.deleteAsync(res.uri, { idempotent: true });
     throw new FileUploadError(message);
   }
+  return res;
+}
+
+/** Hand a cached file to the Android viewer (content:// URI, read grant). */
+async function androidView(uri: string, mime: string): Promise<void> {
+  const contentUri = await FileSystem.getContentUriAsync(uri);
+  try {
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+      data: contentUri,
+      flags: 1,
+      type: mime || "*/*",
+    });
+  } catch (e) {
+    // "IntentLauncher activity is already started" — Android allows ONE launched activity
+    // at a time; user-recoverable, so a notice rather than an app fault (GlitchTip).
+    if (e instanceof Error && /already started/i.test(e.message)) {
+      throw new FileUploadError("A file is already opening — wait for it to finish");
+    }
+    throw e;
+  }
+}
+
+/**
+ * Open a server-generated PDF (e.g. `/pdf/syllabus/<id>?studentId=<id>`) on the device:
+ * web → new tab / save; Android → download with the Bearer token, then VIEW. `fileStem`
+ * names the cached copy. Other platforms get a clear message.
+ */
+export async function openPdfOnDevice(path: string, fileStem: string): Promise<void> {
+  if (Platform.OS === "web") return openPdf(path);
+  if (Platform.OS !== "android") throw new FileUploadError("PDF download is available on Android and web only");
+  const stem = fileStem.replace(/[^A-Za-z0-9_-]/g, "_");
+  const tmp = `${FileSystem.cacheDirectory}scdhub-tmp-${stem}-${++tmpSeq}`;
+  const res = await androidDownload(`${REST_BASE}${path}`, tmp);
+  const uri = `${FileSystem.cacheDirectory}scdhub-${stem}.pdf`;
+  await FileSystem.deleteAsync(uri, { idempotent: true });
+  await FileSystem.moveAsync({ from: res.uri, to: uri });
+  await androidView(uri, "application/pdf");
+}
+
+async function openStoredFileAndroid(fileId: string): Promise<void> {
+  // Per-call suffix: two overlapping opens of the same attachment must not share a temp
+  // path (the first move would break the second — GlitchTip, prod).
+  const target = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}-${++tmpSeq}`;
+  const res = await androidDownload(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, target);
   const rawMime = (headerValue(res.headers, "content-type") ?? "").split(";")[0].trim().toLowerCase();
   // Rename onto a real extension — without it Android matches nothing sensible and the
   // chooser degrades to whatever handles */*. An unknown mime keeps the bytes and lets
@@ -967,26 +1007,7 @@ async function openStoredFileAndroid(fileId: string): Promise<void> {
     await FileSystem.deleteAsync(uri, { idempotent: true }); // a stale copy would block the move
     await FileSystem.moveAsync({ from: res.uri, to: uri });
   }
-  const contentUri = await FileSystem.getContentUriAsync(uri);
-  try {
-    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
-      data: contentUri,
-      flags: 1,
-      type: rawMime || "*/*",
-    });
-  } catch (e) {
-    // "IntentLauncher activity is already started. You need to wait for its result
-    // before starting another activity." Android allows ONE launched activity at a
-    // time, and the promise stays pending while the viewer is in the foreground — so
-    // this is a user-recoverable state, not a defect. Raised as a FileUploadError it
-    // reaches the caller's existing catch and shows a notice, instead of surfacing to
-    // GlitchTip as an app fault (prod: 6 events, all from taps landing on top of an
-    // open viewer).
-    if (e instanceof Error && /already started/i.test(e.message)) {
-      throw new FileUploadError("A file is already opening — wait for it to finish");
-    }
-    throw e;
-  }
+  await androidView(uri, rawMime);
 }
 
 /**
