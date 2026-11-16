@@ -108,7 +108,7 @@ export function ReviewSupervisionChart({
       <View style={{ marginTop: space(3) }}>
         <Muted style={{ marginBottom: space(1) }}>{STR.rspCumulative}</Muted>
         <MiniLineChart
-          points={days.map((d) => ({ label: d.key, value: d.cumulative }))}
+          points={days.map((d) => ({ label: bnNum(Number(d.key.slice(8, 10))), value: d.cumulative }))}
           maxValue={ceiling}
           height={64}
           accessibilityLabel={STR.rspCumulative}

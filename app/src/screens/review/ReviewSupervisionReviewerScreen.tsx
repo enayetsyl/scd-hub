@@ -190,7 +190,7 @@ function TaskCard({
             ? task.history.map((h, i) => (
                 <Muted key={`${h.at}-${i}`} style={{ marginTop: 2 }}>
                   {bnNum(h.at.slice(0, 10))} · {actionLabel(h.action)}
-                  {h.fromReviewer || h.toReviewer ? ` · ${nameOf(h.fromReviewer)} → ${nameOf(h.toReviewer)}` : ""}
+                  {h.fromReviewer && h.toReviewer ? ` · ${nameOf(h.fromReviewer)} → ${nameOf(h.toReviewer)}` : h.toReviewer || h.fromReviewer ? ` · ${nameOf(h.toReviewer ?? h.fromReviewer)}` : ""}
                   {h.note && (h.action === "moved" || h.action === "cancelled") ? ` · ${h.note}` : ""}
                 </Muted>
               ))
