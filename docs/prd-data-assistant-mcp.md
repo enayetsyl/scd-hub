@@ -180,6 +180,7 @@ data-assistant/
   tools/staff.ts           find_staff, staff_attendance, staff_leave, payroll_summary
   tools/finance.ts         finance_summary, fee_dues
   tools/school.ts          my_access, daily_report, notices
+  tools/scholarship.ts     scholarship_analysis (D-#1638, appended last)
   runTool.ts               the ONE entry: auth → switch → limits → validate → gate → run → redact → cap → log
   toolContext.ts           AuthPayload → AppContext for the existing gates (req/res unused)
   redact.ts                contact stripping (§6)
@@ -605,6 +606,8 @@ notice body as `untrusted_text` (≤ 300 chars).
 
 **24 `monthly_report_status`** — Inputs: `month` (period key). Output: per class `{ ready, released,
 pending_comments, teachers_pending: [...] }`.
+
+**25 `scholarship_analysis`** (D-#1638, added 16 Nov 2026) — Inputs: `class_level` (default 5), `student`, `subject`, `axis`. Gate `scholarship_practice:view`, mirroring `scholarshipStudent`. Output: class overview, or one student's weak types with Bangla practice hints. Numbers only.
 
 **Later candidates (not v1):** Saturday revision, Quran exam, guardian work claims, observations,
 staff mistakes (QUIET record — keep out), library, printing queue.

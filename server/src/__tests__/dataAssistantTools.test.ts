@@ -38,9 +38,9 @@ async function outcomes(who: keyof Fx["auth"]): Promise<Record<string, string>> 
 const OFFICE_DENIED = ["daily_report/default", "homework_status/summary", "assignment_status/summary", "mastery_overview/default", "payroll_summary/person"];
 
 describe("the registry", () => {
-  it("has the 24 tools of PRD §7, uniquely named, each with a gate, a cap and Bangla keywords", () => {
-    expect(TOOL_REGISTRY).toHaveLength(24);
-    expect(new Set(TOOL_REGISTRY.map((t) => t.name)).size).toBe(24);
+  it("has the 25 tools of PRD §7, uniquely named, each with a gate, a cap and Bangla keywords", () => {
+    expect(TOOL_REGISTRY).toHaveLength(25);
+    expect(new Set(TOOL_REGISTRY.map((t) => t.name)).size).toBe(25);
     for (const t of TOOL_REGISTRY) {
       expect(t.name).toMatch(/^[a-z_]+$/);
       expect(t.gates.length).toBeGreaterThan(0);
