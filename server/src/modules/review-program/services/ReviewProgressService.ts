@@ -28,6 +28,7 @@ import { ReviewError } from "../../content/services/ReviewService";
 import {
   batchOf,
   groupScope,
+  isRealDateKey,
   keyOf,
   namesOf,
   resolveQuestionAnchors,
@@ -610,6 +611,8 @@ export interface SupervisionRow extends ReviewerSummaryRow {
   daysLeft: number | null;
   projectedFinishKey: string | null;
   status: ProjectionStatus;
+  /** Weighted minutes per school day still needed to finish by the target (holiday-aware); null = no target, nothing left, or the target has passed. */
+  requiredPacePerDay: number | null;
   /** Distinct weekly teaching periods from the routine; null when the routine cannot be read. */
   weeklyPeriods: number | null;
 }
@@ -617,7 +620,7 @@ export interface SupervisionRow extends ReviewerSummaryRow {
 export interface SupervisionOverview extends Omit<ReviewProgramOverview, "reviewers"> {
   reviewers: SupervisionRow[];
   /** The whole batch, same fields (reviewer-less). */
-  batchProjection: Projection & { doneToday: number; doneThisWeek: number };
+  batchProjection: Projection & { doneToday: number; doneThisWeek: number; requiredPacePerDay: number | null };
 }
 
 /** Distinct (day, period) teaching slots per teacher, live now. */
@@ -648,13 +651,22 @@ export async function weeklyPeriodsOf(reviewerIds: string[], now = new Date()): 
   return out;
 }
 
+/** Remaining minutes / school days from today through the target (both inclusive); null when it cannot be computed. */
+export function requiredPacePerDay(remainingMin: number, today: string, targetKey: string | null, isSchoolDay: SchoolDayFn): number | null {
+  if (!targetKey || remainingMin <= 0 || targetKey < today) return null;
+  let days = 0;
+  for (let k = today; k <= targetKey; k = addDaysKey(k, 1)) if (isSchoolDay(k)) days += 1;
+  return days > 0 ? remainingMin / days : null;
+}
+
 export async function supervisionOverview(programId: string, batch: number, now = new Date()): Promise<SupervisionOverview> {
   const st = await batchState(programId, batch);
   const totals = totalsOf(st.summary);
   const base = { program: viewProgram(st.program), batch, targetDate: st.targetDate, totals };
   const w = st.program.weights;
   const today = dhakaDateKey(now);
-  const isSchoolDay = await buildSchoolDayFn(addDaysKey(today, -LOOKBACK_DAYS), addDaysKey(today, MAX_FORWARD_DAYS));
+  const calendarEnd = st.targetDate && st.targetDate > addDaysKey(today, MAX_FORWARD_DAYS) ? st.targetDate : addDaysKey(today, MAX_FORWARD_DAYS);
+  const isSchoolDay = await buildSchoolDayFn(addDaysKey(today, -LOOKBACK_DAYS), calendarEnd);
   const weekStart = weekStartKey(today);
   const periods = await weeklyPeriodsOf(st.summary.map((r) => r.reviewerId), now);
 
@@ -674,7 +686,7 @@ export async function supervisionOverview(programId: string, batch: number, now 
 
   const reviewers: SupervisionRow[] = st.summary.map((r) => {
     const t = tally(st.daily.get(r.reviewerId));
-    return { ...r, doneToday: t.todayItems, doneThisWeek: t.weekItems, ...project(t.dailyMin, r.minutesRemaining), weeklyPeriods: periods.get(r.reviewerId) ?? null };
+    return { ...r, doneToday: t.todayItems, doneThisWeek: t.weekItems, ...project(t.dailyMin, r.minutesRemaining), requiredPacePerDay: requiredPacePerDay(r.minutesRemaining, today, st.targetDate, isSchoolDay), weeklyPeriods: periods.get(r.reviewerId) ?? null };
   });
 
   // The whole batch: every reviewer's days summed.
@@ -690,9 +702,146 @@ export async function supervisionOverview(programId: string, batch: number, now 
     }
   }
   const bt = tally(merged);
-  return { ...base, reviewers, batchProjection: { ...project(bt.dailyMin, totals.minutesRemaining), doneToday: bt.todayItems, doneThisWeek: bt.weekItems } };
+  return { ...base, reviewers, batchProjection: { ...project(bt.dailyMin, totals.minutesRemaining), requiredPacePerDay: requiredPacePerDay(totals.minutesRemaining, today, st.targetDate, isSchoolDay), doneToday: bt.todayItems, doneThisWeek: bt.weekItems } };
 }
 
 export async function supervisionRows(programId: string, batch: number, now = new Date()): Promise<SupervisionRow[]> {
   return (await supervisionOverview(programId, batch, now)).reviewers;
+}
+
+// ---------------------------------------------------------------------------
+// Changes feed (RS-4 follow-up): which rounds asked for changes, and when
+// ---------------------------------------------------------------------------
+
+export const CHANGE_VERDICTS = ["CHANGES_REQUESTED", "APPROVE_WITH_CONDITION"] as const;
+const FEEDBACK_MAX = 400;
+const CHANGE_ROWS_MAX = 500;
+
+export interface ChangeRound {
+  assignmentId: string;
+  /** The version under review - opens ReviewThread (plans) / QuestionReviewThread (questions). */
+  artifactId: string;
+  reviewerId: string;
+  reviewerName: string | null;
+  submittedAt: string;
+  dateKey: string;
+  docType: string;
+  isQuestion: boolean;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  chapter: string;
+  sessionIndex: number | null;
+  qid: string | null;
+  verdict: string;
+  feedback: string | null;
+}
+
+/**
+ * The rounds of a batch whose latest decision asked for changes (CHANGES_REQUESTED or
+ * APPROVE_WITH_CONDITION), decided on a Dhaka day in [fromKey, toKey]. Same rule as the daily done
+ * counts: the LATEST round of a thread, not cancelled, assigned inside the batch window, attached to
+ * a batch chapter with the same question-anchor resolution. Defaults to the last 7 days.
+ */
+export async function reviewChangeRounds(
+  programId: string,
+  batch: number,
+  opts: { reviewerId?: string | null; fromKey?: string | null; toKey?: string | null } = {},
+  now = new Date(),
+): Promise<ChangeRound[]> {
+  if (opts.reviewerId && !Types.ObjectId.isValid(opts.reviewerId)) throw new ReviewError("Not a valid reviewer id");
+  for (const k of [opts.fromKey, opts.toKey]) if (k && !isRealDateKey(k)) throw new ReviewError("Dates must be YYYY-MM-DD");
+  const toKey = opts.toKey ?? dhakaDateKey(now);
+  const fromKey = opts.fromKey ?? addDaysKey(toKey, -6);
+  if (fromKey > toKey) throw new ReviewError("fromKey is after toKey");
+
+  const d = await reviewerSummaryDetailed(programId, batch);
+  if (d.tasks.length === 0) return [];
+  const b = batchOf(d.program, batch);
+  const scope = groupScope(d.tasks, b.startAt ?? null);
+  const keys = new Set(d.tasks.map((t) => keyOf(t)));
+  const from = new Date(`${fromKey}T00:00:00+06:00`);
+  const until = new Date(`${addDaysKey(toKey, 1)}T00:00:00+06:00`);
+
+  const latest: Record<string, unknown> = {
+    status: { $ne: "cancelled" },
+    verdict: { $in: [...CHANGE_VERDICTS] },
+    submittedAt: { $gte: from, $lt: until },
+  };
+  if (scope.assignedAfter) latest.assignedAt = { $gte: scope.assignedAfter };
+  if (opts.reviewerId) latest.reviewerId = new Types.ObjectId(opts.reviewerId);
+
+  const rows = (await ReviewAssignment.aggregate([
+    {
+      $match: {
+        docType: { $in: [...PLAN_TYPES, QUESTION_DOC_TYPE] },
+        subject: { $in: scope.subjects },
+        classLevel: { $in: scope.classLevels },
+      },
+    },
+    { $sort: { roundNumber: -1 } },
+    {
+      $group: {
+        _id: {
+          docType: "$docType", subject: "$subject", classLevel: "$classLevel", anchorWord: "$anchorWord",
+          addressNumber: "$addressNumber", sessionIndex: "$sessionIndex", qid: "$qid",
+        },
+        id: { $first: "$_id" },
+        artifactId: { $first: "$artifactId" },
+        reviewerId: { $first: "$reviewerId" },
+        status: { $first: "$status" },
+        verdict: { $first: "$verdict" },
+        feedback: { $first: "$feedback" },
+        assignedAt: { $first: "$assignedAt" },
+        submittedAt: { $first: "$submittedAt" },
+      },
+    },
+    { $match: latest },
+    { $sort: { submittedAt: -1 } },
+  ])) as {
+    _id: { docType: string; subject: string; classLevel: number; anchorWord: string; addressNumber: string; sessionIndex?: number | null; qid?: string | null };
+    id: Types.ObjectId;
+    artifactId: Types.ObjectId;
+    reviewerId: Types.ObjectId;
+    verdict: string;
+    feedback?: string | null;
+    submittedAt: Date;
+  }[];
+
+  // Same book rule as RS-1: question rounds take their subject x class plan anchorWord.
+  const asGroups = rows.map((r) => ({
+    reviewerId: r.reviewerId.toString(),
+    subject: r._id.subject,
+    classLevel: r._id.classLevel,
+    anchorWord: r._id.anchorWord,
+    addressNumber: r._id.addressNumber,
+    isQuestion: r._id.docType === QUESTION_DOC_TYPE,
+    total: 1, done: 1, changes: 1, firstAssignedAt: new Date(0),
+    row: r,
+  }));
+  const resolved = resolveQuestionAnchors([...d.rawGroups, ...asGroups], d.tasks).slice(d.rawGroups.length) as unknown as typeof asGroups;
+  const kept = resolved.filter((g) => keys.has(keyOf(g))).slice(0, CHANGE_ROWS_MAX);
+  const names = await namesOf(kept.map((g) => g.reviewerId));
+  return kept.map((g) => {
+    const r = g.row;
+    const text = r.feedback ? r.feedback.trim() : "";
+    return {
+      assignmentId: r.id.toString(),
+      artifactId: r.artifactId.toString(),
+      reviewerId: g.reviewerId,
+      reviewerName: names.get(g.reviewerId) ?? null,
+      submittedAt: r.submittedAt.toISOString(),
+      dateKey: dhakaDateKey(r.submittedAt),
+      docType: r._id.docType,
+      isQuestion: g.isQuestion,
+      subject: g.subject,
+      classLevel: g.classLevel,
+      anchorWord: g.anchorWord,
+      chapter: g.addressNumber,
+      sessionIndex: r._id.sessionIndex ?? null,
+      qid: r._id.qid ?? null,
+      verdict: r.verdict,
+      feedback: text ? (text.length > FEEDBACK_MAX ? `${text.slice(0, FEEDBACK_MAX)}...` : text) : null,
+    };
+  });
 }

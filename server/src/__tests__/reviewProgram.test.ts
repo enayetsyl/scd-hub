@@ -74,7 +74,7 @@ beforeEach(async () => {
   ACTOR = { id: (await user("Owner", "PRINCIPAL")).toString(), role: "PRINCIPAL" };
   SAJEDA = await user("Sajeda");
   JERIN = await user("Jerin");
-  const p = await createProgram({ name: "2027", batches: [{ batch: 1, name: "Batch 1", targetDate: "2026-12-15" }], actor: ACTOR });
+  const p = await createProgram({ name: "2027", batches: [{ batch: 1, name: "Batch 1", targetDate: "2026-12-15", startAt: "2026-01-01" }], actor: ACTOR });
   programId = p.id;
 });
 
@@ -335,6 +335,16 @@ describe("batch window, owner actions, anchor words (review fixes)", () => {
     // An explicit assignedAfter in the future adopts nothing.
     const none = await adoptOpenAssignments({ programId, batch: 1, actor: ACTOR, assignedAfter: new Date("2027-01-01") });
     expect(none.created).toBe(0);
+  });
+
+  test("a bare start date is Dhaka midnight; adopt refuses a batch with no start and no cut-off", async () => {
+    const prog = await ReviewProgram.findById(programId).lean();
+    expect(prog!.batches[0].startAt!.toISOString()).toBe("2025-12-31T18:00:00.000Z");
+    await expect(updateBatch({ programId, batch: 1, startAt: "2026-02-31", actor: ACTOR })).rejects.toThrow("real date");
+    await ReviewProgram.updateOne({ _id: programId }, { $unset: { "batches.0.startAt": 1 } });
+    await expect(adoptOpenAssignments({ programId, batch: 1, actor: ACTOR })).rejects.toThrow("start date");
+    const ok = await adoptOpenAssignments({ programId, batch: 1, actor: ACTOR, assignedAfter: new Date("2026-01-01") });
+    expect(ok.created).toBeGreaterThanOrEqual(0);
   });
 
   test("adopt is order-independent: a decided leftover next to an active holder never becomes a task", async () => {

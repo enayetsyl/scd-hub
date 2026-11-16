@@ -229,6 +229,12 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
 
   return (
     <Screen scroll>
+      {can("review_program:supervise") ? (
+        <Card onPress={() => navigation.navigate("ReviewSupervision")}>
+          <Body style={{ fontWeight: "700" }}>{STR.rspNav}</Body>
+          <Muted style={{ marginTop: 2 }}>{STR.rspSubtitle}</Muted>
+        </Card>
+      ) : null}
       {/* Question review & publish (QR-4, D-#508) — a separate workspace from the plan
           loop above: different unit of work (one question, bulk-assigned), different
           rules (optional rejection reason), and a publish step plans do not have. */}

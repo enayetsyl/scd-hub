@@ -26,9 +26,11 @@ import {
 } from "../services/ReviewProgramService";
 import {
   backfillReviewSnapshots,
+  reviewChangeRounds,
   reviewProgressSeries,
   supervisionOverview,
   supervisionRows,
+  type ChangeRound,
   type ProgressSeriesRow,
   type Projection,
   type SupervisionOverview,
@@ -167,6 +169,7 @@ ReviewerRowRef.implement({
     daysLeft: t.float({ nullable: true, resolve: (r) => r.daysLeft }),
     projectedFinishKey: t.string({ nullable: true, resolve: (r) => r.projectedFinishKey }),
     status: t.exposeString("status", { description: "ON_TRACK | BEHIND | FAR_BEHIND | NO_DATA" }),
+    requiredPacePerDay: t.float({ nullable: true, description: "Weighted minutes per school day still needed to hit the target (holiday-aware)", resolve: (r) => r.requiredPacePerDay }),
     weeklyPeriods: t.int({ nullable: true, description: "Distinct weekly teaching periods from the routine; null if unreadable", resolve: (r) => r.weeklyPeriods }),
   }),
 });
@@ -177,6 +180,7 @@ BatchProjectionRef.implement({
   fields: (t) => ({
     doneToday: t.exposeInt("doneToday"),
     doneThisWeek: t.exposeInt("doneThisWeek"),
+    requiredPacePerDay: t.float({ nullable: true, resolve: (r: BatchProjection) => r.requiredPacePerDay }),
     pacePerDay: t.float({ nullable: true, resolve: (r: Projection) => r.pacePerDay }),
     daysLeft: t.float({ nullable: true, resolve: (r: Projection) => r.daysLeft }),
     projectedFinishKey: t.string({ nullable: true, resolve: (r: Projection) => r.projectedFinishKey }),
@@ -308,6 +312,50 @@ builder.queryField("reviewProgressSeries", (t) =>
     resolve: async (_r, a) => {
       try {
         return await reviewProgressSeries(a.programId, a.batch, { reviewerId: a.reviewerId ?? null, perReviewer: a.perReviewer ?? false });
+      } catch (e) {
+        return mapError(e);
+      }
+    },
+  }),
+);
+
+const ChangeRoundRef = builder.objectRef<ChangeRound>("ReviewChangeRound");
+ChangeRoundRef.implement({
+  fields: (t) => ({
+    assignmentId: t.exposeString("assignmentId"),
+    artifactId: t.exposeString("artifactId", { description: "Opens the plan review thread or the question review thread" }),
+    reviewerId: t.exposeString("reviewerId"),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName }),
+    submittedAt: t.exposeString("submittedAt"),
+    dateKey: t.exposeString("dateKey", { description: "Dhaka day of the decision" }),
+    docType: t.exposeString("docType"),
+    isQuestion: t.exposeBoolean("isQuestion"),
+    subject: t.exposeString("subject"),
+    classLevel: t.exposeInt("classLevel"),
+    anchorWord: t.exposeString("anchorWord"),
+    chapter: t.exposeString("chapter"),
+    sessionIndex: t.int({ nullable: true, resolve: (r) => r.sessionIndex }),
+    qid: t.string({ nullable: true, resolve: (r) => r.qid }),
+    verdict: t.exposeString("verdict"),
+    feedback: t.string({ nullable: true, description: "Truncated to about 400 characters; the full text is on the thread", resolve: (r) => r.feedback }),
+  }),
+});
+
+builder.queryField("reviewChangeRounds", (t) =>
+  t.field({
+    type: [ChangeRoundRef],
+    description: "Rounds of a batch decided CHANGES_REQUESTED / APPROVE_WITH_CONDITION on a Dhaka day in [fromKey, toKey] (default the last 7 days). Requires review_program:supervise.",
+    authScopes: { hasPermission: "review_program:supervise" },
+    args: {
+      programId: t.arg.string({ required: true }),
+      batch: t.arg.int({ required: true }),
+      reviewerId: t.arg.string({ required: false }),
+      fromKey: t.arg.string({ required: false }),
+      toKey: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, a) => {
+      try {
+        return await reviewChangeRounds(a.programId, a.batch, { reviewerId: a.reviewerId ?? null, fromKey: a.fromKey ?? null, toKey: a.toKey ?? null });
       } catch (e) {
         return mapError(e);
       }
