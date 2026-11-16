@@ -61,16 +61,23 @@ export function CtWeakObjectivePicker({
     const out = new Map<string, Group>();
     for (const o of options) {
       if (t && !o.code.toLowerCase().includes(t) && !o.labelBn.toLowerCase().includes(t)) continue;
-      const key = o.chapterNumber != null ? `c${o.chapterNumber}` : "strand";
-      const title =
+      // A skill-strand row sits under EVERY chapter whose exercises cite it (derived), else under "strands".
+      const places: { number: number | null; titleBn: string | null }[] =
         o.chapterNumber != null
-          ? `${STR.gpChapter} ${bnNum(o.chapterNumber)}${o.chapterTitleBn ? `: ${o.chapterTitleBn}` : ""}`
-          : STR.msStrands;
-      const g = out.get(key) ?? { key, title, rows: [] };
-      g.rows.push(o);
-      out.set(key, g);
+          ? [{ number: o.chapterNumber, titleBn: o.chapterTitleBn }]
+          : o.practisedChapters?.length
+            ? o.practisedChapters
+            : [{ number: null, titleBn: null }];
+      for (const p of places) {
+        const key = p.number != null ? `c${p.number}` : "strand";
+        const title = p.number != null ? `${STR.gpChapter} ${bnNum(p.number)}${p.titleBn ? `: ${p.titleBn}` : ""}` : STR.msStrands;
+        const g = out.get(key) ?? { key, title, rows: [] };
+        g.rows.push(o);
+        out.set(key, g);
+      }
     }
-    return [...out.values()];
+    const num = (g: Group): number => (g.key === "strand" ? 9999 : Number(g.key.slice(1)));
+    return [...out.values()].sort((a, b) => num(a) - num(b));
   }, [options, term]);
 
   if (!data?.available) return null;

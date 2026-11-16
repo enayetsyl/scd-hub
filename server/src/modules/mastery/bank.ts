@@ -47,6 +47,56 @@ export function loCodeMongoFilter(codes: string[]): Record<string, unknown> {
   };
 }
 
+/** The reason a re-coded row carries (MOVE / MOVE_TO_STRAND): its `mergedInto` is the new code. */
+export const MOVED_REASON_RE = /^moved to /;
+
+export interface MovedAliases {
+  /** The requested codes plus every old / new code of a move that touches them (both directions). */
+  all: string[];
+  /** Any code → the code its row finally lives under (an old code → its new one; others unchanged). */
+  canon: (code: string) => string;
+}
+
+/**
+ * READ-SIDE ALIAS for re-coded rows (MOVE_TO_STRAND, MOVE): a question, plan or mark written against an
+ * OLD code keeps resolving to the row it moved to — nothing outside the tree is rewritten. Follows
+ * old→new through `mergedInto` on rows whose reason is "moved to …", and new→old back, up to a few hops.
+ */
+export async function movedAliases(codes: string[]): Promise<MovedAliases> {
+  const all = new Set(codes);
+  const next = new Map<string, string>(); // old → new
+  let frontier = [...new Set(codes)];
+  for (let hop = 0; hop < 4 && frontier.length > 0; hop++) {
+    const rows = (await MasteryOutcome.find({
+      rejectReason: { $regex: MOVED_REASON_RE },
+      mergedInto: { $exists: true, $ne: null },
+      $or: [{ code: { $in: frontier } }, { mergedInto: { $in: frontier } }],
+    })
+      .select("code mergedInto")
+      .lean()) as unknown as { code: string; mergedInto: string }[];
+    const found: string[] = [];
+    for (const r of rows) {
+      next.set(r.code, r.mergedInto);
+      for (const c of [r.code, r.mergedInto]) if (!all.has(c)) {
+        all.add(c);
+        found.push(c);
+      }
+    }
+    frontier = found;
+  }
+  const canon = (code: string): string => {
+    let c = code;
+    for (let i = 0; i < 5 && next.has(c); i++) c = next.get(c)!;
+    return c;
+  };
+  return { all: [...all], canon };
+}
+
+/** `loCodeMongoFilter` that also matches questions still tagged with an old code of a moved row. */
+export async function loCodeMongoFilterAliased(codes: string[]): Promise<Record<string, unknown>> {
+  return loCodeMongoFilter((await movedAliases(codes)).all);
+}
+
 /**
  * Harness-style WARN lines (`[MASTERY-LO] …`) for a question envelope whose LOs are not yet
  * usable: unknown to the catalogue, still DRAFT (codes may move), or RETIRED. The import

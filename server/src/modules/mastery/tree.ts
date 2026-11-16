@@ -182,6 +182,11 @@ export function planTreeImport(tree: TreeFile, existing: ExistingTreeRow[], late
       return;
     }
     // DRAFT
+    // A row the reviewer moved to a skill strand (MOVE_TO_STRAND) must not come back from a regenerated file.
+    if (e.mergedInto && /^moved to /.test(e.rejectReason ?? "") && e.mergedInto.includes("-SK-")) {
+      plan.errors.push(`${n.code}: এই শিখনফল দক্ষতা-ধারায় সরানো হয়েছে (${e.mergedInto}) — ফাইল থেকে এটি বাদ দিন বা নতুন কোড ব্যবহার করুন।`);
+      return;
+    }
     const restored = e.reviewState === "REJECTED" && e.rejectReason === REMOVED_IN_REDRAFT;
     if (e.draftHash && e.draftHash === fields.draftHash && !restored) {
       plan.kept += 1;

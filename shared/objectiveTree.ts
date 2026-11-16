@@ -104,6 +104,20 @@ export function expandExerciseRef(ref: string): string[] {
   return out;
 }
 
+/**
+ * The chapters a row is practised in, from its exercise refs "<chapter>/<lesson>/<n>" (also "…/—").
+ * Sorted, unique, numbers only; refs with a non-numeric chapter ("SK-VOC/—") are ignored. Derived —
+ * a skill-strand row has no chapter of its own, so this is how the app says where it is practised.
+ */
+export function practisedChapters(exercises: readonly string[] | null | undefined): number[] {
+  const set = new Set<number>();
+  for (const ref of exercises ?? []) {
+    const head = String(ref).split("/")[0]?.trim() ?? "";
+    if (/^\d{1,3}$/.test(head)) set.add(Number(head));
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
 const classIndex = (token: string): number => (MASTERY_CLASS_TOKENS as readonly string[]).indexOf(token);
 
 /**

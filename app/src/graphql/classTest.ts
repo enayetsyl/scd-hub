@@ -284,6 +284,7 @@ export interface CtWeakLoOptionT {
   chapterNumber: number | null;
   chapterTitleBn: string | null;
   strand: string | null;
+  practisedChapters: { number: number; titleBn: string | null }[];
 }
 
 export const CT_WEAK_LO_OPTIONS_QUERY = gql<
@@ -293,7 +294,7 @@ export const CT_WEAK_LO_OPTIONS_QUERY = gql<
   query ClassTestWeakObjectiveOptions($testId: String!) {
     classTestWeakObjectiveOptions(testId: $testId) {
       available max
-      options { code labelBn level chapterNumber chapterTitleBn strand }
+      options { code labelBn level chapterNumber chapterTitleBn strand practisedChapters { number titleBn } }
     }
   }
 `;

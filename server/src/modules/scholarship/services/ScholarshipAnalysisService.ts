@@ -524,7 +524,7 @@ export async function loadScope(scope: AnalysisScope): Promise<PaperWithScores[]
 /** When a subject filter is given, items of the OTHER subject on a combined paper are
  *  dropped — otherwise a Science+BGS paper would drag BGS items into a Science-only
  *  reading, which is the whole reason the subject lives on the item (D-#664). */
-function narrowToSubject(data: PaperWithScores[], subject?: HwSubject): PaperWithScores[] {
+export function narrowToSubject(data: PaperWithScores[], subject?: HwSubject): PaperWithScores[] {
   if (!subject) return data;
   return data.map(({ paper, scores }) => ({
     paper: { ...paper, items: paper.items.filter((i) => i.subject === subject) },
@@ -532,7 +532,7 @@ function narrowToSubject(data: PaperWithScores[], subject?: HwSubject): PaperWit
   }));
 }
 
-async function labelLookup(
+export async function labelLookup(
   classLevel: number,
 ): Promise<(key: string, subject: HwSubject) => string> {
   const topics = (await ScholarshipTopic.find({ classLevel })

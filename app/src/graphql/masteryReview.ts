@@ -133,7 +133,7 @@ export interface ReviewQueue {
 
 /** What masteryReviewDecide takes (prd-objective-tree §7); unused fields stay undefined. */
 export interface ReviewDecisionInput {
-  action: "ACCEPT" | "BULK_ACCEPT" | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "REJECT" | "ADD";
+  action: "ACCEPT" | "BULK_ACCEPT" | "EDIT" | "SPLIT" | "MERGE" | "MOVE" | "MOVE_TO_STRAND" | "REJECT" | "ADD";
   code?: string | null;
   labelBn?: string | null;
   labelEn?: string | null;

@@ -24,6 +24,7 @@ import { Student } from "../../foundation/models/Student";
 import { StudentAttendanceDay } from "../../attendance/models/StudentAttendanceDay";
 import { resolveUnitsForIds } from "../../attendance/attendanceUnit";
 import { MasteryOutcome } from "../../mastery/models/MasteryOutcome";
+import { movedAliases } from "../../mastery/bank";
 import { LessonDelivery, type ILessonDelivery, type ILessonDeliverySession } from "../models/LessonDelivery";
 import { LessonProgressError, sessionKey, sessionPlansFor, type PlanSession } from "./LessonDeliveryService";
 import { dayRecords, presenceOf } from "./StudentLessonService";
@@ -152,7 +153,7 @@ export async function sectionObjectiveRows(
 
   const token = `C${level}`;
   const catalogue = (MASTERY_CLASS_TOKENS as readonly string[]).includes(token)
-    ? ((await MasteryOutcome.find({ classToken: token, subject, status: { $ne: "RETIRED" } })
+    ? ((await MasteryOutcome.find({ classToken: token, subject, status: { $ne: "RETIRED" }, mergedInto: null, reviewState: { $ne: "REJECTED" } })
         .select("code labelBn chapterNumber tagged order")
         .lean()) as unknown as Array<{ code: string; labelBn: string; chapterNumber: number | null; tagged?: boolean; order: number }>)
     : [];
@@ -162,21 +163,24 @@ export async function sectionObjectiveRows(
     .select("noteId dateKey sessions rosterStudentIds attendanceUnits")
     .sort({ dateKey: 1 })
     .lean()) as unknown as DeliveryRow[];
+  // Old codes of moved rows (MOVE_TO_STRAND) read as the row they moved to — a mark or plan written
+  // against the old code keeps counting (read-side alias; nothing outside the tree is rewritten).
+  const alias = await movedAliases([...planCodeSet, ...deliveries.flatMap((d) => d.sessions.flatMap((s) => s.loCodes ?? []))]);
   const taughtBy = new Map<string, DeliveryRow[]>();
   for (const d of deliveries) {
-    const codes = new Set(d.sessions.flatMap((s) => deliveredCodes(s, planCodes)));
+    const codes = new Set(d.sessions.flatMap((s) => deliveredCodes(s, planCodes)).map(alias.canon));
     for (const c of codes) taughtBy.set(c, [...(taughtBy.get(c) ?? []), d]);
   }
 
-  let universe = new Set<string>(planCodeSet);
+  let universe = new Set<string>([...planCodeSet].map(alias.canon));
   if (!opts.planOnly) {
     for (const o of catalogue) if (o.tagged !== false) universe.add(o.code);
     for (const c of taughtBy.keys()) universe.add(c);
   }
   if (opts.codes) {
-    const want = new Set(opts.codes);
+    const want = new Set(opts.codes.map(alias.canon));
     universe = new Set([...universe].filter((c) => want.has(c)));
-    for (const c of want) if (catBy.has(c) || planCodeSet.has(c)) universe.add(c);
+    for (const c of want) if (catBy.has(c) || universe.has(c) || planCodeSet.has(c)) universe.add(c);
   }
   if (universe.size === 0) return [];
 
@@ -228,7 +232,7 @@ export async function sectionObjectiveRows(
       chapterNumber: cat?.chapterNumber ?? null,
       inCatalogue: !!cat,
       sessions: plan
-        .filter((p) => p.loCodes.some((c) => codeCovers(code, c)))
+        .filter((p) => p.loCodes.some((c) => codeCovers(code, alias.canon(c))))
         .map((p) => ({ key: p.key, chapter: p.chapter, anchorWord: p.anchorWord, sessionIndex: p.sessionIndex, sessionOf: p.sessionOf, titleBn: p.titleBn })),
       taught,
       absentCount: new Set(taught.flatMap((t) => t.absent.map((a) => a.studentId))).size,
@@ -292,9 +296,10 @@ export async function studentObjectiveLessons(studentId: string, subject: string
     const map = planCodes.get(d.classLevel) ?? new Map<string, string[]>();
     for (const s of d.sessions) for (const c of deliveredCodes(s, map)) daysBy.set(c, (daysBy.get(c) ?? new Set()).add(d.dateKey));
   }
+  const alias = await movedAliases([...daysBy.keys()]);
   const taughtFor = (code: string): string[] => {
     const days = new Set<string>();
-    for (const [c, ds] of daysBy) if (codeCovers(code, c)) for (const k of ds) days.add(k);
+    for (const [c, ds] of daysBy) if (codeCovers(code, alias.canon(c))) for (const k of ds) days.add(k);
     return [...days].sort();
   };
   const perCode = codes.map((code) => ({ code, taughtOn: taughtFor(code) }));

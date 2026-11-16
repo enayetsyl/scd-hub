@@ -53,6 +53,9 @@ export const MASTERY_CATALOGUE_QUERY = gql`
         level
         parentCode
         tagged
+        bookRef {
+          exercises
+        }
       }
       questionTypes {
         code
@@ -350,6 +353,8 @@ export type MasteryOutcomeRow = {
   level: string;
   parentCode: string | null;
   tagged: boolean;
+  /** Optional: only the catalogue query asks for it (the "practised in chapters" line). */
+  bookRef?: { exercises: string[] } | null;
 };
 
 export type MasteryQuestionTypeRow = {
