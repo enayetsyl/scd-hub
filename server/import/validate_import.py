@@ -260,7 +260,7 @@ def _footer_lo_codes(payload):
     out = []
     for t in parts:
         t = t.strip()
-        if t and t not in out:
+        if t and t not in {"—", "–", "-"} and t not in out:  # D-#NKG: a bare dash = no objective
             out.append(t)
     return out or None
 

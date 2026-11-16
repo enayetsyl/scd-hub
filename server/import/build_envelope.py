@@ -39,6 +39,7 @@ import sys, os, re, json, argparse
 
 # D-#NKG: pre-primary plan class tokens -> the envelope / roster number (D-#30 ROSTER_CLASS_LEVELS).
 PRE_PRIMARY_LEVEL = {"NUR": -1, "KG": 0}
+NO_OBJECTIVE_MARKS = {"—", "–", "-"}
 
 # Force UTF-8 stdio: when spawned by Node (not a terminal) stdout defaults to the
 # system locale (cp1252 on Windows), which cannot encode the Bangla envelope.
@@ -110,7 +111,8 @@ def footer_lo_codes(plan):
     out = []
     for t in parts:
         t = t.strip()
-        if t and t not in out:
+        # D-#NKG: a bare dash ("—" / "–" / "-") is the plan's "no objective in this period" marker.
+        if t and t not in NO_OBJECTIVE_MARKS and t not in out:
             out.append(t)
     return out
 

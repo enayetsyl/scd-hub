@@ -216,7 +216,7 @@
                   "properties": { "label": { "type": "string" }, "value": { "type": "string" } }
                 }},
                 "reason": { "type": "string", "minLength": 1 },
-                "topic_tag": { "type": "string", "pattern": "^TOP-[A-Z][A-Z0-9]*-C[1-6]-[A-Z0-9]+$", "description": "internal only; never rendered to the surface" }
+                "topic_tag": { "type": "string", "pattern": "^TOP-[A-Z][A-Z0-9]*-C([1-6]|N|K|NUR|KG)-[A-Z0-9]+$", "description": "internal only; never rendered to the surface" }
               }
             }
           }
