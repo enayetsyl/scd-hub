@@ -158,6 +158,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "MeetingBriefError",
   "MeetingChainError",
   "MeetingCommentError",
+  // A refused meeting release (draft/future meeting, not the Principal, not a linked guardian) — D-#1633–#1635.
+  "MeetingReleaseError",
   "MessageTemplateError",
   // Monthly report (MR-1..MR-4): all three are deliberate denials, not faults — a
   // release refused because the month is provisional, a config whose hard lock
