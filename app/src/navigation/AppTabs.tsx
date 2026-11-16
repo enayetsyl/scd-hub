@@ -215,6 +215,8 @@ import AssignQuestionsScreen from "../screens/review/AssignQuestionsScreen";
 import PublishQuestionsScreen from "../screens/review/PublishQuestionsScreen";
 import QuestionReviewThreadScreen from "../screens/review/QuestionReviewThreadScreen";
 import QuestionReviewProgressScreen from "../screens/review/QuestionReviewProgressScreen";
+import ReviewSupervisionScreen from "../screens/review/ReviewSupervisionScreen";
+import ReviewSupervisionReviewerScreen from "../screens/review/ReviewSupervisionReviewerScreen";
 import QuestionReviewerRoundsScreen from "../screens/review/QuestionReviewerRoundsScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
@@ -1059,6 +1061,9 @@ function ReviewNavigator(): React.ReactElement {
         component={QuestionReviewerRoundsScreen}
         options={{ title: STR.qpTitle }}
       />
+      {/* Review supervision (RS-4) - after ReviewHome, same initial-route rule. */}
+      <ReviewStack.Screen name="ReviewSupervision" component={ReviewSupervisionScreen} options={{ title: STR.rspHeader }} />
+      <ReviewStack.Screen name="ReviewSupervisionReviewer" component={ReviewSupervisionReviewerScreen} options={{ title: STR.rspReviewerHeader }} />
     </ReviewStack.Navigator>
   );
 }
@@ -2246,6 +2251,7 @@ export function AppTabs(): React.ReactElement {
   const canReview = any(
     "plan_review:assign", "plan_review:review", "plan_review:approve",
     "question_review:assign", "question_review:view_all", "question_review:review", "question_review:publish",
+    "review_program:supervise",
   );
   const canRoutine = can("routine:view");
   const canClassNotes = can("class_note:view");

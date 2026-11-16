@@ -1116,6 +1116,10 @@ export async function assignQuestionReviewByChapter(input: {
   reviewerId: string;
   assignedBy: string;
   actorRole: string;
+  /** Skip the notice - the caller sends ONE summary for the whole action (RS-1). */
+  quiet?: boolean;
+  /** Only questions of this book (address.anchorWord); unset keeps the old behaviour. */
+  anchorWord?: string;
 }): Promise<{
   assigned: number;
   skippedPublished: number;
@@ -1133,6 +1137,7 @@ export async function assignQuestionReviewByChapter(input: {
     retiredAt: null,
     subject: input.subject,
     classLevel: input.classLevel,
+    ...(input.anchorWord ? { "address.anchorWord": input.anchorWord } : {}),
     "address.number": { $in: chapters.flatMap((c) => [c, String(c)]) },
   }).lean()) as unknown as LeanQuestion[];
 
@@ -1180,7 +1185,7 @@ export async function assignQuestionReviewByChapter(input: {
   }
 
   // ONE notification for the whole chapter, not one per question (the D-#508 rule).
-  if (rounds.length > 0) await notifyAssigned(input.reviewerId, rounds, rounds[0].id);
+  if (rounds.length > 0 && !input.quiet) await notifyAssigned(input.reviewerId, rounds, rounds[0].id);
 
   await writeAudit({
     eventKind: "REVIEW_ASSIGNED",
@@ -1260,6 +1265,8 @@ export async function moveQuestionReviewChapter(input: {
   toReviewerId: string;
   actorId: string;
   actorRole: string;
+  /** Skip the notice - the caller sends ONE summary for the whole action (RS-1). */
+  quiet?: boolean;
 }): Promise<{
   moved: number;
   skippedDecided: number;
@@ -1329,7 +1336,7 @@ export async function moveQuestionReviewChapter(input: {
   // ONE notification for the whole move, to the reviewer who just gained the work. The
   // losing reviewer is NOT notified: there is no kind for "work taken back", and inventing
   // one is a /shared/vocab change this slice does not need — the Principal tells her.
-  if (moved > 0) {
+  if (moved > 0 && !input.quiet) {
     await emitQuestionReviewAssigned({
       reviewerId: input.toReviewerId,
       subject: input.subject,

@@ -348,6 +348,17 @@ export const FEATURE_CATALOGUE = {
       review: { en: "Review a paper given to me", bn: "আমাকে দেওয়া প্রশ্নপত্র রিভিউ করা", desc: "Confirm each item matches the syllabus; suggest an edit, a deletion or a new question", teacher: true, office: true, flags: ["SELF"] },
     },
   },
+  // Review supervision (RS-1, .claude/plans/review-supervision.md): the owner (and, by a per-person
+  // grant, the deputy) watch the teacher review program and move work between reviewers.
+  review_program: {
+    group: "content_and_books",
+    en: "Review supervision",
+    bn: "পর্যালোচনা তদারকি",
+    actions: {
+      supervise: { en: "Watch the review program", bn: "পর্যালোচনা তদারকি দেখা", desc: "Batches, per-reviewer progress and the task list (read only)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      manage: { en: "Manage the review program", bn: "পর্যালোচনা কাজ সরানো ও যোগ করা", desc: "Create a program, adopt open rounds into tasks, move/cancel/add a task, change a due date", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+    },
+  },
   scholarship_practice: {
     group: "assessment_and_exams",
     en: "Scholarship practice",
