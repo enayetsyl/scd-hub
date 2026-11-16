@@ -37,7 +37,7 @@ produced envelope is NOT validated here — it is then run through validate_impo
 """
 import sys, os, re, json, argparse
 
-# D-#NKG: pre-primary plan class tokens -> the envelope / roster number (D-#30 ROSTER_CLASS_LEVELS).
+# D-#1642: pre-primary plan class tokens -> the envelope / roster number (D-#30 ROSTER_CLASS_LEVELS).
 PRE_PRIMARY_LEVEL = {"NUR": -1, "KG": 0}
 NO_OBJECTIVE_MARKS = {"—", "–", "-"}
 
@@ -111,7 +111,7 @@ def footer_lo_codes(plan):
     out = []
     for t in parts:
         t = t.strip()
-        # D-#NKG: a bare dash ("—" / "–" / "-") is the plan's "no objective in this period" marker.
+        # D-#1642: a bare dash ("—" / "–" / "-") is the plan's "no objective in this period" marker.
         if t and t not in NO_OBJECTIVE_MARKS and t not in out:
             out.append(t)
     return out
@@ -202,7 +202,7 @@ def main():
         "doc_type": plan_type,
         # D-#1440: Islamic Studies is "ISLAM" everywhere; the old plan spelling "ISL" is gone.
         "subject": plan.get("subject"),
-        # D-#NKG: a Nursery / KG plan says class_level "NUR" / "KG"; the envelope carries the roster number.
+        # D-#1642: a Nursery / KG plan says class_level "NUR" / "KG"; the envelope carries the roster number.
         "class_level": PRE_PRIMARY_LEVEL.get(plan.get("class_level"), plan.get("class_level")),
         "address": address,
         "curation_tag": plan.get("curation_tag"),

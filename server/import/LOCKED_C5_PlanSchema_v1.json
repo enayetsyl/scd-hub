@@ -21,7 +21,7 @@
     },
     "plan_type": { "enum": ["chapter_plan", "session_plan"] },
     "subject": { "enum": ["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM", "ICT", "BAN2", "ENG2"] },
-    "class_level": { "oneOf": [ { "type": "integer", "minimum": 1, "maximum": 6 }, { "enum": ["NUR", "KG"] } ], "description": "1..6, or NUR (Nursery) / KG (D-#NKG); the envelope carries -1 / 0 for NUR / KG." },
+    "class_level": { "oneOf": [ { "type": "integer", "minimum": 1, "maximum": 6 }, { "enum": ["NUR", "KG"] } ], "description": "1..6, or NUR (Nursery) / KG (D-#1642); the envelope carries -1 / 0 for NUR / KG." },
     "curation_tag": { "enum": ["KEEP_AS_IS", "NEEDS_REPLACEMENT", "FLEXIBLE"] },
 
     "division": {
@@ -52,7 +52,7 @@
       "then": { "required": ["session_plan"] }
     },
     {
-      "comment": "D-#NKG: Nursery / KG plans divide every subject into অংশ (part); Classes 1..6 keep their subject's own word.",
+      "comment": "D-#1642: Nursery / KG plans divide every subject into অংশ (part); Classes 1..6 keep their subject's own word.",
       "if": { "properties": { "class_level": { "enum": ["NUR", "KG"] } }, "required": ["class_level"] },
       "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অংশ" } } } } }
     },

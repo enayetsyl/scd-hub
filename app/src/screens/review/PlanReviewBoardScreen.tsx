@@ -21,7 +21,7 @@ import React, { useMemo, useState } from "react";
 import { View, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { SUBJECTS, CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
+import { SUBJECTS, CONTENT_PLAN_CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
 import {
   ASSIGNABLE_PLANS_PAGE,
   REVIEWER_ASSIGNMENT_LOAD,
@@ -397,7 +397,7 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
       <Muted style={{ marginTop: space(2) }}>{STR.classLevel}</Muted>
       <ChipRow>
         <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
-        {CLASS_LEVELS.map((c) => (
+        {CONTENT_PLAN_CLASS_LEVELS.map((c) => (
           <Chip key={c} label={bnNum(c)} selected={classLevel === c} onPress={() => setClassLevel(classLevel === c ? null : c)} />
         ))}
       </ChipRow>

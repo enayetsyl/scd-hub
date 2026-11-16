@@ -90,7 +90,7 @@ export type ClassLevel = (typeof CLASS_LEVELS)[number];
 export const CLASS_LEVEL_MIN = 1;
 export const CLASS_LEVEL_MAX = 6;
 
-/** PLAN axis (D-#NKG, 16 Nov 2026 — re-opens D-#30 for PLANS only): Nursery and KG now have
+/** PLAN axis (D-#1642, 16 Nov 2026 — re-opens D-#30 for PLANS only): Nursery and KG now have
  *  lesson plans, so chapter/session plans may carry the roster's pre-primary levels
  *  (-1 = Nursery, 0 = KG) as well as 1..6. Questions, stimuli and sets stay on CLASS_LEVELS.
  *  MIRROR of the envelope root `class_level` range (the allOf rule keeps non-plans at 1..6). */
@@ -245,7 +245,7 @@ export type SourceProject = (typeof SOURCE_PROJECTS)[number];
  *  The authoritative subject↔anchor mapping lives in the Project-03 plan schema +
  *  the import harness; SUBJECT_ANCHORS below mirrors only what the envelope schema
  *  states and is a display/UI convenience, not the authority. */
-/** অংশ (part) = the Nursery/KG plan division (D-#NKG); Classes 1..6 keep পাঠ / অধ্যায় / Unit / Lesson. */
+/** অংশ (part) = the Nursery/KG plan division (D-#1642); Classes 1..6 keep পাঠ / অধ্যায় / Unit / Lesson. */
 export const ANCHOR_WORDS = ["পাঠ", "অধ্যায়", "Unit", "Lesson", "অংশ"] as const;
 export type AnchorWord = (typeof ANCHOR_WORDS)[number];
 

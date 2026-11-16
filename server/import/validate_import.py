@@ -154,7 +154,7 @@ def layer1_batch(env):
         fail("BATCH-SIZE", f"batch carries {len(items)} items; the size guard is {BATCH_MAX_ITEMS} — split the upload")
 
 
-# D-#NKG: Nursery / KG plans — payload "NUR"/"KG", envelope -1/0, LO-code class token NUR/KG.
+# D-#1642: Nursery / KG plans — payload "NUR"/"KG", envelope -1/0, LO-code class token NUR/KG.
 PRE_PRIMARY_LEVEL = {"NUR": -1, "KG": 0}
 
 
@@ -179,7 +179,7 @@ def consistency(env):
             ev, pv = env.get(field), p.get(field)
             if field == "subject":
                 ev, pv = _canon_subject(ev), _canon_subject(pv)
-            if field == "class_level":  # D-#NKG: payload "NUR"/"KG" == envelope -1/0
+            if field == "class_level":  # D-#1642: payload "NUR"/"KG" == envelope -1/0
                 pv = PRE_PRIMARY_LEVEL.get(pv, pv)
             if field in env and field in p and ev != pv:
                 fail("XF", f"envelope.{field}={env[field]!r} != payload.{field}={p[field]!r}")
@@ -260,7 +260,7 @@ def _footer_lo_codes(payload):
     out = []
     for t in parts:
         t = t.strip()
-        if t and t not in {"—", "–", "-"} and t not in out:  # D-#NKG: a bare dash = no objective
+        if t and t not in {"—", "–", "-"} and t not in out:  # D-#1642: a bare dash = no objective
             out.append(t)
     return out or None
 
