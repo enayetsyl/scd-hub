@@ -14,7 +14,8 @@ import { classTestMarks, classTestStatus, examResults, masteryOverview, monthlyR
 import { findStaff, payrollSummary, staffAttendance, staffLeave } from "./staff";
 import { feeDues, financeSummary } from "./finance";
 import { dailyReport, notices } from "./school";
-import { scholarshipAnalysis } from "./scholarship";
+import { scholarshipAnalysis, scholarshipResults } from "./scholarship";
+import { examSyllabus } from "./syllabus";
 
 const ROLE_BN: Record<string, string> = { PRINCIPAL: "প্রধান শিক্ষক", OFFICE: "অফিস", TEACHER: "শিক্ষক" };
 
@@ -75,6 +76,8 @@ export const TOOL_REGISTRY: readonly ToolDef[] = [
   questionBankStats,
   monthlyReportStatus,
   scholarshipAnalysis,
+  scholarshipResults,
+  examSyllabus,
 ];
 
 export function findTool(name: string): ToolDef | undefined {

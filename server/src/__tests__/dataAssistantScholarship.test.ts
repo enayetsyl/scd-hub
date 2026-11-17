@@ -146,10 +146,10 @@ describe("student detail", () => {
 });
 
 describe("registry and hint", () => {
-  it("the older tools keep their order; the new one is last", () => {
+  it("the older tools keep their order; the newer ones follow scholarship_analysis", () => {
     const names = TOOL_REGISTRY.map((t) => t.name);
-    expect(names[names.length - 1]).toBe("scholarship_analysis");
-    expect(names.slice(-2, -1)).toEqual(["monthly_report_status"]);
+    expect(names.slice(-3)).toEqual(["scholarship_analysis", "scholarship_results", "exam_syllabus"]);
+    expect(names.slice(-4, -3)).toEqual(["monthly_report_status"]);
     expect(names[0]).toBe("my_access");
   });
   it("practiceHintBn maps types to rules", () => {

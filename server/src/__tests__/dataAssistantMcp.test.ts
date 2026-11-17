@@ -141,7 +141,7 @@ describe("the tools", () => {
     const i = await init("/mcp/data", t.access_token);
     expect(i.body.result.instructions).toContain("untrusted_text");
     const tools = (await list(t.access_token)).body.result.tools as Array<{ name: string; annotations?: { readOnlyHint?: boolean } }>;
-    expect(tools).toHaveLength(25);
+    expect(tools).toHaveLength(27);
     expect(tools.every((x) => x.annotations?.readOnlyHint === true)).toBe(true);
     expect(tools.some((x) => /support/i.test(x.name))).toBe(false);
     const r = await call(t.access_token, "student_overview", { student_id: fx.ids.studentA, include_comments: true });
