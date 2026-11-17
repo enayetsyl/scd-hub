@@ -71,7 +71,12 @@ exports.run = async (h0) => {
   await shotAt(h, G, "child-class-tests", 2, [{ text: "বাংলা", last: true }, { re: "^লক্ষণীয় দিক" }], { text: "ক্লাস টেস্টের ফলাফল" });
 
   await menuShot(h, G, "child-exam-syllabus", 0, "পরীক্ষার সিলেবাস");
-  await h.shot(G, "child-exam-syllabus", 1, [{ text: "বার্ষিক পরীক্ষা ২০২৬" }, { text: "বাংলা" }, { text: "🗓️ পরীক্ষার রুটিন দেখুন" }]);
+  await h.shot(G, "child-exam-syllabus", 1, [
+    { text: "বার্ষিক পরীক্ষা ২০২৬" },
+    { text: "বাংলা" },
+    { text: "📄 সিলেবাস ও মানবন্টন ডাউনলোড (PDF)" },
+    { text: "🗓️ পরীক্ষার রুটিন দেখুন" },
+  ]);
   await h.tap(G, "🗓️ পরীক্ষার রুটিন দেখুন", 3000);
   await h.shot(G, "child-exam-syllabus", 2, [{ re: "^লিখিত · ৭:৩০" }]);
 
