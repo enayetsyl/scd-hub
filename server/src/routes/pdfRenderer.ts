@@ -102,6 +102,12 @@ export function mixedText(
   text: string,
   opts: PDFKit.Mixins.TextOptions = {},
 ): void {
+  if (hasArabic(text)) {
+    const left = doc.page.margins.left;
+    const width = opts.width ?? doc.page.width - left - doc.page.margins.right;
+    flowArabicMixed(doc, text, { x: left, y: doc.y, width, indent: opts.indent, lineGap: opts.lineGap, align: opts.align, pageBreak: true });
+    return;
+  }
   const runs = splitScriptRuns(text);
   if (runs.length === 0) {
     doc.font(BENGALI_FONT).text(text, opts);
@@ -124,6 +130,10 @@ export function mixedTextInBox(
   width: number,
   opts: PDFKit.Mixins.TextOptions = {},
 ): void {
+  if (hasArabic(text)) {
+    flowArabicMixed(doc, text, { x, y, width, lineGap: opts.lineGap, align: opts.align, pageBreak: false });
+    return;
+  }
   const runs = splitScriptRuns(text.length > 0 ? text : " ");
   runs.forEach((run, idx) => {
     const isFirst = idx === 0;
@@ -132,6 +142,187 @@ export function mixedTextInBox(
     if (isFirst) doc.font(run.font).text(run.text, x, y, cellOpts);
     else doc.font(run.font).text(run.text, cellOpts);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Arabic inside Bangla text (owner report 2026-11-17: the Nursery Quran syllabus PDF printed
+// the du'a as empty boxes and its lines overlapped). The Bengali subset has no Arabic glyphs,
+// and pdfkit's `continued` flow cannot lay out a right-to-left run, so a paragraph that holds
+// Arabic is laid out here word by word: Noto Naskh Arabic for Arabic runs, Arabic words placed
+// right to left (fontkit shapes each word), our own wrapping, line height and page breaks —
+// the same approach as the worksheet PDFs (worksheetPdf.ts). Text WITHOUT Arabic never comes
+// here, so every other PDF renders exactly as before.
+// ---------------------------------------------------------------------------
+
+export const ARABIC_FONT = "NotoNaskhArabic";
+const ARABIC_FONT_PATH = path.resolve(__dirname, "../../assets/fonts/NotoNaskhArabic-Regular.ttf");
+/** Naskh reads small next to Noto Bengali at the same point size. */
+const ARABIC_SCALE = 1.2;
+
+const isArabicCp = (cp: number): boolean =>
+  (cp >= 0x0600 && cp <= 0x06ff) ||
+  (cp >= 0x0750 && cp <= 0x077f) ||
+  (cp >= 0x08a0 && cp <= 0x08ff) ||
+  (cp >= 0xfb50 && cp <= 0xfdff) ||
+  (cp >= 0xfe70 && cp <= 0xfeff);
+
+export function hasArabic(text: string): boolean {
+  for (const ch of text) if (isArabicCp(ch.codePointAt(0) ?? 0)) return true;
+  return false;
+}
+
+const arabicRegistered = new WeakSet<object>();
+/** Register the Arabic font on this document once (callers create their own documents). */
+function ensureArabicFont(doc: PDFKit.PDFDocument): void {
+  if (arabicRegistered.has(doc)) return;
+  doc.registerFont(ARABIC_FONT, ARABIC_FONT_PATH);
+  arabicRegistered.add(doc);
+}
+
+/** One word (or the space after it) on a laid-out line. */
+export interface Piece {
+  font: string;
+  text: string;
+  width: number;
+  arabic: boolean;
+  space: boolean;
+}
+
+/** Script runs with Arabic cut out on its own; spaces between two Arabic words stay Arabic. */
+function arabicAwareRuns(text: string): { font: string; text: string }[] {
+  const out: { font: string; text: string }[] = [];
+  for (const r of splitScriptRuns(text)) {
+    for (const ch of r.text) {
+      const last = out[out.length - 1];
+      const font = isArabicCp(ch.codePointAt(0) ?? 0) || (ch === " " && last?.font === ARABIC_FONT) ? ARABIC_FONT : r.font;
+      if (last && last.font === font) last.text += ch;
+      else out.push({ font, text: ch });
+    }
+  }
+  // A trailing space of an Arabic run belongs to the text after it (it separates, it is not Arabic).
+  for (let k = 0; k < out.length - 1; k++) {
+    const m = /( +)$/.exec(out[k].text);
+    if (out[k].font === ARABIC_FONT && m && out[k].text.trim()) {
+      out[k].text = out[k].text.slice(0, -m[1].length);
+      out[k + 1].text = m[1] + out[k + 1].text;
+    }
+  }
+  return out.filter((r) => r.text.length > 0);
+}
+
+function measure(doc: PDFKit.PDFDocument, font: string, text: string, size: number): number {
+  const s = font === ARABIC_FONT ? size * ARABIC_SCALE : size;
+  return doc.font(font).fontSize(s).widthOfString(text);
+}
+
+/** A hard line (no "\n") as words and spaces, each measured in its own font. */
+function piecesOf(doc: PDFKit.PDFDocument, line: string, size: number): Piece[] {
+  const pieces: Piece[] = [];
+  for (const r of arabicAwareRuns(line)) {
+    const arabic = r.font === ARABIC_FONT;
+    for (const t of r.text.split(/( +)/)) {
+      if (!t) continue;
+      const space = /^ +$/.test(t);
+      pieces.push({ font: r.font, text: t, width: measure(doc, r.font, t, size), arabic, space });
+    }
+  }
+  return pieces;
+}
+
+/** Wrap one hard line's pieces into visual lines of at most `width` (first line `first`). */
+export function wrapPieces(pieces: Piece[], width: number, first: number): Piece[][] {
+  const lines: Piece[][] = [];
+  let cur: Piece[] = [];
+  let used = 0;
+  let limit = first;
+  for (const p of pieces) {
+    if (p.space && cur.length === 0) continue; // no leading space on a wrapped line
+    if (!p.space && cur.length > 0 && used + p.width > limit) {
+      while (cur.length && cur[cur.length - 1].space) cur.pop();
+      lines.push(cur);
+      cur = [];
+      used = 0;
+      limit = width;
+    }
+    cur.push(p);
+    used += p.width;
+  }
+  while (cur.length && cur[cur.length - 1].space) cur.pop();
+  lines.push(cur);
+  return lines;
+}
+
+interface FlowOpts {
+  x: number;
+  y: number;
+  width: number;
+  indent?: number;
+  lineGap?: number;
+  align?: string;
+  /** Start a new page when a line would cross the bottom margin (paragraphs; not table cells). */
+  pageBreak: boolean;
+}
+
+/** A registered font's ascender in 1/1000 em (pdfkit's own scale). */
+function ascenderOf(doc: PDFKit.PDFDocument, font: string): number {
+  doc.font(font);
+  return (doc as unknown as { _font: { ascender: number } })._font.ascender;
+}
+
+/** Lay out and draw text that holds Arabic. Leaves doc.x at the left edge and doc.y below the
+ *  last line, like pdfkit's own text() does, so moveDown / the next block follow on. */
+function flowArabicMixed(doc: PDFKit.PDFDocument, text: string, o: FlowOpts): void {
+  ensureArabicFont(doc);
+  const size = (doc as unknown as { _fontSize: number })._fontSize;
+  const lineH = doc.font(BENGALI_FONT).fontSize(size).currentLineHeight(true) + (o.lineGap ?? 0);
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  let y = o.y;
+  let firstOfBlock = true;
+  for (const hard of text.split("\n")) {
+    const indent = firstOfBlock ? o.indent ?? 0 : 0;
+    firstOfBlock = false;
+    const lines = wrapPieces(piecesOf(doc, hard, size), o.width, o.width - indent);
+    lines.forEach((line, li) => {
+      if (o.pageBreak && y + lineH > bottom) {
+        doc.addPage();
+        y = doc.page.margins.top;
+      }
+      const lead = li === 0 ? indent : 0;
+      const lineW = line.reduce((s, p) => s + p.width, 0);
+      const free = o.width - lead - lineW;
+      let x = o.x + lead + (o.align === "center" ? free / 2 : o.align === "right" ? free : 0);
+      let k = 0;
+      while (k < line.length) {
+        if (!line[k].arabic) {
+          const p = line[k++];
+          // pdfkit puts a font's baseline at y + its ascender, and Helvetica's ascender is
+          // much lower than Noto Bengali's: shift Latin runs (e.g. the "·") down onto the
+          // Bangla baseline, or they ride high on the line.
+          const dy = p.font === BENGALI_FONT ? 0 : (ascenderOf(doc, BENGALI_FONT) - ascenderOf(doc, p.font)) / 1000 * size;
+          if (!p.space) doc.font(p.font).fontSize(size).text(p.text, x, y + dy, { lineBreak: false });
+          x += p.width;
+          continue;
+        }
+        // An Arabic group: its words run right to left inside the group's span.
+        const group: Piece[] = [];
+        while (k < line.length && line[k].arabic) group.push(line[k++]);
+        const span = group.reduce((s, p) => s + p.width, 0);
+        const s = size * ARABIC_SCALE;
+        doc.font(ARABIC_FONT).fontSize(s);
+        const ay = y - (s - size) * 0.75; // Naskh sits lower in its box: share the Bangla baseline area
+        let cx = x + span;
+        for (const p of group) {
+          cx -= p.width;
+          if (!p.space) doc.text(p.text, cx, ay, { lineBreak: false });
+        }
+        x += span;
+      }
+      y += lineH;
+    });
+  }
+  doc.font(BENGALI_FONT).fontSize(size);
+  doc.x = doc.page.margins.left;
+  doc.y = y;
 }
 
 interface RenderOptions {
