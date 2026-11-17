@@ -60,7 +60,7 @@ export const scholarshipAnalysis: ToolDef = {
   description:
     "Scholarship practice (Class 5) weakness analysis: which question types or chapters are weak (বৃত্তি, বৃত্তি পরীক্ষা, দুর্বলতা, দুর্বল প্রশ্নের ধরন, অধ্যায়, অনুশীলন, শিক্ষার্থীভিত্তিক). " +
     "Without `student`: the class overview (papers scored and class average per subject, the 2 weakest question types per subject, one line per sitting student). " +
-    "With `student` (name fragment or school ID): that child's overall %, per-paper trend, per-subject vs class, 2 weakest types per subject with a Bangla practice hint, strengths, " +
+    "With `student` (name fragment or school ID): that child's overall %, per-paper trend with the exact marks (marks_obtained out of full_marks, plus %), per-subject vs class, 2 weakest types per subject with a Bangla practice hint, strengths, " +
     "and types with too little data (never called weak). Absent papers are not zeros. Numbers only: never returns question text, teacher notes or comments.",
   input: {
     class_level: z.number().int().min(1).max(5).optional().describe("scholarship class, default 5"),
@@ -183,6 +183,7 @@ export const scholarshipAnalysis: ToolDef = {
     if (!ids.includes(st.id)) return { data: { student: { student_id: st.id, school_id: st.schoolId, name: st.name }, note: "This child is not on the scholarship sitting list." }, rowCount: 1 };
 
     const an = await studentAnalysis(scope, st.id);
+    const fullMarksOf = new Map(data.map(({ paper }) => [String(paper._id), paper.items.reduce((s, i) => s + i.marks, 0)]));
     const rows: AxisRow[] = axis === "chapter" ? an.chapters : an.topics;
     const mine = totals.get(st.id) ?? new Map<string, Tot>();
     const hint = (r: AxisRow) => (axis === "topic" ? practiceHintBn(r.label, r.subject) : null);
@@ -218,7 +219,21 @@ export const scholarshipAnalysis: ToolDef = {
         axis,
         overall_percent: an.overallPercent,
         papers_sat: an.papersSat,
-        paper_trend: an.papers.map((p) => ({ paper: p.label, date: p.date, percent: p.percent })),
+        // Exact marks, not only %: marks_obtained / marks_out_of are summed over the items this
+        // child was marked on (the same base the % uses); full_marks is the paper's whole total
+        // in scope, and differs only when some item has no mark entered for her.
+        paper_trend: an.papers.map((p) => {
+          const full = fullMarksOf.get(p.paperId) ?? p.available;
+          return {
+            paper: p.label,
+            date: p.date,
+            marks_obtained: p.earned,
+            marks_out_of: p.available,
+            full_marks: full,
+            ...(p.available < full ? { note: "some items have no mark entered" } : {}),
+            percent: p.percent,
+          };
+        }),
         subjects: subjectsShown
           .filter((sub) => mine.has(sub))
           .map((sub) => ({ subject: sub, percent: pct(mine.get(sub)), class_percent: pct(classTot(sub)), papers_scored: papersBySubject(sub) })),
