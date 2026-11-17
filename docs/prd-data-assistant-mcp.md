@@ -180,7 +180,8 @@ data-assistant/
   tools/staff.ts           find_staff, staff_attendance, staff_leave, payroll_summary
   tools/finance.ts         finance_summary, fee_dues
   tools/school.ts          my_access, daily_report, notices
-  tools/scholarship.ts     scholarship_analysis (D-#1638, appended last)
+  tools/scholarship.ts     scholarship_analysis (D-#1638), scholarship_results (17 Nov 2026)
+  tools/syllabus.ts        exam_syllabus (17 Nov 2026, appended last)
   runTool.ts               the ONE entry: auth → switch → limits → validate → gate → run → redact → cap → log
   toolContext.ts           AuthPayload → AppContext for the existing gates (req/res unused)
   redact.ts                contact stripping (§6)
@@ -608,6 +609,10 @@ notice body as `untrusted_text` (≤ 300 chars).
 pending_comments, teachers_pending: [...] }`.
 
 **25 `scholarship_analysis`** (D-#1638, added 16 Nov 2026) — Inputs: `class_level` (default 5), `student`, `subject`, `axis`. Gate `scholarship_practice:view`, mirroring `scholarshipStudent`. Output: class overview, or one student's weak types with Bangla practice hints. Numbers only.
+
+**26 `scholarship_results`** (17 Nov 2026) — Inputs: `class_level` (default 5), `student`, `subject`, `paper`, `from`/`to`, `last`, `per_item`. Gate `scholarship_practice:view`, mirroring `scholarshipClass`. Output: one row per paper and student (marks_obtained / marks_out_of / full_marks, percent, position of N, status PRESENT/ABSENT/NOT_ENTERED) plus a per-paper summary. Numbers only; per_item adds each item's marks, never question text.
+
+**27 `exam_syllabus`** (17 Nov 2026) — Inputs: `exam`, `class_level`, `subject`, `track`+`level`. Gate `{ authenticated }` like `examSyllabusClass`; the read services apply `exam_syllabus:view` / `:view_all` (drafts for Principal/Office only). Without `subject`: subjects with full marks, date, status. With class + subject: syllabus text (untrusted envelope), mark rows, question types.
 
 **Later candidates (not v1):** Saturday revision, Quran exam, guardian work claims, observations,
 staff mistakes (QUIET record — keep out), library, printing queue.
