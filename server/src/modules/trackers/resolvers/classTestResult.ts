@@ -89,7 +89,7 @@ ClassTestResultRef.implement({
     testId: t.exposeString("testId"),
     studentId: t.exposeString("studentId"),
     status: t.exposeString("status"),
-    marks: t.int({ nullable: true, resolve: (r) => r.marks }),
+    marks: t.float({ nullable: true, resolve: (r) => r.marks }),
     totalMarks: t.exposeInt("totalMarks"),
     percent: t.float({ nullable: true, resolve: (r) => r.percent }),
     pass: t.boolean({ nullable: true, resolve: (r) => r.pass }),
