@@ -126,6 +126,8 @@ export function TrackerTab({
   const [subject, setSubject] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [limit, setLimit] = useState(PAGE);
+  /** Rows shown in the "Outstanding now" card; Show more opens the next page in place. */
+  const [outLimit, setOutLimit] = useState(5);
 
   const items = panel?.items ?? [];
   const outstanding = useMemo(() => items.filter((i) => bucketOf(i) === "outstanding"), [items]);
@@ -201,13 +203,15 @@ export function TrackerTab({
           {outstanding.length === 0 ? (
             <Muted>{STR.spNothingOutstanding}</Muted>
           ) : (
-            outstanding.slice(0, 5).map((it) => <ItemRow key={it.recordId} it={it} isAssignment={isAssignment} />)
+            outstanding.slice(0, outLimit).map((it) => <ItemRow key={it.recordId} it={it} isAssignment={isAssignment} />)
           )}
-          {outstanding.length > 5 ? (
+          {/* Opens more rows here, in this card. It used to switch the full list's filter far
+              below, off screen, so the tap looked dead. */}
+          {outstanding.length > outLimit ? (
             <Button
-              title={`${STR.spShowMore} (${bnNum(outstanding.length)})`}
+              title={`${STR.spShowMore} (${bnNum(outstanding.length - outLimit)})`}
               variant="ghost"
-              onPress={() => { setSubject(null); setFilter("outstanding"); }}
+              onPress={() => setOutLimit((l) => l + PAGE)}
             />
           ) : null}
         </Card>
