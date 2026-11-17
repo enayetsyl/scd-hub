@@ -105,6 +105,10 @@ describe("student detail", () => {
     expect(d.student.name).toBe("Rina Sample");
     expect(d.papers_sat).toBe(2);
     expect(d.paper_trend.map((p: any) => p.paper)).toEqual(["Model Test 1", "Model Test 2"]);
+    // Exact marks, not only % (owner 17 Nov): 4+18+0+25 of 20+20+2+30, then 6+19+0 of 20+20+2.
+    expect(d.paper_trend.map((p: any) => [p.marks_obtained, p.marks_out_of, p.full_marks])).toEqual([[47, 72, 72], [25, 42, 42]]);
+    expect(d.paper_trend[0].percent).toBeCloseTo(65.3, 1);
+    expect(d.paper_trend[0].note).toBeUndefined();
     const bySub: Record<string, number> = {};
     for (const w of d.weakest_types) {
       bySub[w.subject] = (bySub[w.subject] ?? 0) + 1;
