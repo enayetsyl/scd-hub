@@ -208,5 +208,7 @@ export function toolCalls(fx: Fx): Array<{ tool: string; mode: string; args: Rec
     { tool: "question_bank_stats", mode: "review_progress", args: { by: "review_progress" } },
     { tool: "monthly_report_status", mode: "default", args: { month } },
     { tool: "scholarship_analysis", mode: "default", args: {} },
+    { tool: "scholarship_results", mode: "default", args: {} },
+    { tool: "exam_syllabus", mode: "default", args: {} },
   ];
 }

@@ -49,7 +49,7 @@ export default function DataAssistantLogScreen(): React.ReactElement {
   const data = q.data?.dataToolCallsPage;
   // TODO: the server exposes no query for the tool names (TOOL_REGISTRY is server-only), so this list
   // is hand-kept; replace it with a registry-backed query when one is added.
-  const toolOptions = [{ label: STR.daLogAll, value: "" }, ...["my_access", "daily_report", "find_students", "student_overview", "attendance_day", "student_attendance_history", "attendance_ranking", "homework_status", "assignment_status", "class_test_status", "class_test_marks", "exam_results", "mastery_overview", "lesson_progress", "routine_lookup", "find_staff", "staff_attendance", "staff_leave", "payroll_summary", "finance_summary", "fee_dues", "notices", "question_bank_stats", "monthly_report_status", "scholarship_analysis"].map((t) => ({ label: t, value: t }))];
+  const toolOptions = [{ label: STR.daLogAll, value: "" }, ...["my_access", "daily_report", "find_students", "student_overview", "attendance_day", "student_attendance_history", "attendance_ranking", "homework_status", "assignment_status", "class_test_status", "class_test_marks", "exam_results", "mastery_overview", "lesson_progress", "routine_lookup", "find_staff", "staff_attendance", "staff_leave", "payroll_summary", "finance_summary", "fee_dues", "notices", "question_bank_stats", "monthly_report_status", "scholarship_analysis", "scholarship_results", "exam_syllabus"].map((t) => ({ label: t, value: t }))];
   return (
     <Screen scroll>
       <Card>
