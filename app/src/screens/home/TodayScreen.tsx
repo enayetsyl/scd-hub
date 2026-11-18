@@ -54,6 +54,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { FoldCard } from "../../components/FoldCard";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReviewQuotaCard } from "../../components/ReviewQuotaCard";
+import { ReviewHubTodayCard } from "../../components/ReviewHubTodayCard";
 import { ResultEntryTargetCard } from "../../components/ResultEntryTargetCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
@@ -573,6 +574,8 @@ export default function TodayScreen(): React.ReactElement {
           daily review target — myReviewQuota is null for everyone else. OUTSIDE the
           QueryGate: the target counts working days, not the observer's own periods, so
           a day with no periods must still show it. */}
+      {/* H-1: the reviewer hub entry — own query, outside the QueryGate. */}
+      <ReviewHubTodayCard />
       <ReviewQuotaCard />
 
       {/* D-#739: a teacher's class-test result backlog with a due day — renders only for a

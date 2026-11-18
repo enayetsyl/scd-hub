@@ -96,6 +96,18 @@ type NavSection =
  * the generic Trackers tab which is shown as "Daily Tracker" to disambiguate it
  * from the "Trackers" group header.
  */
+/** The reviews the hub (H-1) can list - holding any of them earns the hub its drawer entry. */
+const REVIEW_HUB_PERMS = [
+  "plan_review:review", "question_review:review", "exam_papers:review", "mastery:review",
+  "classroom_observation:review", "free_mixing_review:review", "book_production:review", "winter_task:review",
+];
+/** Who the plan/question review screen (ReviewHome) is for - what used to gate the whole tab. */
+const REVIEW_HOME_PERMS = [
+  "plan_review:assign", "plan_review:review", "plan_review:approve",
+  "question_review:assign", "question_review:view_all", "question_review:review", "question_review:publish",
+  "review_program:supervise",
+];
+
 const STAFF_NAV: NavSection[] = [
   { type: "item", route: "HomeTab", labelKey: "drawerItemToday", icon: "🏠" },
   {
@@ -106,7 +118,9 @@ const STAFF_NAV: NavSection[] = [
       { route: "ContentTab", labelKey: "tabContent", icon: "📚" },
       { route: "QuestionsTab", labelKey: "tabQuestions", icon: "❓" },
       { route: "SetsTab", labelKey: "tabSets", icon: "🗂️" },
-      { route: "ReviewTab", labelKey: "tabReview", icon: "📝" },
+      // H-1: the reviewer hub - everything the caller still has to review, one list. Top of the review group.
+      { route: "ReviewTab", labelKey: "rhNav", icon: "🗂️", screen: "ReviewHub", perms: REVIEW_HUB_PERMS },
+      { route: "ReviewTab", labelKey: "tabReview", icon: "📝", perms: REVIEW_HOME_PERMS },
       // RS-4: the daily supervision view of the teacher review program (Principal; the deputy by grant).
       { route: "ReviewTab", labelKey: "rspNav", icon: "📈", screen: "ReviewSupervision", perms: ["review_program:supervise"] },
       { route: "RoutineTab", labelKey: "tabRoutine", icon: "📅" },

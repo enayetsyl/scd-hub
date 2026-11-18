@@ -22,6 +22,7 @@ import { LiveClassCard } from "../../components/LiveClassCard";
 import { DailyReportTodayCard } from "../../components/DailyReportTodayCard";
 import { MyPeriodsSelfCard } from "../../components/MyPeriodsStrip";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
+import { ReviewHubTodayCard } from "../../components/ReviewHubTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
 import { CtHeldResultsCard } from "../../components/CtHeldResultsCard";
@@ -264,6 +265,8 @@ export default function AdminTodayScreen(): React.ReactElement {
 
         {/* WB-4 (D-#701) — আজকের কাজ: the caller's own board for today (a Principal's
             leave approvals and tasks; the Office's print jobs), linking to the board. */}
+        {/* H-1: the reviewer hub entry — own query, outside the QueryGate. */}
+        <ReviewHubTodayCard />
         <TodayWorkCard />
 
         {/* CS-1..CS-3 (D-#715–#719) — ক্লাস টেস্টের খাতা: receive, scan & tag, publish,

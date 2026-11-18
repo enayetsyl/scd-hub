@@ -78,7 +78,7 @@ const OPEN_FIELDS: Record<string, string> = {
   staffDirectory: "staff directory, row/field gated in the resolver",
   // The caller's own work, scoped to themselves inside the resolver.
   mySectionsAsClassTeacher: "own class-teacher sections", amILibrarian: "own librarian duty",
-  myDay: "own Today; each card self-gates on its action", myReviewQuota: "own observation quota",
+  myDay: "own Today; each card self-gates on its action", myReviewQuota: "own observation quota", myReviewHub: "own review backlog; each section self-gates on that review's own permission (H-1)",
   myResultEntryTarget: "own result-entry target", myWorkClaims: "own claims (SELF)",
   // Own sidebar arrangement (D-#920): keyed on the caller, guardian included; View-as cannot write.
   myNavPreference: "own sidebar", saveNavPreference: "own sidebar", resetNavPreference: "own sidebar",
