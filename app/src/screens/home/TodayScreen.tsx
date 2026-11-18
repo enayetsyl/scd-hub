@@ -54,6 +54,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { FoldCard } from "../../components/FoldCard";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReviewQuotaCard } from "../../components/ReviewQuotaCard";
+import { ReviewHubTodayCard } from "../../components/ReviewHubTodayCard";
 import { ResultEntryTargetCard } from "../../components/ResultEntryTargetCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
@@ -568,6 +569,9 @@ export default function TodayScreen(): React.ReactElement {
           write (class teacher). OUTSIDE the QueryGate: owed on a day with no periods too. */}
       {can("parents_meeting:write_notes") ? <MeetingNotesTeacherCard /> : null}
       {can("parents_meeting:write_notes") ? <MeetingSummaryTeacherCard /> : null}
+
+      {/* H-1: the reviewer hub entry — own query, outside the QueryGate. */}
+      <ReviewHubTodayCard />
 
       {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
           daily review target — myReviewQuota is null for everyone else. OUTSIDE the

@@ -138,6 +138,8 @@ export type ReviewStackParamList = {
     subject: string | null;
   };
   // --- Review supervision (RS-4). Both AFTER ReviewHome (the Reviewer page takes params).
+  // --- Reviewer hub (H-1). AFTER ReviewHome (no params, but the same initial-route rule).
+  ReviewHub: undefined;
   ReviewSupervision: undefined;
   ReviewSupervisionReviewer: { programId: string; batch: number; reviewerId: string; reviewerName: string | null };
 };
