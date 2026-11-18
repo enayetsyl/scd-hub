@@ -20,10 +20,15 @@ chain.limit.mockReturnValue(chain);
 chain.lean.mockResolvedValue([]);
 
 const mockFind = jest.fn((_q: unknown) => chain);
+const mockAggregate = jest.fn((_p: unknown) => Promise.resolve([] as unknown[]));
+/** The stage of the aggregate pipeline the queue built, by operator name. */
+const stageOf = (op: string) =>
+  (mockAggregate.mock.calls[0][0] as Record<string, unknown>[]).find((s) => op in s)?.[op];
 const mockCount = jest.fn((_q: unknown) => Promise.resolve(2742));
 jest.mock("../modules/content/models/ReviewAssignment", () => ({
   ReviewAssignment: {
     find: (q: unknown) => mockFind(q),
+    aggregate: (p: unknown) => mockAggregate(p),
     countDocuments: (q: unknown) => mockCount(q),
   },
 }));
@@ -49,50 +54,56 @@ beforeEach(() => {
   chain.skip.mockReturnValue(chain);
   chain.limit.mockReturnValue(chain);
   chain.lean.mockResolvedValue([]);
+  mockAggregate.mockResolvedValue([]);
 });
 
 describe("listMyQuestionReviews paging", () => {
   test("a caller that asks for nothing gets ONE PAGE, never the whole queue", async () => {
     await listMyQuestionReviews(REVIEWER);
-    expect(chain.limit).toHaveBeenCalledWith(MY_QUESTION_REVIEWS_PAGE);
-    expect(chain.skip).toHaveBeenCalledWith(0);
+    expect(stageOf("$limit")).toBe(MY_QUESTION_REVIEWS_PAGE);
+    expect(stageOf("$skip")).toBe(0);
   });
 
   test("an old client sending no args still cannot trigger the unbounded read", async () => {
     // The installed APK predates this change and sends neither argument. It must
     // degrade to "the first 50", not to the 1.77 MB response that froze it.
     await listMyQuestionReviews(REVIEWER, {});
-    expect(chain.limit).toHaveBeenCalledWith(MY_QUESTION_REVIEWS_PAGE);
+    expect(stageOf("$limit")).toBe(MY_QUESTION_REVIEWS_PAGE);
   });
 
   test("honours an explicit page", async () => {
     await listMyQuestionReviews(REVIEWER, { limit: 20, offset: 40 });
-    expect(chain.limit).toHaveBeenCalledWith(20);
-    expect(chain.skip).toHaveBeenCalledWith(40);
+    expect(stageOf("$limit")).toBe(20);
+    expect(stageOf("$skip")).toBe(40);
   });
 
   test("caps the page so a client cannot ask for everything back", async () => {
     await listMyQuestionReviews(REVIEWER, { limit: 100000 });
-    expect(chain.limit).toHaveBeenCalledWith(200);
+    expect(stageOf("$limit")).toBe(200);
   });
 
   test("refuses a nonsensical page rather than passing it to mongo", async () => {
     await listMyQuestionReviews(REVIEWER, { limit: 0, offset: -5 });
-    expect(chain.limit).toHaveBeenCalledWith(1);
-    expect(chain.skip).toHaveBeenCalledWith(0);
+    expect(stageOf("$limit")).toBe(1);
+    expect(stageOf("$skip")).toBe(0);
   });
 
   test("sorts assigned before submitted, with a STABLE tiebreak", async () => {
     // Without a unique final key the page boundary can repeat or skip a row when
     // several rounds share assignedAt — which bulk assignment guarantees.
     await listMyQuestionReviews(REVIEWER);
-    expect(chain.sort).toHaveBeenCalledWith({ status: 1, assignedAt: -1, _id: 1 });
+    // Chapter order (owner 2026-11-18): the numeric chapter and question number sit between
+    // the book keys and the _id tiebreak, and the sort runs in Mongo so a page is exact.
+    expect(Object.keys(stageOf("$sort") as object)).toEqual([
+      "status", "subject", "classLevel", "_chNum", "addressNumber", "_qNum", "qid", "_id",
+    ]);
   });
 
   test("still asks only for the caller's own question rounds", async () => {
     await listMyQuestionReviews(REVIEWER);
-    const q = mockFind.mock.calls[0][0] as Record<string, unknown>;
-    expect(q.reviewerId).toBe(REVIEWER);
+    const q = stageOf("$match") as Record<string, unknown>;
+    expect(String(q.reviewerId)).toBe(REVIEWER);
+    expect(q.reviewerId).toBeInstanceOf(mongoose.Types.ObjectId);
     expect(q.docType).toBe("question");
     expect(q.status).toEqual({ $in: ["assigned", "submitted"] });
   });

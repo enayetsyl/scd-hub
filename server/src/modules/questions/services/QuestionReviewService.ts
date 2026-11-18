@@ -764,48 +764,54 @@ export async function listMyQuestionReviews(
     MY_QUESTION_REVIEWS_MAX,
   );
   const offset = Math.max(0, opts.offset ?? 0);
-  // `status` ascending puts "assigned" before "submitted" — the work before the history.
-  // The secondary keys the page boundary, so it must be stable.
-  const sort = { status: 1 as const, assignedAt: -1 as const, _id: 1 as const };
-
-  // An unfiltered queue keeps the exact query it has always used — no pipeline, no join.
-  if (noReviewerFilter(args)) {
-    const rounds = (await ReviewAssignment.find({
-      reviewerId,
-      docType: QUESTION_DOC_TYPE,
-      status: { $in: ["assigned", "submitted"] },
-    })
-      .sort(sort)
-      .skip(offset)
-      .limit(limit)
-      .lean()) as unknown as RawAssignment[];
-    return decorate(rounds);
-  }
-
+  // Chapter order, done at the bottom (owner 2026-11-18): assigned before submitted, then one
+  // book together, then chapter and question number NUMERICALLY. The page boundary must stay
+  // correct, so the sort runs in Mongo on every path (an aggregate); `_id` is the stable key.
   const roundMatch = myReviewsRoundMatch(reviewerId, args);
   const artifactMatch = myReviewsArtifactMatch(args);
 
-  if (!artifactMatch) {
-    const rounds = (await ReviewAssignment.find(roundMatch)
-      .sort(sort)
-      .skip(offset)
-      .limit(limit)
-      .lean()) as unknown as RawAssignment[];
-    return decorate(rounds);
-  }
-
   const pipeline: PipelineStage[] = [
+    // The reviewerId/status match stays first so the (reviewerId, status) index is used.
     { $match: roundMatch },
-    ...inboxLookupStages(artifactMatch),
-    { $sort: sort },
+    ...(artifactMatch ? inboxLookupStages(artifactMatch) : []),
+    ...myQueueSortStages(),
     { $skip: offset },
     { $limit: limit },
     // decorate() re-reads the artifacts it needs; carrying the joined copy would double
-    // the payload out of Mongo for no gain.
-    { $project: { art: 0 } },
+    // the payload out of Mongo for no gain. The helper sort keys go too.
+    { $project: { art: 0, _chNum: 0, _qNum: 0 } },
   ];
   const rounds = (await ReviewAssignment.aggregate(pipeline)) as unknown as RawAssignment[];
   return decorate(rounds);
+}
+
+const NOT_A_NUMBER_LAST = 1e15;
+
+/** Stages that order a reviewer's question queue (exported for the tests). */
+export function myQueueSortStages(): PipelineStage[] {
+  return [
+    {
+      $addFields: {
+        _chNum: {
+          $convert: { input: "$addressNumber", to: "double", onError: NOT_A_NUMBER_LAST, onNull: NOT_A_NUMBER_LAST },
+        },
+        _qNum: {
+          $let: {
+            vars: { m: { $regexFind: { input: { $ifNull: ["$qid", ""] }, regex: "Q(\\d+)$" } } },
+            in: {
+              $convert: {
+                input: { $arrayElemAt: ["$$m.captures", 0] },
+                to: "double",
+                onError: NOT_A_NUMBER_LAST,
+                onNull: NOT_A_NUMBER_LAST,
+              },
+            },
+          },
+        },
+      },
+    },
+    { $sort: { status: 1, subject: 1, classLevel: 1, _chNum: 1, addressNumber: 1, _qNum: 1, qid: 1, _id: 1 } },
+  ];
 }
 
 /**
@@ -942,7 +948,7 @@ function myReviewsArtifactMatch(args: MyReviewsFilterArgs): Record<string, unkno
   return Object.keys(match).length > 0 ? match : null;
 }
 
-/** True when the caller asked for nothing — the plain `find` path then stays untouched. */
+/** True when the caller asked for nothing (the count then keeps its plain query). */
 export function noReviewerFilter(args: MyReviewsFilterArgs): boolean {
   return (
     !args.subject &&

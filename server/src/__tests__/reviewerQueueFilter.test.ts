@@ -63,16 +63,17 @@ beforeEach(() => {
   mockCount.mockResolvedValue(0);
 });
 
-describe("an unfiltered queue is left exactly as it was", () => {
-  test("no args → the plain find, never an aggregate", async () => {
+describe("an unfiltered queue", () => {
+  test("no args → an aggregate with NO join (chapter order is sorted in Mongo)", async () => {
     await listMyQuestionReviews(REVIEWER, {});
-    expect(mockAggregate).not.toHaveBeenCalled();
-    expect(mockFind).toHaveBeenCalledTimes(1);
+    expect(mockFind).not.toHaveBeenCalled();
+    expect(mockAggregate).toHaveBeenCalledTimes(1);
 
-    const filter = mockFind.mock.calls[0][0] as Record<string, unknown>;
-    // The reviewer id stays a STRING here — mongoose casts it for find(). Changing this to
-    // an ObjectId would be harmless, but the point is that this path is untouched.
-    expect(filter.reviewerId).toBe(REVIEWER);
+    const pipeline = mockAggregate.mock.calls[0][0] as Record<string, unknown>[];
+    expect(pipeline.some((s) => "$lookup" in s)).toBe(false);
+    const filter = pipeline[0].$match as Record<string, unknown>;
+    // An aggregate does not cast: the reviewer id must be an ObjectId.
+    expect(filter.reviewerId).toBeInstanceOf(mongoose.Types.ObjectId);
     expect(filter.status).toEqual({ $in: ["assigned", "submitted"] });
   });
 
@@ -94,11 +95,12 @@ describe("an unfiltered queue is left exactly as it was", () => {
 });
 
 describe("round-level axes never touch the artifact", () => {
-  test("subject + class + chapter use find(), with NO join", async () => {
+  test("subject + class + chapter match on the round, with NO join", async () => {
     await listMyQuestionReviews(REVIEWER, {}, { subject: "BAN", classLevel: 5, chapter: 23 });
 
-    expect(mockAggregate).not.toHaveBeenCalled();
-    const filter = mockFind.mock.calls[0][0] as Record<string, unknown>;
+    const pipeline = mockAggregate.mock.calls[0][0] as Record<string, unknown>[];
+    expect(pipeline.some((s) => "$lookup" in s)).toBe(false);
+    const filter = pipeline[0].$match as Record<string, unknown>;
     expect(filter.subject).toBe("BAN");
     expect(filter.classLevel).toBe(5);
     // The round stores the chapter as a STRING whatever the artifact used (QR-6).
@@ -107,20 +109,20 @@ describe("round-level axes never touch the artifact", () => {
 
   test("the reviewer id is an ObjectId on the filtered path", async () => {
     await listMyQuestionReviews(REVIEWER, {}, { subject: "BAN" });
-    const filter = mockFind.mock.calls[0][0] as Record<string, unknown>;
+    const filter = (mockAggregate.mock.calls[0][0] as Record<string, unknown>[])[0].$match as Record<string, unknown>;
     expect(filter.reviewerId).toBeInstanceOf(mongoose.Types.ObjectId);
     expect(String(filter.reviewerId)).toBe(REVIEWER);
   });
 
   test("undecided narrows to rounds with no verdict yet", async () => {
     await listMyQuestionReviews(REVIEWER, {}, { undecided: true });
-    const filter = mockFind.mock.calls[0][0] as Record<string, unknown>;
+    const filter = (mockAggregate.mock.calls[0][0] as Record<string, unknown>[])[0].$match as Record<string, unknown>;
     expect(filter.status).toBe("assigned");
   });
 
   test("without undecided, decided rounds stay in the list", async () => {
     await listMyQuestionReviews(REVIEWER, {}, { subject: "BAN" });
-    const filter = mockFind.mock.calls[0][0] as Record<string, unknown>;
+    const filter = (mockAggregate.mock.calls[0][0] as Record<string, unknown>[])[0].$match as Record<string, unknown>;
     expect(filter.status).toEqual({ $in: ["assigned", "submitted"] });
   });
 });
