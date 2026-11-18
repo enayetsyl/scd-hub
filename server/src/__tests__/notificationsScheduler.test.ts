@@ -203,6 +203,13 @@ jest.mock("../modules/comments/services/MeetingChainService", () => ({
   emitMorningReminders: (now: Date) => mockMeetingReminders(now),
   MEETING_REMINDER_MINUTES: 8 * 60,
 }));
+// H-2 — the 08:00 reviewer backlog reminder reads the hub (DB-backed); stubbed like every family.
+// A new family WITHOUT a stub here hangs this suite. Own tests: reviewBacklog.test.ts.
+const mockReviewBacklog = jest.fn((_dateKey: string) => Promise.resolve({ reviewersNotified: 0, supervisorsNotified: 0 }));
+jest.mock("../modules/review-program/services/ReviewBacklogService", () => ({
+  dispatchReviewBacklog: (k: string) => mockReviewBacklog(k),
+  REVIEW_BACKLOG_MINUTES: 8 * 60,
+}));
 // PM §5.5 — recipients picked by action (holderIdsOf) read the User model with a sort the
 // User stub above does not have; stubbed so each family names the action it asks about.
 const mockHolderIdsOf = jest.fn((_perm: string) => Promise.resolve([] as string[]));
@@ -1005,5 +1012,48 @@ describe("staff mistake daily report (D-#1020)", () => {
     mockResolveDayType.mockResolvedValue("HOLIDAY");
     await runSchedulerTick(at(18, 0));
     expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review backlog reminder (H-2, review_backlog_daily) — 08:00 school days only
+// ---------------------------------------------------------------------------
+
+describe("review backlog 08:00 reminder (H-2)", () => {
+  // 2026-06-14 is a Sunday (a school day); 06-12 Friday; 06-13 Saturday.
+  const day = (d: number, h: number, m: number) => new Date(2026, 5, d, h, m);
+
+  it("fires at 08:00 on a school day and reports both counts", async () => {
+    mockReviewBacklog.mockResolvedValueOnce({ reviewersNotified: 4, supervisorsNotified: 1 });
+    const s = await runSchedulerTick(at(8, 0));
+    expect(mockReviewBacklog).toHaveBeenCalledWith(DATE);
+    expect(s.reviewBacklogEmitted).toBe(4);
+    expect(s.reviewOverdueEmitted).toBe(1);
+  });
+
+  it("does not fire before 08:00 or after the 30-minute window", async () => {
+    await runSchedulerTick(at(7, 55));
+    await runSchedulerTick(at(8, 45));
+    expect(mockReviewBacklog).not.toHaveBeenCalled();
+  });
+
+  it("runs ONCE per day across the stale window", async () => {
+    await runSchedulerTick(at(8, 0));
+    await runSchedulerTick(at(8, 10));
+    expect(mockReviewBacklog).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["OFF", "HOLIDAY", "QURAN_ONLY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    await runSchedulerTick(at(8, 0));
+    expect(mockReviewBacklog).not.toHaveBeenCalled();
+  });
+
+  it("does NOT run on a Friday or a Saturday even when the calendar says FULL", async () => {
+    await runSchedulerTick(day(12, 8, 0));
+    await runSchedulerTick(day(13, 8, 0));
+    expect(mockReviewBacklog).not.toHaveBeenCalled();
+    await runSchedulerTick(day(14, 8, 0));
+    expect(mockReviewBacklog).toHaveBeenCalledTimes(1);
   });
 });

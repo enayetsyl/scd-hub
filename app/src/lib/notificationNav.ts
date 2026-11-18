@@ -52,7 +52,10 @@ export function notificationTarget(
         : { tab: "RoutineTab", screen: "RoutineHome" };
     case "HW_PARENT_COMMS":
       return { tab: "HomeworkTab", screen: "HomeworkHome" };
-    case "REVIEW_ASSIGNED":
+    case "REVIEW_ASSIGNED": {
+      // H-2: the daily backlog reminder + the supervisor's overdue line name their page ("Tab/Screen").
+      const [stTab, stScreen] = (refs?.screenTarget ?? "").split("/");
+      if (stTab && stScreen) return { tab: stTab, screen: stScreen };
       // OT-2: the objective-list review shares this review-duty kind; its rows carry masteryReviewId.
       if (refs?.masteryReviewId) return { tab: "MasteryTab", screen: "MasteryReview", params: { reviewId: refs.masteryReviewId } };
       // D-#1032: a draft exam paper to review ("list" = several papers in one notice).
@@ -67,6 +70,7 @@ export function notificationTarget(
             params: { assignmentId: refs.reviewAssignmentId, artifactId: refs.artifactId },
           }
         : { tab: "ReviewTab", screen: "ReviewHome" };
+    }
     case "LIBRARY_DUE_SOON":
     case "LIBRARY_OVERDUE":
       // Guardians have no Library tab — their child-loans card lives on আজ.
