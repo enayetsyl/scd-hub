@@ -82,6 +82,7 @@ import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAuto
 import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { captureReviewSnapshots } from "../../review-program/services/ReviewProgressService";
+import { dispatchReviewBacklog, REVIEW_BACKLOG_MINUTES } from "../../review-program/services/ReviewBacklogService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
   emitPendingDigest as emitImprovementPendingDigest,
@@ -297,6 +298,9 @@ export interface TickSummary {
   dailyReportSharesExpired: number;
   /** 13:00 missed-lesson notices to guardians (LP-4 D-#828; moved from 18:00 by GH-4, D-#1528). */
   lessonMissedEmitted: number;
+  /** H-2: 08:00 daily "আজ পর্যালোচনা বাকি" reminders to reviewers + the supervisors' overdue line. */
+  reviewBacklogEmitted: number;
+  reviewOverdueEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -350,6 +354,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     dailyReportEmitted: 0,
     dailyReportSharesExpired: 0,
     lessonMissedEmitted: 0,
+    reviewBacklogEmitted: 0,
+    reviewOverdueEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -752,6 +758,22 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       }
     }
   });
+
+  // --- Review backlog reminder (H-2, `review_backlog_daily`) — 08:00 Dhaka, FULL school days only.
+  // FULL, not merely "not OFF/HOLIDAY", and never Fri/Sat (the same weekday rule as the school week:
+  // a QURAN_ONLY Saturday carries no review day). One row per reviewer with something left, built from
+  // the hub's own rows; runOnce guards the per-person hub queries, the emit dedupe keys
+  // (`review-backlog:<user>:<date>`) guard the rows across restarts.
+  if (dayType === "FULL" && now.getDay() !== 5 && now.getDay() !== 6) {
+    await family("review backlog daily", async () => {
+      if (!windowOpen(nowMin, REVIEW_BACKLOG_MINUTES)) return;
+      await runOnce(dateKey, "REVBACKLOG", async () => {
+        const res = await dispatchReviewBacklog(dateKey);
+        summary.reviewBacklogEmitted = res.reviewersNotified;
+        summary.reviewOverdueEmitted = res.supervisorsNotified;
+      });
+    });
+  }
 
   // --- Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal.
   //

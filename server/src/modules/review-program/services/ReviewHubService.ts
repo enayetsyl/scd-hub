@@ -21,7 +21,7 @@ import {
   subjectLabel,
 } from "@scd/shared";
 import type { RosterClassLevel } from "@scd/shared";
-import type { AppContext } from "../../../context";
+import type { AppContext, AuthPayload } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { bnNum } from "../../../lib/bnNum";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
@@ -335,7 +335,18 @@ async function safely(label: string, fn: () => Promise<ReviewHubRow[]>): Promise
 
 export async function myReviewHub(ctx: AppContext): Promise<ReviewHubResult> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const auth = ctx.auth;
+  return hubOf(ctx);
+}
+
+/** The same hub for a named person, outside a request (the H-2 daily reminder). Builds the minimal
+ *  context the sections read — the caller's auth only — so the rows and `totalLeft` are exactly the
+ *  ones that person sees in the app. */
+export async function reviewHubForUser(auth: AuthPayload): Promise<ReviewHubResult> {
+  return hubOf({ auth } as unknown as AppContext);
+}
+
+async function hubOf(ctx: AppContext): Promise<ReviewHubResult> {
+  const auth = ctx.auth as AuthPayload;
   const userId = auth.userId;
   const has = (perm: string): boolean => callerHasPermission(auth, perm as never);
   const reviewerOid = new Types.ObjectId(userId);
