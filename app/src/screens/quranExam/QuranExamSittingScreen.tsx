@@ -115,7 +115,8 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
         present && p.scheme === "ITEMS"
           ? Object.entries(secCounts).map(([si, c]) => ({ section: Number(si), tanbih: c.tanbih, fath: c.fath }))
           : null,
-      hifzCounts: present && p.scheme === "HIFZ_DEDUCTION" ? counts : null,
+      // Only the input fields: rows loaded from a saved sitting carry __typename, which the input type rejects.
+      hifzCounts: present && p.scheme === "HIFZ_DEDUCTION" ? counts.map((c) => ({ para: c.para, tanbih: c.tanbih, fath: c.fath })) : null,
       absenceReason: present ? null : reason,
       comment: comment.trim() || null,
     });
