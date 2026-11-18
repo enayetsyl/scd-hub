@@ -206,6 +206,7 @@ import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
 import WinterBookletsScreen from "../screens/winterTask/WinterBookletsScreen";
 import WinterBookletScreen from "../screens/winterTask/WinterBookletScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
+import ReviewHubScreen from "../screens/review/ReviewHubScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
 import AssignReviewsScreen from "../screens/review/AssignReviewsScreen";
@@ -1063,6 +1064,8 @@ function ReviewNavigator(): React.ReactElement {
       />
       {/* Review supervision (RS-4) - after ReviewHome, same initial-route rule. */}
       <ReviewStack.Screen name="ReviewSupervision" component={ReviewSupervisionScreen} options={{ title: STR.rspHeader }} />
+      {/* Reviewer hub (H-1) - after ReviewHome, same initial-route rule. */}
+      <ReviewStack.Screen name="ReviewHub" component={ReviewHubScreen} options={{ title: STR.rhTitle }} />
       <ReviewStack.Screen name="ReviewSupervisionReviewer" component={ReviewSupervisionReviewerScreen} options={{ title: STR.rspReviewerHeader }} />
     </ReviewStack.Navigator>
   );
@@ -2252,7 +2255,10 @@ export function AppTabs(): React.ReactElement {
     "plan_review:assign", "plan_review:review", "plan_review:approve",
     "question_review:assign", "question_review:view_all", "question_review:review", "question_review:publish",
     "review_program:supervise",
-  );
+    // H-1: the reviewer hub lives in this tab. Every staff login gets the tab (the Today
+    // card opens the hub for a syllabus approver or a work-board review card too); the drawer
+    // leaves inside it stay gated by their own permissions (DrawerContent).
+  ) || (!!role && role !== "GUARDIAN");
   const canRoutine = can("routine:view");
   const canClassNotes = can("class_note:view");
   const canAttendance = any(

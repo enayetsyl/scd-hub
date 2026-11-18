@@ -506,7 +506,8 @@ export async function reviewerMayReadArtifact(reviewerId: string, artifactId: st
  * A teacher's review queue (R2.5) — the rounds they can still act on: `assigned`
  * (awaiting their verdict) AND `submitted` (already decided, but editable/resubmittable
  * until the version is superseded or the Principal signs off). Closed rounds
- * (superseded/cancelled) drop off. Submitted-first so freshly decided rounds surface.
+ * (superseded/cancelled) drop off. Order (owner 18 Nov): undecided first, then
+ * by book and chapter — chapter plan before its sessions — and decided rounds at the bottom.
  */
 export async function listMyReviewAssignments(reviewerId: string): Promise<ReviewAssignmentDTO[]> {
   const docs = await ReviewAssignment.find({
@@ -517,9 +518,54 @@ export async function listMyReviewAssignments(reviewerId: string): Promise<Revie
     docType: { $in: PLAN_DOC_TYPES },
     status: { $in: ["assigned", "submitted"] },
   })
-    .sort({ status: 1, assignedAt: -1 })
     .lean();
-  return (docs as unknown as RawAssignment[]).map(toDTO);
+  // Chapter order, done at the bottom (owner 2026-11-18). A reviewer holds a few hundred
+  // rounds at most, so this sorts in memory with a unit-tested comparator.
+  const raw = (docs as unknown as RawAssignment[]).slice().sort(compareReviewQueueRows);
+  return raw.map(toDTO);
+}
+
+/** Numeric chapter for ordering: "2" before "10"; anything non-numeric after every number. */
+export function chapterSortKey(addressNumber: string | null | undefined): number {
+  const t = String(addressNumber ?? "").trim();
+  const n = Number(t);
+  return t !== "" && Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+}
+
+/** chapter_plan first, then session_plan, then any other plan type. */
+function planDocTypeRank(docType: string): number {
+  return docType === "chapter_plan" ? 0 : docType === "session_plan" ? 1 : 2;
+}
+
+type QueueSortRow = Pick<
+  RawAssignment,
+  "_id" | "status" | "subject" | "classLevel" | "addressNumber" | "docType" | "sessionIndex"
+>;
+
+/**
+ * The reviewer plan queue order: undecided ("assigned") above decided ("submitted"), then
+ * one book together (subject, class), chapter ascending (numeric), the chapter plan before
+ * its session plans, sessions ascending (null last), with the id as a stable last key.
+ */
+export function compareReviewQueueRows(a: QueueSortRow, b: QueueSortRow): number {
+  if (a.status !== b.status) return a.status < b.status ? -1 : 1;
+  if (a.subject !== b.subject) return a.subject < b.subject ? -1 : 1;
+  if (a.classLevel !== b.classLevel) return a.classLevel - b.classLevel;
+  const ca = chapterSortKey(a.addressNumber);
+  const cb = chapterSortKey(b.addressNumber);
+  if (ca !== cb) return ca < cb ? -1 : 1;
+  if (ca === Number.MAX_SAFE_INTEGER && a.addressNumber !== b.addressNumber) {
+    return String(a.addressNumber) < String(b.addressNumber) ? -1 : 1;
+  }
+  const ra = planDocTypeRank(a.docType);
+  const rb = planDocTypeRank(b.docType);
+  if (ra !== rb) return ra - rb;
+  const sa = a.sessionIndex ?? Number.MAX_SAFE_INTEGER;
+  const sb = b.sessionIndex ?? Number.MAX_SAFE_INTEGER;
+  if (sa !== sb) return sa < sb ? -1 : 1;
+  const ia = a._id.toString();
+  const ib = b._id.toString();
+  return ia < ib ? -1 : ia > ib ? 1 : 0;
 }
 
 /** Principal/Office inbox: submitted rounds awaiting action, newest first (R2.3). The

@@ -208,3 +208,5 @@ import "./modules/support-profile/resolvers/supportLifecycle";
 import "./modules/platform/safeguarding/safeguardingResolvers";
 // Review supervision RS-1 (.claude/plans/review-supervision.md): program, tasks, move/cancel/add.
 import "./modules/review-program/resolvers/reviewProgram";
+// Reviewer hub H-1 (.claude/plans/review-hub-and-quality.md): myReviewHub.
+import "./modules/review-program/resolvers/reviewHub";

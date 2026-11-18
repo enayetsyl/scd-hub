@@ -28,6 +28,7 @@ import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS } from "../graphql/classT
 import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
 import { MY_SYLLABUS_APPROVAL_COUNT } from "../graphql/examSyllabus";
 import { MY_WORK_BOARD_COUNTS } from "../graphql/workBoard";
+import { REVIEW_HOME_PERMS } from "../lib/reviewHubPerms";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -106,7 +107,10 @@ const STAFF_NAV: NavSection[] = [
       { route: "ContentTab", labelKey: "tabContent", icon: "📚" },
       { route: "QuestionsTab", labelKey: "tabQuestions", icon: "❓" },
       { route: "SetsTab", labelKey: "tabSets", icon: "🗂️" },
-      { route: "ReviewTab", labelKey: "tabReview", icon: "📝" },
+      // H-1: the reviewer hub - everything the caller still has to review, one list. Top of the review group.
+      // Every staff login sees it (owner 18 Nov): no perms gate, the ReviewTab itself is every non-guardian role.
+      { route: "ReviewTab", labelKey: "rhNav", icon: "🗂️", screen: "ReviewHub" },
+      { route: "ReviewTab", labelKey: "tabReview", icon: "📝", perms: REVIEW_HOME_PERMS },
       // RS-4: the daily supervision view of the teacher review program (Principal; the deputy by grant).
       { route: "ReviewTab", labelKey: "rspNav", icon: "📈", screen: "ReviewSupervision", perms: ["review_program:supervise"] },
       { route: "RoutineTab", labelKey: "tabRoutine", icon: "📅" },
