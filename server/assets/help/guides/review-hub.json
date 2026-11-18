@@ -15,7 +15,8 @@
     "classroom_observation:review",
     "free_mixing_review:review",
     "book_production:review",
-    "winter_task:review"
+    "winter_task:review",
+    "class_test_question:create"
   ],
   "screens": ["ReviewTab/ReviewHub"],
   "goTo": { "route": "ReviewTab", "screen": "ReviewHub" },

@@ -570,12 +570,13 @@ export default function TodayScreen(): React.ReactElement {
       {can("parents_meeting:write_notes") ? <MeetingNotesTeacherCard /> : null}
       {can("parents_meeting:write_notes") ? <MeetingSummaryTeacherCard /> : null}
 
+      {/* H-1: the reviewer hub entry — own query, outside the QueryGate. */}
+      <ReviewHubTodayCard />
+
       {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
           daily review target — myReviewQuota is null for everyone else. OUTSIDE the
           QueryGate: the target counts working days, not the observer's own periods, so
           a day with no periods must still show it. */}
-      {/* H-1: the reviewer hub entry — own query, outside the QueryGate. */}
-      <ReviewHubTodayCard />
       <ReviewQuotaCard />
 
       {/* D-#739: a teacher's class-test result backlog with a due day — renders only for a

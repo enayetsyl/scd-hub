@@ -10,7 +10,7 @@
  */
 import React, { useCallback, useMemo, useRef } from "react";
 import { RefreshControl, View } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { StackActions, useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { MY_REVIEW_HUB, type ReviewHubRowT } from "../../graphql/reviewHub";
 import { Badge, Body, Card, EmptyState, H2, Muted, Screen } from "../../components/ui";
@@ -54,6 +54,12 @@ function useOpenRow(): (row: ReviewHubRowT) => void {
         params = row.paramsJson ? (JSON.parse(row.paramsJson) as Record<string, unknown>) : undefined;
       } catch {
         params = undefined;
+      }
+      // A row of the hub's OWN stack (ReviewHome, a queue) is PUSHED: navigate() would pop back down to
+      // ReviewHome at index 0 and the hub would vanish from the Back path.
+      if (row.tab === "ReviewTab") {
+        nav.dispatch(StackActions.push(row.screen, params));
+        return;
       }
       (nav as unknown as { navigate: (n: string, p?: object) => void }).navigate("App", {
         screen: row.tab,

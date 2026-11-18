@@ -28,6 +28,7 @@ import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS } from "../graphql/classT
 import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
 import { MY_SYLLABUS_APPROVAL_COUNT } from "../graphql/examSyllabus";
 import { MY_WORK_BOARD_COUNTS } from "../graphql/workBoard";
+import { REVIEW_HOME_PERMS, REVIEW_HUB_PERMS } from "../lib/reviewHubPerms";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -96,18 +97,6 @@ type NavSection =
  * the generic Trackers tab which is shown as "Daily Tracker" to disambiguate it
  * from the "Trackers" group header.
  */
-/** The reviews the hub (H-1) can list - holding any of them earns the hub its drawer entry. */
-const REVIEW_HUB_PERMS = [
-  "plan_review:review", "question_review:review", "exam_papers:review", "mastery:review",
-  "classroom_observation:review", "free_mixing_review:review", "book_production:review", "winter_task:review",
-];
-/** Who the plan/question review screen (ReviewHome) is for - what used to gate the whole tab. */
-const REVIEW_HOME_PERMS = [
-  "plan_review:assign", "plan_review:review", "plan_review:approve",
-  "question_review:assign", "question_review:view_all", "question_review:review", "question_review:publish",
-  "review_program:supervise",
-];
-
 const STAFF_NAV: NavSection[] = [
   { type: "item", route: "HomeTab", labelKey: "drawerItemToday", icon: "🏠" },
   {

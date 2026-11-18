@@ -10,6 +10,8 @@ import { Text, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { MY_REVIEW_HUB } from "../graphql/reviewHub";
+import { useAuth } from "../auth/AuthContext";
+import { REVIEW_HOME_PERMS } from "../lib/reviewHubPerms";
 import type { TabParamList } from "../navigation/types";
 import { Badge, Card } from "./ui";
 import { STR, bnNum } from "../lib/labels";
@@ -17,14 +19,21 @@ import { makeStyles, space, typeScale } from "../theme";
 
 export function ReviewHubTodayCard(): React.ReactElement | null {
   const styles = useStyles();
+  const { can } = useAuth();
   const nav = useNavigation<NavigationProp<TabParamList>>();
   const [q] = useQuery({ query: MY_REVIEW_HUB, requestPolicy: "cache-and-network" });
   if (q.error || !q.data) return null;
   const left = q.data.myReviewHub.totalLeft;
   if (left <= 0) return null;
 
+  // Without ReviewHome in their reach, keep the hub as the stack's first screen: Back then leaves
+  // the tab instead of landing on an empty ReviewHome.
+  const hasHome = REVIEW_HOME_PERMS.some((p) => can(p));
   const open = (): void =>
-    (nav.navigate as unknown as (name: string, p?: object) => void)("ReviewTab", { screen: "ReviewHub", initial: false });
+    (nav.navigate as unknown as (name: string, p?: object) => void)(
+      "ReviewTab",
+      hasHome ? { screen: "ReviewHub", initial: false } : { screen: "ReviewHub" },
+    );
 
   return (
     <Card onPress={open}>

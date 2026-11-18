@@ -263,10 +263,11 @@ export default function AdminTodayScreen(): React.ReactElement {
             Renders nothing unless the caller has a period today. */}
         <MyPeriodsSelfCard />
 
-        {/* WB-4 (D-#701) — আজকের কাজ: the caller's own board for today (a Principal's
-            leave approvals and tasks; the Office's print jobs), linking to the board. */}
         {/* H-1: the reviewer hub entry — own query, outside the QueryGate. */}
         <ReviewHubTodayCard />
+
+        {/* WB-4 (D-#701) — আজকের কাজ: the caller's own board for today (a Principal's
+            leave approvals and tasks; the Office's print jobs), linking to the board. */}
         <TodayWorkCard />
 
         {/* CS-1..CS-3 (D-#715–#719) — ক্লাস টেস্টের খাতা: receive, scan & tag, publish,

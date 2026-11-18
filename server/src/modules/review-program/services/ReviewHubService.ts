@@ -32,7 +32,7 @@ import { mySyllabusApprovals } from "../../exams/services/ExamSyllabusReadServic
 import { listReviewRounds } from "../../mastery/services/MasteryReviewWriteService";
 import { myReviewQueue } from "../../classroom-observation/services/ClassroomObservationService";
 import { myVideoReviews } from "../../classroom-observation/services/VideoReviewService";
-import { ClassTestQuestionRequest } from "../../trackers/models/ClassTestQuestionRequest";
+import { ctQuestionCounts } from "../../trackers/services/ClassTestQuestionService";
 import { BookReviewRound } from "../../support-book/models/BookReviewRound";
 import { isBookDbReady } from "../../../bookDb";
 import { WinterBooklet } from "../../winter-task/models/WinterBooklet";
@@ -71,7 +71,7 @@ export interface ReviewHubRow {
 
 export interface ReviewHubResult {
   rows: ReviewHubRow[];
-  /** Sum of `left` over every row — the Today card's number. */
+  /** Sum of `left` over the caller's OWN rows (school-wide winter queue excluded) — the Today card's number. */
   totalLeft: number;
 }
 
@@ -81,13 +81,6 @@ function classLabelBn(level: number): string {
 
 function paramsOf(p: Record<string, unknown> | null): string | null {
   return p ? JSON.stringify(p) : null;
-}
-
-/** The earliest of two optional YYYY-MM-DD keys (string compare is date order). */
-function earlier(a: string | null, b: string | null): string | null {
-  if (!a) return b;
-  if (!b) return a;
-  return a < b ? a : b;
 }
 
 interface ChapterGroup {
@@ -121,12 +114,14 @@ async function chapterRows(
 
   // One read for every due date: the program task of this reviewer, per chapter.
   const tasks = (await ReviewTask.find({ reviewerId, kind: "PLAN_CHAPTER", status: { $in: ["OPEN", "SUBMITTED"] } })
-    .select("subject classLevel chapter dueKey")
-    .lean()) as unknown as Array<{ subject: string; classLevel: number; chapter: string; dueKey: string | null }>;
+    .select("subject classLevel anchorWord chapter dueKey")
+    .sort({ createdAt: -1, _id: -1 })
+    .lean()) as unknown as Array<{ subject: string; classLevel: number; anchorWord: string; chapter: string; dueKey: string | null }>;
+  // The NEWEST task of a chapter wins (a re-set or moved task supersedes the older one).
   const dueBy = new Map<string, string | null>();
   for (const t of tasks) {
-    const k = `${t.subject}|${t.classLevel}|${t.chapter}`;
-    dueBy.set(k, earlier(dueBy.get(k) ?? null, t.dueKey ?? null));
+    const k = `${t.subject}|${t.classLevel}|${t.anchorWord}|${t.chapter}`;
+    if (!dueBy.has(k)) dueBy.set(k, t.dueKey ?? null);
   }
 
   return open
@@ -134,12 +129,12 @@ async function chapterRows(
       const { subject, classLevel, anchorWord, chapter } = g._id;
       const head = `${subjectLabel(subject, classLevel)} · ${classLabelBn(classLevel)} · ${anchorWord} ${bnNum(chapter)}`;
       return {
-        key: `${kind}:${subject}:${classLevel}:${chapter}`,
+        key: `${kind}:${subject}:${classLevel}:${anchorWord}:${chapter}`,
         kind,
         titleBn: head,
         left: g.left,
         total: g.total,
-        dueKey: dueBy.get(`${subject}|${classLevel}|${chapter}`) ?? null,
+        dueKey: dueBy.get(`${subject}|${classLevel}|${anchorWord}|${chapter}`) ?? null,
         tab: "ReviewTab",
         screen: kind === "PLAN" ? "ReviewHome" : "QuestionReviewQueue",
         paramsJson: null,
@@ -240,23 +235,20 @@ async function videoRows(userId: string): Promise<ReviewHubRow[]> {
   ];
 }
 
-/** Office: class-test question requests waiting for its work (the queue's own "actionable" set). */
-async function ctQuestionRows(): Promise<ReviewHubRow[]> {
-  const [left, total] = await Promise.all([
-    ClassTestQuestionRequest.countDocuments({ active: { $ne: false }, status: { $in: ["REQUESTED", "CHANGES_REQUESTED"] } }),
-    ClassTestQuestionRequest.countDocuments({ active: { $ne: false }, status: { $ne: "CANCELLED" } }),
-  ]);
-  if (left === 0) return [];
+/** The requesting teacher's side: the Office's draft is waiting for THEM to check it (IN_REVIEW). */
+async function ctQuestionRows(userId: string): Promise<ReviewHubRow[]> {
+  const { inReview } = await ctQuestionCounts(userId);
+  if (inReview === 0) return [];
   return [
     {
       key: "CT_QUESTION",
       kind: "CT_QUESTION",
-      titleBn: "ক্লাস টেস্টের প্রশ্নের অনুরোধ",
-      left,
-      total,
+      titleBn: "ক্লাস টেস্টের প্রশ্ন — আপনার দেখার অপেক্ষায়",
+      left: inReview,
+      total: inReview,
       dueKey: null,
       tab: "ClassTestTab",
-      screen: "CtQuestionQueue",
+      screen: "MyCtQuestions",
       paramsJson: null,
     },
   ];
@@ -281,7 +273,8 @@ async function bookRows(userId: string): Promise<ReviewHubRow[]> {
   }));
 }
 
-/** Winter booklets have no per-reviewer assignment: every booklet still IN_REVIEW is owed to any reviewer. */
+/** Winter booklets have no per-reviewer assignment: a SCHOOL-WIDE "in review" queue, shown for information
+ *  and left out of `totalLeft` (it is not the caller's own backlog). */
 async function winterRows(): Promise<ReviewHubRow[]> {
   const [left, total] = await Promise.all([
     WinterBooklet.countDocuments({ status: "IN_REVIEW" }),
@@ -292,7 +285,7 @@ async function winterRows(): Promise<ReviewHubRow[]> {
     {
       key: "WINTER",
       kind: "WINTER",
-      titleBn: "শীতকালীন বুকলেট",
+      titleBn: "শীতকালীন বুকলেট — পর্যালোচনায় আছে (সবার জন্য)",
       left,
       total,
       dueKey: null,
@@ -304,7 +297,7 @@ async function winterRows(): Promise<ReviewHubRow[]> {
 }
 
 /** Manual work-board cards the assigner worded as a review ("… পর্যালোচনা", "… রিভিউ"). */
-const REVIEW_WORDING = /পর্যালোচনা|রিভিউ|review/i;
+const REVIEW_WORDING = /পর্যালোচনা|রিভিউ|\breview\b/i;
 async function taskRows(userId: string): Promise<ReviewHubRow[]> {
   const cards = (await Task.find({
     assigneeUserId: new Types.ObjectId(userId),
@@ -356,11 +349,13 @@ export async function myReviewHub(ctx: AppContext): Promise<ReviewHubResult> {
   if (has("mastery:review")) jobs.push(safely("MASTERY", () => masteryRows(ctx)));
   if (has("classroom_observation:review")) jobs.push(safely("OBSERVATION", () => observationRows(userId)));
   if (has("free_mixing_review:review")) jobs.push(safely("VIDEO", () => videoRows(userId)));
-  if (has("class_test_question:prepare")) jobs.push(safely("CT_QUESTION", () => ctQuestionRows()));
+  if (has("class_test_question:create")) jobs.push(safely("CT_QUESTION", () => ctQuestionRows(userId)));
   if (has("book_production:review")) jobs.push(safely("BOOK", () => bookRows(userId)));
-  if (has("winter_task:review")) jobs.push(safely("WINTER", () => winterRows()));
+  // School-wide queues (no per-person assignment) are skipped for the Principal: his card counts only
+  // what is assigned to him.
+  if (has("winter_task:review") && auth.role !== "PRINCIPAL") jobs.push(safely("WINTER", () => winterRows()));
   if (auth.role !== "GUARDIAN") jobs.push(safely("TASK", () => taskRows(userId)));
 
   const rows = (await Promise.all(jobs)).flat().filter((r) => r.left > 0);
-  return { rows, totalLeft: rows.reduce((n, r) => n + r.left, 0) };
+  return { rows, totalLeft: rows.filter((r) => r.kind !== "WINTER").reduce((n, r) => n + r.left, 0) };
 }
