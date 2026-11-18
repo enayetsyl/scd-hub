@@ -82,10 +82,11 @@ export function backlogMessage(rows: ReviewHubRow[], todayKey: string): { titleB
   return { titleBn: `আজ পর্যালোচনা বাকি: ${bnNum(total)}`, bodyBn: `${top}${tail}` };
 }
 
-/** Pure: how many items are past their due date. */
+/** Pure: how many review-program items (plan / question rounds) are past their due date. Manual work-board
+ *  cards worded as a review are the person's own to-do, not the programme's, so they never count here. */
 export function overdueCount(rows: ReviewHubRow[], todayKey: string): number {
-  return own(rows)
-    .filter((r) => r.dueKey !== null && r.dueKey < todayKey)
+  return rows
+    .filter((r) => (r.kind === "PLAN" || r.kind === "QUESTION") && r.dueKey !== null && r.dueKey < todayKey)
     .reduce((n, r) => n + r.left, 0);
 }
 
@@ -111,17 +112,21 @@ export async function dispatchReviewBacklog(dateKey: string): Promise<ReviewBack
 
   const overdue: Array<{ name: string; overdue: number }> = [];
   let reviewersNotified = 0;
+  let failed = 0;
 
   for (const u of users) {
     const id = u._id.toString();
     try {
-      const hub = await reviewHubForUser({
+      const hub = await reviewHubForUser(
+        {
         userId: id,
         role: u.role,
         additionalTemplates: u.additionalTemplates ?? [],
         grantedPermissions: u.grantedPermissions ?? [],
         revokedPermissions: u.revokedPermissions ?? [],
-      });
+        },
+        { skipSchoolWide: true },
+      );
       const msg = backlogMessage(hub.rows, dateKey);
       if (!msg) continue;
       const late = overdueCount(hub.rows, dateKey);
@@ -136,7 +141,8 @@ export async function dispatchReviewBacklog(dateKey: string): Promise<ReviewBack
       });
       if (res.created) reviewersNotified += 1;
     } catch (err) {
-      // One person's failure never stops the rest; the next tick (inside the stale window) retries.
+      // One person's failure never stops the rest; it is counted and thrown ONCE after everyone else was sent.
+      failed += 1;
       console.warn(`[reviewBacklog] ${id} skipped:`, err instanceof Error ? err.message : err);
     }
   }
@@ -157,5 +163,8 @@ export async function dispatchReviewBacklog(dateKey: string): Promise<ReviewBack
       if (res.created) supervisorsNotified += 1;
     }
   }
+  // Throwing keeps the scheduler's runOnce from marking the day done, so the next tick (inside the stale
+  // window) retries; the dedupe keys make the people already told a no-op.
+  if (failed > 0) throw new Error(`review backlog: ${failed} reviewer(s) failed, ${reviewersNotified} sent`);
   return { reviewersNotified, supervisorsNotified };
 }

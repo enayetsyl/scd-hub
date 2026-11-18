@@ -759,22 +759,6 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     }
   });
 
-  // --- Review backlog reminder (H-2, `review_backlog_daily`) — 08:00 Dhaka, FULL school days only.
-  // FULL, not merely "not OFF/HOLIDAY", and never Fri/Sat (the same weekday rule as the school week:
-  // a QURAN_ONLY Saturday carries no review day). One row per reviewer with something left, built from
-  // the hub's own rows; runOnce guards the per-person hub queries, the emit dedupe keys
-  // (`review-backlog:<user>:<date>`) guard the rows across restarts.
-  if (dayType === "FULL" && now.getDay() !== 5 && now.getDay() !== 6) {
-    await family("review backlog daily", async () => {
-      if (!windowOpen(nowMin, REVIEW_BACKLOG_MINUTES)) return;
-      await runOnce(dateKey, "REVBACKLOG", async () => {
-        const res = await dispatchReviewBacklog(dateKey);
-        summary.reviewBacklogEmitted = res.reviewersNotified;
-        summary.reviewOverdueEmitted = res.supervisorsNotified;
-      });
-    });
-  }
-
   // --- Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal.
   //
   // ONE rolled-up row per recipient per day, NOT one per pending exam: a per-item
@@ -883,6 +867,22 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       if (!windowOpen(nowMin, at)) return;
       await runOnce(dateKey, `TASKGS:${part}`, async () => {
         summary.taskGivenSummaryEmitted += await dispatchTaskGivenSummary(now, part);
+      });
+    });
+  }
+
+  // --- Review backlog reminder (H-2, `review_backlog_daily`) — 08:00 Dhaka, FULL school days only.
+  // FULL, not merely "not OFF/HOLIDAY", and never Fri/Sat (the same weekday rule as the school week:
+  // a QURAN_ONLY Saturday carries no review day). One row per reviewer with something left, built from
+  // the hub's own rows; runOnce guards the per-person hub queries, the emit dedupe keys
+  // (`review-backlog:<user>:<date>`) guard the rows across restarts.
+  if (dayType === "FULL" && now.getDay() !== 5 && now.getDay() !== 6) {
+    await family("review backlog daily", async () => {
+      if (!windowOpen(nowMin, REVIEW_BACKLOG_MINUTES)) return;
+      await runOnce(dateKey, "REVBACKLOG", async () => {
+        const res = await dispatchReviewBacklog(dateKey);
+        summary.reviewBacklogEmitted = res.reviewersNotified;
+        summary.reviewOverdueEmitted = res.supervisorsNotified;
       });
     });
   }

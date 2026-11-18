@@ -341,11 +341,14 @@ export async function myReviewHub(ctx: AppContext): Promise<ReviewHubResult> {
 /** The same hub for a named person, outside a request (the H-2 daily reminder). Builds the minimal
  *  context the sections read — the caller's auth only — so the rows and `totalLeft` are exactly the
  *  ones that person sees in the app. */
-export async function reviewHubForUser(auth: AuthPayload): Promise<ReviewHubResult> {
-  return hubOf({ auth } as unknown as AppContext);
+export async function reviewHubForUser(
+  auth: AuthPayload,
+  opts: { skipSchoolWide?: boolean } = {},
+): Promise<ReviewHubResult> {
+  return hubOf({ auth } as unknown as AppContext, opts);
 }
 
-async function hubOf(ctx: AppContext): Promise<ReviewHubResult> {
+async function hubOf(ctx: AppContext, opts: { skipSchoolWide?: boolean } = {}): Promise<ReviewHubResult> {
   const auth = ctx.auth as AuthPayload;
   const userId = auth.userId;
   const has = (perm: string): boolean => callerHasPermission(auth, perm as never);
@@ -364,7 +367,7 @@ async function hubOf(ctx: AppContext): Promise<ReviewHubResult> {
   if (has("book_production:review")) jobs.push(safely("BOOK", () => bookRows(userId)));
   // School-wide queues (no per-person assignment) are skipped for the Principal: his card counts only
   // what is assigned to him.
-  if (has("winter_task:review") && auth.role !== "PRINCIPAL") jobs.push(safely("WINTER", () => winterRows()));
+  if (!opts.skipSchoolWide && has("winter_task:review") && auth.role !== "PRINCIPAL") jobs.push(safely("WINTER", () => winterRows()));
   if (auth.role !== "GUARDIAN") jobs.push(safely("TASK", () => taskRows(userId)));
 
   const rows = (await Promise.all(jobs)).flat().filter((r) => r.left > 0);

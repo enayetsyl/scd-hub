@@ -17,7 +17,7 @@ const mockUserFind = jest.fn();
 const mockHolders = jest.fn();
 
 jest.mock("../modules/review-program/services/ReviewHubService", () => ({
-  reviewHubForUser: (a: unknown) => mockHub(a),
+  reviewHubForUser: (a: unknown, o?: unknown) => mockHub(a, o),
 }));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (i: unknown) => mockEmit(i),
@@ -75,8 +75,8 @@ describe("backlogMessage", () => {
 });
 
 describe("overdue helpers", () => {
-  it("counts only items due before today", () => {
-    expect(overdueCount([row("PLAN", 3, "2026-11-17"), row("PLAN", 2, TODAY), row("QUESTION", 9, null), row("WINTER", 4, "2026-01-01")], TODAY)).toBe(3);
+  it("counts only plan / question items due before today", () => {
+    expect(overdueCount([row("PLAN", 3, "2026-11-17"), row("PLAN", 2, TODAY), row("QUESTION", 9, null), row("QUESTION", 1, "2026-11-01"), row("TASK", 5, "2026-11-01"), row("WINTER", 4, "2026-01-01")], TODAY)).toBe(4);
   });
   it("formats the supervisor line, worst first", () => {
     expect(overdueLine([{ name: "জেরিন", overdue: 1 }, { name: "কাওসার", overdue: 3 }])).toBe("পর্যালোচনায় সময় পেরিয়েছে: কাওসার (৩), জেরিন (১)");
@@ -168,14 +168,34 @@ describe("dispatchReviewBacklog", () => {
     expect(mockHolders).not.toHaveBeenCalled();
   });
 
-  it("one person's failing hub does not stop the others", async () => {
-    mockUserFind.mockResolvedValue([user("u1", "ক"), user("u2", "খ")]);
+  it("a per-user failure throws ONCE at the end, after the others were emitted (so the day is retried)", async () => {
+    mockUserFind.mockResolvedValue([user("u1", "ক"), user("u2", "খ"), user("u3", "গ")]);
     mockHub.mockImplementation(async (a: { userId: string }) => {
       if (a.userId === "u1") throw new Error("boom");
       return { rows: [row("PLAN", 1)], totalLeft: 1 };
     });
     const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    await expect(dispatchReviewBacklog(TODAY)).rejects.toThrow(/1 reviewer\(s\) failed, 2 sent/);
+    expect(mockEmit.mock.calls.map((c) => c[0].recipientUserId)).toEqual(["u2", "u3"]);
+    // The retry re-sends nobody who was already told.
+    mockHub.mockResolvedValue({ rows: [row("PLAN", 1)], totalLeft: 1 });
     expect((await dispatchReviewBacklog(TODAY)).reviewersNotified).toBe(1);
     warn.mockRestore();
+  });
+
+  it("reads the hub without the school-wide queue", async () => {
+    mockUserFind.mockResolvedValue([user("u1", "ক")]);
+    mockHub.mockResolvedValue({ rows: [], totalLeft: 0 });
+    await dispatchReviewBacklog(TODAY);
+    expect(mockHub).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1" }), { skipSchoolWide: true });
+  });
+
+  it("an overdue work-board TASK card alone does not trigger the supervisor line", async () => {
+    mockUserFind.mockResolvedValue([user("u1", "কাওসার")]);
+    mockHolders.mockResolvedValue(["sup1"]);
+    mockHub.mockResolvedValue({ rows: [row("TASK", 1, "2026-11-01")], totalLeft: 1 });
+    const res = await dispatchReviewBacklog(TODAY);
+    expect(res).toEqual({ reviewersNotified: 1, supervisorsNotified: 0 });
+    expect(mockHolders).not.toHaveBeenCalled();
   });
 });
