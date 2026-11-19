@@ -539,6 +539,7 @@ builder.queryField("myQuestionReviews", (t) =>
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
       chapter: t.arg.int({ required: false }),
+      anchorWord: t.arg.string({ required: false }),
       questionType: t.arg.string({ required: false }),
       /** PR-G: only questions carrying this school question type (QT-…). */
       qtCode: t.arg.string({ required: false }),
@@ -555,6 +556,7 @@ builder.queryField("myQuestionReviews", (t) =>
         subject: args.subject,
         classLevel: args.classLevel,
         chapter: args.chapter,
+        anchorWord: args.anchorWord,
         questionType: args.questionType,
         qtCode: args.qtCode,
         search: args.search,
@@ -579,6 +581,7 @@ builder.queryField("myQuestionReviewCount", (t) =>
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
       chapter: t.arg.int({ required: false }),
+      anchorWord: t.arg.string({ required: false }),
       questionType: t.arg.string({ required: false }),
       /** PR-G: only questions carrying this school question type (QT-…). */
       qtCode: t.arg.string({ required: false }),
@@ -592,6 +595,7 @@ builder.queryField("myQuestionReviewCount", (t) =>
         subject: args.subject,
         classLevel: args.classLevel,
         chapter: args.chapter,
+        anchorWord: args.anchorWord,
         questionType: args.questionType,
         qtCode: args.qtCode,
         search: args.search,

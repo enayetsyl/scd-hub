@@ -472,7 +472,8 @@ export type AuditEventKind =
   | "SUPPORT_ACCESS_REFUSED" // an authenticated staff read of a support profile refused by scope or role — studentId, reason (D-#1548)
   | "SAFEGUARDING_REFERRAL_RAISED" // a safeguarding referral raised — referralId, studentId, source, signs; never text (D-#1564)
   | "SAFEGUARDING_REFERRAL_SEEN" // the receiver marked a safeguarding referral seen (D-#1564)
-  | "REVIEW_PROGRAM_WRITE"; // review supervision: a program/batch/task created, adopted, moved, cancelled, added or re-dated; meta = what + who
+  | "REVIEW_PROGRAM_WRITE" // review supervision: a program/batch/task created, adopted, moved, cancelled, added or re-dated; meta = what + who
+  | "REVIEW_SELF_SERVE"; // a reviewer took their own next chunk ("আরও কাজ দিন") or the Principal changed the ladder/settings; meta = what + chapters
 
 export interface IAudit extends Document {
   _id: Types.ObjectId;

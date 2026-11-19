@@ -10,7 +10,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery, useMutation } from "urql";
+import { useQuery, useMutation, useClient } from "urql";
 import { ARTIFACT_QUERY, SUBMIT_PLAN_REVIEW } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
 import {
@@ -39,6 +39,7 @@ import {
   curationTagLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { fetchNextItem, openItemAction } from "../../lib/reviewPath";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 
@@ -46,7 +47,8 @@ type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewSubmit">;
 type Verdict = "APPROVE" | "CHANGES_REQUESTED";
 
 export default function ReviewSubmitScreen({ route, navigation }: Props): React.ReactElement {
-  const { assignmentId, artifactId, initialVerdict, initialFeedback, roundStatus } = route.params;
+  const { assignmentId, artifactId, initialVerdict, initialFeedback, roundStatus, fromPath } = route.params;
+  const client = useClient();
   const [{ data, fetching, error }, refetch] = useQuery({ query: ARTIFACT_QUERY, variables: { id: artifactId } });
   const [, submitReview] = useMutation(SUBMIT_PLAN_REVIEW);
 
@@ -89,6 +91,15 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
     if (res.error) {
       setErr(friendlyError(res.error));
       return;
+    }
+    // Opened from the ordered path: carry straight on to the next item (the next plan, or the next
+    // chapter's questions). Nothing left, or the read failing, falls back to the normal way back.
+    if (fromPath && !isResubmit) {
+      const next = await fetchNextItem(client);
+      if (next.item) {
+        navigation.dispatch(openItemAction(next.item, "replace"));
+        return;
+      }
     }
     navigation.goBack();
   }

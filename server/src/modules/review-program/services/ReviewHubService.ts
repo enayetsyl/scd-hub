@@ -27,6 +27,8 @@ import { bnNum } from "../../../lib/bnNum";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
 import { QUESTION_DOC_TYPE } from "../../questions/services/QuestionReviewService";
 import { ReviewTask } from "../models/ReviewTask";
+import { resolveQuestionAnchors, type RoundGroup } from "./ReviewProgramService";
+import { reviewerAnchorHints } from "./ReviewPathService";
 import { examPaperDrafts } from "../../exam-papers/services/ExamPaperDraftService";
 import { mySyllabusApprovals } from "../../exams/services/ExamSyllabusReadService";
 import { listReviewRounds } from "../../mastery/services/MasteryReviewWriteService";
@@ -93,6 +95,10 @@ interface ChapterGroup {
  * Plan rounds + question rounds, grouped by chapter. `left` = rounds still `assigned`
  * (awaiting a verdict); a `submitted` round is decided (still editable) and is not owed.
  * Due dates come from the review program's task for that chapter, when one exists.
+ *
+ * Order (owner 19 Nov): one book together, chapters in NUMBER order. The chapter word is always
+ * the PLAN anchorWord (a question round's own "Unit" is mapped onto it), and a QUESTION row opens
+ * the question queue filtered to that chapter.
  */
 async function chapterRows(
   reviewerId: Types.ObjectId,
@@ -109,8 +115,38 @@ async function chapterRows(
       },
     },
   ]);
-  const open = groups.filter((g) => g.left > 0);
+  let open = groups.filter((g) => g.left > 0);
+  const scWords = new Map<string, Set<string>>();
   if (open.length === 0) return [];
+  if (kind === "QUESTION") {
+    // One plan word per chapter: map each question group onto the plan anchorWord of its subject x class
+    // (the caller's plan rounds + program tasks), then merge groups that now share a chapter.
+    const planWords = await ReviewAssignment.aggregate<{ _id: { subject: string; classLevel: number; anchorWord: string } }>([
+      { $match: { reviewerId, docType: { $in: [...PLAN_DOC_TYPES] }, status: { $in: ["assigned", "submitted"] } } },
+      { $group: { _id: { subject: "$subject", classLevel: "$classLevel", anchorWord: "$anchorWord" } } },
+    ]);
+    const hints = [...(await reviewerAnchorHints(reviewerId)), ...planWords.map((p) => p._id)];
+    for (const h of hints) {
+      const k = `${h.subject}|${h.classLevel}`;
+      scWords.set(k, (scWords.get(k) ?? new Set<string>()).add(h.anchorWord));
+    }
+    const asGroups: RoundGroup[] = open.map((g) => ({
+      reviewerId: "", subject: g._id.subject, classLevel: g._id.classLevel, anchorWord: g._id.anchorWord,
+      addressNumber: g._id.chapter, isQuestion: true, total: g.total, done: g.total - g.left, changes: 0, firstAssignedAt: new Date(0),
+    }));
+    const merged = new Map<string, ChapterGroup>();
+    for (const r of resolveQuestionAnchors(asGroups, hints)) {
+      const k = `${r.subject}|${r.classLevel}|${r.anchorWord}|${r.addressNumber}`;
+      const m = merged.get(k);
+      if (m) {
+        m.total += r.total;
+        m.left += r.total - r.done;
+      } else {
+        merged.set(k, { _id: { subject: r.subject, classLevel: r.classLevel, anchorWord: r.anchorWord, chapter: r.addressNumber }, total: r.total, left: r.total - r.done });
+      }
+    }
+    open = [...merged.values()];
+  }
 
   // One read for every due date: the program task of this reviewer, per chapter.
   const tasks = (await ReviewTask.find({ reviewerId, kind: "PLAN_CHAPTER", status: { $in: ["OPEN", "SUBMITTED"] } })
@@ -124,7 +160,15 @@ async function chapterRows(
     if (!dueBy.has(k)) dueBy.set(k, t.dueKey ?? null);
   }
 
-  return open
+  const chapterNo = (c: string): number => (c.trim() !== "" && Number.isFinite(Number(c)) ? Number(c) : Number.MAX_SAFE_INTEGER);
+  return [...open]
+    .sort(
+      (a, b) =>
+        a._id.classLevel - b._id.classLevel ||
+        a._id.subject.localeCompare(b._id.subject) ||
+        a._id.anchorWord.localeCompare(b._id.anchorWord) ||
+        chapterNo(a._id.chapter) - chapterNo(b._id.chapter),
+    )
     .map((g): ReviewHubRow => {
       const { subject, classLevel, anchorWord, chapter } = g._id;
       const head = `${subjectLabel(subject, classLevel)} · ${classLabelBn(classLevel)} · ${anchorWord} ${bnNum(chapter)}`;
@@ -137,10 +181,16 @@ async function chapterRows(
         dueKey: dueBy.get(`${subject}|${classLevel}|${anchorWord}|${chapter}`) ?? null,
         tab: "ReviewTab",
         screen: kind === "PLAN" ? "ReviewHome" : "QuestionReviewQueue",
-        paramsJson: null,
+        paramsJson:
+          kind === "QUESTION"
+            ? paramsOf({
+                subject, classLevel,
+                ...((scWords.get(`${subject}|${classLevel}`)?.size ?? 0) > 1 ? { anchorWord } : {}),
+                ...(Number.isInteger(Number(chapter)) && chapter.trim() !== "" ? { chapter: Number(chapter), undecided: true } : {}),
+              })
+            : null,
       };
-    })
-    .sort((a, b) => (a.dueKey ?? "9999").localeCompare(b.dueKey ?? "9999") || b.left - a.left);
+    });
 }
 
 async function examPaperRows(ctx: AppContext): Promise<ReviewHubRow[]> {

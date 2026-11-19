@@ -179,7 +179,7 @@ export function resolveQuestionAnchors(
 }
 
 /** The question-round filter for a task: the book's own anchorWord only when the subject x class has several. */
-async function questionAnchorFilter(subject: string, classLevel: number, anchorWord: string): Promise<Record<string, unknown>> {
+export async function questionAnchorFilter(subject: string, classLevel: number, anchorWord: string): Promise<Record<string, unknown>> {
   const planAnchors = (await ReviewAssignment.distinct("anchorWord", {
     docType: { $in: [...PLAN_TYPES] }, subject, classLevel, status: { $ne: "cancelled" },
   })) as string[];
@@ -854,6 +854,11 @@ export async function addTask(input: {
   anchorWord: string;
   chapter: string;
   actor: Actor;
+  /** false = no notice to the reviewer (self-serve: they asked for it; the caller sends one summary). Default true. */
+  notify?: boolean;
+  /** Only one half of the chapter (a reviewer who holds just plan_review:review / question_review:review). */
+  skipPlans?: boolean;
+  skipQuestions?: boolean;
 }): Promise<{ task: ReviewTaskView; assignedPlans: number; assignedQuestions: number; skippedPlans: number }> {
   const program = await loadProgram(input.programId);
   batchOf(program, input.batch);
@@ -863,7 +868,7 @@ export async function addTask(input: {
   const chapterNo = Number(chapter);
 
   // Draft plans of this chapter with NO open round (never disturb somebody mid-review).
-  const arts = await ContentArtifact.find({
+  const arts = input.skipPlans ? [] : await ContentArtifact.find({
     docType: { $in: [...PLAN_TYPES] },
     current: true,
     retiredAt: null,
@@ -891,7 +896,7 @@ export async function addTask(input: {
     assignedPlans += 1;
   }
   let assignedQuestions = 0;
-  if (Number.isInteger(chapterNo)) {
+  if (Number.isInteger(chapterNo) && !input.skipQuestions) {
     const res = await assignQuestionReviewByChapter({
       subject: input.subject, classLevel: input.classLevel, chapters: [chapterNo],
       reviewerId: input.reviewerId, assignedBy: input.actor.id, actorRole: input.actor.role ?? "PRINCIPAL", quiet: true,
@@ -931,10 +936,12 @@ export async function addTask(input: {
   }
   if (!task) throw new ReviewError("Review task not found");
   await audit(input.actor, "task_added", { id: task._id.toString(), kind: "ReviewTask" }, { reviewerId: input.reviewerId, assignedPlans, assignedQuestions, skippedPlans });
-  await emitReviewTaskNotice({
-    reviewerId: input.reviewerId, subject: input.subject, classLevel: input.classLevel, chapter, anchorWord: task.anchorWord,
-    plans: assignedPlans, questions: assignedQuestions, stamp: `add:${task._id.toString()}:${Date.now()}`,
-  });
+  if (input.notify !== false) {
+    await emitReviewTaskNotice({
+      reviewerId: input.reviewerId, subject: input.subject, classLevel: input.classLevel, chapter, anchorWord: task.anchorWord,
+      plans: assignedPlans, questions: assignedQuestions, stamp: `add:${task._id.toString()}:${Date.now()}`,
+    });
+  }
   return { task: await viewOne(task, program), assignedPlans, assignedQuestions, skippedPlans };
 }
 
