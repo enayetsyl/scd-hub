@@ -12,6 +12,7 @@
  */
 import React from "react";
 import { View, Text, ScrollView, type TextStyle } from "react-native";
+import AuthImage from "./AuthImage";
 import { makeStyles, radius, space, typeScale, fonts } from "../theme";
 
 // A table with this many columns or more can't fit a phone width without squeezing
@@ -37,6 +38,7 @@ type Block =
   | { kind: "ordered"; num: string; text: string }
   | { kind: "quote"; text: string }
   | { kind: "hr" }
+  | { kind: "image"; alt: string; src: string }
   | { kind: "table"; header: string[]; rows: string[][] };
 
 function splitRow(line: string): string[] {
@@ -54,8 +56,11 @@ function isDelimiterRow(line: string): boolean {
   return cells.length > 0 && cells.every((c) => /^:?-+:?$/.test(c));
 }
 
-function isSpecial(line: string): boolean {
+const IMAGE_LINE = /^\s*!\[([^\]]*)\]\(\s*(\/files\/[^)\s]+)(?:\s+"[^"]*")?\s*\)\s*$/;
+
+function isSpecial(line: string, images = false): boolean {
   return (
+    (images && IMAGE_LINE.test(line)) ||
     /^#{1,6}\s+/.test(line) ||
     /^\s*([-*_])\1{2,}\s*$/.test(line) ||
     /^\s*\|/.test(line) ||
@@ -65,7 +70,7 @@ function isSpecial(line: string): boolean {
   );
 }
 
-function parseBlocks(src: string): Block[] {
+function parseBlocks(src: string, images = false): Block[] {
   const lines = stripHtmlComments(src).replace(/\r\n/g, "\n").split("\n");
   const blocks: Block[] = [];
   let i = 0;
@@ -73,6 +78,13 @@ function parseBlocks(src: string): Block[] {
   while (i < lines.length) {
     const line = lines[i];
     if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    const im = images ? IMAGE_LINE.exec(line) : null;
+    if (im) {
+      blocks.push({ kind: "image", alt: im[1].trim(), src: im[2] });
       i++;
       continue;
     }
@@ -136,7 +148,7 @@ function parseBlocks(src: string): Block[] {
     // Paragraph: gather wrapped lines until a blank or a block-starting line.
     const buf = [line];
     i++;
-    while (i < lines.length && lines[i].trim() !== "" && !isSpecial(lines[i])) {
+    while (i < lines.length && lines[i].trim() !== "" && !isSpecial(lines[i], images)) {
       buf.push(lines[i]);
       i++;
     }
@@ -283,6 +295,8 @@ function renderBlock(styles: MdStyles, b: Block, k: string): React.ReactElement 
     }
     case "hr":
       return <View key={k} style={styles.hr} />;
+    case "image":
+      return <AuthImage key={k} path={b.src} alt={b.alt} />;
     case "quote":
       return (
         <View key={k} style={styles.quote}>
@@ -315,9 +329,10 @@ function renderBlock(styles: MdStyles, b: Block, k: string): React.ReactElement 
   }
 }
 
-export default function Markdown({ source }: { source: string }): React.ReactElement {
+/** `images`: show `![alt](/files/<id>)` lines as pictures (book chapters); off, they stay literal text as before. */
+export default function Markdown({ source, images = false }: { source: string; images?: boolean }): React.ReactElement {
   const styles = useStyles();
-  const blocks = React.useMemo(() => parseBlocks(source), [source]);
+  const blocks = React.useMemo(() => parseBlocks(source, images), [source, images]);
   return <View>{blocks.map((b, idx) => renderBlock(styles, b, `b-${idx}`))}</View>;
 }
 

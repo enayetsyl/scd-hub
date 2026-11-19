@@ -32,6 +32,7 @@ import { BookMemoRound } from "../models/BookMemoRound";
 import { SchoolBook } from "../models/SchoolBook";
 import { addReleaseFile } from "../services/releaseService";
 import { teacherMayRead, uploadReportPhoto } from "../services/teacherService";
+import { planBookMayReadFile } from "../services/planBook";
 import type { BookReleaseFileKind } from "@scd/shared";
 import { downloadBundle, downloadTranscriptionPack, uploadBundleWhole } from "../services/bundle";
 import { consumeUploadUrl, peekUploadToken } from "../services/uploadUrl";
@@ -416,3 +417,6 @@ export async function assertBookLcFileReadAccess(ctx: AppContext, file: IStoredF
 
 // BL-2 (§7.3): a reader opens the released Teacher edition; a reporter their own page photo.
 registerBookLcReadRule(async (ctx, file) => !!ctx.auth && teacherMayRead(ctx.auth, file));
+
+// Plan-beside-book: a `lesson_plans:read_book` holder opens the PICTURES of the served (released / final) version only.
+registerBookLcReadRule(async (ctx, file) => !!ctx.auth && planBookMayReadFile(ctx.auth, file));

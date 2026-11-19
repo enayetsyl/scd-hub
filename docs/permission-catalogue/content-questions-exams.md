@@ -68,6 +68,7 @@ Counts: 56 mutations, 73 queries, 7 REST/SSE.
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
 |---|---|---|---|
 | server/src/modules/content/resolvers/content.ts:262 | artifact | `content:read`; content scope (contentScope.ts:37 P/O primary role = all); reviewer override | `lesson_plans:view` + content scope (stays; lift see (d), F-27); reviewer override → `plan_review:review` / `question_review:review` + designation assigned reviewer (stays) |
+| server/src/modules/content/resolvers/planBook.ts | planBookChapter | `lesson_plans:read_book`; the plan's own read scope (shared `assertMayReadArtifact`, same as `artifact`) | `lesson_plans:read_book` + plan scope (new, PB-1). Serves only the released / final version; `GET /files/:id` `book_lc_media` also opens for this holder when the served version uses the picture |
 | server/src/modules/content/resolvers/content.ts:291 | contentArtifacts | `content:read`; content scope + mixed-doc publish gate (isAdminStaff) | `lesson_plans:view` + content scope (stays); draft questions → `question_bank:view_all` |
 | server/src/modules/content/resolvers/content.ts:419 | contentTree | `content:read`; same | `lesson_plans:view` + content scope (stays) |
 | server/src/modules/content/resolvers/content.ts:538 | contentTreePage | `content:read`; same (plans only) | `lesson_plans:view` + content scope (stays) |

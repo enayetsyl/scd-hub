@@ -40,6 +40,7 @@ import Markdown from "../../components/Markdown";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { TabParamList } from "../../navigation/types";
 
+import PlanBookTabs from "../../components/PlanBookTabs";
 type Props = NativeStackScreenProps<ContentStackParamList, "PlanView">;
 
 export default function PlanViewScreen({ route, navigation }: Props): React.ReactElement {
@@ -118,6 +119,8 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
     }
   }
 
+  // "পরিকল্পনা | বই" tabs only for people who may read the book (lesson_plans:read_book).
+  const showBook = can("lesson_plans:read_book") && !!a && (PLAN_DOC_TYPES as readonly string[]).includes(a.docType);
   if (fetching) return <Loader label={STR.loading} />;
   if (error) {
     return (
@@ -136,8 +139,8 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
 
   const title = a.address.title || `${a.address.anchorWord} ${a.address.number}`;
 
-  return (
-    <Screen scroll>
+  const planBody = (
+    <>
       <H1>{title}</H1>
       <Muted>
         {subjectLabel(a.subject)} · {classLevelLabel(a.classLevel)}
@@ -233,6 +236,13 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
           </Card>
         </>
       ) : null}
+    </>
+  );
+  return showBook ? (
+    <Screen>
+      <PlanBookTabs artifactId={artifactId}>{planBody}</PlanBookTabs>
     </Screen>
+  ) : (
+    <Screen scroll>{planBody}</Screen>
   );
 }
