@@ -43,6 +43,20 @@ export async function acquireSelfServeLock(programId: Types.ObjectId, now = new 
   }
 }
 
+/** How long a request waits for another reviewer's request to finish before answering BUSY. A request
+ *  normally holds the lock well under a second, so a tap at the same moment as a colleague's still succeeds. */
+export const SELF_SERVE_WAIT_MS = 4_000;
+
+/** Take the program's lock, waiting up to `waitMs` while somebody else holds it; false = still busy. */
+export async function waitForSelfServeLock(programId: Types.ObjectId, waitMs = SELF_SERVE_WAIT_MS): Promise<boolean> {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    if (await acquireSelfServeLock(programId)) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((r) => setTimeout(r, 100 + Math.floor(Math.random() * 100)));
+  }
+}
+
 export async function releaseSelfServeLock(programId: Types.ObjectId): Promise<void> {
   await ReviewSelfServeLock.updateOne({ programId }, { $set: { lockedUntil: new Date(0) } });
 }
