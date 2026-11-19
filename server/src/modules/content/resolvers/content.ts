@@ -23,7 +23,7 @@ import { User } from "../../foundation/models/User";
 import { ForbiddenError } from "../../../middleware/authz";
 import type { AppContext } from "../../../context";
 import { buildContentScope, contentScopeAllows } from "../contentScope";
-import { reviewerMayReadArtifact } from "../services/ReviewService";
+import { assertMayReadArtifact } from "../services/artifactAccess";
 import { applyMixedDocTypeGate } from "../../questions/publishGate";
 import type { Types, FlattenMaps } from "mongoose";
 import type { FilterQuery } from "mongoose";
@@ -298,18 +298,7 @@ builder.queryField("artifact", (t) =>
     resolve: async (_root, args, ctx) => {
       const doc = await ContentArtifact.findById(args.id).lean();
       if (!doc) return null;
-      // Row-scope (D-#257): lesson_plans:view_all bypasses; anyone else sees it iff a routine
-      // teaching/proxy or supervisory grant covers (subject, classLevel).
-      // Override (D-#39): a reviewer (plan_review:review / question_review:review) with an
-      // active review assignment for this exact version may read it even outside their
-      // teaching subject (read-only, artifact-scoped).
-      const scope = await buildContentScope(ctx, "lesson_plans:view_all");
-      if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) {
-        const mayReview =
-          !!ctx.auth &&
-          (callerHasPermission(ctx.auth, "plan_review:review") || callerHasPermission(ctx.auth, "question_review:review"));
-        if (!(mayReview && (await reviewerMayReadArtifact(ctx.auth!.userId, doc._id)))) throw new ForbiddenError();
-      }
+      await assertMayReadArtifact(ctx, doc);
       return docToShape(doc);
     },
   }),

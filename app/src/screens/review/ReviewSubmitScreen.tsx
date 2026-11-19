@@ -29,6 +29,7 @@ import {
   Notice,
   Divider,
 } from "../../components/ui";
+import { useAuth } from "../../auth/AuthContext";
 import Markdown from "../../components/Markdown";
 import {
   STR,
@@ -43,6 +44,8 @@ import { fetchNextItem, openItemAction } from "../../lib/reviewPath";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 
+import { PLAN_DOC_TYPES } from "@scd/shared";
+import PlanBookTabs from "../../components/PlanBookTabs";
 type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewSubmit">;
 type Verdict = "APPROVE" | "CHANGES_REQUESTED";
 
@@ -104,6 +107,9 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
     navigation.goBack();
   }
 
+  const { can } = useAuth();
+  // "পরিকল্পনা | বই" tabs only for people who may read the book (lesson_plans:read_book).
+  const showBook = can("lesson_plans:read_book") && !!a && (PLAN_DOC_TYPES as readonly string[]).includes(a.docType);
   if (fetching) return <Loader label={STR.loading} />;
   if (error) {
     return (
@@ -126,8 +132,8 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
   // further verdict can be submitted — show why instead of a dead form/error.
   const closed = a.reviewStatus === "gold" || a.current === false;
 
-  return (
-    <Screen scroll>
+  const planBody = (
+    <>
       <H1>{title}</H1>
       <Muted>
         {subjectLabel(a.subject)} · {classLevelLabel(a.classLevel)}
@@ -188,6 +194,13 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
         />
       </Card>
       )}
+    </>
+  );
+  return showBook ? (
+    <Screen>
+      <PlanBookTabs artifactId={artifactId}>{planBody}</PlanBookTabs>
     </Screen>
+  ) : (
+    <Screen scroll>{planBody}</Screen>
   );
 }

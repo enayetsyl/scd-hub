@@ -10398,6 +10398,18 @@ const STR_BN = {
   mgrNotifyFailed: "প্রকাশ হয়েছে, কিন্তু অভিভাবকদের বার্তা পাঠানো যায়নি। “আবার জানান” চাপুন।",
   mgrNotifyAgain: "আবার জানান",
   mgrNotifiedOk: "অভিভাবকদের জানানো হয়েছে",
+  pbTabPlan: "📄 পরিকল্পনা",
+  pbTabBook: "📖 বই",
+  pbSideBySide: "⇆ পাশাপাশি",
+  pbSideBySideOff: "⇆ আলাদা",
+  pbVersionLine: "সংস্করণ",
+  pbPrinted: "ছাপা হয়েছে",
+  pbFinal: "চূড়ান্ত",
+  pbChapterMissing: "এই পরিকল্পনার অধ্যায়টি বইয়ে পাওয়া যায়নি — নিচের তালিকা থেকে অধ্যায় বেছে নিন",
+  pbPickChapter: "অধ্যায় বেছে নিন",
+  pbTeacherNote: "👩‍🏫 শিক্ষক-নোট ও উত্তর",
+  pbNoBook: "এই বইটি এখনো অ্যাপে নেই",
+  pbNoText: "এই অধ্যায়ের লেখা পাওয়া যায়নি",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -19348,6 +19360,18 @@ const STR_EN: StrTable = {
   mgrNotifyFailed: "Published, but the families could not be messaged. Tap \"Tell them again\".",
   mgrNotifyAgain: "Tell them again",
   mgrNotifiedOk: "Families notified",
+  pbTabPlan: "📄 Plan",
+  pbTabBook: "📖 Book",
+  pbSideBySide: "⇆ Side by side",
+  pbSideBySideOff: "⇆ Separate",
+  pbVersionLine: "edition",
+  pbPrinted: "printed",
+  pbFinal: "final",
+  pbChapterMissing: "This plan's chapter was not found in the book — pick a chapter from the list below",
+  pbPickChapter: "Pick a chapter",
+  pbTeacherNote: "👩‍🏫 Teacher note and answers",
+  pbNoBook: "This book is not in the app yet",
+  pbNoText: "No text found for this chapter",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

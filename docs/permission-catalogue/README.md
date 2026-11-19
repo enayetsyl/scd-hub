@@ -169,7 +169,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Finance | `fee_support` | Zakat & fee support | যাকাত ও ফি সহায়তা | 3 | hr-finance |
 | Finance | `qard` | Qard-hasan / IOU | কর্জে হাসানা | 3 | hr-finance |
 | Finance | `reconciliation` | Bank reconciliation | হিসাব মেলানো | 2 | hr-finance |
-| Content & books | `lesson_plans` | Lesson plans | পাঠ পরিকল্পনা | 3 | content-questions-exams |
+| Content & books | `lesson_plans` | Lesson plans | পাঠ পরিকল্পনা | 4 | content-questions-exams |
 | Content & books | `plan_review` | Plan review | পরিকল্পনা রিভিউ | 3 | content-questions-exams |
 | Content & books | `question_bank` | Question bank | প্রশ্নব্যাংক | 5 | content-questions-exams |
 | Content & books | `question_hint` | Question hints | প্রশ্নের ইঙ্গিত | 1 | content-questions-exams |
@@ -751,6 +751,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `lesson_plans:view` | View lesson plans | পাঠ পরিকল্পনা দেখা | Plan tree, a plan, its PDF | on | — | | content:read |
 | `lesson_plans:view_all` | Every plan | সব পাঠ পরিকল্পনা দেখা | Plans beyond own routine/supervisory scope | — | on | †, 2H, F-27 | contentScope primary-role P/O = all |
 | `lesson_plans:import` | Import lesson plans | পাঠ পরিকল্পনা ইম্পোর্ট করা | Upload a plan pair or envelope | — | on | | content:import |
+| `lesson_plans:read_book` | Read the book beside a plan | পরিকল্পনার পাশে বই পড়া | The matching chapter of the school's released book on the plan screen (children's text, teacher note folded); its pictures. Also needs the plan's own read scope | on | on | | — (new) |
 | `home_guide:import` | Import home guides | বাড়ির গাইড ইম্পোর্ট করা | Load the per-session guardian home guides (steps + classwork items) from a plan pack file (GH-4, D-#1528) | — | — | | — (new) |
 | `plan_review:assign` | Assign plan reviewers | রিভিউয়ার বরাদ্দ করা | Assign/move/cancel rounds; board, inbox, load; any thread | — | on | F-26 | content:assign_review; isAdminStaff (thread) |
 | `plan_review:review` | Review plans | পরিকল্পনা রিভিউ করা | Verdict on an assigned plan | on | — | DESIGNATION:assigned_reviewer | content:review |

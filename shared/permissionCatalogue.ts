@@ -794,6 +794,7 @@ export const FEATURE_CATALOGUE = {
       view: { en: "View lesson plans", bn: "পাঠ পরিকল্পনা দেখা", desc: "Plan tree, a plan, its PDF", teacher: true, office: false, flags: [] },
       view_all: { en: "Every plan", bn: "সব পাঠ পরিকল্পনা দেখা", desc: "Plans beyond own routine/supervisory scope", teacher: false, office: true, flags: [] },
       import: { en: "Import lesson plans", bn: "পাঠ পরিকল্পনা ইম্পোর্ট করা", desc: "Upload a plan pair or envelope", teacher: false, office: true, flags: [] },
+      read_book: { en: "Read the book beside a plan", bn: "পরিকল্পনার পাশে বই পড়া", desc: "The matching chapter of the school's book on the plan screen", teacher: true, office: true, flags: [] },
     },
   },
   home_guide: {
