@@ -13,7 +13,7 @@ const os = require("node:os");
 const path = require("node:path");
 const L = require("./exam-lib.cjs");
 
-const SY = "পরীক্ষার সিলেবাস";
+const SY = "পরীক্ষা"; // D-#1652: the পরীক্ষা group
 const PDF =
   process.env.HELP_EP_PDF ||
   "C:/Users/HP/Downloads/Mohammadpur Materials/Mohammadpur Final Question 2025/Class 1/One_Bangla_Final_2025.pdf";

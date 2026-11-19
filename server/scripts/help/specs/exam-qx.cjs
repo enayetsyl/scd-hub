@@ -11,7 +11,7 @@ const QX = "কুরআন পরীক্ষা";
 
 async function office(h) {
   const O = await L.login(h, "office@help.test");
-  await L.menuShots(h, O, ["exam-qx-publish"], null, QX);
+  await L.menuShots(h, O, ["exam-qx-publish"], "পরীক্ষা", QX);
   await L.fillAfter(O, "অভিভাবকদের জন্য নির্দেশনা", "পরীক্ষার ১৫ মিনিট আগে পৌঁছাবে; কুরআন শরিফ সঙ্গে আনবে।");
   await h.shot(O, "exam-qx-publish", 1, [{ text: "অভিভাবকদের জন্য নির্দেশনা" }, { text: "প্রকাশ করুন" }]);
   await h.tap(O, "সংরক্ষণ করুন", 2500);
@@ -46,7 +46,7 @@ async function office(h) {
 
 async function examiner(h) {
   const T = await L.login(h, "teacher@help.test");
-  await L.menuShots(h, T, ["exam-qx-examine"], null, QX);
+  await L.menuShots(h, T, ["exam-qx-examine"], "পরীক্ষা", QX);
   await h.shot(T, "exam-qx-examine", 1, [{ text: "আরিফ হোসেন" }]);
   await h.tap(T, "আরিফ হোসেন", 4000);
   const fill = [["সূরা থেকে পড়া", 36], ["তাজবীদ", 17], ["ছোট সূরা", 18], ["দোয়া", 9]];

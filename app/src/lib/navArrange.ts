@@ -35,6 +35,39 @@ export function orderByKeys<T>(items: T[], keyOf: (t: T) => string, order: strin
   return stableSort(items, (t) => pos.get(keyOf(t)) ?? order.length);
 }
 
+/**
+ * A section that took over from older sections (D-#1652: the পরীক্ষা group replaced the
+ * syllabus and scholarship groups and the Quran / oral exam items). `replaces` are the old
+ * section keys; `after` is used only when none of them is in the saved order.
+ */
+export interface NavOrderMigration {
+  key: string;
+  replaces: string[];
+  after?: string;
+}
+
+/**
+ * Puts each new section into a saved order where its old sections were: at the first saved
+ * position of any key it replaces, else right after `after`. An order that already holds
+ * the key, or an empty order (nothing arranged yet), is returned unchanged; a key with no
+ * anchor is left out, so it falls to the end like any section never placed. The old keys
+ * stay in the list; they match no section any more, so they are harmless and the next save
+ * drops them.
+ */
+export function migrateOrder(order: string[], migrations: NavOrderMigration[]): string[] {
+  if (order.length === 0) return order;
+  let next = order;
+  for (const m of migrations) {
+    if (next.includes(m.key)) continue;
+    const at = next.findIndex((k) => m.replaces.includes(k));
+    const after = m.after === undefined ? -1 : next.indexOf(m.after);
+    const pos = at >= 0 ? at : after >= 0 ? after + 1 : -1;
+    if (pos < 0) continue;
+    next = [...next.slice(0, pos), m.key, ...next.slice(pos)];
+  }
+  return next;
+}
+
 /** Most-used first; never-used keep their default order at the end. */
 export function orderByUse<T>(items: T[], useOf: (t: T) => number): T[] {
   return stableSort(items, (t) => -useOf(t));
