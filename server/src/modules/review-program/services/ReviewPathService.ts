@@ -157,6 +157,12 @@ export function buildReviewPath(input: {
     })),
   ];
   const resolved = resolveQuestionAnchors(asGroups, [...(input.hints ?? [])]);
+  // A subject x class with several books (ISLAM class 1): the queue must be told WHICH book, or its list
+  // and counts would mix them. Same rule as resolveQuestionAnchors: more than one plan word -> own word decides.
+  const scWords = new Map<string, Set<string>>();
+  for (const g of asGroups) if (!g.isQuestion) scWords.set(`${g.subject}|${g.classLevel}`, (scWords.get(`${g.subject}|${g.classLevel}`) ?? new Set<string>()).add(g.anchorWord));
+  for (const h of input.hints ?? []) scWords.set(`${h.subject}|${h.classLevel}`, (scWords.get(`${h.subject}|${h.classLevel}`) ?? new Set<string>()).add(h.anchorWord));
+  const multiBook = (subject: string, classLevel: number): boolean => (scWords.get(`${subject}|${classLevel}`)?.size ?? 0) > 1;
   const questionGroups = resolved.filter((g) => g.isQuestion);
 
   interface ChapterAcc {
@@ -235,6 +241,7 @@ export function buildReviewPath(input: {
         screen: "QuestionReviewQueue",
         paramsJson: JSON.stringify({
           subject: c.subject, classLevel: c.classLevel,
+          ...(multiBook(c.subject, c.classLevel) ? { anchorWord: c.anchorWord } : {}),
           ...(chapterNo != null && Number.isInteger(chapterNo) ? { chapter: chapterNo } : {}),
           ...(c.qLeft > 0 ? { undecided: true } : {}),
           fromPath: true,

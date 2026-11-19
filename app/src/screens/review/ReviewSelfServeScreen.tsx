@@ -23,7 +23,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { Badge, Body, Button, Card, Chip, ChipRow, EmptyState, Field, H2, Muted, Screen, wrapRowText } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useToast } from "../../state/ToastContext";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, subjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { useColors } from "../../theme";
@@ -76,9 +76,9 @@ export default function ReviewSelfServeScreen({ route }: Props): React.ReactElem
     setEnabled(s.enabled);
     setChunk(String(s.chunkChapters));
     setPlansLeft(String(s.releasePlansLeft));
-    setPct(String(s.releaseQuestionsPct));
+    setPct(String(s.releaseQuestionsLeft));
     setPerDay(String(s.maxRequestsPerDay));
-  }, [s?.enabled, s?.chunkChapters, s?.releasePlansLeft, s?.releaseQuestionsPct, s?.maxRequestsPerDay]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [s?.enabled, s?.chunkChapters, s?.releasePlansLeft, s?.releaseQuestionsLeft, s?.maxRequestsPerDay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveSettings(): Promise<void> {
     if (saving) return;
@@ -88,7 +88,7 @@ export default function ReviewSelfServeScreen({ route }: Props): React.ReactElem
       enabled,
       chunkChapters: Number(chunk),
       releasePlansLeft: Number(plansLeft),
-      releaseQuestionsPct: Number(pct),
+      releaseQuestionsLeft: Number(pct),
       maxRequestsPerDay: Number(perDay),
     });
     setSaving(false);
@@ -122,9 +122,8 @@ export default function ReviewSelfServeScreen({ route }: Props): React.ReactElem
 
   function candidatesFor(row: LadderRow): ReviewLadderBookT[] {
     const have = new Set(row.books.map(bookKey));
-    const subject = row.books[0]?.subject;
-    // The same subject first-class: a ladder is "this subject, class after class".
-    return (data?.availableBooks ?? []).filter((b) => !have.has(bookKey(b)) && (!subject || b.subject === subject)).slice(0, 40);
+    // Any subject (a ladder may move a reviewer to another subject); the list is grouped by subject below.
+    return (data?.availableBooks ?? []).filter((b) => !have.has(bookKey(b)));
   }
 
   return (
@@ -139,7 +138,7 @@ export default function ReviewSelfServeScreen({ route }: Props): React.ReactElem
               </ChipRow>
               <Field label={STR.rssChunk} value={chunk} onChangeText={setChunk} keyboardType="number-pad" editable={canManage} />
               <Field label={STR.rssPlansLeft} value={plansLeft} onChangeText={setPlansLeft} keyboardType="number-pad" editable={canManage} />
-              <Field label={STR.rssQuestionsPct} value={pct} onChangeText={setPct} keyboardType="number-pad" editable={canManage} />
+              <Field label={STR.rssQuestionsLeft} value={pct} onChangeText={setPct} keyboardType="number-pad" editable={canManage} />
               <Field label={STR.rssPerDay} value={perDay} onChangeText={setPerDay} keyboardType="number-pad" editable={canManage} />
               {canManage ? <Button title={STR.rssSave} onPress={() => void saveSettings()} loading={saving} /> : null}
             </Card>
@@ -182,9 +181,12 @@ export default function ReviewSelfServeScreen({ route }: Props): React.ReactElem
                       <View style={{ marginTop: space(2) }}>
                         <Muted>{STR.rssBookPick}</Muted>
                         {candidatesFor(row).length === 0 ? <Muted>{STR.rssNoMoreBooks}</Muted> : null}
-                        {candidatesFor(row).map((b) => (
+                        {candidatesFor(row).map((b, bi, all) => (
+                          <React.Fragment key={bookKey(b)}>
+                          {bi === 0 || all[bi - 1]?.subject !== b.subject ? (
+                            <Body style={{ fontWeight: "700", marginTop: space(2) }}>{subjectLabel(b.subject)}</Body>
+                          ) : null}
                           <Pressable
-                            key={bookKey(b)}
                             accessibilityRole="button"
                             style={{ paddingVertical: space(2) }}
                             onPress={() => {
@@ -194,6 +196,7 @@ export default function ReviewSelfServeScreen({ route }: Props): React.ReactElem
                           >
                             <Body>+ {b.labelBn}</Body>
                           </Pressable>
+                          </React.Fragment>
                         ))}
                       </View>
                     ) : null}

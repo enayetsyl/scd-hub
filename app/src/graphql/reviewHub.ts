@@ -154,7 +154,7 @@ export interface ReviewSelfServeT {
     enabled: boolean;
     chunkChapters: number;
     releasePlansLeft: number;
-    releaseQuestionsPct: number;
+    releaseQuestionsLeft: number;
     maxRequestsPerDay: number;
   };
   ladders: { reviewerId: string; reviewerName: string | null; custom: boolean; books: ReviewLadderBookT[] }[];
@@ -163,7 +163,7 @@ export interface ReviewSelfServeT {
 
 const SELF_SERVE_FIELDS = `
   programId
-  settings { enabled chunkChapters releasePlansLeft releaseQuestionsPct maxRequestsPerDay }
+  settings { enabled chunkChapters releasePlansLeft releaseQuestionsLeft maxRequestsPerDay }
   ladders { reviewerId reviewerName custom books { subject classLevel anchorWord labelBn } }
   availableBooks { subject classLevel anchorWord labelBn }
 `;
@@ -181,7 +181,7 @@ export const UPDATE_REVIEW_SELF_SERVE = gql<
     enabled?: boolean | null;
     chunkChapters?: number | null;
     releasePlansLeft?: number | null;
-    releaseQuestionsPct?: number | null;
+    releaseQuestionsLeft?: number | null;
     maxRequestsPerDay?: number | null;
   }
 >`
@@ -190,7 +190,7 @@ export const UPDATE_REVIEW_SELF_SERVE = gql<
     $enabled: Boolean
     $chunkChapters: Int
     $releasePlansLeft: Int
-    $releaseQuestionsPct: Int
+    $releaseQuestionsLeft: Int
     $maxRequestsPerDay: Int
   ) {
     updateReviewSelfServe(
@@ -198,7 +198,7 @@ export const UPDATE_REVIEW_SELF_SERVE = gql<
       enabled: $enabled
       chunkChapters: $chunkChapters
       releasePlansLeft: $releasePlansLeft
-      releaseQuestionsPct: $releaseQuestionsPct
+      releaseQuestionsLeft: $releaseQuestionsLeft
       maxRequestsPerDay: $maxRequestsPerDay
     ) { ${SELF_SERVE_FIELDS} }
   }

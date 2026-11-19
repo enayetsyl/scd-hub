@@ -129,6 +129,8 @@ export type ReviewStackParamList = {
         subject?: string | null;
         classLevel?: number | null;
         chapter?: number | null;
+        /** The book, when the subject x class has several. */
+        anchorWord?: string | null;
         undecided?: boolean;
         fromPath?: boolean;
       }

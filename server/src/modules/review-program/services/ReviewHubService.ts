@@ -116,6 +116,7 @@ async function chapterRows(
     },
   ]);
   let open = groups.filter((g) => g.left > 0);
+  const scWords = new Map<string, Set<string>>();
   if (open.length === 0) return [];
   if (kind === "QUESTION") {
     // One plan word per chapter: map each question group onto the plan anchorWord of its subject x class
@@ -125,6 +126,10 @@ async function chapterRows(
       { $group: { _id: { subject: "$subject", classLevel: "$classLevel", anchorWord: "$anchorWord" } } },
     ]);
     const hints = [...(await reviewerAnchorHints(reviewerId)), ...planWords.map((p) => p._id)];
+    for (const h of hints) {
+      const k = `${h.subject}|${h.classLevel}`;
+      scWords.set(k, (scWords.get(k) ?? new Set<string>()).add(h.anchorWord));
+    }
     const asGroups: RoundGroup[] = open.map((g) => ({
       reviewerId: "", subject: g._id.subject, classLevel: g._id.classLevel, anchorWord: g._id.anchorWord,
       addressNumber: g._id.chapter, isQuestion: true, total: g.total, done: g.total - g.left, changes: 0, firstAssignedAt: new Date(0),
@@ -180,6 +185,7 @@ async function chapterRows(
           kind === "QUESTION"
             ? paramsOf({
                 subject, classLevel,
+                ...((scWords.get(`${subject}|${classLevel}`)?.size ?? 0) > 1 ? { anchorWord } : {}),
                 ...(Number.isInteger(Number(chapter)) && chapter.trim() !== "" ? { chapter: Number(chapter), undecided: true } : {}),
               })
             : null,

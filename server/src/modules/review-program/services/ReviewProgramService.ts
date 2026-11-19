@@ -856,6 +856,9 @@ export async function addTask(input: {
   actor: Actor;
   /** false = no notice to the reviewer (self-serve: they asked for it; the caller sends one summary). Default true. */
   notify?: boolean;
+  /** Only one half of the chapter (a reviewer who holds just plan_review:review / question_review:review). */
+  skipPlans?: boolean;
+  skipQuestions?: boolean;
 }): Promise<{ task: ReviewTaskView; assignedPlans: number; assignedQuestions: number; skippedPlans: number }> {
   const program = await loadProgram(input.programId);
   batchOf(program, input.batch);
@@ -865,7 +868,7 @@ export async function addTask(input: {
   const chapterNo = Number(chapter);
 
   // Draft plans of this chapter with NO open round (never disturb somebody mid-review).
-  const arts = await ContentArtifact.find({
+  const arts = input.skipPlans ? [] : await ContentArtifact.find({
     docType: { $in: [...PLAN_TYPES] },
     current: true,
     retiredAt: null,
@@ -893,7 +896,7 @@ export async function addTask(input: {
     assignedPlans += 1;
   }
   let assignedQuestions = 0;
-  if (Number.isInteger(chapterNo)) {
+  if (Number.isInteger(chapterNo) && !input.skipQuestions) {
     const res = await assignQuestionReviewByChapter({
       subject: input.subject, classLevel: input.classLevel, chapters: [chapterNo],
       reviewerId: input.reviewerId, assignedBy: input.actor.id, actorRole: input.actor.role ?? "PRINCIPAL", quiet: true,

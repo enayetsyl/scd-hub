@@ -8,6 +8,7 @@
  *          updateReviewSelfServe, setReviewLadder: review_program:manage.
  * No new permission: each action reuses the catalogue entry that already covers it.
  */
+import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
@@ -28,6 +29,7 @@ import {
   updateSelfServeSettings,
   type LadderBookView,
   type LadderRowView,
+  type MoreCaps,
   type MoreResult,
   type MoreStatus,
   type SelfServeOverview,
@@ -41,6 +43,15 @@ function mapError(err: unknown): never {
 function actorOf(ctx: { auth?: { userId: string; role: string } | null }) {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   return { id: ctx.auth.userId, role: ctx.auth.role };
+}
+
+/** Only the half of a chapter the caller may review (a plan-only reviewer is never handed questions). */
+function capsOf(ctx: { auth?: Parameters<typeof callerHasPermission>[0] | null }): MoreCaps {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  return {
+    plans: callerHasPermission(ctx.auth, "plan_review:review"),
+    questions: callerHasPermission(ctx.auth, "question_review:review"),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +142,7 @@ const MoreStatusRef = builder.objectRef<MoreStatus>("ReviewMoreStatus");
 MoreStatusRef.implement({
   fields: (t) => ({
     canRequest: t.exposeBoolean("canRequest"),
-    reason: t.string({ nullable: true, resolve: (s) => s.reason, description: "STILL_OPEN | DAILY_CAP | NOT_ENABLED, or null when canRequest." }),
+    reason: t.string({ nullable: true, resolve: (s) => s.reason, description: "STILL_OPEN | DAILY_CAP | NOT_ENABLED | BUSY, or null when canRequest." }),
     leftPlans: t.exposeInt("leftPlans"),
     leftQuestions: t.exposeInt("leftQuestions"),
     requestsToday: t.exposeInt("requestsToday"),
@@ -143,7 +154,7 @@ MoreStatusRef.implement({
 const MoreResultRef = builder.objectRef<MoreResult>("ReviewMoreResult");
 MoreResultRef.implement({
   fields: (t) => ({
-    outcome: t.exposeString("outcome", { description: "ADDED | STILL_OPEN | DAILY_CAP | NOTHING_LEFT | NOT_ENABLED" }),
+    outcome: t.exposeString("outcome", { description: "ADDED | STILL_OPEN | DAILY_CAP | NOTHING_LEFT | NOT_ENABLED | BUSY" }),
     bookTitleBn: t.string({ nullable: true, resolve: (r) => r.bookTitleBn }),
     anchorWord: t.string({ nullable: true, resolve: (r) => r.anchorWord }),
     chapters: t.field({ type: ["String"], resolve: (r) => r.chapters }),
@@ -160,7 +171,7 @@ builder.queryField("myReviewMoreStatus", (t) =>
     authScopes: { hasAnyPermission: ["plan_review:review", "question_review:review"] },
     resolve: async (_r, _a, ctx) => {
       try {
-        return await myReviewMoreStatus(actorOf(ctx).id);
+        return await myReviewMoreStatus(actorOf(ctx).id, capsOf(ctx));
       } catch (e) {
         return mapError(e);
       }
@@ -177,7 +188,7 @@ builder.mutationField("requestMoreReview", (t) =>
     authScopes: { hasAnyPermission: ["plan_review:review", "question_review:review"] },
     resolve: async (_r, _a, ctx) => {
       try {
-        return await requestMoreReview(actorOf(ctx));
+        return await requestMoreReview(actorOf(ctx), capsOf(ctx));
       } catch (e) {
         return mapError(e);
       }
@@ -195,7 +206,7 @@ SettingsRef.implement({
     enabled: t.exposeBoolean("enabled"),
     chunkChapters: t.exposeInt("chunkChapters"),
     releasePlansLeft: t.exposeInt("releasePlansLeft"),
-    releaseQuestionsPct: t.exposeInt("releaseQuestionsPct"),
+    releaseQuestionsLeft: t.exposeInt("releaseQuestionsLeft"),
     maxRequestsPerDay: t.exposeInt("maxRequestsPerDay"),
   }),
 });
@@ -264,7 +275,7 @@ builder.mutationField("updateReviewSelfServe", (t) =>
       enabled: t.arg.boolean({ required: false }),
       chunkChapters: t.arg.int({ required: false }),
       releasePlansLeft: t.arg.int({ required: false }),
-      releaseQuestionsPct: t.arg.int({ required: false }),
+      releaseQuestionsLeft: t.arg.int({ required: false }),
       maxRequestsPerDay: t.arg.int({ required: false }),
     },
     resolve: async (_r, a, ctx) => {

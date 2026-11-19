@@ -74,6 +74,8 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
   const [subject, setSubject] = useState<string | null>(initial?.subject ?? null);
   const [classLevel, setClassLevel] = useState<number | null>(initial?.classLevel ?? null);
   const [chapter, setChapter] = useState<number | null>(initial?.chapter ?? null);
+  /** Set only by the ordered path for a multi-book subject x class; no chip changes it. */
+  const anchorWord = initial?.anchorWord ?? null;
   const [questionType, setQuestionType] = useState<string | null>(null);
   /** PR-G: the school question type (QT-…) the question carries. */
   const [qtCode, setQtCode] = useState<string | null>(null);
@@ -99,12 +101,13 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
       subject,
       classLevel,
       chapter,
+      anchorWord,
       questionType,
       qtCode,
       important: important ? true : null,
       undecided: undecided ? true : null,
     }),
-    [subject, classLevel, chapter, questionType, qtCode, important, undecided],
+    [subject, classLevel, chapter, anchorWord, questionType, qtCode, important, undecided],
   );
 
   const [{ data, fetching, error }, refetch] = useQuery({

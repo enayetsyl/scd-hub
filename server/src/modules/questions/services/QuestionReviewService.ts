@@ -904,6 +904,8 @@ export interface MyReviewsFilterArgs {
   subject?: string | null;
   classLevel?: number | null;
   chapter?: number | null;
+  /** The round's own anchorWord - set only when a subject x class has several books sharing chapter numbers (ISLAM class 1). */
+  anchorWord?: string | null;
   questionType?: string | null;
   /** PR-G: only questions carrying this school question type (`lesson_ref`). */
   qtCode?: string | null;
@@ -926,6 +928,7 @@ function myReviewsRoundMatch(reviewerId: string, args: MyReviewsFilterArgs): Rec
   };
   if (args.subject) filter.subject = args.subject;
   if (args.classLevel != null) filter.classLevel = args.classLevel;
+  if (args.anchorWord) filter.anchorWord = args.anchorWord;
   // The round stores the chapter as a string whatever the artifact used (QR-6).
   if (args.chapter != null) filter.addressNumber = String(args.chapter);
   return filter;
@@ -954,6 +957,7 @@ export function noReviewerFilter(args: MyReviewsFilterArgs): boolean {
     !args.subject &&
     args.classLevel == null &&
     args.chapter == null &&
+    !args.anchorWord &&
     !args.questionType &&
     !args.qtCode &&
     !(args.search?.trim()) &&

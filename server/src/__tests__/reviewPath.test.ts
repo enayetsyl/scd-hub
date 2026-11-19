@@ -179,6 +179,24 @@ describe("myReviewPath", () => {
   });
 });
 
+describe("multi-book subject x class", () => {
+  test("the questions block carries the book's anchorWord only when the subject x class has several books", async () => {
+    await seed({ reviewer: ME, docType: "chapter_plan", chapter: "1", subject: "ISLAM", anchorWord: "অধ্যায়" });
+    await seed({ reviewer: ME, docType: "chapter_plan", chapter: "1", subject: "ISLAM", anchorWord: "পাঠ" });
+    await seed({ reviewer: ME, docType: "question", chapter: "1", subject: "ISLAM", anchorWord: "পাঠ", n: 2 });
+    await seed({ reviewer: ME, docType: "chapter_plan", chapter: "1", subject: "BAN" });
+    await seed({ reviewer: ME, docType: "question", chapter: "1", subject: "BAN", n: 2 });
+    const { books } = await myReviewPath(authFor(ME));
+    const q = (subject: string, word: string) =>
+      JSON.parse(books.find((b) => b.subject === subject && b.anchorWord === word)!.chapters[0].items.find((i) => i.kind === "QUESTIONS")!.paramsJson);
+    expect(q("ISLAM", "পাঠ")).toMatchObject({ subject: "ISLAM", anchorWord: "পাঠ", chapter: 1 });
+    expect(q("BAN", "অধ্যায়").anchorWord).toBeUndefined();
+    const hub = await myReviewHub({ auth: authFor(ME) } as unknown as AppContext);
+    const islamQ = hub.rows.find((r) => r.kind === "QUESTION" && r.key.includes("ISLAM"))!;
+    expect(JSON.parse(islamQ.paramsJson as string).anchorWord).toBe("পাঠ");
+  });
+});
+
 describe("buildReviewPath (pure)", () => {
   test("two books of one subject x class are told apart by their word; question words map to the one plan word", () => {
     const plan = (anchorWord: string, id: string) => ({

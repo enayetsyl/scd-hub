@@ -29,6 +29,7 @@ import { ContentArtifact } from "../modules/content/models/ContentArtifact";
 import { ReviewAssignment } from "../modules/content/models/ReviewAssignment";
 import { ReviewProgram } from "../modules/review-program/models/ReviewProgram";
 import { ReviewTask } from "../modules/review-program/models/ReviewTask";
+import { ReviewSelfServeLock, acquireSelfServeLock } from "../modules/review-program/models/ReviewSelfServeLock";
 import { Audit } from "../modules/platform/models/Audit";
 import { createProgram } from "../modules/review-program/services/ReviewProgramService";
 import {
@@ -110,7 +111,7 @@ const myRounds = (status?: string) => ReviewAssignment.find({ reviewerId: ME, ..
 
 beforeEach(async () => {
   jest.clearAllMocks();
-  await Promise.all([User, ContentArtifact, ReviewAssignment, ReviewProgram, ReviewTask, Audit].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})));
+  await Promise.all([User, ContentArtifact, ReviewAssignment, ReviewProgram, ReviewTask, ReviewSelfServeLock, Audit].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})));
   PRINCIPAL = await user("Principal", "PRINCIPAL");
   ME = await user("Reviewer");
   OTHER = await user("Other");
@@ -130,13 +131,12 @@ describe("the gate", () => {
     expect(mockEmitSelfServe).not.toHaveBeenCalled();
   });
 
-  test("questions: allowed at or under the percentage, refused above it", () => {
-    const s = { releasePlansLeft: 0, releaseQuestionsPct: 10 };
-    expect(releaseAllowed(s, { leftPlans: 0, leftQuestions: 10, totalQuestions: 100 })).toBe(true);
-    expect(releaseAllowed(s, { leftPlans: 0, leftQuestions: 11, totalQuestions: 100 })).toBe(false);
-    expect(releaseAllowed(s, { leftPlans: 1, leftQuestions: 0, totalQuestions: 100 })).toBe(false);
-    expect(releaseAllowed(s, { leftPlans: 0, leftQuestions: 0, totalQuestions: 0 })).toBe(true);
-    expect(releaseAllowed({ releasePlansLeft: 2, releaseQuestionsPct: 0 }, { leftPlans: 2, leftQuestions: 0, totalQuestions: 5 })).toBe(true);
+  test("questions: allowed at or under the fixed count of open items, refused above it", () => {
+    const s = { releasePlansLeft: 0, releaseQuestionsLeft: 10 };
+    expect(releaseAllowed(s, { leftPlans: 0, leftQuestions: 10 })).toBe(true);
+    expect(releaseAllowed(s, { leftPlans: 0, leftQuestions: 11 })).toBe(false);
+    expect(releaseAllowed(s, { leftPlans: 1, leftQuestions: 0 })).toBe(false);
+    expect(releaseAllowed({ releasePlansLeft: 2, releaseQuestionsLeft: 0 }, { leftPlans: 2, leftQuestions: 0 })).toBe(true);
   });
 
   test("the status the button reads says why it is off", async () => {
@@ -264,6 +264,79 @@ describe("the ladder", () => {
   });
 });
 
+describe("concurrency, held chapters and partial permissions", () => {
+  test("two requests at once never hand out one chapter twice, and the cap holds", async () => {
+    await liveTask("1");
+    for (const n of [2, 3, 4, 5]) await chapter({ n });
+    // A second reviewer on the same ladder, asking at the same moment.
+    await ReviewTask.create({
+      programId: new Types.ObjectId(programId), batch: 1, reviewerId: OTHER, kind: "PLAN_CHAPTER", subject: "BAN", classLevel: 1,
+      anchorWord: WORD, chapter: "1", status: "OPEN", createdBy: PRINCIPAL,
+    });
+    await updateSelfServeSettings({ programId, chunkChapters: 2, maxRequestsPerDay: 1, actor: { id: PRINCIPAL.toString(), role: "PRINCIPAL" } });
+    const results = await Promise.all([
+      requestMoreReview(ACTOR()),
+      requestMoreReview(ACTOR()),
+      requestMoreReview({ id: OTHER.toString(), role: "TEACHER" }),
+    ]);
+    // Every round (plan or question) belongs to exactly one open reviewer: no chapter was superseded or doubled.
+    const open = await ReviewAssignment.find({ status: { $in: ["assigned", "submitted"] } }).lean();
+    const owners = new Map<string, Set<string>>();
+    for (const r of open) owners.set(r.addressNumber, (owners.get(r.addressNumber) ?? new Set()).add(r.reviewerId.toString()));
+    for (const [, who] of owners) expect(who.size).toBe(1);
+    expect(await ReviewAssignment.countDocuments({ status: "superseded" })).toBe(0);
+    // ME's cap is 1 request per day: at most one ADDED for ME across the two taps.
+    expect(results.slice(0, 2).filter((r) => r.outcome === "ADDED")).toHaveLength(1);
+    expect(await Audit.countDocuments({ eventKind: "REVIEW_SELF_SERVE", actorId: ME, "meta.what": "requested" })).toBe(1);
+    // The loser got a clear refusal, never a second grant.
+    expect(results.slice(0, 2).map((r) => r.outcome).sort()).toEqual(expect.arrayContaining(["ADDED"]));
+    expect(results.slice(0, 2).some((r) => ["BUSY", "STILL_OPEN", "DAILY_CAP"].includes(r.outcome))).toBe(true);
+  });
+
+  test("a busy lock answers BUSY and a stale one is taken over", async () => {
+    await liveTask("1");
+    await chapter({ n: 2 });
+    const prog = new Types.ObjectId(programId);
+    expect(await acquireSelfServeLock(prog)).toBe(true);
+    expect(await acquireSelfServeLock(prog)).toBe(false);
+    expect((await requestMoreReview(ACTOR())).outcome).toBe("BUSY");
+    await ReviewSelfServeLock.updateOne({ programId: prog }, { $set: { lockedUntil: new Date(Date.now() - 1000) } });
+    expect((await requestMoreReview(ACTOR())).outcome).toBe("ADDED");
+    // Released in finally: the next request is not BUSY.
+    expect(await acquireSelfServeLock(prog)).toBe(true);
+  });
+
+  test("a chapter somebody else holds as a live task is skipped even when an item of it is free", async () => {
+    await liveTask("1");
+    const c2 = await chapter({ n: 2 }); // a re-imported draft with no round
+    void c2;
+    await chapter({ n: 3 });
+    await ReviewTask.create({
+      programId: new Types.ObjectId(programId), batch: 1, reviewerId: OTHER, kind: "PLAN_CHAPTER", subject: "BAN", classLevel: 1,
+      anchorWord: WORD, chapter: "2", status: "OPEN", createdBy: PRINCIPAL,
+    });
+    const res = await requestMoreReview(ACTOR());
+    expect(res.chapters).toEqual(["3"]);
+    // Nothing of the held chapter reached the reviewer.
+    expect(await ReviewAssignment.countDocuments({ reviewerId: ME, addressNumber: "2" })).toBe(0);
+  });
+
+  test("a plan-only reviewer is handed only plans", async () => {
+    await liveTask("1");
+    await chapter({ n: 2, q: 3 });
+    const res = await requestMoreReview(ACTOR(), { plans: true, questions: false });
+    expect(res).toMatchObject({ outcome: "ADDED", addedPlans: 1, addedQuestions: 0 });
+    expect(await ReviewAssignment.countDocuments({ reviewerId: ME, docType: "question" })).toBe(0);
+  });
+
+  test("a question-only reviewer is handed only questions", async () => {
+    await liveTask("1");
+    await chapter({ n: 2, q: 3 });
+    const res = await requestMoreReview(ACTOR(), { plans: false, questions: true });
+    expect(res).toMatchObject({ outcome: "ADDED", addedPlans: 0, addedQuestions: 3 });
+  });
+});
+
 describe("the daily cap", () => {
   test("the second request of the day is refused once the cap is reached", async () => {
     await liveTask("1");
@@ -295,11 +368,11 @@ describe("the Principal's settings", () => {
 
   test("defaults, validation and an audit row per change", async () => {
     const first = await selfServeOverview(programId);
-    expect(first.settings).toEqual({ enabled: true, chunkChapters: 2, releasePlansLeft: 0, releaseQuestionsPct: 10, maxRequestsPerDay: 2 });
+    expect(first.settings).toEqual({ enabled: true, chunkChapters: 2, releasePlansLeft: 0, releaseQuestionsLeft: 20, maxRequestsPerDay: 2 });
     await expect(updateSelfServeSettings({ programId, chunkChapters: 0, actor: principal() })).rejects.toThrow(/Chapters per request/);
-    await expect(updateSelfServeSettings({ programId, releaseQuestionsPct: 101, actor: principal() })).rejects.toThrow(/percent/);
-    const next = await updateSelfServeSettings({ programId, chunkChapters: 4, releaseQuestionsPct: 20, actor: principal() });
-    expect(next.settings).toMatchObject({ chunkChapters: 4, releaseQuestionsPct: 20, maxRequestsPerDay: 2 });
+    await expect(updateSelfServeSettings({ programId, releaseQuestionsLeft: 501, actor: principal() })).rejects.toThrow(/Questions left/);
+    const next = await updateSelfServeSettings({ programId, chunkChapters: 4, releaseQuestionsLeft: 20, actor: principal() });
+    expect(next.settings).toMatchObject({ chunkChapters: 4, releaseQuestionsLeft: 20, maxRequestsPerDay: 2 });
     const audits = await Audit.find({ eventKind: "REVIEW_SELF_SERVE" }).lean();
     expect(audits).toHaveLength(1);
     expect(audits[0].meta).toMatchObject({ what: "settings_updated" });

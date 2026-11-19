@@ -67,6 +67,7 @@ export function moreReasonText(s: ReviewMoreStatusT): string | null {
   if (s.canRequest) return null;
   if (s.reason === "STILL_OPEN") return STR.rpMoreStillOpen.replace("{n}", bnNum(s.leftPlans + s.leftQuestions));
   if (s.reason === "DAILY_CAP") return STR.rpMoreDailyCap;
+  if (s.reason === "BUSY") return STR.rpMoreBusy;
   return STR.rpMoreNotEnabled;
 }
 
@@ -237,6 +238,8 @@ export default function ReviewHubScreen(): React.ReactElement {
       const text = STR.rpMoreAdded.replace("{word}", r.anchorWord ?? "").replace("{chapters}", chaptersLabel(r.chapters)).trim();
       toast.show(text, "ok");
       setMoreMsg({ text, tone: "ok" });
+    } else if (r.outcome === "BUSY") {
+      setMoreMsg({ text: STR.rpMoreBusy, tone: "warn" });
     } else if (r.outcome === "NOTHING_LEFT") {
       setMoreMsg({ text: STR.rpMoreNothingLeft, tone: "warn" });
     } else {

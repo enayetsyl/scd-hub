@@ -636,7 +636,8 @@ export async function emitReviewSelfServeNotice(ev: ReviewSelfServeNoticeEvent):
       kind: "REVIEW_ASSIGNED",
       titleBn: "পর্যালোচনার পরের কাজ",
       bodyBn: reviewSelfServeNoticeBody(ev),
-      refs: {},
+      // The tap opens the supervision screen (REVIEW_ASSIGNED reads refs.screenTarget first), not ReviewHome.
+      refs: { screenTarget: "ReviewTab/ReviewSupervision" },
       dedupeKey: `RSELF:${ev.principalId}:${ev.stamp}`,
     });
   });

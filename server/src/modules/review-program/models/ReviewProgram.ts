@@ -54,7 +54,7 @@ export interface IReviewSelfServe {
   /** A request is allowed while the caller's undecided PLAN rounds are at most this many. */
   releasePlansLeft: number;
   /** ... and the undecided QUESTION rounds are at most this percent of the caller's question rounds. */
-  releaseQuestionsPct: number;
+  releaseQuestionsLeft: number;
   /** Requests one person may make per Dhaka day. */
   maxRequestsPerDay: number;
 }
@@ -63,7 +63,7 @@ export const DEFAULT_REVIEW_SELF_SERVE: IReviewSelfServe = {
   enabled: true,
   chunkChapters: 2,
   releasePlansLeft: 0,
-  releaseQuestionsPct: 10,
+  releaseQuestionsLeft: 20,
   maxRequestsPerDay: 2,
 };
 
@@ -122,7 +122,7 @@ const SelfServeSchema = new Schema<IReviewSelfServe>(
     enabled: { type: Boolean, required: true, default: DEFAULT_REVIEW_SELF_SERVE.enabled },
     chunkChapters: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.chunkChapters },
     releasePlansLeft: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.releasePlansLeft },
-    releaseQuestionsPct: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.releaseQuestionsPct },
+    releaseQuestionsLeft: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.releaseQuestionsLeft },
     maxRequestsPerDay: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.maxRequestsPerDay },
   },
   { _id: false },
