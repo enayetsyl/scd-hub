@@ -179,7 +179,7 @@ export function resolveQuestionAnchors(
 }
 
 /** The question-round filter for a task: the book's own anchorWord only when the subject x class has several. */
-async function questionAnchorFilter(subject: string, classLevel: number, anchorWord: string): Promise<Record<string, unknown>> {
+export async function questionAnchorFilter(subject: string, classLevel: number, anchorWord: string): Promise<Record<string, unknown>> {
   const planAnchors = (await ReviewAssignment.distinct("anchorWord", {
     docType: { $in: [...PLAN_TYPES] }, subject, classLevel, status: { $ne: "cancelled" },
   })) as string[];
@@ -854,6 +854,8 @@ export async function addTask(input: {
   anchorWord: string;
   chapter: string;
   actor: Actor;
+  /** false = no notice to the reviewer (self-serve: they asked for it; the caller sends one summary). Default true. */
+  notify?: boolean;
 }): Promise<{ task: ReviewTaskView; assignedPlans: number; assignedQuestions: number; skippedPlans: number }> {
   const program = await loadProgram(input.programId);
   batchOf(program, input.batch);
@@ -931,10 +933,12 @@ export async function addTask(input: {
   }
   if (!task) throw new ReviewError("Review task not found");
   await audit(input.actor, "task_added", { id: task._id.toString(), kind: "ReviewTask" }, { reviewerId: input.reviewerId, assignedPlans, assignedQuestions, skippedPlans });
-  await emitReviewTaskNotice({
-    reviewerId: input.reviewerId, subject: input.subject, classLevel: input.classLevel, chapter, anchorWord: task.anchorWord,
-    plans: assignedPlans, questions: assignedQuestions, stamp: `add:${task._id.toString()}:${Date.now()}`,
-  });
+  if (input.notify !== false) {
+    await emitReviewTaskNotice({
+      reviewerId: input.reviewerId, subject: input.subject, classLevel: input.classLevel, chapter, anchorWord: task.anchorWord,
+      plans: assignedPlans, questions: assignedQuestions, stamp: `add:${task._id.toString()}:${Date.now()}`,
+    });
+  }
   return { task: await viewOne(task, program), assignedPlans, assignedQuestions, skippedPlans };
 }
 

@@ -3,25 +3,43 @@
  *
  * ONE list of every review the caller still owes — plans, questions, exam papers, syllabus
  * sign-offs, objective lists, observations, class videos, class-test question requests, support
- * books, winter booklets and review cards on the work board — grouped by kind, with the বাকি
- * count and the due date on each row. A tap opens the EXISTING screen where that review is done;
- * nothing here changes how a review is done. The server shows each group only when the caller
- * holds that review's permission, so this screen needs no permission checks of its own.
+ * books, winter booklets and review cards on the work board — with the বাকি count and the due date
+ * on each row. A tap opens the EXISTING screen where that review is done; nothing here changes how a
+ * review is done. The server shows each group only when the caller holds that review's permission,
+ * so this screen needs no permission checks of its own (apart from the two review buttons).
+ *
+ * Plans and questions are NOT listed as two flat groups any more (owner 19 Nov 2026,
+ * .claude/plans/review-next-chunk.md). They are one ordered path: a card per BOOK, the chapters in
+ * number order inside it (finished ones at the bottom), and a "পরের কাজ ▶" button at the top that
+ * opens the first undecided item. "আরও কাজ দিন" takes the next chapters when the work is done.
  */
-import React, { useCallback, useMemo, useRef } from "react";
-import { RefreshControl, View } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { Pressable, RefreshControl, View } from "react-native";
 import { StackActions, useFocusEffect, useNavigation } from "@react-navigation/native";
-import { useQuery } from "urql";
-import { MY_REVIEW_HUB, type ReviewHubRowT } from "../../graphql/reviewHub";
-import { Badge, Body, Card, EmptyState, H2, Muted, Screen } from "../../components/ui";
+import { useMutation, useQuery } from "urql";
+import {
+  MY_REVIEW_HUB,
+  MY_REVIEW_MORE_STATUS,
+  MY_REVIEW_PATH,
+  REQUEST_MORE_REVIEW,
+  type ReviewHubRowT,
+  type ReviewMoreStatusT,
+  type ReviewPathBookT,
+} from "../../graphql/reviewHub";
+import { useAuth } from "../../auth/AuthContext";
+import { Badge, Body, Button, Card, EmptyState, H2, Muted, Notice, Screen, wrapRowText } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { useToast } from "../../state/ToastContext";
 import { STR, bnNum, dhakaDateKey, fullDateLabel } from "../../lib/labels";
+import { friendlyError } from "../../lib/errors";
+import { chaptersLabel, openItemAction } from "../../lib/reviewPath";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme";
 
 type LabelKey = keyof typeof STR;
 
-/** The order the groups appear in: the long-running work first, the small desks after. */
+/** The order the groups appear in: the long-running work first, the small desks after. PLAN and QUESTION
+ *  are listed here only as a fallback — while the ordered path is available they are shown as book cards. */
 const KIND_ORDER = [
   "PLAN",
   "QUESTION",
@@ -42,6 +60,14 @@ type DueState = "overdue" | "today" | "later";
 export function dueState(dueKey: string, todayKey: string): DueState {
   if (dueKey < todayKey) return "overdue";
   return dueKey === todayKey ? "today" : "later";
+}
+
+/** The one-line reason the "আরও কাজ দিন" button is off, or null when it is live. */
+export function moreReasonText(s: ReviewMoreStatusT): string | null {
+  if (s.canRequest) return null;
+  if (s.reason === "STILL_OPEN") return STR.rpMoreStillOpen.replace("{n}", bnNum(s.leftPlans + s.leftQuestions));
+  if (s.reason === "DAILY_CAP") return STR.rpMoreDailyCap;
+  return STR.rpMoreNotEnabled;
 }
 
 /** Opens the screen a row names, the way a notification link does: root → tab → screen. */
@@ -93,13 +119,78 @@ function HubRow({ row, todayKey, onOpen }: { row: ReviewHubRowT; todayKey: strin
   );
 }
 
+/** One book: its chapters in number order, the finished ones at the bottom. A chapter opens its own screen. */
+function BookCard({
+  book,
+  todayKey,
+  onOpenChapter,
+}: {
+  book: ReviewPathBookT;
+  todayKey: string;
+  onOpenChapter: (book: ReviewPathBookT, chapterKey: string) => void;
+}): React.ReactElement {
+  return (
+    <Card>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+        <Body style={[wrapRowText, { fontWeight: "700" }]}>{book.titleBn}</Body>
+        <Badge
+          text={book.left === 0 ? STR.rpChapterDone : `${STR.rhLeft} ${bnNum(book.left)} / ${STR.rhOf} ${bnNum(book.total)}`}
+          tone={book.left === 0 ? "ok" : "warn"}
+        />
+      </View>
+      {book.chapters.map((c) => {
+        const due = c.dueKey && !c.decided ? dueState(c.dueKey, todayKey) : null;
+        return (
+          <Pressable
+            key={c.key}
+            accessibilityRole="button"
+            onPress={() => onOpenChapter(book, c.key)}
+            style={{ marginTop: space(2), paddingVertical: space(1) }}
+          >
+            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+              <Body style={[wrapRowText, c.decided ? { opacity: 0.6 } : { fontWeight: "600" }]}>{c.labelBn} ›</Body>
+              <Badge
+                text={c.decided ? STR.rpChapterDone : `${STR.rhLeft} ${bnNum(c.left)} / ${STR.rhOf} ${bnNum(c.total)}`}
+                tone={c.decided ? "ok" : "warn"}
+              />
+              {due ? (
+                <Badge
+                  text={due === "overdue" ? STR.rhOverdue : due === "today" ? STR.rhDueToday : STR.rhDue}
+                  tone={due === "overdue" ? "danger" : due === "today" ? "warn" : "muted"}
+                />
+              ) : null}
+            </View>
+          </Pressable>
+        );
+      })}
+    </Card>
+  );
+}
+
 export default function ReviewHubScreen(): React.ReactElement {
+  const nav = useNavigation();
+  const { can } = useAuth();
+  const toast = useToast();
+  const canPath = can("plan_review:review") || can("question_review:review");
+
   const [q, refetch] = useQuery({ query: MY_REVIEW_HUB, requestPolicy: "cache-and-network" });
+  const [pathQ, refetchPath] = useQuery({ query: MY_REVIEW_PATH, requestPolicy: "cache-and-network", pause: !canPath });
+  const [moreQ, refetchMore] = useQuery({ query: MY_REVIEW_MORE_STATUS, requestPolicy: "cache-and-network", pause: !canPath });
+  const [moreRes, requestMore] = useMutation(REQUEST_MORE_REVIEW);
+  const [moreMsg, setMoreMsg] = useState<{ text: string; tone: "ok" | "warn" | "danger" } | null>(null);
   const open = useOpenRow();
-  const { refreshing, onRefresh } = usePullRefresh(q.fetching, () => refetch({ requestPolicy: "network-only" }));
+
+  const reloadAll = useCallback((): void => {
+    refetch({ requestPolicy: "network-only" });
+    if (canPath) {
+      refetchPath({ requestPolicy: "network-only" });
+      refetchMore({ requestPolicy: "network-only" });
+    }
+  }, [refetch, refetchPath, refetchMore, canPath]);
+  const { refreshing, onRefresh } = usePullRefresh(q.fetching, reloadAll);
 
   // Coming back from a review: the counts must drop without a reload. Skip the first focus
-  // (the query above is already fetching).
+  // (the queries above are already fetching).
   const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -107,31 +198,98 @@ export default function ReviewHubScreen(): React.ReactElement {
         firstFocus.current = false;
         return;
       }
-      refetch({ requestPolicy: "network-only" });
-    }, [refetch]),
+      reloadAll();
+    }, [reloadAll]),
   );
 
   const rows = q.data?.myReviewHub.rows ?? [];
   const totalLeft = q.data?.myReviewHub.totalLeft ?? 0;
+  const path = pathQ.data?.myReviewPath ?? null;
+  const books = path?.books ?? [];
+  const more = moreQ.data?.myReviewMoreStatus ?? null;
   const todayKey = dhakaDateKey();
+  // While the ordered path is there, plans and questions are the book cards; without it (it failed to
+  // load) the two flat groups stay as the fallback, so the hub never loses them.
+  const pathShown = path != null;
   const groups = useMemo(
     () =>
-      KIND_ORDER.map((kind) => ({ kind, rows: rows.filter((r) => r.kind === kind) })).filter((g) => g.rows.length > 0),
-    [rows],
+      KIND_ORDER.filter((kind) => !(pathShown && (kind === "PLAN" || kind === "QUESTION")))
+        .map((kind) => ({ kind, rows: rows.filter((r) => r.kind === kind) }))
+        .filter((g) => g.rows.length > 0),
+    [rows, pathShown],
   );
+
+  const openChapter = (book: ReviewPathBookT, chapterKey: string): void => {
+    nav.dispatch(StackActions.push("ReviewChapter", { bookKey: book.key, chapterKey }));
+  };
+
+  async function onMore(): Promise<void> {
+    if (moreRes.fetching) return;
+    setMoreMsg(null);
+    const res = await requestMore({});
+    if (res.error) {
+      setMoreMsg({ text: friendlyError(res.error), tone: "danger" });
+      return;
+    }
+    const r = res.data?.requestMoreReview;
+    if (!r) return;
+    if (r.outcome === "ADDED") {
+      const text = STR.rpMoreAdded.replace("{word}", r.anchorWord ?? "").replace("{chapters}", chaptersLabel(r.chapters)).trim();
+      toast.show(text, "ok");
+      setMoreMsg({ text, tone: "ok" });
+    } else if (r.outcome === "NOTHING_LEFT") {
+      setMoreMsg({ text: STR.rpMoreNothingLeft, tone: "warn" });
+    } else {
+      setMoreMsg({ text: moreReasonText(r.status) ?? STR.rpMoreNotEnabled, tone: "warn" });
+    }
+    reloadAll();
+  }
+
+  const reason = more ? moreReasonText(more) : null;
+  const nothingToShow = rows.length === 0 && books.length === 0;
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <QueryGate
         result={q}
-        onRetry={() => refetch({ requestPolicy: "network-only" })}
-        isEmpty={rows.length === 0}
+        onRetry={reloadAll}
+        isEmpty={nothingToShow && !more}
         empty={<EmptyState message={STR.rhEmpty} />}
       >
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>
           {STR.rhTodayCard}: {bnNum(totalLeft)}
         </Body>
         <Muted style={{ marginBottom: space(3) }}>{STR.rhSubtitle}</Muted>
+
+        {/* The next thing to do, in path order: the first undecided plan, or the next chapter's questions. */}
+        {path?.next ? (
+          <View style={{ marginBottom: space(3) }}>
+            <Button title={STR.rpNext} onPress={() => nav.dispatch(openItemAction(path.next!.item, "push"))} />
+            <Muted style={{ marginTop: space(1) }}>
+              {STR.rpUpNext}: {path.next.bookTitleBn} · {path.next.chapterLabelBn} · {path.next.item.titleBn}
+            </Muted>
+          </View>
+        ) : null}
+
+        {/* Self-serve: take the next chapters when the current work is done. */}
+        {canPath && more ? (
+          <View style={{ marginBottom: space(3) }}>
+            <Button title={STR.rpMore} onPress={() => void onMore()} loading={moreRes.fetching} disabled={!more.canRequest} variant="secondary" />
+            <Muted style={{ marginTop: space(1) }}>{reason ?? STR.rpMoreHint}</Muted>
+            {moreMsg ? <Notice message={moreMsg.text} tone={moreMsg.tone} /> : null}
+          </View>
+        ) : null}
+
+        {books.length > 0 ? (
+          <View style={{ marginBottom: space(3) }}>
+            <H2>{STR.rpBooksTitle}</H2>
+            <Muted style={{ marginBottom: space(2) }}>{STR.rpBooksHint}</Muted>
+            {books.map((b) => (
+              <BookCard key={b.key} book={b} todayKey={todayKey} onOpenChapter={openChapter} />
+            ))}
+          </View>
+        ) : null}
+
         {groups.map((g) => {
           const left = g.rows.reduce((n, r) => n + r.left, 0);
           return (
@@ -145,6 +303,7 @@ export default function ReviewHubScreen(): React.ReactElement {
             </View>
           );
         })}
+        {nothingToShow ? <EmptyState message={STR.rhEmpty} /> : null}
       </QueryGate>
     </Screen>
   );

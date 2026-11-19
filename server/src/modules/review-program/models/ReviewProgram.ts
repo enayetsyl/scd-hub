@@ -33,11 +33,47 @@ export const DEFAULT_REVIEW_WEIGHTS: IReviewWeights = {
   bookletPageMin: 3,
 };
 
+/** One book of a reviewer's ladder: subject x class x the PLAN anchorWord (the chapter key's book). */
+export interface IReviewLadderBook {
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+}
+
+/** A reviewer's own ladder: the books "আরও কাজ দিন" walks through, in order. */
+export interface IReviewLadder {
+  reviewerId: Types.ObjectId;
+  books: IReviewLadderBook[];
+}
+
+/** "আরও কাজ দিন" (self-serve next chunk) settings; the Principal edits them. */
+export interface IReviewSelfServe {
+  enabled: boolean;
+  /** Chapters handed out per request. */
+  chunkChapters: number;
+  /** A request is allowed while the caller's undecided PLAN rounds are at most this many. */
+  releasePlansLeft: number;
+  /** ... and the undecided QUESTION rounds are at most this percent of the caller's question rounds. */
+  releaseQuestionsPct: number;
+  /** Requests one person may make per Dhaka day. */
+  maxRequestsPerDay: number;
+}
+
+export const DEFAULT_REVIEW_SELF_SERVE: IReviewSelfServe = {
+  enabled: true,
+  chunkChapters: 2,
+  releasePlansLeft: 0,
+  releaseQuestionsPct: 10,
+  maxRequestsPerDay: 2,
+};
+
 export interface IReviewProgram extends Document {
   _id: Types.ObjectId;
   name: string;
   batches: IReviewBatch[];
   weights: IReviewWeights;
+  selfServe?: IReviewSelfServe;
+  ladders?: IReviewLadder[];
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -64,11 +100,42 @@ const WeightsSchema = new Schema<IReviewWeights>(
   { _id: false },
 );
 
+const LadderBookSchema = new Schema<IReviewLadderBook>(
+  {
+    subject: { type: String, required: true },
+    classLevel: { type: Number, required: true },
+    anchorWord: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const LadderSchema = new Schema<IReviewLadder>(
+  {
+    reviewerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    books: { type: [LadderBookSchema], default: [] },
+  },
+  { _id: false },
+);
+
+const SelfServeSchema = new Schema<IReviewSelfServe>(
+  {
+    enabled: { type: Boolean, required: true, default: DEFAULT_REVIEW_SELF_SERVE.enabled },
+    chunkChapters: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.chunkChapters },
+    releasePlansLeft: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.releasePlansLeft },
+    releaseQuestionsPct: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.releaseQuestionsPct },
+    maxRequestsPerDay: { type: Number, required: true, default: DEFAULT_REVIEW_SELF_SERVE.maxRequestsPerDay },
+  },
+  { _id: false },
+);
+
 const ReviewProgramSchema = new Schema<IReviewProgram>(
   {
     name: { type: String, required: true, trim: true },
     batches: { type: [BatchSchema], default: [] },
     weights: { type: WeightsSchema, default: () => ({ ...DEFAULT_REVIEW_WEIGHTS }) },
+    // Optional on purpose: a program created before the self-serve slice reads the defaults.
+    selfServe: { type: SelfServeSchema, required: false },
+    ladders: { type: [LadderSchema], default: [] },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true },
