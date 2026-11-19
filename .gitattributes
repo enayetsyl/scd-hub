@@ -1,2 +1,4 @@
 server/assets/support-profile/*.md text eol=lf
 server/assets/book-lifecycle/*.md text eol=lf
+CHANGELOG.md merge=union
+DECISIONS.md merge=union

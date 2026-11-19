@@ -1,0 +1,67 @@
+name: Sync dev from main
+
+# D-#1651 hotfix lane: after anything lands on main (a hotfix PR, a docs-only commit, or a
+# dev → main promotion), merge main back into dev so dev never drifts behind production.
+# If that changes dev's code, dispatch "Deploy dev" (a push made with GITHUB_TOKEN starts no
+# workflow by itself).
+# Not synced automatically (the job stops with a message; do it by hand with a PR to dev):
+#   - a rollback (`Revert "…"` on main): dev keeps the feature until it is fixed there;
+#   - a merge conflict;
+#   - a change to .github/workflows/* (GITHUB_TOKEN may not push workflow files).
+# CHANGELOG.md / DECISIONS.md use merge=union (.gitattributes), so appended rows don't conflict.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - name: Merge main into dev
+        id: merge
+        run: |
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "dev already contains main — nothing to do"; exit 0
+          fi
+          if git log -1 --format=%s origin/main | grep -q '^Revert "'; then
+            echo "::warning::main's newest commit is a revert (rollback) — not syncing it into dev. Fix the problem on dev; the next promotion brings main and dev together."
+            exit 0
+          fi
+          before="$(git rev-parse 'HEAD^{tree}')"
+          if ! git merge --no-ff --no-edit -m "sync: main → dev (auto, D-#1651)" origin/main; then
+            git merge --abort || true
+            echo "::error::main does not merge cleanly into dev — merge it by hand (branch from dev, merge origin/main, PR to dev)"
+            exit 1
+          fi
+          after="$(git rev-parse 'HEAD^{tree}')"
+          if ! git diff --quiet "$before" "$after" -- .github/workflows; then
+            echo "::error::this sync changes .github/workflows, which GITHUB_TOKEN may not push — merge main into dev by hand (PR to dev)"
+            exit 1
+          fi
+          git push origin HEAD:dev
+          # redeploy dev unless only the root records (STATUS / CHANGELOG / DECISIONS / AGENTS …) changed
+          if git diff --quiet "$before" "$after" -- . ':(exclude,glob)*.md'; then
+            echo "dev code unchanged — no dev deploy"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"; echo "dev code changed — dispatching Deploy dev"
+          fi
+      - name: Deploy dev
+        if: steps.merge.outputs.deploy == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-dev.yml --ref dev --repo "${{ github.repository }}"
