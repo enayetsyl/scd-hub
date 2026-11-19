@@ -49,13 +49,17 @@ import { SUBJECTS, CLASS_LEVELS, QUESTION_TYPES } from "@scd/shared";
 import { parsePayload, prettyCode } from "../../lib/question";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
 import { LoadOlder } from "../../components/LoadOlder";
+import { ReviewNextButton } from "../../components/ReviewNextButton";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewQueue">;
 
-export default function QuestionReviewQueueScreen({ navigation }: Props): React.ReactElement {
+export default function QuestionReviewQueueScreen({ navigation, route }: Props): React.ReactElement {
+  // The ordered path (and a hub row) opens this queue already narrowed to one chapter: the same QR-11
+  // axes the filter chips below set, just pre-filled. Read once; the chips stay free to change it.
+  const initial = route.params;
   /**
    * PAGE_SIZE mirrors the server default. The queue was an unbounded read: on prod
    * one reviewer held 2,742 assigned rounds, so the screen pulled 1.77 MB and tried
@@ -67,9 +71,11 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
    * Same axes as the Principal’s publish inbox, plus `undecided` — the one that turns a
    * long history back into a work list.
    */
-  const [subject, setSubject] = useState<string | null>(null);
-  const [classLevel, setClassLevel] = useState<number | null>(null);
-  const [chapter, setChapter] = useState<number | null>(null);
+  const [subject, setSubject] = useState<string | null>(initial?.subject ?? null);
+  const [classLevel, setClassLevel] = useState<number | null>(initial?.classLevel ?? null);
+  const [chapter, setChapter] = useState<number | null>(initial?.chapter ?? null);
+  /** Set only by the ordered path for a multi-book subject x class; no chip changes it. */
+  const anchorWord = initial?.anchorWord ?? null;
   const [questionType, setQuestionType] = useState<string | null>(null);
   /** PR-G: the school question type (QT-…) the question carries. */
   const [qtCode, setQtCode] = useState<string | null>(null);
@@ -80,7 +86,7 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
     return () => clearTimeout(h);
   }, [qtInput]);
   const [important, setImportantOnly] = useState(false);
-  const [undecided, setUndecided] = useState(false);
+  const [undecided, setUndecided] = useState(initial?.undecided === true);
 
   const PAGE_SIZE = 50;
   const [offset, setOffset] = useState(0);
@@ -95,12 +101,13 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
       subject,
       classLevel,
       chapter,
+      anchorWord,
       questionType,
       qtCode,
       important: important ? true : null,
       undecided: undecided ? true : null,
     }),
-    [subject, classLevel, chapter, questionType, qtCode, important, undecided],
+    [subject, classLevel, chapter, anchorWord, questionType, qtCode, important, undecided],
   );
 
   const [{ data, fetching, error }, refetch] = useQuery({
@@ -443,7 +450,11 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         ) : null}
 
         {rounds.length === 0 ? (
-          <EmptyState message={STR.qrNoQueue} />
+          <>
+            <EmptyState message={STR.qrNoQueue} />
+            {/* Opened from the ordered path and this chapter's questions are done: carry on to the next item. */}
+            {initial?.fromPath && !fetching ? <ReviewNextButton mode="replace" /> : null}
+          </>
         ) : (
           rounds.map((round) => {
             const decided = round.status === "submitted";

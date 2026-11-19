@@ -603,6 +603,46 @@ export async function emitReviewTaskNotice(ev: ReviewTaskNoticeEvent): Promise<v
   });
 }
 
+/**
+ * "আরও কাজ দিন" (owner 19 Nov 2026): a reviewer took their own next chunk. The Principal gets ONE
+ * summary per request (not one per chapter), worded with the reviewer's name and the chapters.
+ */
+export interface ReviewSelfServeNoticeEvent {
+  principalId: string;
+  reviewerName: string;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  chapters: string[];
+  plans: number;
+  questions: number;
+  stamp: string;
+}
+
+export function reviewSelfServeNoticeBody(ev: ReviewSelfServeNoticeEvent): string {
+  const cls = (ROSTER_CLASS_LABELS_BN as Record<number, string>)[ev.classLevel] ?? `${bnNum(ev.classLevel)}ম শ্রেণি`;
+  const parts: string[] = [];
+  if (ev.plans > 0) parts.push(`${bnNum(ev.plans)}টি পাঠ পরিকল্পনা`);
+  if (ev.questions > 0) parts.push(`${bnNum(ev.questions)}টি প্রশ্ন`);
+  const word = ev.anchorWord.trim() || "অধ্যায়";
+  const chapters = ev.chapters.map((c) => bnNum(c)).join(", ");
+  return `${ev.reviewerName} নিজে পরের কাজ নিলেন: ${cls} · ${subjectLabel(ev.subject, ev.classLevel)} · ${word} ${chapters} (${parts.join(" ও ")})।`;
+}
+
+export async function emitReviewSelfServeNotice(ev: ReviewSelfServeNoticeEvent): Promise<void> {
+  return bestEffort("review self-serve notice", async () => {
+    await emit({
+      recipientUserId: ev.principalId,
+      kind: "REVIEW_ASSIGNED",
+      titleBn: "পর্যালোচনার পরের কাজ",
+      bodyBn: reviewSelfServeNoticeBody(ev),
+      // The tap opens the supervision screen (REVIEW_ASSIGNED reads refs.screenTarget first), not ReviewHome.
+      refs: { screenTarget: "ReviewTab/ReviewSupervision" },
+      dedupeKey: `RSELF:${ev.principalId}:${ev.stamp}`,
+    });
+  });
+}
+
 export async function emitQuestionReviewAssigned(ev: QuestionReviewAssignedEvent): Promise<void> {
   return bestEffort("question review assigned", async () => {
     await emit({

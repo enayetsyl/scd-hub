@@ -35,7 +35,8 @@ it("the digest is one per day per recipient and counts only PROCESSED reports", 
 });
 
 it("the batch reminder fires once a day at most, when 25 are waiting", async () => {
-  const day = new Date();
+  // A fixed Tuesday, so the Thursday rule of batchReminders never decides the outcome (the suite failed on Thursdays).
+  const day = new Date("2026-06-02T06:00:00Z");
   await SupportReport.updateMany({}, { $set: { waitingSince: new Date() } });
   const isThursday = new Date(`${day.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" })}T12:00:00+06:00`).getUTCDay() === 4;
   if (!isThursday) expect(await batchReminders(day)).toBe(0);

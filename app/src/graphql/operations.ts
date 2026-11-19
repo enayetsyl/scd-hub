@@ -1193,6 +1193,8 @@ export interface MyReviewsVars {
   subject?: string | null;
   classLevel?: number | null;
   chapter?: number | null;
+  /** The book, only when a subject x class has several (ISLAM class 1) - from the ordered path. */
+  anchorWord?: string | null;
   questionType?: string | null;
   /** PR-G: only questions carrying this school question type (QT-…). */
   qtCode?: string | null;
@@ -1204,9 +1206,9 @@ export interface MyReviewsVars {
 // The FILTER args only. Kept separate from paging because the COUNT resolver takes the
 // filter and NOT limit/offset — bolting all of them into one string is the exact shape
 // that broke the Class-test dashboard in prod on 2026-08-03 (see graphqlDocuments.test).
-const MY_REVIEWS_FILTER_DEFS = `$subject: String, $classLevel: Int, $chapter: Int,
+const MY_REVIEWS_FILTER_DEFS = `$subject: String, $classLevel: Int, $chapter: Int, $anchorWord: String,
   $questionType: String, $qtCode: String, $search: String, $important: Boolean, $undecided: Boolean`;
-const MY_REVIEWS_FILTER_USE = `subject: $subject, classLevel: $classLevel, chapter: $chapter,
+const MY_REVIEWS_FILTER_USE = `subject: $subject, classLevel: $classLevel, chapter: $chapter, anchorWord: $anchorWord,
   questionType: $questionType, qtCode: $qtCode, search: $search, important: $important, undecided: $undecided`;
 
 export const MY_QUESTION_REVIEWS = gql<

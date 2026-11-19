@@ -295,12 +295,14 @@ describe("11 — reminders have their own daytime window and key; held reports d
     await closeAll();
     const r = await run(SUBMIT, authOf(fx.classTeacher, "TEACHER"), { input: reportInput(fx.child, { occurredOn: daysAgoKey(1) }) });
     const id = r.data?.submitSupportReport.report.id;
-    await SupportReport.updateOne({ _id: id }, { $set: { status: "TO_PROCESS", safeguardingHold: "OPEN", waitingSince: new Date(Date.now() - 30 * 86_400_000) } });
+    // A fixed Tuesday: on a real Thursday an earlier test has already used today's batch-reminder key.
+    const at = new Date("2026-06-02T06:00:00Z");
+    await SupportReport.updateOne({ _id: id }, { $set: { status: "TO_PROCESS", safeguardingHold: "OPEN", waitingSince: new Date(at.getTime() - 30 * 86_400_000) } });
     const before = await Notification.countDocuments({ recipientUserId: fx.principal });
-    expect(await batchReminders(new Date())).toBe(0);
+    expect(await batchReminders(at)).toBe(0);
     expect(await Notification.countDocuments({ recipientUserId: fx.principal })).toBe(before);
     await SupportReport.updateOne({ _id: id }, { $set: { safeguardingHold: null } });
-    expect(await batchReminders(new Date())).toBeGreaterThanOrEqual(1);
+    expect(await batchReminders(at)).toBeGreaterThanOrEqual(1);
   });
 });
 

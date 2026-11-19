@@ -210,3 +210,5 @@ import "./modules/platform/safeguarding/safeguardingResolvers";
 import "./modules/review-program/resolvers/reviewProgram";
 // Reviewer hub H-1 (.claude/plans/review-hub-and-quality.md): myReviewHub.
 import "./modules/review-program/resolvers/reviewHub";
+// The reviewer's ordered path + "আরও কাজ দিন" (.claude/plans/review-next-chunk.md): myReviewPath, requestMoreReview.
+import "./modules/review-program/resolvers/reviewPath";

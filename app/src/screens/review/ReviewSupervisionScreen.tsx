@@ -456,6 +456,14 @@ export default function ReviewSupervisionScreen({ navigation }: Props): React.Re
           ) : null}
         </QueryGate>
 
+        {/* "আরও কাজ দিন": the chunk size, the release rule and each reviewer's ladder. */}
+        {program ? (
+          <Card onPress={() => navigation.navigate("ReviewSelfServe", { programId: program.id })}>
+            <Body style={{ fontWeight: "700" }}>{STR.rssNav}</Body>
+            <Muted style={{ marginTop: 2 }}>{STR.rssSubtitle}</Muted>
+          </Card>
+        ) : null}
+
         {adminCard}
       </QueryGate>
     </Screen>

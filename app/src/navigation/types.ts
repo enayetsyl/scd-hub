@@ -115,13 +115,26 @@ export type ReviewStackParamList = {
     initialVerdict?: string | null;
     initialFeedback?: string | null;
     roundStatus?: string;
+    /** Opened from the ordered path: after a verdict, open the next item of the path. */
+    fromPath?: boolean;
   };
   ReviewThread: { artifactId: string };
   AssignReviews: undefined;
   PlanReviewBoard: undefined;
   // --- Question review & publish loop (QR-4, D-#508). Registered AFTER ReviewHome so a
   // param-taking screen never becomes the stack's initial route.
-  QuestionReviewQueue: undefined;
+  QuestionReviewQueue:
+    | {
+        /** The chapter filter the ordered path / hub row opens the queue with (QR-11 axes). */
+        subject?: string | null;
+        classLevel?: number | null;
+        chapter?: number | null;
+        /** The book, when the subject x class has several. */
+        anchorWord?: string | null;
+        undecided?: boolean;
+        fromPath?: boolean;
+      }
+    | undefined;
   AssignQuestions: undefined;
   PublishQuestions: undefined;
   QuestionReviewThread: { artifactId: string };
@@ -140,6 +153,10 @@ export type ReviewStackParamList = {
   // --- Review supervision (RS-4). Both AFTER ReviewHome (the Reviewer page takes params).
   // --- Reviewer hub (H-1). AFTER ReviewHome (no params, but the same initial-route rule).
   ReviewHub: undefined;
+  /** One chapter of the ordered path: its plan, sessions and questions (.claude/plans/review-next-chunk.md). */
+  ReviewChapter: { bookKey: string; chapterKey: string };
+  /** The Principal's "আরও কাজ দিন" settings + ladders. */
+  ReviewSelfServe: { programId: string };
   ReviewSupervision: undefined;
   ReviewSupervisionReviewer: { programId: string; batch: number; reviewerId: string; reviewerName: string | null };
 };
