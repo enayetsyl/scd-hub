@@ -33,7 +33,7 @@ import { User } from "../../foundation/models/User";
 import { Audit } from "../../platform/models/Audit";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ReviewError, planThreadKeyOf } from "../../content/services/ReviewService";
-import { acquireSelfServeLock, releaseSelfServeLock } from "../models/ReviewSelfServeLock";
+import { waitForSelfServeLock, releaseSelfServeLock } from "../models/ReviewSelfServeLock";
 import { QUESTION_DOC_TYPE } from "../../questions/services/QuestionReviewService";
 import { emitReviewSelfServeNotice } from "../../notifications/services/emitters";
 import {
@@ -318,7 +318,8 @@ export async function requestMoreReview(actor: Actor, caps: MoreCaps = BOTH): Pr
   const ctxProgram = await programOf(me);
   if (!ctxProgram) return empty("NOT_ENABLED", first);
 
-  if (!(await acquireSelfServeLock(ctxProgram.program._id))) return empty("BUSY", first);
+  // Another reviewer's request may hold the lock for a moment: wait for it rather than refuse at once.
+  if (!(await waitForSelfServeLock(ctxProgram.program._id))) return empty("BUSY", first);
   try {
     // Re-check the gate and the cap now that nobody else can be handing out work.
     const status = await myReviewMoreStatus(actor.id, caps);

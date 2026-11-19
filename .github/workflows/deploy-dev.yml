@@ -2,15 +2,41 @@ name: Deploy dev
 
 # On push to dev: run the CI gate, then (if green) SSH to the VM and deploy the
 # dev instance via the same scripts/deploy.sh used for manual deploys.
+# D-#1651: the gate is skipped when this exact source tree already passed CI (the
+# merge of a green PR), so the same code is never tested twice.
 on:
   push:
     branches: [dev]
+  # sync-dev.yml dispatches this after merging main into dev (a GITHUB_TOKEN push starts no workflow)
+  workflow_dispatch:
+
+# one deploy of this environment at a time; a newer push waits instead of racing (D-#1651)
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
 
 jobs:
+  tested:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      hit: ${{ steps.look.outputs.hit }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Look for a CI pass of this tree
+        id: look
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/ci-tree-tested.sh "${{ github.repository }}"
   ci:
+    needs: tested
+    if: needs.tested.outputs.hit != 'true'
     uses: ./.github/workflows/ci.yml
   deploy:
-    needs: ci
+    needs: [tested, ci]
+    if: ${{ !cancelled() && needs.tested.result == 'success' && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to dev over SSH
@@ -23,4 +49,4 @@ jobs:
           printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
-            "$VM_USER@$VM_HOST" 'bash /opt/scdhub/dev/scripts/deploy.sh dev'
+            "$VM_USER@$VM_HOST" 'bash /opt/scdhub/dev/scripts/deploy.sh dev ${{ github.sha }}'

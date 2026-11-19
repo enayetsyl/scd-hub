@@ -28,8 +28,18 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 - **Promote to production with a deliberate PR `dev → main`.** Merging `main` auto-deploys prod
   (CI-gated). `main` and `dev` are protected (no force-push/delete). Rollback = revert the merge on
   `main` and push.
+- **Hotfix lane (D-#1651)** — only for a small, urgent prod fix (a bug users hit now, a one-screen
+  change): branch `hotfix/<slug>` **from `main`**, PR **to `main`**, green CI, merge → prod deploys.
+  `sync-dev.yml` then merges `main` back into `dev` automatically (and redeploys dev); if that merge
+  conflicts, changes `.github/workflows/*`, or is a rollback (`Revert "…"`) the job stops — merge by hand via a
+  PR to `dev` (a rollback stays on `main` only; fix the feature on `dev`). Everything else stays dev-first.
+- **CI is fast and runs once per tree (D-#1651):** the gate runs checks, 4 jest shards and the app build
+  in parallel and records each green tree (`ci-pass-<tree>` artifact); a deploy whose code is
+  byte-identical to a green PR skips the gate. `deploy.sh` skips `npm install` / the web export when
+  nothing they depend on changed since the last good one (`FORCE_FULL=1` forces both). Deploys run one at a
+  time per environment and deploy the exact commit CI gated (`deploy.sh <env> <sha>`).
 - **Pure docs/planning** (STATUS / DECISIONS / CHANGELOG / `/docs`, no code) may still go **straight
-  to `main`** — they're path-ignored so they never redeploy; then sync `dev ← main` so dev doesn't drift.
+  to `main`** — they're path-ignored so they never redeploy; `sync-dev.yml` brings them into `dev`.
 
 ## Hard rules (non-negotiable)
 - **Executed verification is the only gate.** "Done" means a validator/test printed green output in

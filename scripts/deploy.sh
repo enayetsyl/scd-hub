@@ -3,7 +3,7 @@
 # auto-rollback if the new revision is unhealthy. ONE procedure, two callers:
 # run by hand over SSH, and invoked by GitHub Actions (DEP-6).
 #
-#   scripts/deploy.sh [prod|dev]      (default: prod)
+#   scripts/deploy.sh [prod|dev] [sha]   (default: prod, branch tip; CI passes the gated sha)
 #
 # Assumes: repo cloned at /opt/scdhub/<env>, systemd unit scdhub-<env>, the
 # deploy user has NOPASSWD sudo for systemctl. The server reads its own .env
@@ -18,13 +18,33 @@ case "$ENV" in
 esac
 
 say() { echo "[deploy:$ENV] $*"; }
+# D-#1651 fast deploy: skip `npm install` and the web export when nothing they depend on changed
+# since the LAST SUCCESSFUL one (its commit is kept in .git/, never in the working tree). A failed or
+# half-done deploy leaves the marker behind, so the next deploy redoes the step. FORCE_FULL=1 forces
+# everything (e.g. after editing the VM-only app/.env, which git can't see).
+DEPS_MARK=.git/scd-deploy-deps
+WEB_MARK=.git/scd-deploy-web
+stale() {   # stale <marker> <pathspec...>: true when HEAD differs from the marker's commit in those paths
+  [ "${FORCE_FULL:-0}" = 1 ] && return 0
+  local rev; rev="$(cat "$1" 2>/dev/null || true)"
+  [ -n "$rev" ] && git cat-file -e "$rev^{commit}" 2>/dev/null || return 0
+  shift
+  local rc=0; git diff --quiet "$rev" HEAD -- "$@" || rc=$?
+  [ "$rc" -ne 0 ]   # 0 = unchanged (fresh); 1 = changed; anything else (a git error) also counts as stale
+}
 build() {
   # The server's `tsc --build` needs more than Node's default heap on a smaller machine: Node
   # sizes it from RAM, so the 24 GB VM gets ~4 GB but an 8 GB host gets ~2 GB, and the build
   # died there with "JavaScript heap out of memory" (rebuild drill, 2026-10-23, D-#819).
   # Pinning the 4 GB the VM already uses keeps a rebuild on a smaller VM from failing here.
   export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096"
-  npm install --no-audit --no-fund
+  # patches/: the root postinstall runs patch-package, so a patch change needs a reinstall
+  if stale "$DEPS_MARK" package.json package-lock.json '*/package.json' patches || [ ! -d node_modules ]; then
+    npm install --no-audit --no-fund
+    git rev-parse HEAD > "$DEPS_MARK"
+  else
+    say "dependencies unchanged since $(cut -c1-8 "$DEPS_MARK") — skipping npm install"
+  fi
   npm run build --workspace=shared
   npm run build --workspace=server
   # MON-3 (prd-observability.md §4): web bundle + source-map upload to GlitchTip so
@@ -39,20 +59,29 @@ build() {
   # bake the other env's label. A cold export costs a few minutes; a silent web is worse.
   # The CI deploy's ssh carries no env, so the token also comes from the VM-only
   # app/.env (gitignored, mode 600). Read the one line — never source that file.
+  if ! stale "$WEB_MARK" app shared package.json package-lock.json patches && [ -f app/dist/index.html ]; then
+    say "app unchanged since $(cut -c1-8 "$WEB_MARK") — keeping the current web bundle"
+    return 0
+  fi
   if [ -z "${SENTRY_AUTH_TOKEN:-}" ] && [ -f app/.env ]; then
     SENTRY_AUTH_TOKEN="$(sed -n 's/^SENTRY_AUTH_TOKEN=//p' app/.env | tail -1 | tr -d '"\r')"
     export SENTRY_AUTH_TOKEN
   fi
   if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
-    ( cd app \
-        && npx expo export --platform web --clear --source-maps \
-        && { npx sentry-cli --url https://scdhub-errors.shafayet.me sourcemaps upload \
-               --org scd --project scdhub-app \
-               --release "$(git rev-parse HEAD)" dist \
-             || say "sentry sourcemap upload failed (non-fatal)"; } \
-        ; find dist -name '*.map' -delete )
+    # (as before, a failed export here does not stop the deploy; it now also leaves the marker, so
+    # the next deploy retries the export instead of skipping it)
+    if ( cd app && npx expo export --platform web --clear --source-maps ); then
+      git rev-parse HEAD > "$WEB_MARK"
+      ( cd app && npx sentry-cli --url https://scdhub-errors.shafayet.me sourcemaps upload \
+          --org scd --project scdhub-app --release "$(git rev-parse HEAD)" dist ) \
+        || say "sentry sourcemap upload failed (non-fatal)"
+    else
+      say "web export FAILED (non-fatal) — the next deploy will retry it"
+    fi
+    find app/dist -name '*.map' -delete 2>/dev/null || true
   else
     ( cd app && npx expo export --platform web --clear )
+    git rev-parse HEAD > "$WEB_MARK"
   fi
 }
 # AI Workspace job worker (W-4, D-#1251): restart it with the API so it never runs old code.
@@ -76,7 +105,14 @@ cd "$DIR"
 PREV="$(git rev-parse HEAD)"
 say "previous=$PREV"
 git fetch origin -q
-git reset --hard "origin/$BRANCH" -q
+# D-#1651: CI passes the exact commit it gated (scripts/deploy.sh <env> <sha>), so a newer, not-yet-tested
+# push to the branch can never ride along. The commit must be on the branch. No sha = branch tip (manual use).
+TARGET="${2:-origin/$BRANCH}"
+if [ -n "${2:-}" ]; then
+  git cat-file -e "$TARGET^{commit}" 2>/dev/null || { say "commit $TARGET not found after fetch"; exit 1; }
+  git merge-base --is-ancestor "$TARGET" "origin/$BRANCH" || { say "commit $TARGET is not on origin/$BRANCH — refusing"; exit 1; }
+fi
+git reset --hard "$TARGET" -q
 say "deploying $(git rev-parse --short HEAD) — $(git log -1 --format=%s)"
 build
 sudo systemctl restart "$SVC"

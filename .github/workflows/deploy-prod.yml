@@ -3,6 +3,8 @@ name: Deploy prod
 # On push to main with CODE changes (docs-only commits are path-filtered out so
 # STATUS/CHANGELOG/DECISIONS edits never redeploy): run the CI gate, then (if
 # green) SSH to the VM and deploy production via scripts/deploy.sh.
+# D-#1651: the gate is skipped when this exact source tree already passed CI (the
+# merge of a green promotion or hotfix PR), so the same code is never tested twice.
 on:
   push:
     branches: [main]
@@ -11,11 +13,33 @@ on:
       - "docs/**"
       - ".github/**"
 
+# one deploy of this environment at a time; a newer push waits instead of racing (D-#1651)
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 jobs:
+  tested:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      hit: ${{ steps.look.outputs.hit }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Look for a CI pass of this tree
+        id: look
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/ci-tree-tested.sh "${{ github.repository }}"
   ci:
+    needs: tested
+    if: needs.tested.outputs.hit != 'true'
     uses: ./.github/workflows/ci.yml
   deploy:
-    needs: ci
+    needs: [tested, ci]
+    if: ${{ !cancelled() && needs.tested.result == 'success' && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to prod over SSH
@@ -28,4 +52,4 @@ jobs:
           printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
-            "$VM_USER@$VM_HOST" 'bash /opt/scdhub/prod/scripts/deploy.sh prod'
+            "$VM_USER@$VM_HOST" 'bash /opt/scdhub/prod/scripts/deploy.sh prod ${{ github.sha }}'
