@@ -79,7 +79,7 @@ async function teacher(h) {
 
 async function office(h) {
   const O = await L.login(h, "office@help.test");
-  await L.go(h, O, null, VIVA, 5000);
+  await L.go(h, O, "পরীক্ষা", VIVA, 5000);
 
   // Home cards.
   await h.shot(O, "exam-viva-examiners", 0, [inCard(BAN, "পরীক্ষক")]);
@@ -138,7 +138,7 @@ const ARB = "নার্সারি · আরবি";
 
 async function officePictures(h) {
   const O = await L.login(h, "office@help.test");
-  await L.go(h, O, null, VIVA, 5000);
+  await L.go(h, O, "পরীক্ষা", VIVA, 5000);
   await h.tap(O, inCard(ARB, "প্রশ্নপত্র"), 5000);
   await h.shot(O, "exam-viva-picture-paper", 0, [{ re: "^১\\. " }, { text: "ছবি বাছুন" }, { text: "প্রতি ছবিতে নম্বর" }], { anchor: { re: "^প্রশ্ন ১$" } });
   await h.tap(O, "ছবি বাছুন", 4000);
@@ -159,7 +159,7 @@ async function officePictures(h) {
 
 async function teacherPictures(h) {
   const T = await L.login(h, "teacher@help.test");
-  await L.go(h, T, null, VIVA, 5000);
+  await L.go(h, T, "পরীক্ষা", VIVA, 5000);
   await h.tap(T, inCard(ARB, "নম্বর দিন"), 5000);
   await h.tap(T, { text: FIRST }, 3500);
   // The first picture chip (not the roll number "১" above it).

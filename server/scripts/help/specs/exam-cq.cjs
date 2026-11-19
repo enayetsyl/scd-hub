@@ -8,14 +8,14 @@
  */
 const L = require("./exam-lib.cjs");
 
-const TRACKERS = "ট্র্যাকার";
+const EXAMS = "পরীক্ষা"; // D-#1652: ক্লাস টেস্ট sits in the পরীক্ষা group
 const CT = "ক্লাস টেস্ট";
 const PAPER = "6600000000000000000000a1";
 const SCANS = ["6600000000000000000000b1", "6600000000000000000000b2", "6600000000000000000000b3", "6600000000000000000000b4", "6600000000000000000000b5", "6600000000000000000000b6"];
 
 async function teacherQuestions(h) {
   const T = await L.login(h, "teacher@help.test");
-  await L.go(h, T, TRACKERS, CT);
+  await L.go(h, T, EXAMS, CT);
   for (const g of ["exam-cq-request", "exam-cq-review"]) await h.shot(T, g, 0, [{ text: "প্রশ্ন তৈরির অনুরোধ (অফিসকে)" }]);
   await h.tap(T, "প্রশ্ন তৈরির অনুরোধ (অফিসকে)", 3500);
   await h.shot(T, "exam-cq-request", 1, [{ text: "নতুন অনুরোধ" }]);
@@ -61,7 +61,7 @@ async function teacherQuestions(h) {
 async function officeQuestions(h) {
   const O = await L.login(h, "office@help.test");
   await L.fakeUploads(O, "classtest", [PAPER], "application/pdf");
-  await L.go(h, O, TRACKERS, CT);
+  await L.go(h, O, EXAMS, CT);
   await h.shot(O, "exam-cq-prepare", 0, [{ text: "প্রশ্নের অনুরোধ কিউ" }]);
   await h.tap(O, "প্রশ্নের অনুরোধ কিউ", 3500);
   await h.shot(O, "exam-cq-prepare", 1, [{ text: "প্রশ্নপত্র আপলোড করুন" }]);

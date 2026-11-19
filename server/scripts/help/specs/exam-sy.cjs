@@ -7,7 +7,7 @@
  */
 const L = require("./exam-lib.cjs");
 
-const SY = "পরীক্ষার সিলেবাস";
+const SY = "পরীক্ষা"; // D-#1652: the পরীক্ষা group
 
 async function office(h) {
   const O = await L.login(h, "office@help.test");
@@ -49,7 +49,7 @@ async function office(h) {
 
 async function teacher2(h) {
   const T = await L.login(h, "teacher2@help.test");
-  await L.menuShots(h, T, ["exam-sy-teacher-approve"], SY, "অনুমোদন");
+  await L.menuShots(h, T, ["exam-sy-teacher-approve"], SY, "সিলেবাস অনুমোদন");
   await h.shot(T, "exam-sy-teacher-approve", 1, [{ text: "মানবন্টন দেখুন" }, { text: "অনুমোদন", minY: 120 }, { text: "ফেরত দেওয়ার কারণ" }]);
   await h.tap(T, { text: "অনুমোদন", minY: 120 }, 3000);
   await T.context().close();
@@ -57,7 +57,7 @@ async function teacher2(h) {
 
 async function principal(h) {
   const P = await L.login(h, "principal@help.test");
-  await L.menuShots(h, P, ["exam-sy-publish"], SY, "অনুমোদন");
+  await L.menuShots(h, P, ["exam-sy-publish"], SY, "সিলেবাস অনুমোদন");
   await h.shot(P, "exam-sy-publish", 1, [{ text: "প্র" }]);
   await h.tap(P, "প্র", 2500);
   await h.shot(P, "exam-sy-publish", 2, [{ text: "প্রকাশ করুন" }, { text: "ফেরত দেওয়ার কারণ" }]);

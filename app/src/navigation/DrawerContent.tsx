@@ -38,11 +38,13 @@ import { REPORT_LEAF_ACTIONS } from "../lib/navGates";
 import { MY_NAV_PREFERENCE, RECORD_NAV_USE, RESET_NAV_PREFERENCE, SAVE_NAV_PREFERENCE } from "../graphql/navPreference";
 import {
   DEFAULT_NAV_PREFS,
+  migrateOrder,
   moveKey,
   orderByKeys,
   orderByUse,
   togglePinned,
   type NavMode,
+  type NavOrderMigration,
   type NavPrefs,
 } from "../lib/navArrange";
 import { friendlyError } from "../lib/errors";
@@ -129,43 +131,44 @@ const STAFF_NAV: NavSection[] = [
       { route: "TrackersTab", labelKey: "drawerItemDailyTracker", icon: "✅" },
       { route: "HomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "AssignmentTab", labelKey: "tabAssignment", icon: "📋" },
-      { route: "ClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
+      // ক্লাস টেস্ট moved to the পরীক্ষা group (D-#1652).
       // SP-1 (D-#734) — Office / Principal only; lives in the Class Test stack.
       { route: "ClassTestTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: ["improvement_plan:view_all"] },
       { route: "RevisionTab", labelKey: "tabRevision", icon: "🕌" },
     ],
   },
-  // Exam syllabus (SY-4..SY-6). Three leaves in one stack — the Reports shape.
-  // `সিলেবাস দেখুন` is every staff role; the other two carry their own perms, so
-  // a plain teacher sees only the read leaf.
+  // D-#1652 (owner 2026-11-19): every exam screen in ONE group — class tests, the exam
+  // routine, syllabus (SY-4..SY-6), draft + reference papers, Quran and oral exams, marks
+  // and results, scholarship practice. Each leaf keeps the gate it had before the move, so
+  // a plain teacher sees only their own leaves and the group hides when none is visible.
+  // It replaced the পরীক্ষার সিলেবাস + বৃত্তি অনুশীলন groups and the two Quran/oral items;
+  // a saved order puts it where those were (NAV_ORDER_MIGRATIONS below).
   {
     type: "group",
-    titleKey: "syDrawerGroup",
-    icon: "📋",
+    titleKey: "exGroup",
+    icon: "📝",
     items: [
-      { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
-      // D-#883: the exam routine (general + Quran exam days), beside the syllabus.
+      { route: "ClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
+      // D-#883: the exam routine (general + Quran exam days).
       { route: "SyllabusTab", labelKey: "exrNav", icon: "🗓️", screen: "ExamRoutine", perms: ["exam_routine:view", "exam_routine:manage", "exam_routine:publish"] },
-      { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam_syllabus:settings"] },
+      { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
       { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam_syllabus:edit"] },
-      { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
-      // Exams EX-1..EX-9 (D-#375–#382): marks, recheck, custody chain, report cards — one stack.
-      { route: "ExamsTab", labelKey: "tabExams", icon: "📝", perms: ["exam_results:view", "exam_custody:view"] },
+      { route: "SyllabusTab", labelKey: "syApprovalsNav", icon: "✅", screen: "SyllabusApprovals" },
+      { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam_syllabus:settings"] },
       // D-#1031: draft papers — every staff member may be a reviewer (their list is just their own).
       { route: "ExamPapersTab", labelKey: "epNav", icon: "📝", screen: "ExamPapersHome", perms: ["exam_papers:review", "exam_papers:view", "exam_papers:manage"] },
       // D-#1030: Mohammadpur's past papers (Office by default).
       { route: "ExamPapersTab", labelKey: "epRefNav", icon: "📂", screen: "ReferencePapers", perms: ["exam_papers:view_reference", "exam_papers:manage_reference"] },
-    ],
-  },
-  {
-    type: "group",
-    titleKey: "scDrawerGroup",
-    icon: "🎓",
-    items: [
-      { route: "ScholarshipTab", labelKey: "scPapers", icon: "🎓", screen: "ScholarshipHome", perms: ["scholarship_practice:view"] },
+      // Quran oral exam (D-#873): the Office's plan/monitor and the examiner's own duties share one tab.
+      { route: "QuranExamTab", labelKey: "qxNav", icon: "🕋", perms: ["quran_exam:view", "quran_exam:manage", "quran_exam:examine"] },
+      // Nursery & KG oral exam (D-#1080): papers, examiners, live marks — one tab for Office and examiners.
+      { route: "VivaTab", labelKey: "vivaNav", icon: "🗣️", perms: ["viva:view", "viva:manage", "viva:examine"] },
+      // Exams EX-1..EX-9 (D-#375–#382): marks, recheck, custody chain, report cards — one stack.
+      { route: "ExamsTab", labelKey: "exNavResults", icon: "🧾", perms: ["exam_results:view", "exam_custody:view"] },
+      { route: "ScholarshipTab", labelKey: "scPapersNav", icon: "🎓", screen: "ScholarshipHome", perms: ["scholarship_practice:view"] },
       {
         route: "ScholarshipTab",
-        labelKey: "scTopics",
+        labelKey: "scTopicsNav",
         icon: "🏷️",
         screen: "ScholarshipTopics",
         perms: ["scholarship_practice:settings"],
@@ -173,10 +176,6 @@ const STAFF_NAV: NavSection[] = [
       },
     ],
   },
-  // Quran oral exam (D-#873): the Office's plan/monitor and the examiner's own duties share one tab.
-  { type: "item", route: "QuranExamTab", labelKey: "qxNav", icon: "🕋", perms: ["quran_exam:view", "quran_exam:manage", "quran_exam:examine"] },
-  // Nursery & KG oral exam (D-#1080): papers, examiners, live marks — one tab for Office and examiners.
-  { type: "item", route: "VivaTab", labelKey: "vivaNav", icon: "🗣️", perms: ["viva:view", "viva:manage", "viva:examine"] },
   // AI-6 (D-#1096): the AI teacher assistant — own conversations; the Principal reads all.
   { type: "item", route: "AiAssistTab", labelKey: "aasNav", icon: "🤖", perms: ["ai_assist:chat", "ai_assist:read_all_chats"] },
   // AI Workspace (docs/prd-ai-workspace.md, D-#1208): projects + files + instructions; the Principal at launch.
@@ -407,6 +406,14 @@ const GUARDIAN_NAV: NavSection[] = [
       { route: "GuardianHomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "GuardianClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
       { route: "GuardianAssignmentsTab", labelKey: "tabAssignment", icon: "📋" },
+    ],
+  },
+  // D-#1652: the guardian's পরীক্ষা group — class tests, syllabus and exam routine.
+  {
+    type: "group",
+    titleKey: "exGroup",
+    icon: "📝",
+    items: [
       { route: "GuardianClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
       { route: "GuardianSyllabusTab", labelKey: "syTitle", icon: "📋" },
       { route: "GuardianSyllabusTab", labelKey: "exrNav", icon: "🗓️", screen: "ChildExamRoutine" },
@@ -443,6 +450,17 @@ const DEEP_LINKED = new Set(
 const leafKey = (l: NavLeaf): string => `${l.route}:${l.screen ?? ""}`;
 const sectionKey = (s: NavSection): string => (s.type === "group" ? `g:${String(s.titleKey)}` : leafKey(s));
 const LEAF_BY_KEY = new Map(NAV.flatMap((s) => (s.type === "group" ? s.items : [s])).map((l) => [leafKey(l), l]));
+
+/** D-#1652: a saved order places the new পরীক্ষা group where the sections it replaced were
+ *  (staff), or right after একাডেমিক (guardians, whose exam leaves sat inside it).
+ *  Favourites and use counts are keyed by leaf, and the leaves kept their keys. */
+const NAV_ORDER_MIGRATIONS: NavOrderMigration[] = [
+  {
+    key: "g:exGroup",
+    replaces: ["g:syDrawerGroup", "g:scDrawerGroup", "QuranExamTab:", "VivaTab:"],
+    after: "g:drawerGroupAcademics",
+  },
+];
 
 export default function DrawerContent(props: DrawerContentComponentProps): React.ReactElement {
   const colors = useColors();
@@ -495,7 +513,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (!p) return DEFAULT_NAV_PREFS;
     return {
       mode: p.mode === "auto" ? "auto" : "manual",
-      order: p.order,
+      order: migrateOrder(p.order, NAV_ORDER_MIGRATIONS),
       pinned: p.pinned,
       usage: Object.fromEntries(p.usage.map((u) => [u.key, u.count])),
     };
@@ -769,11 +787,15 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     else navigate(leaf.route);
   };
 
+  /** The leaf of the screen on show: same route, and the same deep-linked screen (or, for a
+   *  plain leaf, none of the route's deep-linked screens). */
+  const isActiveLeaf = (leaf: NavLeaf): boolean =>
+    leaf.route === activeRoute &&
+    (leaf.screen ? leaf.screen === activeNested : !DEEP_LINKED.has(`${leaf.route}:${activeNested ?? ""}`));
+
   const Leaf = ({ leaf, indent }: { leaf: NavLeaf; indent?: boolean }): React.ReactElement | null => {
     if (!visibleLeaf(leaf)) return null;
-    const active =
-      leaf.route === activeRoute &&
-      (leaf.screen ? leaf.screen === activeNested : !DEEP_LINKED.has(`${leaf.route}:${activeNested ?? ""}`));
+    const active = isActiveLeaf(leaf);
     const badge = badgeFor(leaf.route);
     const tinted = tintedBadgesFor(leaf.route, leaf.screen);
     return (
@@ -860,7 +882,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (visible.length === 0) return null;
     // By title, not position: the person's own order moves groups around (D-#920).
     const key = sectionKey(section);
-    const isCollapsed = collapsed[key] ?? (!groupsStartOpen && !visible.some((it) => it.route === activeRoute));
+    // Open by default only around the highlighted leaf (D-#1652: শিক্ষার্থীর অগ্রগতি in ট্র্যাকার
+    // shares ClassTestTab with ক্লাস টেস্ট in পরীক্ষা, and must not open both groups).
+    const isCollapsed = collapsed[key] ?? (!groupsStartOpen && !visible.some(isActiveLeaf));
     return (
       <View key={key} style={{ marginTop: space(1) }}>
         <Pressable
