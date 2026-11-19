@@ -61,7 +61,7 @@ exports.run = async (h) => {
   await h.tap(O, "কপি যোগ করুন", 2500);
 
   await home(O);
-  await menu(h, O, "ক্লাস টেস্ট", "ট্র্যাকার");
+  await menu(h, O, "ক্লাস টেস্ট", "পরীক্ষা");
   await h.shot(O, "ops-archive-box", 0, [{ text: "খাতা আর্কাইভ (স্ক্রিপ্ট সংরক্ষণ)" }]);
   await h.tap(O, "খাতা আর্কাইভ (স্ক্রিপ্ট সংরক্ষণ)", 3000);
   await h.shot(O, "ops-archive-find", 0, [

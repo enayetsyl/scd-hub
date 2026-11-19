@@ -7,11 +7,11 @@
  */
 const L = require("./exam-lib.cjs");
 
-const SC = "বৃত্তি অনুশীলন";
+const SC = "পরীক্ষা"; // D-#1652: the পরীক্ষা group
 
 async function teacher(h) {
   const T = await L.login(h, "teacher2@help.test");
-  await L.menuShots(h, T, ["exam-sc-declare"], SC, "অনুশীলন প্রশ্ন");
+  await L.menuShots(h, T, ["exam-sc-declare"], SC, "বৃত্তি অনুশীলন");
   await h.shot(T, "exam-sc-declare", 1, [{ text: "নতুন প্রশ্ন ঘোষণা" }]);
   await h.shot(T, "exam-sc-marks", 0, [{ text: "ইংরেজি অনুশীলন ৩" }]);
   await h.shot(T, "exam-sc-analysis", 0, [{ text: "শ্রেণি বিশ্লেষণ" }]);
@@ -54,7 +54,7 @@ async function teacher(h) {
 
 async function office(h) {
   const O = await L.login(h, "office@help.test");
-  await L.menuShots(h, O, ["exam-sc-topics"], SC, "টপিক তালিকা");
+  await L.menuShots(h, O, ["exam-sc-topics"], SC, "বৃত্তি টপিক তালিকা");
   const five = await h.topmost(O, { text: "শ্রেণি ৫" }, { scroll: true }).catch(() => null);
   if (five) {
     await five.click();
@@ -68,7 +68,7 @@ async function office(h) {
   await h.shot(O, "exam-sc-topics", 2, [ADD]);
   await h.tap(O, ADD, 3000);
 
-  await L.go(h, O, SC, "অনুশীলন প্রশ্ন");
+  await L.go(h, O, SC, "বৃত্তি অনুশীলন");
   await h.shot(O, "exam-sc-candidates", 0, [{ text: "বৃত্তি পরীক্ষার তালিকা" }]);
   await h.tap(O, "বৃত্তি পরীক্ষার তালিকা", 3500);
   await h.shot(O, "exam-sc-candidates", 1, [{ text: "পরীক্ষা দেবে", last: true }]);

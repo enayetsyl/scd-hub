@@ -8,7 +8,7 @@
  */
 const L = require("./exam-lib.cjs");
 
-const TRACKERS = "ট্র্যাকার";
+const EXAMS = "পরীক্ষা"; // D-#1652: ক্লাস টেস্ট sits in the পরীক্ষা group
 const CT = "ক্লাস টেস্ট";
 const TICK = "আমি খাতা দ্বিতীয়বার দেখেছি, নম্বর ঠিক আছে";
 /** A test card's button, found after the card's CT id. */
@@ -22,7 +22,7 @@ async function expectText(page, re, what) {
 
 async function teacher(h) {
   const T = await L.login(h, "teacher2@help.test");
-  await L.go(h, T, TRACKERS, CT);
+  await L.go(h, T, EXAMS, CT);
   // ৩য় বালিকা ইংরেজি টেস্ট ৪ (CT-C3-ENG-0006): নাফিসা 20/20, সাদিয়া 7/20.
   await h.tap(T, inCard("CT-C3-ENG-0006", "ফলাফল প্রকাশ"), 4000);
   await expectText(T, /বাকি: ২টি অস্বাভাবিক নম্বর/, "two marks owed before submit");
@@ -56,7 +56,7 @@ async function teacher(h) {
 
 async function principal(h) {
   const P = await L.login(h, "principal@help.test");
-  await L.go(h, P, TRACKERS, CT);
+  await L.go(h, P, EXAMS, CT);
 
   // The % rules.
   await h.shot(P, "exam-ct-recheck-rules", 0, [{ text: "অস্বাভাবিক নম্বরের নিয়ম" }]);

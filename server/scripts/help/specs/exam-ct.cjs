@@ -7,12 +7,12 @@
  */
 const L = require("./exam-lib.cjs");
 
-const TRACKERS = "ট্র্যাকার";
+const EXAMS = "পরীক্ষা"; // D-#1652: ক্লাস টেস্ট sits in the পরীক্ষা group
 const CT = "ক্লাস টেস্ট";
 
 async function teacher(h) {
   const T = await L.login(h, "teacher@help.test");
-  await L.menuShots(h, T, ["exam-ct-register", "exam-ct-change-date", "exam-ct-enter-marks", "exam-ct-view-results"], TRACKERS, CT);
+  await L.menuShots(h, T, ["exam-ct-register", "exam-ct-change-date", "exam-ct-enter-marks", "exam-ct-view-results"], EXAMS, CT);
   // ফলাফল দেখুন of বাংলা টেস্ট ১ (all marks in): the second printed test in the list.
   await h.shot(T, "exam-ct-view-results", 1, [{ css: 'text="ফলাফল দেখুন" >> nth=1' }]);
   await h.tap(T, { css: 'text="ফলাফল দেখুন" >> nth=1' }, 3500);
@@ -90,7 +90,7 @@ async function teacher(h) {
   // Correct a test's details: গণিত টেস্ট ৩ (no marks yet) is the first printed one.
   await T.reload({ waitUntil: "load" });
   await T.waitForTimeout(6000);
-  await L.go(h, T, TRACKERS, CT);
+  await L.go(h, T, EXAMS, CT);
   await h.shot(T, "exam-ct-edit-details", 0, [{ text: "ফলাফল এন্ট্রি" }]);
   await h.tap(T, "ফলাফল এন্ট্রি", 3500);
   await h.shot(T, "exam-ct-edit-details", 1, [{ text: "পরীক্ষার তথ্য সংশোধন" }]);
@@ -103,7 +103,7 @@ async function teacher(h) {
 
 async function principal(h) {
   const P = await L.login(h, "principal@help.test");
-  await L.menuShots(h, P, ["exam-ct-dashboard"], TRACKERS, CT);
+  await L.menuShots(h, P, ["exam-ct-dashboard"], EXAMS, CT);
   await h.shot(P, "exam-ct-dashboard", 1, [{ re: "^ড্যাশবোর্ড" }]);
   await h.tap(P, { re: "^ড্যাশবোর্ড" }, 5000);
   await h.shot(P, "exam-ct-dashboard", 2, [{ text: "ফিল্টার ও খোঁজ" }, { text: "বিলম্বিত" }]);
@@ -124,7 +124,7 @@ async function principal(h) {
 
 async function office(h) {
   const O = await L.login(h, "office@help.test");
-  await L.go(h, O, TRACKERS, CT);
+  await L.go(h, O, EXAMS, CT);
   await h.tap(O, { re: "^ড্যাশবোর্ড" }, 5000);
   await h.shot(O, "exam-ct-retire", 0, [{ re: "^গণিত · টেস্ট নং ৩" }]);
   await h.tap(O, { re: "^গণিত · টেস্ট নং ৩" }, 4000);
