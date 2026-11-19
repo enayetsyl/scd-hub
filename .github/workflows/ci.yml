@@ -3,18 +3,23 @@ name: CI
 # The single source-of-truth gate (ADR-012). Runs on every PR to dev/main, and
 # is called by the deploy workflows via workflow_call so deploys only proceed on
 # a green gate. Mirrors the local verifiers in AGENTS.md.
+#
+# Fast-deploy (D-#1651): the gate runs as parallel jobs — checks, 4 jest shards, app —
+# and on success records the tested source tree as an artifact `ci-pass-<tree>`, so a
+# deploy of byte-identical code (the merge of a green PR) can skip running it again.
 on:
   pull_request:
     branches: [dev, main]
   workflow_call:
 
+# The server typecheck needs ~2.9 GB and Node's default heap on the runner is ~2 GB: OT-3
+# (#1304) died there with "JavaScript heap out of memory". Same 4 GB pin as deploy.sh (D-#819).
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+
 jobs:
-  gate:
+  checks:
     runs-on: ubuntu-latest
-    # The server typecheck needs ~2.9 GB and Node's default heap on the runner is ~2 GB: OT-3
-    # (#1304) died there with "JavaScript heap out of memory". Same 4 GB pin as deploy.sh (D-#819).
-    env:
-      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,11 +55,68 @@ jobs:
         run: node skills/_tools/verify_objective_tree.mjs docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json
       - name: Help guides pass the structural verifier (prd-help-centre HC-1, D-#973)
         run: node skills/_tools/verify_help_guides.mjs
-      - name: Server tests (jest)
-        run: npm run test --workspace=server
+
+  jest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: jest (${{ matrix.shard }}/4)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Cache the in-memory Mongo binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongoms-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install deps
+        run: npm ci
+      - name: Build shared
+        run: npm run build --workspace=shared
+      # Same flags as `npm run test --workspace=server`, one quarter of the suites per runner.
+      - name: Server tests (jest shard ${{ matrix.shard }}/4)
+        working-directory: server
+        run: npx jest --runInBand --forceExit --shard=${{ matrix.shard }}/4
+
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install deps
+        run: npm ci
+      - name: Build shared
+        run: npm run build --workspace=shared
       - name: Typecheck app
         working-directory: app
         run: npx tsc --noEmit
       - name: Expo web export
         working-directory: app
         run: npx expo export --platform web
+
+  pass:
+    needs: [checks, jest, app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record the tested tree
+        id: tree
+        run: |
+          t="$(git rev-parse 'HEAD^{tree}')"
+          echo "tree=$t" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$t" > ci-pass.txt
+          echo "CI passed for tree $t"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-pass-${{ steps.tree.outputs.tree }}
+          path: ci-pass.txt
+          retention-days: 30
+          overwrite: true
