@@ -33,6 +33,8 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
 import { callerHasPermission } from "@scd/shared";
 import { ReviewError } from "../../content/services/ReviewService";
+import { ReviewVoiceNoteRef } from "../../content/resolvers/review";
+import { listReviewVoiceNotes, managerPermissionFor } from "../../content/services/ReviewVoiceNoteService";
 import {
   assignQuestionReviewOne as assignSvc,
   assignQuestionReviewBulk as assignBulkSvc,
@@ -107,6 +109,23 @@ QuestionReviewRoundRef.implement({
     important: t.exposeBoolean("important"),
   }),
 });
+
+// The clips of a round for the caller (VN-2): the reviewer sees all of theirs (drafts included);
+// the importer and the review managers see the sent ones. Asked only by the thread screen — the
+// queue must not fetch clips for every card.
+builder.objectField(QuestionReviewRoundRef, "voiceNotes", (t) =>
+  t.field({
+    type: [ReviewVoiceNoteRef],
+    description: "Voice clips on this round the caller may see (VN-2).",
+    resolve: async (r, _args, ctx) => {
+      if (!ctx.auth) return [];
+      return listReviewVoiceNotes(r.id, {
+        userId: ctx.auth.userId,
+        managerFor: (docType) => callerHasPermission(ctx.auth!, managerPermissionFor(docType)),
+      });
+    },
+  }),
+);
 
 const AssignableQuestionRef = builder.objectRef<AssignableQuestionDTO>("AssignableQuestion");
 AssignableQuestionRef.implement({

@@ -64,6 +64,11 @@ jest.mock("../modules/content/models/ReviewVoiceNote", () => ({
   },
 }));
 
+const mockQueueTranscripts = jest.fn().mockResolvedValue(undefined);
+jest.mock("../modules/content/services/ReviewVoiceTranscriptService", () => ({
+  queueVoiceTranscripts: (...a: unknown[]) => mockQueueTranscripts(...a),
+}));
+
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => ({ select: () => ({ lean: () => mockUserFind(f) }) }) },
 }));
@@ -81,6 +86,7 @@ jest.mock("../modules/notifications/services/emitters", () => ({
 }));
 
 // Import AFTER mocks
+import { ReviewVoiceNote } from "../modules/content/models/ReviewVoiceNote";
 import {
   assignQuestionReview,
   assignQuestionReviewOne,
@@ -375,6 +381,25 @@ describe("submitQuestionReview (Q2.3, Q2.4)", () => {
     expect(assignment.status).toBe("submitted");
     expect(artifact.reviewStatus).toBe("reviewed");
     expect(artifact.save).toHaveBeenCalled();
+  });
+
+  test("VN-2 — drafts are attached and transcripts queued when clips were flipped; audit carries the count", async () => {
+    const assignment = assignmentDoc();
+    mockReviewFindById.mockResolvedValue(assignment);
+    mockArtifactFindById.mockReturnValue(questionDoc());
+    (ReviewVoiceNote.updateMany as jest.Mock).mockResolvedValueOnce({ modifiedCount: 2 });
+
+    await submitQuestionReview({ assignmentId: ASSIGNMENT_ID.toString(), reviewerId: REVIEWER_ID.toString(), verdict: "CHANGES_REQUESTED" });
+
+    expect(mockQueueTranscripts).toHaveBeenCalledWith(ASSIGNMENT_ID.toString(), REVIEWER_ID.toString());
+    expect(mockWriteAudit.mock.calls[0][0].meta.voiceNotes).toBe(2);
+  });
+
+  test("VN-2 — no draft clips: no transcript job is queued", async () => {
+    mockReviewFindById.mockResolvedValue(assignmentDoc());
+    mockArtifactFindById.mockReturnValue(questionDoc());
+    await submitQuestionReview({ assignmentId: ASSIGNMENT_ID.toString(), reviewerId: REVIEWER_ID.toString(), verdict: "APPROVE" });
+    expect(mockQueueTranscripts).not.toHaveBeenCalled();
   });
 
   test("Q2.4 — CHANGES_REQUESTED with NO reason SUCCEEDS (the divergence from plans)", async () => {

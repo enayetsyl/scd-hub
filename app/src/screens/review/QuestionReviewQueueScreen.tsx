@@ -562,7 +562,7 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
                       }}
                     />
                     <Button
-                      title={STR.reviewThread}
+                      title={STR.qrOpenBookVoice}
                       variant="ghost"
                       onPress={() =>
                         navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId })

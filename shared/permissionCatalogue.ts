@@ -794,7 +794,7 @@ export const FEATURE_CATALOGUE = {
       view: { en: "View lesson plans", bn: "পাঠ পরিকল্পনা দেখা", desc: "Plan tree, a plan, its PDF", teacher: true, office: false, flags: [] },
       view_all: { en: "Every plan", bn: "সব পাঠ পরিকল্পনা দেখা", desc: "Plans beyond own routine/supervisory scope", teacher: false, office: true, flags: [] },
       import: { en: "Import lesson plans", bn: "পাঠ পরিকল্পনা ইম্পোর্ট করা", desc: "Upload a plan pair or envelope", teacher: false, office: true, flags: [] },
-      read_book: { en: "Read the book beside a plan", bn: "পরিকল্পনার পাশে বই পড়া", desc: "The matching chapter of the school's book on the plan screen", teacher: true, office: true, flags: [] },
+      read_book: { en: "Read the book beside a plan or a question", bn: "পরিকল্পনা ও প্রশ্নের পাশে বই পড়া", desc: "The matching chapter of the school's book on the plan and question-review screens", teacher: true, office: true, flags: [] },
     },
   },
   home_guide: {
@@ -844,7 +844,7 @@ export const FEATURE_CATALOGUE = {
     actions: {
       assign: { en: "Assign question reviewers", bn: "প্রশ্ন রিভিউ বরাদ্দ করা", desc: "Assign by question/chapter, move, clear a condition, picker", teacher: false, office: true, flags: [] },
       view_all: { en: "Review progress", bn: "রিভিউয়ের অগ্রগতি দেখা", desc: "Inbox, progress, drill-downs, coverage, slices, any thread", teacher: false, office: true, flags: [] },
-      review: { en: "Review questions", bn: "প্রশ্ন রিভিউ করা", desc: "Verdict (single/bulk); IMPORTANT on own rounds", teacher: true, office: false, flags: [], designation: "assigned_reviewer" },
+      review: { en: "Review questions", bn: "প্রশ্ন রিভিউ করা", desc: "Verdict (single/bulk); IMPORTANT on own rounds; voice notes on own rounds", teacher: true, office: false, flags: [], designation: "assigned_reviewer" },
       publish: { en: "Publish questions", bn: "প্রশ্ন প্রকাশ করা", desc: "Gold: single with override, bulk, publish-all", teacher: false, office: false, flags: [] },
     },
   },

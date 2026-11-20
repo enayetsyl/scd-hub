@@ -81,6 +81,7 @@ import {
   deleteReviewVoiceNote,
   listReviewVoiceNotes,
   managerPermissionFor,
+  reviewPermissionFor,
   normaliseAudioMime,
   validateVoiceNoteAudio,
 } from "../modules/content/services/ReviewVoiceNoteService";
@@ -187,6 +188,12 @@ describe("helpers and limits", () => {
     expect(validateVoiceNoteAudio("image/png", 1000, 30)).toBe(VOICE_NOTE_ERRORS_BN.badAudio);
   });
 
+  test("reviewPermissionFor picks the question permission for questions only", () => {
+    expect(reviewPermissionFor("chapter_plan")).toBe("plan_review:review");
+    expect(reviewPermissionFor("session_plan")).toBe("plan_review:review");
+    expect(reviewPermissionFor("question")).toBe("question_review:review");
+  });
+
   test("managerPermissionFor picks the question permission for questions only", () => {
     expect(managerPermissionFor("chapter_plan")).toBe("plan_review:assign");
     expect(managerPermissionFor("session_plan")).toBe("plan_review:assign");
@@ -235,9 +242,23 @@ describe("addReviewVoiceNote", () => {
     spy.mockRestore();
   });
 
-  test("a non-plan (question) round is refused until VN-2", async () => {
+  test("a question round is accepted (VN-2)", async () => {
     mockRoundFindById.mockResolvedValue(round({ docType: "question" }));
+    await expect(add()).resolves.toBeDefined();
+    expect(mockUpload).toHaveBeenCalled();
+  });
+
+  test("an unknown docType is refused", async () => {
+    mockRoundFindById.mockResolvedValue(round({ docType: "worksheet" }));
     await expect(add()).rejects.toThrow(VOICE_NOTE_ERRORS_BN.notPlan);
+    expect(mockUpload).not.toHaveBeenCalled();
+  });
+
+  test("a reviewer without the docType's review permission is refused", async () => {
+    mockRoundFindById.mockResolvedValue(round({ docType: "question" }));
+    const seen: string[] = [];
+    await expect(add({ mayReview: (d: string) => (seen.push(d), false) })).rejects.toThrow(/FORBIDDEN/);
+    expect(seen).toEqual(["question"]);
     expect(mockUpload).not.toHaveBeenCalled();
   });
 

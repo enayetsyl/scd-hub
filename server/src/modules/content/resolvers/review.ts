@@ -48,6 +48,7 @@ import {
   addReviewVoiceNote as addVoiceSvc,
   deleteReviewVoiceNote as deleteVoiceSvc,
   listReviewVoiceNotes as listVoiceSvc,
+  reviewPermissionFor,
   managerPermissionFor,
   type ReviewVoiceNoteDTO,
 } from "../services/ReviewVoiceNoteService";
@@ -83,7 +84,7 @@ ReviewAssignmentRef.implement({
   }),
 });
 
-const ReviewVoiceNoteRef = builder.objectRef<ReviewVoiceNoteDTO>("ReviewVoiceNote");
+export const ReviewVoiceNoteRef = builder.objectRef<ReviewVoiceNoteDTO>("ReviewVoiceNote");
 ReviewVoiceNoteRef.implement({
   description:
     "One recorded voice clip on a review round (VN-1, D-#1658). Audio only. `fileId` plays through " +
@@ -220,8 +221,8 @@ builder.mutationField("addReviewVoiceNote", (t) =>
     description:
       "Save one recorded clip (base64 WAV/AAC, up to 90 s) as a DRAFT on the caller's own open review " +
       "round, with an optional spot tag. At most 10 per round. Submitting the verdict sends the drafts. " +
-      "Requires plan_review:review.",
-    authScopes: { hasPermission: "plan_review:review" },
+      "Requires plan_review:review (plan rounds) or question_review:review (question rounds).",
+    authScopes: { hasAnyPermission: ["plan_review:review", "question_review:review"] },
     args: {
       assignmentId: t.arg.string({ required: true }),
       audioBase64: t.arg.string({ required: true }),
@@ -239,6 +240,7 @@ builder.mutationField("addReviewVoiceNote", (t) =>
           mimeType: args.mimeType,
           seconds: args.seconds,
           spot: args.spot ?? null,
+          mayReview: (docType) => callerHasPermission(ctx.auth!, reviewPermissionFor(docType)),
         });
       } catch (err) {
         return mapReviewError(err);
@@ -249,13 +251,17 @@ builder.mutationField("addReviewVoiceNote", (t) =>
 
 builder.mutationField("deleteReviewVoiceNote", (t) =>
   t.boolean({
-    description: "Delete one of the caller's own voice clips while the round is still open. Requires plan_review:review.",
-    authScopes: { hasPermission: "plan_review:review" },
+    description: "Delete one of the caller's own voice clips while the round is still open. Requires plan_review:review or question_review:review (by the round's type).",
+    authScopes: { hasAnyPermission: ["plan_review:review", "question_review:review"] },
     args: { noteId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       try {
-        return await deleteVoiceSvc({ noteId: args.noteId, reviewerId: ctx.auth.userId });
+        return await deleteVoiceSvc({
+          noteId: args.noteId,
+          reviewerId: ctx.auth.userId,
+          mayReview: (docType) => callerHasPermission(ctx.auth!, reviewPermissionFor(docType)),
+        });
       } catch (err) {
         return mapReviewError(err);
       }

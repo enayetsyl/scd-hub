@@ -29,6 +29,8 @@ import { writeAudit, writeAuditMany } from "../../platform/services/AuditService
 import { emitQuestionReviewAssigned } from "../../notifications/services/emitters";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { questionTypeCodeOf } from "../../mastery/bank";
+import { attachDraftVoiceNotes } from "../../content/services/ReviewVoiceNoteService";
+import { queueVoiceTranscripts } from "../../content/services/ReviewVoiceTranscriptService";
 import {
   ReviewError,
   addressKeyOf,
@@ -401,6 +403,11 @@ export async function submitQuestionReview(input: SubmitQuestionReviewInput): Pr
   assignment.status = "submitted";
   await assignment.save();
 
+  // The reviewer's draft voice clips become part of the review (VN-2, D-#1664); the automatic
+  // transcripts are queued in the background and never block or fail the submit.
+  const voiceNotes = await attachDraftVoiceNotes(input.assignmentId, input.reviewerId);
+  if (voiceNotes > 0) await queueVoiceTranscripts(input.assignmentId, input.reviewerId);
+
   // Same both-directions sync the plan loop uses: APPROVE drives draft→reviewed, a
   // resubmitted CHANGES_REQUESTED reverts reviewed→draft, `gold` is never touched.
   let advancedTo: string | null = null;
@@ -427,6 +434,7 @@ export async function submitQuestionReview(input: SubmitQuestionReviewInput): Pr
       qid: assignment.qid ?? null,
       resubmit: isResubmit,
       reasonGiven: reason.length > 0,
+      voiceNotes,
     },
   });
 

@@ -18,8 +18,6 @@ import { friendlyError } from "../lib/errors";
 import { getItem, setItem } from "../lib/storage";
 import { makeStyles, space, typeScale } from "../theme";
 
-const TAB_KEY = "planBook.tab";
-const SIDE_KEY = "planBook.side";
 const SIDE_MIN_WIDTH = 1000;
 
 /** "অধ্যায় ১: …" / "পাঠ ৩ — …" / "Unit 2: …" → just the leading label; null when there is none. */
@@ -35,6 +33,8 @@ function BookPane({
   chapterKey,
   onPick,
   onRetry,
+  noPdfNote,
+  chapterMissingText,
 }: {
   b: PlanBookChapterT | null;
   fetching: boolean;
@@ -42,6 +42,8 @@ function BookPane({
   chapterKey: string | null;
   onPick: (k: string) => void;
   onRetry: () => void;
+  noPdfNote: boolean;
+  chapterMissingText?: string;
 }): React.ReactElement {
   const styles = useStyles();
   const [noteOpen, setNoteOpen] = React.useState(false);
@@ -59,7 +61,7 @@ function BookPane({
   const hasPdf = !!b.pdf && b.pdf.fromPage !== null && b.pdf.toPage !== null;
   return (
     <View>
-      {b.chapterKey === null && chapterKey === null ? <Notice message={STR.pbChapterMissing} tone="warn" /> : null}
+      {b.chapterKey === null && chapterKey === null ? <Notice message={chapterMissingText ?? STR.pbChapterMissing} tone="warn" /> : null}
       <Select
         label={STR.pbPickChapter}
         value={b.chapterKey ?? chapterKey}
@@ -77,6 +79,7 @@ function BookPane({
       ) : null}
       {b.chapterKey ? (
         <View style={{ marginTop: space(2) }}>
+          {noPdfNote && !hasPdf ? <Notice message={STR.pbNoPdf} tone="info" /> : null}
           {hasPdf ? (
             <BookPdfPages pdfId={b.pdf!.pdfId} fromPage={b.pdf!.fromPage!} toPage={b.pdf!.toPage!} pageAspect={b.pdf!.pageAspect} />
           ) : b.childText ? (
@@ -105,8 +108,28 @@ function BookPane({
   );
 }
 
-export default function PlanBookTabs({ artifactId, children }: { artifactId: string; children: React.ReactNode }): React.ReactElement {
+export default function PlanBookTabs({
+  artifactId,
+  children,
+  mainLabel,
+  storageKey = "planBook",
+  noPdfNote = false,
+  chapterMissingText,
+}: {
+  artifactId: string;
+  children: React.ReactNode;
+  /** The first tab's label; defaults to the plan's "📄 পরিকল্পনা". */
+  mainLabel?: string;
+  /** Prefix of the remembered tab / side-by-side keys (`<key>.tab`, `<key>.side`). */
+  storageKey?: string;
+  /** Show a note above the chapter text when no PDF pages are available. */
+  noPdfNote?: boolean;
+  /** Replaces the "chapter not found" note (the question screen words it differently). */
+  chapterMissingText?: string;
+}): React.ReactElement {
   const styles = useStyles();
+  const TAB_KEY = `${storageKey}.tab`;
+  const SIDE_KEY = `${storageKey}.side`;
   const { width } = useWindowDimensions();
   const wide = width >= SIDE_MIN_WIDTH;
   const [tab, setTab] = React.useState<"plan" | "book">("plan");
@@ -167,7 +190,7 @@ export default function PlanBookTabs({ artifactId, children }: { artifactId: str
         <ChipRow>
           {sideOn ? null : (
             <>
-              <Chip label={STR.pbTabPlan} selected={tab === "plan"} onPress={() => pick("plan")} />
+              <Chip label={mainLabel ?? STR.pbTabPlan} selected={tab === "plan"} onPress={() => pick("plan")} />
               <Chip label={bookLabel} selected={tab === "book"} onPress={() => pick("book")} />
             </>
           )}
@@ -190,6 +213,8 @@ export default function PlanBookTabs({ artifactId, children }: { artifactId: str
             chapterKey={chapterKey}
             onPick={setChapterKey}
             onRetry={() => refetch({ requestPolicy: "network-only" })}
+            noPdfNote={noPdfNote}
+            chapterMissingText={chapterMissingText}
           />
         </ScrollView>
       </View>
