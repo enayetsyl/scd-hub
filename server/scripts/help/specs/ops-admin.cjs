@@ -116,7 +116,7 @@ exports.run = async (h) => {
 
   // AI-7 (D-#1140): the Principal's AI report (Reports group in the menu).
   await h.openMenu(P);
-  await h.tap(P, "রিপোর্ট", 1500);
+  await h.tap(P, "বাকি কাজের রিপোর্ট", 1500);
   await h.shot(P, "reports-ai-usage", 0, [{ text: "এআই ব্যবহার ও মন্তব্যের মান" }]);
   await h.tap(P, "এআই ব্যবহার ও মন্তব্যের মান", 3500);
   await h.shot(P, "reports-ai-usage", 1, [{ text: "এ মাসের খরচ ও সীমা" }]);

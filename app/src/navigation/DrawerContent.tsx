@@ -2,8 +2,10 @@
  * Custom drawer content (D-#258) — the EximusEdu-familiar grouped sidebar.
  *
  * Replaces React Navigation's default flat drawer-item list with collapsible
- * module GROUPS (Academics, Trackers, Reports) plus flat standalone items
- * (Attendance, Library, Finance, HR, …). It renders ONLY the routes the role actually holds:
+ * GROUPS by the job being done (D-#1654: Teaching, Homework & trackers, Exams, Books,
+ * Questions & review, Analysis, Pending-work reports, Observation & support, Communication,
+ * Work board, AI, Office & admin; guardians: Study, Exams, Books, My child) plus the Today
+ * item. It renders ONLY the routes the role actually holds:
  * the Drawer.Navigator registers a Drawer.Screen for a module only when its
  * permission gate passes (unchanged from the old bottom-tab gating), so
  * `state.routeNames` already reflects the role — we filter the config against it
@@ -38,6 +40,7 @@ import { REPORT_LEAF_ACTIONS } from "../lib/navGates";
 import { MY_NAV_PREFERENCE, RECORD_NAV_USE, RESET_NAV_PREFERENCE, SAVE_NAV_PREFERENCE } from "../graphql/navPreference";
 import {
   DEFAULT_NAV_PREFS,
+  dedupeByLabel,
   migrateOrder,
   moveKey,
   orderByKeys,
@@ -101,40 +104,43 @@ type NavSection =
  */
 const STAFF_NAV: NavSection[] = [
   { type: "item", route: "HomeTab", labelKey: "drawerItemToday", icon: "🏠" },
+  // D-#1654 (owner 2026-11-19): the sidebar is grouped by the job a person is doing —
+  // teaching, homework, exams, books, questions & review, analysis, pending-work reports,
+  // observation, communication, work board, AI, office. Every leaf keeps the route, screen and
+  // gates it had (nobody gains or loses access) and its key, so favourites and use counts survive.
   {
     type: "group",
-    titleKey: "drawerGroupAcademics",
-    icon: "📖",
+    titleKey: "navGTeaching",
+    icon: "🧑‍🏫",
     items: [
-      { route: "ContentTab", labelKey: "tabContent", icon: "📚" },
-      { route: "QuestionsTab", labelKey: "tabQuestions", icon: "❓" },
-      { route: "SetsTab", labelKey: "tabSets", icon: "🗂️" },
-      // H-1: the reviewer hub - everything the caller still has to review, one list. Top of the review group.
-      // Every staff login sees it (owner 18 Nov): no perms gate, the ReviewTab itself is every non-guardian role.
-      { route: "ReviewTab", labelKey: "rhNav", icon: "🗂️", screen: "ReviewHub" },
-      { route: "ReviewTab", labelKey: "tabReview", icon: "📝", perms: REVIEW_HOME_PERMS },
-      // RS-4: the daily supervision view of the teacher review program (Principal; the deputy by grant).
-      { route: "ReviewTab", labelKey: "rspNav", icon: "📈", screen: "ReviewSupervision", perms: ["review_program:supervise"] },
       { route: "RoutineTab", labelKey: "tabRoutine", icon: "📅" },
+      { route: "ContentTab", labelKey: "tabContent", icon: "📚" },
+      // Class notes: the teacher's own periods, and the filtered archive of every note they may see.
+      { route: "ClassNotesTab", labelKey: "cnMyPeriods", icon: "📓", screen: "MyClassNotes" },
+      { route: "ClassNotesTab", labelKey: "cnAllNotesTitle", icon: "🗃️", screen: "AllClassNotes" },
+      // LP-2 (D-#824/#826): lesson-plan progress — the Office overview, or a teacher's own শাখা.
+      { route: "ClassNotesTab", labelKey: "lpNavTitle", icon: "📘", screen: "LessonProgress", perms: ["lesson_progress:view", "lesson_progress:view_all"] },
+      // Same label as the leaf above: when both show, only the first is drawn (dedupeByLabel).
+      { route: "ReportsTab", labelKey: "lpNavTitle", icon: "📗", screen: "LessonProgress", perms: REPORT_LEAF_ACTIONS.LessonProgress },
+      { route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
+      // Notes & guides (TN-1) — the (class × subject) teacher note library.
+      { route: "TeachingNotesTab", labelKey: "tabTeachingNotes", icon: "📓" },
       { route: "VocabTab", labelKey: "tabVocab", icon: "🔤" },
       // English Drive (D-#344) — entry point per owner decision #9.
       { route: "EnglishDriveTab", labelKey: "tabEnglishDrive", icon: "🅰️" },
-      // Notes & guides (TN-1) — the (class × subject) teacher note library.
-      { route: "TeachingNotesTab", labelKey: "tabTeachingNotes", icon: "📓" },
     ],
   },
   {
     type: "group",
-    titleKey: "drawerGroupTrackers",
-    icon: "✅",
+    titleKey: "navGHomework",
+    icon: "📒",
     items: [
       { route: "TrackersTab", labelKey: "drawerItemDailyTracker", icon: "✅" },
       { route: "HomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "AssignmentTab", labelKey: "tabAssignment", icon: "📋" },
-      // ক্লাস টেস্ট moved to the পরীক্ষা group (D-#1652).
-      // SP-1 (D-#734) — Office / Principal only; lives in the Class Test stack.
-      { route: "ClassTestTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: ["improvement_plan:view_all"] },
       { route: "RevisionTab", labelKey: "tabRevision", icon: "🕌" },
+      // D-#1620: winter-holiday booklet review (a named reviewer + the Principal).
+      { route: "WinterTaskTab", labelKey: "wtNav", icon: "❄️", perms: ["winter_task:review", "winter_task:manage"] },
     ],
   },
   // D-#1652 (owner 2026-11-19): every exam screen in ONE group — class tests, the exam
@@ -176,18 +182,127 @@ const STAFF_NAV: NavSection[] = [
       },
     ],
   },
-  // AI-6 (D-#1096): the AI teacher assistant — own conversations; the Principal reads all.
-  { type: "item", route: "AiAssistTab", labelKey: "aasNav", icon: "🤖", perms: ["ai_assist:chat", "ai_assist:read_all_chats"] },
-  // AI Workspace (docs/prd-ai-workspace.md, D-#1208): projects + files + instructions; the Principal at launch.
-  { type: "item", route: "AiWorkspaceTab", labelKey: "awNav", icon: "🧠", perms: ["ai_workspace:use", "ai_workspace:admin"] },
-  // Data assistant (docs/prd-data-assistant-mcp.md, D-#1537): read-only answers from school data.
-  { type: "item", route: "DataAssistantTab", labelKey: "daNav", icon: "📊", perms: ["data_assistant:use", "data_assistant:connect", "data_assistant:audit"], orViewAs: true },
-  // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
   {
     type: "group",
-    titleKey: "msDrawerGroup",
-    icon: "🎯",
+    titleKey: "navGBooks",
+    icon: "📚",
     items: [
+      // D-#870: class books (staff read every class's; the Office uploads).
+      { route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
+      // Book lifecycle for teachers: আমার বই (released Teacher edition, errata, report an error).
+      { route: "BookLcTeacherTab", labelKey: "blMyBooks", icon: "📘" },
+      { route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
+      // SB-1 (D-#980): the storybook series catalogue (library:view; Office manages it).
+      { route: "StorybooksTab", labelKey: "stbNav", icon: "🧸" },
+      // AS-1 (D-#988): activity sheets (activity_sheets:view; Office manages banks and the corner).
+      { route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
+      // Book lifecycle (D-#1590): বই ও সংস্করণ — the school's own books, versions and paper review.
+      { route: "BookLcTab", labelKey: "blNavTitle", icon: "📗" },
+      /**
+       * Support-book production (SB-2..SB-4). One stack, deep-linked leaves — the Reports
+       * shape. Each leaf carries its own `perms`, because the five production roles are
+       * per-user grants (D-#405): an illustrator sees only the image queue, an assembler only
+       * the build workspace. They were a 📕 group hidden for everyone (owner ask 2026-10-04);
+       * the flag moved onto each leaf so they stay off the sidebar.
+       */
+      {
+        route: "SupportBookTab",
+        labelKey: "sbImportTitle",
+        icon: "📥",
+        screen: "BookImport",
+        hidden: true,
+        // Step one of the module: the author brings book.json/patch.json in, and
+        // book:manage creates the title. Everything below is downstream of this.
+        perms: ["book_production:author", "book_production:create"],
+        allOf: ["book_production:view"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbPolicyTitle",
+        icon: "📜",
+        screen: "BookPolicy",
+        hidden: true,
+        // The validator runs against these; a missing one silently weakens every
+        // check that depends on it, so whoever loads books needs to see the gaps.
+        perms: ["book_production:settings"],
+        allOf: ["book_production:view"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbQueueTitle",
+        icon: "🖼️",
+        screen: "BookImageQueue",
+        hidden: true,
+        // The reviewers see the queue too — they look at what came back. `book:read`
+        // alone is not enough; that is a spectator.
+        perms: ["book_production:illustrate", "book_production:review", "book_production:approve"],
+        allOf: ["book_production:view"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbReviewTitle",
+        icon: "🔎",
+        screen: "BookReview",
+        hidden: true,
+        perms: ["book_production:review", "book_production:approve"],
+        allOf: ["book_production:view"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbInboxTitle",
+        icon: "📨",
+        screen: "BookEscalationInbox",
+        hidden: true,
+        // Offered to ordinary reviewers too, not only seniors: a reviewer needs to
+        // follow the thread they raised. Only a senior gets the resolve form, and
+        // that is decided inside the screen.
+        perms: ["book_production:review", "book_production:approve"],
+        allOf: ["book_production:view"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbAssembleTitle",
+        icon: "🏗️",
+        screen: "BookAssemble",
+        hidden: true,
+        perms: ["book_production:assemble"],
+        allOf: ["book_production:view"],
+      },
+    ],
+  },
+  {
+    type: "group",
+    titleKey: "navGReview",
+    icon: "🔎",
+    items: [
+      { route: "QuestionsTab", labelKey: "tabQuestions", icon: "❓" },
+      { route: "SetsTab", labelKey: "tabSets", icon: "🗂️" },
+      // H-1: the reviewer hub - everything the caller still has to review, one list.
+      // Every staff login sees it (owner 18 Nov): no perms gate, the ReviewTab itself is every non-guardian role.
+      { route: "ReviewTab", labelKey: "rhNav", icon: "🗂️", screen: "ReviewHub" },
+      { route: "ReviewTab", labelKey: "tabReview", icon: "📝", perms: REVIEW_HOME_PERMS },
+      // RS-4: the daily supervision view of the teacher review program (Principal; the deputy by grant).
+      { route: "ReviewTab", labelKey: "rspNav", icon: "📈", screen: "ReviewSupervision", perms: ["review_program:supervise"] },
+      // Mastery tracker (M-0, docs/prd-mastery.md): catalogue, import, review, tags, policy & switch.
+      { route: "MasteryTab", labelKey: "msCatalogueNav", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
+      { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
+      // OT-2: the objective-list review — the assigned reviewer (per-person grant) and the Principal.
+      { route: "MasteryTab", labelKey: "msRvNav", icon: "📝", screen: "MasteryReviews", perms: ["mastery:review", "mastery:settings"] },
+      { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },
+      { route: "MasteryTab", labelKey: "msPolicy", icon: "⚙️", screen: "MasteryPolicy", perms: ["mastery:view"] },
+      // Moved from the Admin hub card (D-#1654); the AdminTab is mounted only for those who open it today.
+      { route: "AdminTab", labelKey: "importContent", icon: "📥", screen: "Import", perms: ["lesson_plans:import", "question_bank:import"] },
+    ],
+  },
+  {
+    type: "group",
+    titleKey: "navGAnalysis",
+    icon: "📊",
+    items: [
+      // SP-1 (D-#734) — Office / Principal only; lives in the Class Test stack. The Reports-stack
+      // twin below has the same label: when both show, only the first is drawn (dedupeByLabel).
+      { route: "ClassTestTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: ["improvement_plan:view_all"] },
+      { route: "ReportsTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: REPORT_LEAF_ACTIONS.StudentProgress },
       {
         route: "MasteryTab",
         labelKey: "msWork",
@@ -204,16 +319,77 @@ const STAFF_NAV: NavSection[] = [
         perms: ["mastery:approve"],
         allOf: ["mastery:view"],
       },
-      { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
-      { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
-      // OT-2: the objective-list review — the assigned reviewer (per-person grant) and the Principal.
-      { route: "MasteryTab", labelKey: "msRvNav", icon: "📝", screen: "MasteryReviews", perms: ["mastery:review", "mastery:settings"] },
-      { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },
-      { route: "MasteryTab", labelKey: "msPolicy", icon: "⚙️", screen: "MasteryPolicy", perms: ["mastery:view"] },
+      { route: "ReportsTab", labelKey: "mdTitle", icon: "🎯", screen: "MarksDrivers", perms: REPORT_LEAF_ACTIONS.MarksDrivers },
+      { route: "ReportsTab", labelKey: "ctDashboardTitle", icon: "🧮", screen: "ClassTestDashboard", perms: REPORT_LEAF_ACTIONS.ClassTestDashboard },
+      { route: "ReportsTab", labelKey: "arTitle", icon: "🏅", screen: "AttendanceRanking", perms: REPORT_LEAF_ACTIONS.AttendanceRanking },
+      { route: "ReportsTab", labelKey: "revDashTitle", icon: "🕌", screen: "RevisionDashboard", perms: REPORT_LEAF_ACTIONS.RevisionDashboard },
+      { route: "ReportsTab", labelKey: "bcTitle", icon: "🧩", screen: "MasteryBankCoverage", perms: REPORT_LEAF_ACTIONS.MasteryBankCoverage },
+      { route: "ReportsTab", labelKey: "geTitle", icon: "👪", screen: "GuardianEngagement", perms: REPORT_LEAF_ACTIONS.GuardianEngagement },
+      { route: "ReportsTab", labelKey: "drpTitle", icon: "🗓️", screen: "DailyReport", perms: REPORT_LEAF_ACTIONS.DailyReport },
+      // Data assistant (docs/prd-data-assistant-mcp.md, D-#1537): read-only answers from school data.
+      { route: "DataAssistantTab", labelKey: "daNav", icon: "📊", perms: ["data_assistant:use", "data_assistant:connect", "data_assistant:audit"], orViewAs: true },
     ],
   },
-  { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
-  { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
+  {
+    type: "group",
+    titleKey: "navGPending",
+    icon: "📋",
+    items: [
+      { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad", perms: REPORT_LEAF_ACTIONS.TeacherClassLoad },
+      { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport", perms: REPORT_LEAF_ACTIONS.AssignmentLoadReport },
+      { route: "ReportsTab", labelKey: "wbLoad", icon: "⚖️", screen: "LoadGrid", perms: REPORT_LEAF_ACTIONS.LoadGrid },
+      // D-#340: the class-test oversight report.
+      { route: "ReportsTab", labelKey: "ctReportTitle", icon: "🧪", screen: "ClassTestReport", perms: REPORT_LEAF_ACTIONS.ClassTestReport },
+      { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport", perms: REPORT_LEAF_ACTIONS.AttendanceReport },
+      { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport", perms: REPORT_LEAF_ACTIONS.ClassNoteReport },
+      { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending", perms: REPORT_LEAF_ACTIONS.HwDeclarePending },
+      { route: "ReportsTab", labelKey: "rptHwIssuePending", icon: "📒", screen: "HwIssuePending", perms: REPORT_LEAF_ACTIONS.HwIssuePending },
+      { route: "ReportsTab", labelKey: "rptAsDeclarePending", icon: "📋", screen: "AsDeclarePending", perms: REPORT_LEAF_ACTIONS.AsDeclarePending },
+      { route: "ReportsTab", labelKey: "rptAsDeliverPending", icon: "📦", screen: "AsDeliverPending", perms: REPORT_LEAF_ACTIONS.AsDeliverPending },
+      { route: "ReportsTab", labelKey: "rptAsPrintPending", icon: "🖨️", screen: "AsPrintPending", perms: REPORT_LEAF_ACTIONS.AsPrintPending },
+      { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport", perms: REPORT_LEAF_ACTIONS.HwLifecycleReport },
+      // D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin).
+      { route: "ReportsTab", labelKey: "hwwdTitle", icon: "📅", screen: "HwWeeklyUnsubmitted", perms: REPORT_LEAF_ACTIONS.HwWeeklyUnsubmitted },
+      // Owner ask 2026-07-20: moved here from the Admin hub.
+      { route: "ReportsTab", labelKey: "rrTitle", icon: "🔄", screen: "ReconciliationReport", perms: REPORT_LEAF_ACTIONS.ReconciliationReport },
+      { route: "ReportsTab", labelKey: "wcQueueTitle", icon: "🏠", screen: "WorkClaimQueue", perms: REPORT_LEAF_ACTIONS.WorkClaimQueue },
+      { route: "ReportsTab", labelKey: "lcbBoardTitle", icon: "🟢", screen: "LiveClassBoard", perms: REPORT_LEAF_ACTIONS.LiveClassBoard },
+      // GH-3 (D-#1522): children whose homework runs 20+ points above their class tests (Office only).
+      { route: "ReportsTab", labelKey: "hiNavTitle", icon: "🔎", screen: "HomeworkIntegrity", perms: REPORT_LEAF_ACTIONS.HomeworkIntegrity },
+      { route: "ReportsTab", labelKey: "qpTitle", icon: "🔍", screen: "QuestionReviewProgress", perms: REPORT_LEAF_ACTIONS.QuestionReviewProgress },
+      { route: "ReportsTab", labelKey: "obsReviewerEffTitle", icon: "👁️", screen: "ReviewerEffectiveness", perms: REPORT_LEAF_ACTIONS.ReviewerEffectiveness },
+      { route: "ReportsTab", labelKey: "tnOpenComments", icon: "💬", screen: "TeachingNoteOpenComments", perms: REPORT_LEAF_ACTIONS.TeachingNoteOpenComments },
+      { route: "ReportsTab", labelKey: "stbRepTitle", icon: "🧸", screen: "StorybookReport", perms: REPORT_LEAF_ACTIONS.StorybookReport },
+      { route: "ReportsTab", labelKey: "actRepTitle", icon: "🧩", screen: "ActivityReport", perms: REPORT_LEAF_ACTIONS.ActivityReport },
+      { route: "ReportsTab", labelKey: "aurTitle", icon: "🤖", screen: "AiUsageReport", perms: REPORT_LEAF_ACTIONS.AiUsageReport },
+    ],
+  },
+  {
+    type: "group",
+    titleKey: "navGPeople",
+    icon: "👁️",
+    items: [
+      { route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
+      { route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
+      // Student support profile (D-#1546): teachers who teach, the Principal; never Office (no action).
+      { route: "HomeTab", screen: "SupportHome", labelKey: "supTitle", icon: "🌱", needsSupportSwitch: true, perms: ["support_profile:report", "support_profile:view_all", "safeguarding:receive"] },
+    ],
+  },
+  {
+    type: "group",
+    titleKey: "navGComms",
+    icon: "💬",
+    items: [
+      { route: "ChatTab", labelKey: "tabChat", icon: "💬" },
+      { route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
+      // Pop-up notices (D-#852): the sender's list for Office / Principal; আমার বার্তা for every
+      // staff login (the pop-ups they received, to read again).
+      { route: "PopupNoticesTab", labelKey: "ppTitleNav", icon: "📣" },
+      { route: "HomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
+      // Moved from the Admin hub card (D-#1654): message_templates:* is LOCKED (Principal-only).
+      { route: "AdminTab", labelKey: "mtMessageTemplates", icon: "✉️", screen: "MessageTemplates", perms: ["message_templates:view"] },
+    ],
+  },
   // Work board (WB-1..WB-3, D-#701). My board is every staff login; the other three
   // leaves are the assigner's (tasks:assign), gated per leaf like Syllabus.
   {
@@ -227,185 +403,62 @@ const STAFF_NAV: NavSection[] = [
       { route: "WorkBoardTab", labelKey: "wbTemplates", icon: "🔁", screen: "TaskTemplates" },
     ],
   },
-  // Class Notes became a GROUP (owner ask 2026-08-17): the teacher's own periods,
-  // and the filtered archive of every note they may see. Both leaves live in the
-  // one ClassNotesTab stack — the Reports-group deep-link shape.
   {
     type: "group",
-    titleKey: "drawerItemClassNotes",
-    icon: "📓",
+    titleKey: "navGAi",
+    icon: "🤖",
     items: [
-      { route: "ClassNotesTab", labelKey: "cnMyPeriods", icon: "📓", screen: "MyClassNotes" },
-      { route: "ClassNotesTab", labelKey: "cnAllNotesTitle", icon: "🗃️", screen: "AllClassNotes" },
-      // LP-2 (D-#824/#826): lesson-plan progress — the Office overview, or a teacher's own শাখা.
-      { route: "ClassNotesTab", labelKey: "lpNavTitle", icon: "📘", screen: "LessonProgress", perms: ["lesson_progress:view", "lesson_progress:view_all"] },
+      // AI-6 (D-#1096): the AI teacher assistant — own conversations; the Principal reads all.
+      { route: "AiAssistTab", labelKey: "aasNav", icon: "🤖", perms: ["ai_assist:chat", "ai_assist:read_all_chats"] },
+      // AI Workspace (docs/prd-ai-workspace.md, D-#1208): projects + files + instructions; the Principal at launch.
+      { route: "AiWorkspaceTab", labelKey: "awNav", icon: "🧠", perms: ["ai_workspace:use", "ai_workspace:admin"] },
+      // Moved from the Admin hub cards (D-#1654): D-#967 the Gemini key + model; AI-3 the AI rules;
+      // D-#1179 the request & reply log (LOCKED, Principal only).
+      { route: "AdminTab", labelKey: "aiTitle", icon: "🔑", screen: "AiSettings", perms: ["system_health:ai_key"] },
+      { route: "AdminTab", labelKey: "airTitle", icon: "📏", screen: "AiRules", perms: ["ai_assist:edit_rules", "ai_assist:read_rules"] },
+      { route: "AdminTab", labelKey: "axlTitle", icon: "🧾", screen: "AiExchanges", perms: ["ai_assist:read_ai_log"] },
     ],
   },
-  { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
-  { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
-  { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
-  { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
-  // SB-1 (D-#980): the storybook series catalogue (library:view; Office manages it).
-  { type: "item", route: "StorybooksTab", labelKey: "stbNav", icon: "🧸" },
-  // AS-1 (D-#988): activity sheets (activity_sheets:view; Office manages banks and the corner).
-  { type: "item", route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
-  // D-#870: class books (staff read every class's; the Office uploads).
-  { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
-  // Book lifecycle (D-#1590): বই ও সংস্করণ — the school's own books, versions and paper review.
-  { type: "item", route: "BookLcTab", labelKey: "blNavTitle", icon: "📗" },
-  // Book lifecycle for teachers: আমার বই (released Teacher edition, errata, report an error).
-  { type: "item", route: "BookLcTeacherTab", labelKey: "blMyBooks", icon: "📘" },
-  // D-#1620: winter-holiday booklet review (a named reviewer + the Principal).
-  { type: "item", route: "WinterTaskTab", labelKey: "wtNav", icon: "❄️", perms: ["winter_task:review", "winter_task:manage"] },
-  { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
-  // Pop-up notices (D-#852): the sender's list for Office / Principal; আমার বার্তা for every
-  // staff login (the pop-ups they received, to read again).
-  { type: "item", route: "PopupNoticesTab", labelKey: "ppTitleNav", icon: "📣" },
-  { type: "item", route: "HomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
-  // Student support profile (D-#1546): teachers who teach, the Principal; never Office (no action).
-  { type: "item", route: "HomeTab", screen: "SupportHome", labelKey: "supTitle", icon: "🌱", needsSupportSwitch: true, perms: ["support_profile:report", "support_profile:view_all", "safeguarding:receive"] },
-  { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
-  { type: "item", route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
   {
     type: "group",
-    titleKey: "tabReports",
-    icon: "📊",
+    titleKey: "navGOffice",
+    icon: "🏢",
     items: [
-      { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad", perms: REPORT_LEAF_ACTIONS.TeacherClassLoad },
-      { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport", perms: REPORT_LEAF_ACTIONS.AssignmentLoadReport },
-      // D-#340: the class-test oversight report.
-      { route: "ReportsTab", labelKey: "ctReportTitle", icon: "🧪", screen: "ClassTestReport", perms: REPORT_LEAF_ACTIONS.ClassTestReport },
-      { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport", perms: REPORT_LEAF_ACTIONS.AttendanceReport },
-      { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport", perms: REPORT_LEAF_ACTIONS.ClassNoteReport },
-      { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending", perms: REPORT_LEAF_ACTIONS.HwDeclarePending },
-      { route: "ReportsTab", labelKey: "rptHwIssuePending", icon: "📒", screen: "HwIssuePending", perms: REPORT_LEAF_ACTIONS.HwIssuePending },
-      { route: "ReportsTab", labelKey: "rptAsDeclarePending", icon: "📋", screen: "AsDeclarePending", perms: REPORT_LEAF_ACTIONS.AsDeclarePending },
-      { route: "ReportsTab", labelKey: "rptAsDeliverPending", icon: "📦", screen: "AsDeliverPending", perms: REPORT_LEAF_ACTIONS.AsDeliverPending },
-      { route: "ReportsTab", labelKey: "rptAsPrintPending", icon: "🖨️", screen: "AsPrintPending", perms: REPORT_LEAF_ACTIONS.AsPrintPending },
-      // Owner ask 2026-07-20: moved here from the Admin hub.
-      { route: "ReportsTab", labelKey: "rrTitle", icon: "🔄", screen: "ReconciliationReport", perms: REPORT_LEAF_ACTIONS.ReconciliationReport },
-      { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport", perms: REPORT_LEAF_ACTIONS.HwLifecycleReport },
-      // D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin).
-      { route: "ReportsTab", labelKey: "hwwdTitle", icon: "📅", screen: "HwWeeklyUnsubmitted", perms: REPORT_LEAF_ACTIONS.HwWeeklyUnsubmitted },
-      // D-#861: the reports that sat elsewhere (Admin hub, module homes), one switch each.
-      { route: "ReportsTab", labelKey: "arTitle", icon: "🏅", screen: "AttendanceRanking", perms: REPORT_LEAF_ACTIONS.AttendanceRanking },
-      { route: "ReportsTab", labelKey: "wcQueueTitle", icon: "🏠", screen: "WorkClaimQueue", perms: REPORT_LEAF_ACTIONS.WorkClaimQueue },
-      { route: "ReportsTab", labelKey: "lcbBoardTitle", icon: "🟢", screen: "LiveClassBoard", perms: REPORT_LEAF_ACTIONS.LiveClassBoard },
-      { route: "ReportsTab", labelKey: "wbLoad", icon: "⚖️", screen: "LoadGrid", perms: REPORT_LEAF_ACTIONS.LoadGrid },
-      { route: "ReportsTab", labelKey: "ctDashboardTitle", icon: "🧮", screen: "ClassTestDashboard", perms: REPORT_LEAF_ACTIONS.ClassTestDashboard },
-      { route: "ReportsTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: REPORT_LEAF_ACTIONS.StudentProgress },
-      { route: "ReportsTab", labelKey: "lpNavTitle", icon: "📗", screen: "LessonProgress", perms: REPORT_LEAF_ACTIONS.LessonProgress },
-      // GH-3 (D-#1522): children whose homework runs 20+ points above their class tests (Office only).
-      { route: "ReportsTab", labelKey: "hiNavTitle", icon: "🔎", screen: "HomeworkIntegrity", perms: REPORT_LEAF_ACTIONS.HomeworkIntegrity },
-      { route: "ReportsTab", labelKey: "revDashTitle", icon: "🕌", screen: "RevisionDashboard", perms: REPORT_LEAF_ACTIONS.RevisionDashboard },
-      { route: "ReportsTab", labelKey: "qpTitle", icon: "🔍", screen: "QuestionReviewProgress", perms: REPORT_LEAF_ACTIONS.QuestionReviewProgress },
-      { route: "ReportsTab", labelKey: "obsReviewerEffTitle", icon: "👁️", screen: "ReviewerEffectiveness", perms: REPORT_LEAF_ACTIONS.ReviewerEffectiveness },
-      { route: "ReportsTab", labelKey: "tnOpenComments", icon: "💬", screen: "TeachingNoteOpenComments", perms: REPORT_LEAF_ACTIONS.TeachingNoteOpenComments },
+      { route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
+      // Finance reports (not on the owner's page; placed beside অর্থ).
       { route: "ReportsTab", labelKey: "finDashboardTitle", icon: "💰", screen: "FinanceDashboard", perms: REPORT_LEAF_ACTIONS.FinanceDashboard },
       { route: "ReportsTab", labelKey: "finSnapshotTitle", icon: "🧾", screen: "DailySnapshot", perms: REPORT_LEAF_ACTIONS.DailySnapshot },
-      { route: "ReportsTab", labelKey: "geTitle", icon: "👪", screen: "GuardianEngagement", perms: REPORT_LEAF_ACTIONS.GuardianEngagement },
-      { route: "ReportsTab", labelKey: "mdTitle", icon: "🎯", screen: "MarksDrivers", perms: REPORT_LEAF_ACTIONS.MarksDrivers },
-      { route: "ReportsTab", labelKey: "aurTitle", icon: "🤖", screen: "AiUsageReport", perms: REPORT_LEAF_ACTIONS.AiUsageReport },
-      { route: "ReportsTab", labelKey: "bcTitle", icon: "🧩", screen: "MasteryBankCoverage", perms: REPORT_LEAF_ACTIONS.MasteryBankCoverage },
-      { route: "ReportsTab", labelKey: "stbRepTitle", icon: "🧸", screen: "StorybookReport", perms: REPORT_LEAF_ACTIONS.StorybookReport },
-      { route: "ReportsTab", labelKey: "actRepTitle", icon: "🧩", screen: "ActivityReport", perms: REPORT_LEAF_ACTIONS.ActivityReport },
-      { route: "ReportsTab", labelKey: "drpTitle", icon: "🗓️", screen: "DailyReport", perms: REPORT_LEAF_ACTIONS.DailyReport },
-    ],
-  },
-  /**
-   * Support-book production (SB-2..SB-4). One stack, four deep-linked leaves —
-   * the Reports shape. Each leaf carries its own `perms`, because the five
-   * production roles are per-user grants (D-#405): an illustrator sees only the
-   * image queue, an assembler only the build workspace, and the whole group
-   * disappears for everyone else.
-   */
-  {
-    type: "group",
-    titleKey: "drawerGroupBook",
-    icon: "📕",
-    hidden: true,
-    items: [
+      { route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
+      { route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
       {
-        route: "SupportBookTab",
-        labelKey: "sbImportTitle",
-        icon: "📥",
-        screen: "BookImport",
-        // Step one of the module: the author brings book.json/patch.json in, and
-        // book:manage creates the title. Everything below is downstream of this.
-        perms: ["book_production:author", "book_production:create"],
-        allOf: ["book_production:view"],
-      },
-      {
-        route: "SupportBookTab",
-        labelKey: "sbPolicyTitle",
-        icon: "📜",
-        screen: "BookPolicy",
-        // The validator runs against these; a missing one silently weakens every
-        // check that depends on it, so whoever loads books needs to see the gaps.
-        perms: ["book_production:settings"],
-        allOf: ["book_production:view"],
-      },
-      {
-        route: "SupportBookTab",
-        labelKey: "sbQueueTitle",
-        icon: "🖼️",
-        screen: "BookImageQueue",
-        // The reviewers see the queue too — they look at what came back. `book:read`
-        // alone is not enough; that is a spectator.
-        perms: ["book_production:illustrate", "book_production:review", "book_production:approve"],
-        allOf: ["book_production:view"],
-      },
-      {
-        route: "SupportBookTab",
-        labelKey: "sbReviewTitle",
-        icon: "🔎",
-        screen: "BookReview",
-        perms: ["book_production:review", "book_production:approve"],
-        allOf: ["book_production:view"],
-      },
-      {
-        route: "SupportBookTab",
-        labelKey: "sbInboxTitle",
-        icon: "📨",
-        screen: "BookEscalationInbox",
-        // Offered to ordinary reviewers too, not only seniors: a reviewer needs to
-        // follow the thread they raised. Only a senior gets the resolve form, and
-        // that is decided inside the screen.
-        perms: ["book_production:review", "book_production:approve"],
-        allOf: ["book_production:view"],
-      },
-      {
-        route: "SupportBookTab",
-        labelKey: "sbAssembleTitle",
-        icon: "🏗️",
-        screen: "BookAssemble",
-        perms: ["book_production:assemble"],
-        allOf: ["book_production:view"],
+        route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️",
+        // Exactly the actions behind the cards still on the Admin hub (AdminHomeScreen); canAdmin in AppTabs stays wider
+        // so the moved leaves can still mount the tab. routine:view is the card's second condition, not a way in.
+        perms: [
+          "staff_logins:view", "cover:assign_proxy", "teaching_assignments:assign_subject_teacher", "teaching_assignments:assign_supervisor",
+          "students:view_all", "students:edit", "teaching_assignments:assign_class_teacher", "teaching_assignments:assign_homework_checker",
+          "classes_sections:merge_split", "classes_sections:settings", "year_change:view", "routine:settings",
+          "guardians:reset_password", "guardians:link", "access_control:edit", "audit_log:view", "audit_log:view_activity", "system_health:view",
+        ],
       },
     ],
   },
-  { type: "item", route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️" },
-  // YC-5: the Principal's year-change screen, one tap from the sidebar (year_change:view is LOCKED).
-  { type: "item", route: "AdminTab", labelKey: "ycTitle", icon: "🔄", screen: "YearChange", perms: ["year_change:view"] },
 ];
 
 const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", labelKey: "gpToday", icon: "🏠" },
-  // D-#870 (owner ask): the classroom books, right under Today so families find them.
-  { type: "item", route: "GuardianBooksTab", labelKey: "cbNav", icon: "📚" },
-  // SB-1 (D-#980): the school's storybooks for the child's age band.
-  { type: "item", route: "GuardianStoriesTab", labelKey: "stbNav", icon: "🧸" },
-  // AS-3 (D-#988): activity sheets for the child's class — choose one, see how it went.
-  { type: "item", route: "GuardianActivityTab", labelKey: "actNav", icon: "🧩" },
+  // D-#1654: the family's sidebar in four groups — study, exams, books, and "my child".
   {
     type: "group",
-    titleKey: "drawerGroupAcademics",
-    icon: "📖",
+    titleKey: "navGStudy",
+    icon: "📒",
     items: [
       { route: "GuardianRoutineTab", labelKey: "tabRoutine", icon: "📅" },
       { route: "GuardianHomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "GuardianClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
       { route: "GuardianAssignmentsTab", labelKey: "tabAssignment", icon: "📋" },
+      // LP-4 (D-#828): the lessons the child missed (with what was taught that day).
+      { route: "GuardianHomeTab", screen: "ChildMissedLessons", labelKey: "gpMissedLessons", icon: "📘", needsLessonProgress: true },
     ],
   },
   // D-#1652: the guardian's পরীক্ষা group — class tests, syllabus and exam routine.
@@ -419,20 +472,38 @@ const GUARDIAN_NAV: NavSection[] = [
       { route: "GuardianSyllabusTab", labelKey: "exrNav", icon: "🗓️", screen: "ChildExamRoutine" },
     ],
   },
+  {
+    type: "group",
+    titleKey: "navGBooks",
+    icon: "📚",
+    items: [
+      // D-#870 (owner ask): the classroom books.
+      { route: "GuardianBooksTab", labelKey: "cbNav", icon: "📚" },
+      // SB-1 (D-#980): the school's storybooks for the child's age band.
+      { route: "GuardianStoriesTab", labelKey: "stbNav", icon: "🧸" },
+      // AS-3 (D-#988): activity sheets for the child's class — choose one, see how it went.
+      { route: "GuardianActivityTab", labelKey: "actNav", icon: "🧩" },
+    ],
+  },
   // D-#769 (owner ask): sections that used to be reachable only by scrolling Today —
   // two shortcut cards at its bottom and two history cards above them — get a sidebar
-  // entry each. All four live in the Today stack, so they deep-link by screen.
-  { type: "item", route: "GuardianHomeTab", screen: "ChildAttendance", labelKey: "gpAttendance", icon: "🙋" },
-  { type: "item", route: "GuardianHomeTab", screen: "ChildLeave", labelKey: "gpLeave", icon: "📝" },
-  { type: "item", route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
-  // D-#1634: the published parents'-meeting result (figures + the Principal's final comment).
-  { type: "item", route: "GuardianHomeTab", screen: "ChildMeetingResults", labelKey: "mgrTitle", icon: "🤝" },
-  { type: "item", route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
-  { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
-  // D-#855: every pop-up the school sent this family, to read again.
-  { type: "item", route: "GuardianHomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
-  // LP-4 (D-#828): the lessons the child missed (with what was taught that day).
-  { type: "item", route: "GuardianHomeTab", screen: "ChildMissedLessons", labelKey: "gpMissedLessons", icon: "📘", needsLessonProgress: true },
+  // entry each. All of them live in the Today stack, so they deep-link by screen.
+  {
+    type: "group",
+    titleKey: "navGChild",
+    icon: "🧒",
+    items: [
+      { route: "GuardianHomeTab", screen: "ChildAttendance", labelKey: "gpAttendance", icon: "🙋" },
+      { route: "GuardianHomeTab", screen: "ChildLeave", labelKey: "gpLeave", icon: "📝" },
+      { route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
+      // D-#1634: the published parents'-meeting result (figures + the Principal's final comment).
+      { route: "GuardianHomeTab", screen: "ChildMeetingResults", labelKey: "mgrTitle", icon: "🤝" },
+      { route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
+      { route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
+      // D-#855: every pop-up the school sent this family, to read again.
+      { route: "GuardianHomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
+    ],
+  },
 ];
 
 // prd-help-centre (D-#968): one entry for every login, last in the default order.
@@ -453,12 +524,48 @@ const LEAF_BY_KEY = new Map(NAV.flatMap((s) => (s.type === "group" ? s.items : [
 
 /** D-#1652: a saved order places the new পরীক্ষা group where the sections it replaced were
  *  (staff), or right after একাডেমিক (guardians, whose exam leaves sat inside it).
+ *  D-#1654: the same for each group of the re-organised sidebar — it lands where its old
+ *  sections were (migrateOrder inserts at the first saved position of any key it replaces;
+ *  migrations that share an anchor land in list order, so analysis comes before pending).
  *  Favourites and use counts are keyed by leaf, and the leaves kept their keys. */
 const NAV_ORDER_MIGRATIONS: NavOrderMigration[] = [
   {
     key: "g:exGroup",
     replaces: ["g:syDrawerGroup", "g:scDrawerGroup", "QuranExamTab:", "VivaTab:"],
     after: "g:drawerGroupAcademics",
+  },
+  {
+    key: "g:navGTeaching",
+    replaces: ["g:drawerGroupAcademics", "g:drawerItemClassNotes", "AttendanceTab:", "RoutineTab:"],
+    after: "HomeTab:",
+  },
+  { key: "g:navGHomework", replaces: ["g:drawerGroupTrackers", "WinterTaskTab:"], after: "g:navGTeaching" },
+  {
+    key: "g:navGBooks",
+    replaces: [
+      "ClassBooksTab:", "BookLcTeacherTab:", "LibraryTab:", "StorybooksTab:", "ActivityTab:", "BookLcTab:",
+      "g:drawerGroupBook", "GuardianBooksTab:", "GuardianStoriesTab:", "GuardianActivityTab:",
+    ],
+    after: "g:exGroup",
+  },
+  { key: "g:navGReview", replaces: ["g:msDrawerGroup"], after: "g:navGBooks" },
+  { key: "g:navGAnalysis", replaces: ["g:tabReports", "DataAssistantTab:"], after: "g:navGReview" },
+  { key: "g:navGPending", replaces: ["g:tabReports"], after: "g:navGAnalysis" },
+  { key: "g:navGPeople", replaces: ["ObservationTab:", "FreeMixingTab:", "HomeTab:SupportHome"], after: "g:navGPending" },
+  { key: "g:navGComms", replaces: ["ChatTab:", "CommentsTab:", "PopupNoticesTab:", "HomeTab:MyPopups"], after: "g:navGPeople" },
+  { key: "g:navGAi", replaces: ["AiAssistTab:", "AiWorkspaceTab:"], after: "g:wbTab" },
+  // PrintTab: is not an anchor: in an old order it sat right after attendance, far above কাজের বোর্ড.
+  { key: "g:navGOffice", replaces: ["FinanceTab:", "HrTab:", "AdminTab:", "AdminTab:YearChange"], after: "g:navGAi" },
+  // Guardian groups (harmless for staff: no such visible section in a staff order).
+  { key: "g:navGStudy", replaces: ["g:drawerGroupAcademics"], after: "GuardianHomeTab:" },
+  {
+    key: "g:navGChild",
+    replaces: [
+      "GuardianHomeTab:ChildAttendance", "GuardianHomeTab:ChildLeave", "GuardianHomeTab:ChildComments",
+      "GuardianHomeTab:ChildMeetingResults", "GuardianHomeTab:ChildRevision", "GuardianHomeTab:ChildMastery",
+      "GuardianHomeTab:MyPopups",
+    ],
+    after: "g:navGBooks",
   },
 ];
 
@@ -528,7 +635,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const arrangeSections = (mode: NavMode, order: string[]): NavSection[] =>
     mode === "auto" ? orderByUse(visibleSections, useOfSection) : orderByKeys(visibleSections, sectionKey, order);
   const pinnedLeaves = (keys: string[]): NavLeaf[] =>
-    keys.map((k) => LEAF_BY_KEY.get(k)).filter((l): l is NavLeaf => !!l && visibleLeaf(l));
+    dedupeByLabel(keys.map((k) => LEAF_BY_KEY.get(k)).filter((l): l is NavLeaf => !!l && visibleLeaf(l)));
   const sections = arrangeSections(prefs.mode, prefs.order);
   const favourites = pinnedLeaves(prefs.pinned);
 
@@ -793,9 +900,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     leaf.route === activeRoute &&
     (leaf.screen ? leaf.screen === activeNested : !DEEP_LINKED.has(`${leaf.route}:${activeNested ?? ""}`));
 
-  const Leaf = ({ leaf, indent }: { leaf: NavLeaf; indent?: boolean }): React.ReactElement | null => {
+  const Leaf = ({ leaf, indent, active: activeIn }: { leaf: NavLeaf; indent?: boolean; active?: boolean }): React.ReactElement | null => {
     if (!visibleLeaf(leaf)) return null;
-    const active = isActiveLeaf(leaf);
+    const active = activeIn ?? isActiveLeaf(leaf);
     const badge = badgeFor(leaf.route);
     const tinted = tintedBadgesFor(leaf.route, leaf.screen);
     return (
@@ -878,13 +985,17 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (section.hidden) return null;
     // D-#920: in auto mode a group's own items are most-used first too.
     const items = prefs.mode === "auto" ? orderByUse(section.items, useOfLeaf) : section.items;
-    const visible = items.filter(visibleLeaf);
-    if (visible.length === 0) return null;
+    const visibleAll = items.filter(visibleLeaf);
+    if (visibleAll.length === 0) return null;
+    // D-#1654: two visible leaves with one label show one row (the dedupe runs after the ordering).
+    // The twin kept is the one first in the DEFAULT order, so the arrange panel shows the same row.
+    const keepTwin = new Set(dedupeByLabel(section.items.filter(visibleLeaf)));
+    const visible = visibleAll.filter((l) => keepTwin.has(l));
     // By title, not position: the person's own order moves groups around (D-#920).
     const key = sectionKey(section);
-    // Open by default only around the highlighted leaf (D-#1652: শিক্ষার্থীর অগ্রগতি in ট্র্যাকার
+    // Open by default only around the highlighted leaf (D-#1652: শিক্ষার্থীর অগ্রগতি in বিশ্লেষণ
     // shares ClassTestTab with ক্লাস টেস্ট in পরীক্ষা, and must not open both groups).
-    const isCollapsed = collapsed[key] ?? (!groupsStartOpen && !visible.some(isActiveLeaf));
+    const isCollapsed = collapsed[key] ?? (!groupsStartOpen && !visibleAll.some(isActiveLeaf));
     return (
       <View key={key} style={{ marginTop: space(1) }}>
         <Pressable
@@ -905,7 +1016,16 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{isCollapsed ? "▸" : "▾"}</Text>
         </Pressable>
-        {isCollapsed ? null : visible.map((it) => <Leaf key={`${it.route}:${it.screen ?? ""}`} leaf={it} indent />)}
+        {isCollapsed
+          ? null
+          : visible.map((it) => (
+              <Leaf
+                key={`${it.route}:${it.screen ?? ""}`}
+                leaf={it}
+                indent
+                active={visibleAll.some((l) => l.labelKey === it.labelKey && isActiveLeaf(l))}
+              />
+            ))}
       </View>
     );
   };
@@ -1193,7 +1313,7 @@ function ArrangePanel({
             <Row icon={s.icon} title={STR[s.titleKey]} strong>
               {arrows}
             </Row>
-            {s.items.filter(visibleLeaf).map((l) => (
+            {dedupeByLabel(s.items.filter(visibleLeaf)).map((l) => (
               <Row key={leafKey(l)} icon={l.icon} title={STR[l.labelKey]} indent>
                 <Star leaf={l} />
               </Row>
