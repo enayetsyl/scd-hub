@@ -20,6 +20,7 @@ import type { IStoredFile } from "../../platform/models/StoredFile";
 import { docxXmlText } from "../../ai-workspace/services/fileText";
 import { rewriteServerRegions, FRONT_KEY } from "./markdown";
 import { loadLcFile } from "./files";
+import { BookPdf, chapterPageRange, type IBookPdf } from "../../book-pdf/models/BookPdf";
 import { recordContentRead } from "./events";
 import { serverRegionContent, versionChapters, vlabel, vno } from "./store";
 import { cutChapters, splitStudentChapters, toAsciiDigits, normText, type CutChapter } from "./planBookCut";
@@ -37,6 +38,16 @@ export interface PlanBookPicture {
   url: string;
 }
 
+/** The printed PDF pages of the book (PB-2, D-#1661); fromPage/toPage null when the chapter has no range. */
+export interface PlanBookPdf {
+  pdfId: string;
+  versionLabel: string;
+  pageCount: number;
+  pageAspect: number;
+  fromPage: number | null;
+  toPage: number | null;
+}
+
 export interface PlanBookResult {
   available: boolean;
   reason: string | null;
@@ -52,6 +63,8 @@ export interface PlanBookResult {
   /** True when the teacher note could not be separated; `childText` is then the whole chapter. */
   anchorMissing: boolean;
   pictures: PlanBookPicture[];
+  /** The real printed pages when a book PDF is uploaded — the app shows these instead of the text. */
+  pdf: PlanBookPdf | null;
 }
 
 const NO_BOOK_BN = "এই বইটি এখনো অ্যাপে নেই";
@@ -72,6 +85,7 @@ const unavailable = (reason: string, extra: Partial<PlanBookResult> = {}): PlanB
   teacherNote: null,
   anchorMissing: false,
   pictures: [],
+  pdf: null,
   ...extra,
 });
 
@@ -188,15 +202,18 @@ export function clearPlanBookCache(): void {
 // ---------------------------------------------------------------------------
 
 const MEDIA_URL_RE = /(!\[[^\]]*\]\()(media\/[^)\s]+)(\))/g;
+const HTML_MEDIA_URL_RE = /(<img\b[^>]*?\bsrc\s*=\s*["'])(media\/[^"'\s>]+)(["'])/gi;
 
 function rewritePictures(text: string | null, urls: Map<string, string>, seen: Map<string, string>): string | null {
   if (text === null) return null;
-  return text.replace(MEDIA_URL_RE, (whole, a: string, path: string, c: string) => {
+  const rewrite = (whole: string, a: string, path: string, c: string): string => {
     const url = urls.get(path);
     if (!url) return whole;
     seen.set(path, url);
     return `${a}${url}${c}`;
-  });
+  };
+  // Markdown pictures, and raw HTML <img src="media/..."> (the app turns those into pictures too).
+  return text.replace(MEDIA_URL_RE, rewrite).replace(HTML_MEDIA_URL_RE, rewrite);
 }
 
 async function mediaUrls(v: IBookVersion): Promise<Map<string, string>> {
@@ -230,8 +247,31 @@ export async function planBookForCaller(ctx: AppContext, artifactId: string, cha
   if (!isBookDbReady()) return unavailable(PLANE_DOWN_BN);
   const book = await SchoolBook.findOne({ classLevel: doc.classLevel, subject: doc.subject, archived: false }).sort({ code: 1 });
   if (!book) return unavailable(NO_BOOK_BN);
+  const pdfRow = (await BookPdf.findOne({ bookCode: book.code, status: "READY", active: true }).lean()) as unknown as IBookPdf | null;
+  const pdfOf = (key: string | null): PlanBookPdf | null => {
+    if (!pdfRow) return null;
+    const r = key ? chapterPageRange(pdfRow, key) : null;
+    return { pdfId: pdfRow._id.toString(), versionLabel: pdfRow.versionLabel ?? "", pageCount: pdfRow.pageCount, pageAspect: pdfRow.pageAspect ?? 1.357, fromPage: r?.fromPage ?? null, toPage: r?.toPage ?? null };
+  };
   const picked = await pickPlanBookVersion(book);
-  if (!picked) return unavailable(NO_VERSION_BN, { bookTitle: book.titleBn });
+  if (!picked) {
+    if (!pdfRow) return unavailable(NO_VERSION_BN, { bookTitle: book.titleBn });
+    // No final text version yet, but the printed PDF is uploaded: the chapters come from its page map.
+    const pdfItems: PlanBookChapterItem[] = pdfRow.chapters.map((c) => ({ key: c.key, title: c.title || c.key, number: chapterNumberOfTitle(c.title || c.key) }));
+    let key: string | null = null;
+    if (chapterKey && pdfItems.some((c) => c.key === chapterKey)) key = chapterKey;
+    else if (!chapterKey) key = matchDefaultChapter(pdfItems, doc.address as { anchorWord?: string; number?: number | string; title?: string } | undefined);
+    return unavailable("", {
+      available: true,
+      reason: null,
+      bookTitle: book.titleBn,
+      versionLabel: pdfRow.versionLabel || null,
+      chapters: pdfItems,
+      chapterKey: key,
+      title: key ? pdfItems.find((c) => c.key === key)!.title : null,
+      pdf: pdfOf(key),
+    });
+  }
   const { version: v, released } = picked;
 
   const served = await serverRegionContent(v.bookId, vno(v), true);
@@ -247,10 +287,10 @@ export async function planBookForCaller(ctx: AppContext, artifactId: string, cha
   } else chosen = matchDefaultChapter(items, doc.address as { anchorWord?: string; number?: number | string; title?: string } | undefined);
 
   await recordContentRead({ bookId: v.bookId, versionId: v._id, userId: auth.userId, surface: "plan" });
-  if (!chosen) return { ...base, reason, chapterKey: null, title: null, childText: null, teacherNote: null, anchorMissing: false, pictures: [] };
+  if (!chosen) return { ...base, reason, chapterKey: null, title: null, childText: null, teacherNote: null, anchorMissing: false, pictures: [], pdf: pdfOf(null) };
 
   const cut = (await cutVersion(v, chapters, book.chapterHeadingLevel ?? 2)).get(chosen);
-  if (!cut) return { ...base, reason: NO_CHAPTER_BN, chapterKey: null, title: null, childText: null, teacherNote: null, anchorMissing: false, pictures: [] };
+  if (!cut) return { ...base, reason: NO_CHAPTER_BN, chapterKey: null, title: null, childText: null, teacherNote: null, anchorMissing: false, pictures: [], pdf: pdfOf(null) };
   const urls = await mediaUrls(v);
   const seen = new Map<string, string>();
   const childText = rewritePictures(cut.childText, urls, seen);
@@ -264,6 +304,7 @@ export async function planBookForCaller(ctx: AppContext, artifactId: string, cha
     teacherNote,
     anchorMissing: cut.anchorMissing,
     pictures: [...seen].map(([path, url]) => ({ path, url })),
+    pdf: pdfOf(chosen),
   };
 }
 

@@ -10,7 +10,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
 
 import { getUrqlClient, subscribeUrqlClient } from "./src/graphql/client";
-import { initSentry, Sentry } from "./src/observability/sentry";
+import { initSentry, noteSentryScreen, Sentry } from "./src/observability/sentry";
+import { startDailyCountReporter } from "./src/observability/dailyCounts";
 import { AppErrorFallback } from "./src/observability/AppErrorFallback";
 import { getItem, setItem } from "./src/lib/storage";
 import { NAV_STATE_KEY } from "./src/lib/navState";
@@ -49,6 +50,7 @@ void SplashScreen.preventAutoHideAsync();
 // MON-3 (prd-observability.md §4): init @sentry/react-native at boot. A no-op unless
 // EXPO_PUBLIC_SENTRY_DSN is set, so local dev / the web-export gate are unaffected.
 initSentry();
+startDailyCountReporter();
 
 // Mobile browsers: Expo's web reset sizes html/body/#root at `height: 100%` with
 // `body { overflow: hidden }`. On Chrome Android that height can include the strip
@@ -155,9 +157,13 @@ function ThemedNavigation(): React.ReactElement | null {
       ref={navigationRef}
       theme={navTheme}
       initialState={initialState}
-      onReady={flushPendingNotification}
+      onReady={() => {
+        flushPendingNotification();
+        noteSentryScreen(navigationRef.getCurrentRoute()?.name);
+      }}
       onStateChange={(state) => {
         flushPendingNotification(); // a push tap made while signed out opens after login
+        noteSentryScreen(navigationRef.getCurrentRoute()?.name);
         if (Platform.OS !== "web") return;
         void setItem(NAV_STATE_KEY, JSON.stringify(state));
       }}

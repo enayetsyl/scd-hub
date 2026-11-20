@@ -115,7 +115,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   // D-#952: the school switch (default off) — off, the published card offers no session correction.
   // One cached query shared by every period card.
   const [lpSwitchQ] = useQuery({ query: LESSON_PLAN_QUESTION_SETTING_QUERY, variables: {} });
-  const lpQuestionOn = lpSwitchQ.data?.lessonPlanQuestionSetting.on === true;
+  const lpQuestionOn = lpSwitchQ.data?.lessonPlanQuestionSetting?.on === true;
 
   const [notesQ, refetchNotes] = useQuery({
     query: CLASS_NOTES_FOR_DATE_QUERY,

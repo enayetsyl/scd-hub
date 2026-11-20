@@ -92,8 +92,8 @@ export default function SupportBatchScreen(_props: Props): React.ReactElement {
   const [untick, setUntick] = useState<string[]>([]);
   const [evalText, setEvalText] = useState("");
   const [evalOk, setEvalOk] = useState(false);
-  const open = batches.data?.supportBatchesPage.rows.find((b) => b.status === "OPEN" || b.status === "RESULT_PENDING");
-  const passed = method.data?.supportMethodInfo.passedChats ?? [];
+  const open = batches.data?.supportBatchesPage?.rows.find((b) => b.status === "OPEN" || b.status === "RESULT_PENDING");
+  const passed = method.data?.supportMethodInfo?.passedChats ?? [];
   const err = (e?: Parameters<typeof friendlyError>[0]) => (e ? (toast.show(friendlyError(e), "danger"), true) : false);
 
   return (
@@ -130,7 +130,7 @@ export default function SupportBatchScreen(_props: Props): React.ReactElement {
               onPress={async () => {
                 const r = await download({ batchId: open.id });
                 if (err(r.error)) return;
-                await Clipboard.setStringAsync(r.data?.downloadSupportPack.content ?? "");
+                await Clipboard.setStringAsync(r.data?.downloadSupportPack?.content ?? "");
                 toast.show(STR.supCopied, "ok");
               }}
             />
@@ -220,11 +220,11 @@ export default function SupportBatchScreen(_props: Props): React.ReactElement {
             onPress={async () => {
               const r = await evalRecord({ kind: "CHAT", chatLabel: chat, resultText: evalText, suggestionsChecked: evalOk });
               if (err(r.error)) return;
-              toast.show(r.data?.recordSupportEvaluation.passed ? STR.supEvalPassed : STR.supEvalFailed, r.data?.recordSupportEvaluation.passed ? "ok" : "danger");
+              toast.show(r.data?.recordSupportEvaluation?.passed ? STR.supEvalPassed : STR.supEvalFailed, r.data?.recordSupportEvaluation?.passed ? "ok" : "danger");
             }}
           />
         </Card>
-        {batches.data?.supportBatchesPage.rows.map((b) => (
+        {batches.data?.supportBatchesPage?.rows.map((b) => (
           <Muted key={b.id}>{`${b.code} · ${BATCH_STATUS_BN[b.status] ?? b.status} · ${bnNum(b.reportCount)} · ${b.methodVersion}${b.producer ? ` · ${b.producer}` : ""}`}</Muted>
         ))}
       </ScrollView>

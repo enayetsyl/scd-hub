@@ -892,7 +892,12 @@ export interface ReviewAssignmentT {
   title?: string | null;
   reviewerName?: string | null;
   artifactReviewStatus?: string | null;
+  /** planReviewThread only (VN-1): the clips the caller may see on this round. */
+  voiceNotes?: ReviewVoiceNoteT[];
 }
+
+/** Fields of a review voice clip (VN-1) — defined here so the thread query below can use it. */
+const REVIEW_VOICE_NOTE_FIELDS = `id assignmentId fileId mime seconds spot submitted createdAt`;
 
 const REVIEW_ASSIGNMENT_FIELDS = `
   id docType subject classLevel anchorWord addressNumber sessionIndex
@@ -917,7 +922,7 @@ export const PLAN_REVIEW_INBOX = gql<{ planReviewInbox: ReviewAssignmentT[] }, N
 /** Full round history for a plan's address (by any artifact version). */
 export const PLAN_REVIEW_THREAD = gql<{ planReviewThread: ReviewAssignmentT[] }, { artifactId: string }>`
   query PlanReviewThread($artifactId: String!) {
-    planReviewThread(artifactId: $artifactId) { ${REVIEW_ASSIGNMENT_FIELDS} }
+    planReviewThread(artifactId: $artifactId) { ${REVIEW_ASSIGNMENT_FIELDS} voiceNotes { ${REVIEW_VOICE_NOTE_FIELDS} } }
   }
 `;
 
@@ -949,6 +954,44 @@ export const SUBMIT_PLAN_REVIEW = gql<
 >`
   mutation SubmitPlanReview($assignmentId: String!, $verdict: String!, $feedback: String) {
     submitPlanReview(assignmentId: $assignmentId, verdict: $verdict, feedback: $feedback) { ${REVIEW_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+/** One voice clip on a review round (VN-1, D-#1658). Audio only. `fileId` plays through GET /files/:id. */
+export interface ReviewVoiceNoteT {
+  id: string;
+  assignmentId: string;
+  fileId: string;
+  mime: string;
+  seconds: number;
+  spot: string | null;
+  /** False = a private draft (the reviewer's own, before Submit). */
+  submitted: boolean;
+  createdAt: string;
+}
+
+/** The caller's view of a round's clips (the reviewer: drafts included; others: sent ones). */
+export const REVIEW_VOICE_NOTES = gql<
+  { reviewVoiceNotes: ReviewVoiceNoteT[] },
+  { assignmentId: string }
+>`
+  query ReviewVoiceNotes($assignmentId: String!) {
+    reviewVoiceNotes(assignmentId: $assignmentId) { ${REVIEW_VOICE_NOTE_FIELDS} }
+  }
+`;
+
+export const ADD_REVIEW_VOICE_NOTE = gql<
+  { addReviewVoiceNote: ReviewVoiceNoteT },
+  { assignmentId: string; audioBase64: string; mimeType: string; seconds: number; spot?: string | null }
+>`
+  mutation AddReviewVoiceNote($assignmentId: String!, $audioBase64: String!, $mimeType: String!, $seconds: Float!, $spot: String) {
+    addReviewVoiceNote(assignmentId: $assignmentId, audioBase64: $audioBase64, mimeType: $mimeType, seconds: $seconds, spot: $spot) { ${REVIEW_VOICE_NOTE_FIELDS} }
+  }
+`;
+
+export const DELETE_REVIEW_VOICE_NOTE = gql<{ deleteReviewVoiceNote: boolean }, { noteId: string }>`
+  mutation DeleteReviewVoiceNote($noteId: String!) {
+    deleteReviewVoiceNote(noteId: $noteId)
   }
 `;
 

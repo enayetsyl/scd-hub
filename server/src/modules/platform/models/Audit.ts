@@ -393,6 +393,10 @@ export type AuditEventKind =
   | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
   | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
   | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)
+  | "BOOK_PDF_UPLOADED"       // a printed-book PDF uploaded / replaced for the Book tab (PB-1, D-#1661) — meta.bookCode/sourceName
+  | "BOOK_PDF_CHAPTERS_SET"   // the chapter to page ranges of a book PDF edited (PB-1, D-#1661) — meta.bookCode/count
+  | "BOOK_PDF_EDITED"        // a book PDF hidden / shown or its edition label changed (PB-1, D-#1661) - meta before/after
+  | "BOOK_PDF_DELETED"        // a book PDF removed with its page images (PB-1, D-#1661)
   | "WINTER_BOOKLET_IMPORTED"  // a winter booklet imported / re-imported (D-#1620) — meta code/version/kept/stale
   | "WINTER_CHANGE_SUGGESTED"  // reviewer suggested an edit or left a page note (D-#1620) — meta bookletId/pageN/blockId
   | "WINTER_CHANGE_EDITED"     // reviewer edited her own open suggestion (D-#1620) — meta before/after
@@ -427,6 +431,9 @@ export type AuditEventKind =
   | "VIVA_SET_DRAWN"              // a child's oral question set drawn at the examiner's tap (D-#1276) — meta.studentId/setKey/counts
   | "EXAM_ROUTINE_SAVED"          // one class's exam routine saved (D-#883) — meta.classId/slots
   | "EXAM_ROUTINE_PUBLISHED"      // the exam routine published or withdrawn (D-#883) — meta.published
+  | "EXAM_SITTING_DUTY_ASSIGNED"          // a teacher put on an exam sitting (D-#1660) — meta.examId/classId/dateKey/subject/kind/seat/teacherId
+  | "EXAM_SITTING_DUTY_CHANGED"           // the teacher on a sitting swapped (D-#1660) — meta as above + fromTeacherId/reason
+  | "EXAM_SITTING_DUTY_CLEARED"           // a duty removed (D-#1660) — meta as above + fromTeacherId/reason
   | "GUARDIAN_FEATURE_SET"        // a guardian feature switched on/off for all or one guardian (D-#1011) — meta.feature/onForAll/guardianId/on
   // Exams (docs/prd-exams.md, D-#375–#382). The custody rows are the point: the paper
   // sheets carry names and signatures but no counts and no issue/return record, so

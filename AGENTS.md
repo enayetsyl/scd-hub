@@ -72,6 +72,10 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   `server/src/pageRef.ts`) and `<Pager>` / `usePagedRows` on the screen. Never return an unbounded
   `.find()`, and never cap silently with `.limit(N)`. Keep old queries working (phones run an older
   bundle until their next cold start). See `docs/pagination.md`.
+- **Errors must be readable (D-#1657).** Read GraphQL data null-safe (`data?.x?.y`; a jest scan fails the build
+  otherwise). Never hand-strip `__typename`; the client exchange does it. A server service checks every id
+  argument with `isValidObjectId` and treats "" as not given. Role and screen tags on error reports are
+  automatic, so a new screen needs no extra wiring.
 - **Every feature registers all its actions in the permission catalogue (D-#799).** A new feature, or a
   new action in an existing one, adds a `feature:action` entry for **every** thing a person can do in
   it (view, declare, check, return, approve, publish…), with default roles (TEACHER/OFFICE; the

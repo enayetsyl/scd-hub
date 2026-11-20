@@ -76,7 +76,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
     if (res.error) setMsg({ tone: "danger", text: friendlyError(res.error) });
     else (setMsg({ tone: "ok", text: ok }), refresh());
   };
-  const finalVersions = (vq.data?.bookLcVersionsPage.rows ?? []).filter((v) => v.status === "final" || v.status === "print_released");
+  const finalVersions = (vq.data?.bookLcVersionsPage?.rows ?? []).filter((v) => v.status === "final" || v.status === "print_released");
   const upload = async (releaseId: string): Promise<void> => {
     const f = await pickBookLcFile("any");
     if (!f) return;
@@ -111,8 +111,8 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
         </Card>
       ) : null}
 
-      <QueryGate result={rq} onRetry={refresh} isEmpty={!rq.data?.bookLcReleasesPage.rows.length} empty={<EmptyState message="—" />}>
-        {rq.data?.bookLcReleasesPage.rows.map((r) => (
+      <QueryGate result={rq} onRetry={refresh} isEmpty={!rq.data?.bookLcReleasesPage?.rows.length} empty={<EmptyState message="—" />}>
+        {rq.data?.bookLcReleasesPage?.rows.map((r) => (
           <Card key={r.id} style={{ marginBottom: space(3) }}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center" }}>
               <Body style={{ fontWeight: "700" }}>
@@ -164,11 +164,11 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
         ))}
       </QueryGate>
 
-      {(rq.data?.bookLcReleasesPage.total ?? 0) > 20 * relPages ? <Button title={BL.moreReleases} variant="ghost" onPress={() => setRelPages(relPages + 1)} /> : null}
+      {(rq.data?.bookLcReleasesPage?.total ?? 0) > 20 * relPages ? <Button title={BL.moreReleases} variant="ghost" onPress={() => setRelPages(relPages + 1)} /> : null}
 
       <SectionTitle>{BL.errata}</SectionTitle>
-      <QueryGate result={eq} onRetry={refresh} isEmpty={!eq.data?.bookLcErrataPage.rows.length} empty={<EmptyState message={BL.noErrata} />}>
-        {eq.data?.bookLcErrataPage.rows.map((e) => (
+      <QueryGate result={eq} onRetry={refresh} isEmpty={!eq.data?.bookLcErrataPage?.rows.length} empty={<EmptyState message={BL.noErrata} />}>
+        {eq.data?.bookLcErrataPage?.rows.map((e) => (
           <Card key={e.id} style={{ marginBottom: space(2) }}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center" }}>
               <Body style={{ fontWeight: "700" }}>
@@ -218,7 +218,7 @@ export default function BookLcReleaseScreen({ route }: Props): React.ReactElemen
           </Card>
         ))}
       </QueryGate>
-      {(eq.data?.bookLcErrataPage.total ?? 0) > 50 * errPages ? <Button title={BL.moreErrata} variant="ghost" onPress={() => setErrPages(errPages + 1)} /> : null}
+      {(eq.data?.bookLcErrataPage?.total ?? 0) > 50 * errPages ? <Button title={BL.moreErrata} variant="ghost" onPress={() => setErrPages(errPages + 1)} /> : null}
     </Screen>
   );
 }

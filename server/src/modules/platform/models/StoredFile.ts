@@ -65,6 +65,9 @@ export type StoredFileKind =
    *  rendered to JPEG pages at upload and is never stored or served; readers get pages.
    *  Staff read via class_books:view/manage; a guardian only for their own child's class. */
   | "class_book_page"
+  /** One page image of a school book's printed PDF (PB-1, D-#1661). Teachers read
+   *  (lesson_plans:read_book / class_books:view); never a guardian. */
+  | "bookpdf_page"
   /** A storybook cover / preview page (SB-1, D-#986, docs/prd-storybook-reading.md). Only
    *  the cover and up to 3 preview pages of a book are kept — never the whole book. Staff
    *  read via library:view; a guardian only for a published book of their child's age band. */
@@ -92,7 +95,10 @@ export type StoredFileKind =
   | "book_lc_print"
   | "book_lc_history"
   /** The printed PDF of a winter-holiday booklet (D-#1620). Read-gated by winter_task:review | manage. */
-  | "winter_booklet_pdf";
+  | "winter_booklet_pdf"
+  /** One recorded voice clip on a review round (VN-1, D-#1658). Read-gated by
+   *  `assertReviewVoiceFileReadAccess`: the reviewer, the plan author, the review managers. */
+  | "review_voice_note";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -118,6 +124,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "archive_photo",
   "classtest_script",
   "class_book_page",
+  "bookpdf_page",
   "storybook_page",
   "activity_bank_pdf",
   "activity_answer_pdf",
@@ -133,6 +140,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "book_lc_print",
   "book_lc_history",
   "winter_booklet_pdf",
+  "review_voice_note",
 ];
 
 

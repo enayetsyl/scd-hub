@@ -203,8 +203,8 @@ export default function ReviewHubScreen(): React.ReactElement {
     }, [reloadAll]),
   );
 
-  const rows = q.data?.myReviewHub.rows ?? [];
-  const totalLeft = q.data?.myReviewHub.totalLeft ?? 0;
+  const rows = q.data?.myReviewHub?.rows ?? [];
+  const totalLeft = q.data?.myReviewHub?.totalLeft ?? 0;
   const path = pathQ.data?.myReviewPath ?? null;
   const books = path?.books ?? [];
   const more = moreQ.data?.myReviewMoreStatus ?? null;

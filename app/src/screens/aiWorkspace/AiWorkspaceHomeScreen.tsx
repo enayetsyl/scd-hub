@@ -48,7 +48,7 @@ export default function AiWorkspaceHomeScreen({ navigation }: Props): React.Reac
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.awNone}</Muted> : null}
-      {data?.rows.map((p) => (
+      {data?.rows?.map((p) => (
         <ProjectCard key={p.id} p={p} onPress={() => navigation.navigate("AiProject", { projectId: p.id })} />
       ))}
       {data ? <Pager page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}

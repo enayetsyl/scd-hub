@@ -79,7 +79,7 @@ function EditorView({ navigation, keyName }: { navigation: Props["navigation"]; 
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const rows = q.data?.aiPolicyVersionsPage.rows;
+  const rows = q.data?.aiPolicyVersionsPage?.rows;
   if (q.fetching && !rows) return <Loader />;
   if (q.error || !rows) return <ErrorBanner message={friendlyError(q.error as never)} />;
 
@@ -118,7 +118,7 @@ function EditorView({ navigation, keyName }: { navigation: Props["navigation"]; 
                 ))}
               </ChipRow>
             </ScrollView>
-            <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.aiPolicyVersionsPage.total ?? 0} onPage={setPage} />
+            <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.aiPolicyVersionsPage?.total ?? 0} onPage={setPage} />
           </Card>
           {selected ? (
             <Card>

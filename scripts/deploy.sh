@@ -67,21 +67,29 @@ build() {
     SENTRY_AUTH_TOKEN="$(sed -n 's/^SENTRY_AUTH_TOKEN=//p' app/.env | tail -1 | tr -d '"\r')"
     export SENTRY_AUTH_TOKEN
   fi
+  # D-#1657: the web bundle bakes EXPO_PUBLIC_RELEASE=<sha> (sentry.ts, web only) and the maps are
+  # uploaded under that SAME value. The baked value is written next to the export
+  # (app/dist/release.txt) and the upload reads it from there, never `git rev-parse HEAD` at upload
+  # time: a skipped export leaves an older bundle whose release is older than HEAD.
+  # expo export --clear empties dist, so release.txt is written AFTER the export.
+  WEB_RELEASE="$(git rev-parse HEAD)"
   if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
     # (as before, a failed export here does not stop the deploy; it now also leaves the marker, so
     # the next deploy retries the export instead of skipping it)
-    if ( cd app && npx expo export --platform web --clear --source-maps ); then
+    if ( cd app && EXPO_PUBLIC_RELEASE="$WEB_RELEASE" npx expo export --platform web --clear --source-maps ); then
       git rev-parse HEAD > "$WEB_MARK"
+      printf '%s' "$WEB_RELEASE" > app/dist/release.txt
       ( cd app && npx sentry-cli --url https://scdhub-errors.shafayet.me sourcemaps upload \
-          --org scd --project scdhub-app --release "$(git rev-parse HEAD)" dist ) \
+          --org scd --project scdhub-app --release "$(cat dist/release.txt)" dist ) \
         || say "sentry sourcemap upload failed (non-fatal)"
     else
       say "web export FAILED (non-fatal) — the next deploy will retry it"
     fi
     find app/dist -name '*.map' -delete 2>/dev/null || true
   else
-    ( cd app && npx expo export --platform web --clear )
+    ( cd app && EXPO_PUBLIC_RELEASE="$WEB_RELEASE" npx expo export --platform web --clear )
     git rev-parse HEAD > "$WEB_MARK"
+    printf '%s' "$WEB_RELEASE" > app/dist/release.txt
   fi
 }
 # AI Workspace job worker (W-4, D-#1251): restart it with the API so it never runs old code.

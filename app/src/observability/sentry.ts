@@ -9,6 +9,7 @@
  * `EXPO_PUBLIC_*` values. The source-map/symbol upload token (`SENTRY_AUTH_TOKEN`) is a
  * CI/EAS build secret and is NEVER bundled / never `EXPO_PUBLIC_*` (§0).
  */
+import { Platform } from "react-native";
 import * as Sentry from "@sentry/react-native";
 
 const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -47,7 +48,37 @@ export function initSentry(): void {
     // attaches the JWT to events; it rides only the request Authorization header, which
     // the SDK does not capture (sendDefaultPii false).
     sendDefaultPii: false,
+    // WEB ONLY (D-#1657): deploy.sh bakes EXPO_PUBLIC_RELEASE=<sha> into the web export and
+    // uploads the source maps under that same value, so web stacks resolve. Without it web
+    // events had `release: undefined` and the maps never applied. Native keeps the SDK's own
+    // automatic `com.scd.hub@x+y` release.
+    ...(Platform.OS === "web" && process.env.EXPO_PUBLIC_RELEASE
+      ? { release: process.env.EXPO_PUBLIC_RELEASE }
+      : {}),
   });
+}
+
+/** Send one informational message (no exception); a no-op when Sentry is disabled. */
+export function captureAppMessage(
+  message: string,
+  opts: { fingerprint?: string[]; extra?: Record<string, unknown>; tags?: Record<string, string> } = {},
+): void {
+  if (!sentryEnabled) return;
+  Sentry.captureMessage(message, {
+    level: "info",
+    ...(opts.fingerprint ? { fingerprint: opts.fingerprint } : {}),
+    ...(opts.extra ? { extra: opts.extra } : {}),
+    ...(opts.tags ? { tags: opts.tags } : {}),
+  });
+}
+
+let lastScreen = "";
+/** The screen the person is on: tag `screen` on every later event + a navigation breadcrumb. */
+export function noteSentryScreen(name: string | undefined): void {
+  if (!sentryEnabled || !name || name === lastScreen) return;
+  lastScreen = name;
+  Sentry.setTag("screen", name);
+  Sentry.addBreadcrumb({ category: "navigation", message: name, level: "info" });
 }
 
 /** Capture an app error/exception; a no-op when Sentry is disabled. */
@@ -78,6 +109,8 @@ export function setSentryUser(
 ): void {
   if (!sentryEnabled) return;
   Sentry.setUser(user ? { id: user.id, role: user.role, ...(viewAs ? { viewAs: true } : {}) } : null);
+  // The role as a tag too, so every issue filters by it (cleared on logout).
+  Sentry.setTag("role", user ? user.role : undefined);
 }
 
 /**

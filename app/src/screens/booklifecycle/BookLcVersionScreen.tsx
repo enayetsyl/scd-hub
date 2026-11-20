@@ -177,13 +177,13 @@ export default function BookLcVersionScreen({ route }: Props): React.ReactElemen
             <Select
               label={BL.compareWith}
               value={cmpWith}
-              options={(others.data?.bookLcVersionsPage.rows ?? []).filter((o) => o.id !== versionId).map((o) => ({ value: o.id, label: `${o.labelBn} (${o.statusBn})` }))}
+              options={(others.data?.bookLcVersionsPage?.rows ?? []).filter((o) => o.id !== versionId).map((o) => ({ value: o.id, label: `${o.labelBn} (${o.statusBn})` }))}
               onChange={setCmpWith}
             />
             {cmpWith ? (
               <QueryGate result={dq} onRetry={() => refetchDiff({ requestPolicy: "network-only" })}>
                 {dq.data?.bookLcDiff
-                  .filter((c) => c.status !== "same")
+                  ?.filter((c) => c.status !== "same")
                   .map((c) => (
                     <Card key={c.key} style={{ marginTop: space(2) }}>
                       <Body style={{ fontWeight: "700" }}>

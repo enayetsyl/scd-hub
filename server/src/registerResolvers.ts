@@ -168,6 +168,7 @@ import "./modules/archive/resolvers/archive";
 import "./modules/exams/resolvers/exams";
 import "./modules/exams/resolvers/examSyllabus";
 import "./modules/exams/resolvers/examRoutine";
+import "./modules/exams/resolvers/examDuty";
 // Exam cycle EX-1..EX-9 (docs/prd-exams.md, D-#375–#382): papers, duties, marks, recheck,
 // report card, custody chain, publish. Extends the one Exam record above.
 import "./modules/exams/resolvers/exam";
@@ -197,6 +198,7 @@ import "./modules/lesson-progress/resolvers/guardianLessons";
 import "./modules/worksheets/resolvers/worksheet";
 import "./modules/popup-notices/resolvers/popupNotice";
 import "./modules/class-books/resolvers/classBooks";
+import "./modules/book-pdf/resolvers/bookPdf";
 import "./modules/winter-task/resolvers/winterTask";
 import "./modules/exam-papers/resolvers/examPapers";
 import "./modules/quran-exam/resolvers/quranExam";

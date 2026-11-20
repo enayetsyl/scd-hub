@@ -57,7 +57,7 @@ export default function MySupportReportsScreen({ navigation }: Props): React.Rea
                   const r = await answer({ commentId: s.commentId, choice: "NOW" });
                   if (r.error) return toast.show(friendlyError(r.error), "danger");
                   refetchSeeds({ requestPolicy: "network-only" });
-                  navigation.navigate("SupportReportForm", { studentId: s.studentId, reportId: r.data?.answerSupportSeed.draft?.id });
+                  navigation.navigate("SupportReportForm", { studentId: s.studentId, reportId: r.data?.answerSupportSeed?.draft?.id });
                 }}
               />
             ) : null}
@@ -65,7 +65,7 @@ export default function MySupportReportsScreen({ navigation }: Props): React.Rea
         ))}
         {q.fetching && !data ? <Loader /> : null}
         {q.error ? <Notice message={friendlyError(q.error)} tone="danger" /> : null}
-        {data?.rows.map((r) => {
+        {data?.rows?.map((r) => {
           const full = opened[r.id];
           const readable = r.studentName != null;
           const held = r.safeguardingHold === "OPEN";
