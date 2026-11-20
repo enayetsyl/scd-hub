@@ -48,6 +48,7 @@ import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
+import { setQuestionReviewOrder } from "../../lib/questionReviewNav";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewerRounds">;
 
@@ -232,7 +233,10 @@ export default function QuestionReviewerRoundsScreen({
                 onPress={
                   editing === r.id
                     ? undefined
-                    : () => navigation.navigate("QuestionReviewThread", { artifactId: r.artifactId })
+                    : () => {
+                        setQuestionReviewOrder(rounds.map((x) => x.artifactId));
+                        navigation.navigate("QuestionReviewThread", { artifactId: r.artifactId });
+                      }
                 }
               >
               <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>

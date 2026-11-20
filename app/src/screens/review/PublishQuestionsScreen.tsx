@@ -68,6 +68,7 @@ import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
+import { setQuestionReviewOrder } from "../../lib/questionReviewNav";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "PublishQuestions">;
 type Tab = "APPROVE" | "APPROVE_WITH_CONDITION" | "CHANGES_REQUESTED";
@@ -587,7 +588,10 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
                     <Button
                       title={STR.reviewThread}
                       variant="ghost"
-                      onPress={() => navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId })}
+                      onPress={() => {
+                        setQuestionReviewOrder(rounds.map((r) => r.artifactId));
+                        navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId });
+                      }}
                     />
                     {/* The missing half of the loop (QR-8): a reviewer's condition asks for
                         the answer to change, and until now nobody could change it. */}

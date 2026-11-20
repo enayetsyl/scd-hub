@@ -52,6 +52,7 @@ import { LoadOlder } from "../../components/LoadOlder";
 import { ReviewNextButton } from "../../components/ReviewNextButton";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { setQuestionReviewOrder } from "../../lib/questionReviewNav";
 import { useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewQueue">;
@@ -564,9 +565,10 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
                     <Button
                       title={STR.qrOpenBookVoice}
                       variant="ghost"
-                      onPress={() =>
-                        navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId })
-                      }
+                      onPress={() => {
+                        setQuestionReviewOrder(rounds.map((r) => r.artifactId));
+                        navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId });
+                      }}
                     />
                   </View>
                 )}
