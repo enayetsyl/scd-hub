@@ -544,6 +544,9 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   VIVA_SET_DRAWN: { bn: "মৌখিক পরীক্ষায় শিশুর প্রশ্নসেট এনেছেন", en: "Drew a child's oral question set", group: "EXAM" },
   EXAM_ROUTINE_SAVED: { bn: "পরীক্ষার রুটিন সংরক্ষণ করেছেন", en: "Saved an exam routine", group: "EXAM" },
   EXAM_ROUTINE_PUBLISHED: { bn: "পরীক্ষার রুটিন প্রকাশ/প্রত্যাহার করেছেন", en: "Published or withdrew the exam routine", group: "EXAM" },
+  EXAM_SITTING_DUTY_ASSIGNED: { bn: "পরীক্ষার ডিউটি দিয়েছেন", en: "Assigned an exam duty", group: "EXAM" },
+  EXAM_SITTING_DUTY_CHANGED: { bn: "পরীক্ষার ডিউটির শিক্ষক বদলেছেন", en: "Changed the teacher on an exam duty", group: "EXAM" },
+  EXAM_SITTING_DUTY_CLEARED: { bn: "পরীক্ষার ডিউটি তুলে নিয়েছেন", en: "Removed an exam duty", group: "EXAM" },
   // Exam cycle EX-1..EX-9 (docs/prd-exams.md, D-#375–#382).
   EXAM_PAPER_UPSERTED: { bn: "বিষয়পত্রের অংশ ও পূর্ণমান ঠিক করেছেন", en: "Set up an exam paper", group: "EXAM" },
   EXAM_STATUS_CHANGED: { bn: "পরীক্ষার ধাপ বদলেছেন", en: "Moved an exam to another stage", group: "EXAM" },

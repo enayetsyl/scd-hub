@@ -71,6 +71,7 @@ import { DailyReportTodayCard } from "../../components/DailyReportTodayCard";
 import { MyPeriodsStrip } from "../../components/MyPeriodsStrip";
 import { QuranExamTodayCard } from "../../components/QuranExamTodayCard";
 import { VivaTodayCard } from "../../components/VivaTodayCard";
+import { ExamDutyTodayCard } from "../../components/ExamDutyTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
@@ -541,6 +542,9 @@ export default function TodayScreen(): React.ReactElement {
 
       {/* Nursery & KG oral exam (D-#1082): today's orals for an examiner. Own query → outside the gate. */}
       {can("viva:examine") ? <VivaTodayCard /> : null}
+
+      {/* Exam duty roster (D-#1660): my upcoming invigilation duties. Own query → outside the gate. */}
+      {can("exam_routine:view") ? <ExamDutyTodayCard /> : null}
 
       {/* D-#1052 — a shared daily school report, until it is opened. Own query → outside the gate. */}
       {Object.values(DAILY_REPORT_SECTION_PERMISSION).some((p) => can(p)) ? <DailyReportTodayCard /> : null}

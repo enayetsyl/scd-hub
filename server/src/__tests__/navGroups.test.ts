@@ -199,6 +199,8 @@ const NEW_STAFF_LEAVES = [
   "AdminTab:AdminClasses",
   "AdminTab:AdminYear",
   "AdminTab:AdminWatch",
+  "SyllabusTab:ExamDutyRoster", // D-#1660
+  "SyllabusTab:MyExamDuty",
 ];
 // "AdminTab:" (its gate is now split into the four section rows, whose union is the old gate plus routine:edit_calendar —
 // asserted below); "AdminTab:YearChange" lives in Admin ③ (the Admin hub card) now.
