@@ -19,7 +19,7 @@ const SHOWN = 3;
 export function ExamDutyTodayCard(): React.ReactElement | null {
   const [q] = useQuery({ query: MY_EXAM_DUTIES });
   const nav = useNavigation() as unknown as { navigate: (name: string, params?: object) => void };
-  const rows = q.data?.myExamDuties ?? [];
+  const rows = q.data?.mySittingDuties ?? [];
   if (!rows.length) return null;
   return (
     <Card>

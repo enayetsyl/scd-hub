@@ -26,7 +26,7 @@ export function dutyWhere(d: Pick<MyExamDutyT, "classLabelBn" | "room">): string
 export default function MyExamDutyScreen(): React.ReactElement {
   const [q, reexec] = useQuery({ query: MY_EXAM_DUTIES });
   const refresh = usePullRefresh(q.fetching, () => reexec({ requestPolicy: "network-only" }));
-  const rows = q.data?.myExamDuties ?? [];
+  const rows = q.data?.mySittingDuties ?? [];
   const days = [...new Set(rows.map((r) => r.dateKey))];
 
   return (

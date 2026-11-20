@@ -49,9 +49,9 @@ export interface MyExamDutyT {
   room: string;
 }
 
-export const EXAM_DUTY_ROSTER = gql<{ examDutyRoster: ExamDutyRosterT }, { examId: string }>`
-  query ExamDutyRoster($examId: String!) {
-    examDutyRoster(examId: $examId) {
+export const EXAM_DUTY_ROSTER = gql<{ sittingDutyRoster: ExamDutyRosterT }, { examId: string }>`
+  query SittingDutyRoster($examId: String!) {
+    sittingDutyRoster(examId: $examId) {
       examId
       examName
       conflictCount
@@ -65,16 +65,16 @@ export const EXAM_DUTY_ROSTER = gql<{ examDutyRoster: ExamDutyRosterT }, { examI
   }
 `;
 
-export const EXAM_DUTY_CANDIDATES = gql<{ examDutyCandidates: { userId: string; name: string }[] }>`
-  query ExamDutyCandidates { examDutyCandidates { userId name } }
+export const EXAM_DUTY_CANDIDATES = gql<{ sittingDutyCandidates: { userId: string; name: string }[] }>`
+  query SittingDutyCandidates { sittingDutyCandidates { userId name } }
 `;
 
-export const MY_EXAM_DUTIES = gql<{ myExamDuties: MyExamDutyT[] }>`
-  query MyExamDuties { myExamDuties { id examId examName dateKey subject kind classLabelBn start end room } }
+export const MY_EXAM_DUTIES = gql<{ mySittingDuties: MyExamDutyT[] }>`
+  query MySittingDuties { mySittingDuties { id examId examName dateKey subject kind classLabelBn start end room } }
 `;
 
 export const ASSIGN_EXAM_DUTY = gql<
-  { assignExamDuty: ExamDutyT },
+  { assignSittingDuty: ExamDutyT },
   {
     examId: string;
     classId: string;
@@ -87,7 +87,7 @@ export const ASSIGN_EXAM_DUTY = gql<
     reason?: string | null;
   }
 >`
-  mutation AssignExamDuty(
+  mutation AssignSittingDuty(
     $examId: String!
     $classId: String!
     $dateKey: String!
@@ -98,7 +98,7 @@ export const ASSIGN_EXAM_DUTY = gql<
     $room: String
     $reason: String
   ) {
-    assignExamDuty(
+    assignSittingDuty(
       examId: $examId
       classId: $classId
       dateKey: $dateKey
@@ -112,6 +112,6 @@ export const ASSIGN_EXAM_DUTY = gql<
   }
 `;
 
-export const CLEAR_EXAM_DUTY = gql<{ clearExamDuty: boolean }, { dutyId: string; reason: string }>`
-  mutation ClearExamDuty($dutyId: String!, $reason: String!) { clearExamDuty(dutyId: $dutyId, reason: $reason) }
+export const CLEAR_EXAM_DUTY = gql<{ clearSittingDuty: boolean }, { dutyId: string; reason: string }>`
+  mutation ClearSittingDuty($dutyId: String!, $reason: String!) { clearSittingDuty(dutyId: $dutyId, reason: $reason) }
 `;

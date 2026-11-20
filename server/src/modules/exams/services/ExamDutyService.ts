@@ -30,7 +30,7 @@ import { ExamSittingDuty, type IExamSittingDuty } from "../models/ExamSittingDut
 export class ExamDutyError extends Error {}
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_SEAT = 6;
+export const MAX_SEAT = 6;
 /** Roles that may sit on a duty — the same pool the oral exams draw examiners from. */
 const DUTY_ROLES = ["TEACHER", "PRINCIPAL", "OFFICE"];
 
@@ -338,7 +338,11 @@ export async function assignExamDuty(ctx: AppContext, input: AssignDutyInput): P
   const meta = { examId: String(exam._id), classId: input.classId, dateKey: input.dateKey, subject: input.subject, kind, seat };
 
   if (!existing) {
-    const created = await ExamSittingDuty.create({ ...key, seat, teacherId: teacher._id, room, rev: 1, updatedBy: oid(auth.userId) });
+    // Two quick taps on the same seat race into the unique index: say so plainly.
+    const created = await ExamSittingDuty.create({ ...key, seat, teacherId: teacher._id, room, rev: 1, updatedBy: oid(auth.userId) }).catch((err: unknown) => {
+      if ((err as { code?: number }).code === 11000) throw new ExamDutyError("এই ডিউটি এইমাত্র অন্য কেউ দিয়েছেন। পাতাটি নতুন করে খুলে দেখুন।");
+      throw err;
+    });
     await writeAudit({
       eventKind: "EXAM_SITTING_DUTY_ASSIGNED",
       actorId: auth.userId,

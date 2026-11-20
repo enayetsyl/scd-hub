@@ -26,6 +26,8 @@ import { STR, bnNum, dhakaDateKey, fullDateLabel, routineSubjectLabel } from "..
 import { qxRange } from "../../lib/quranExam";
 import { space, typeScale } from "../../theme/tokens";
 
+/** Mirrors the server cap (ExamDutyService MAX_SEAT). */
+const MAX_SEAT = 6;
 const sittingKey = (s: ExamDutySittingT) => `${s.classId}|${s.dateKey}|${s.subject}|${s.kind}`;
 
 interface Editing {
@@ -54,8 +56,8 @@ export default function ExamDutyRosterScreen(): React.ReactElement {
     pick.refetch();
     refetch();
   });
-  const r = q.data?.examDutyRoster ?? null;
-  const candidates = cq.data?.examDutyCandidates ?? [];
+  const r = q.data?.sittingDutyRoster ?? null;
+  const candidates = cq.data?.sittingDutyCandidates ?? [];
 
   if (!pick.loading && pick.exams.length === 0) {
     return (
@@ -161,7 +163,7 @@ export default function ExamDutyRosterScreen(): React.ReactElement {
                           </View>
                         </View>
                       ))}
-                      {!s.orphan && editing?.key !== sittingKey(s) ? (
+                      {!s.orphan && s.duties.length < MAX_SEAT && editing?.key !== sittingKey(s) ? (
                         <Button
                           title={s.duties.length ? STR.edAddSecond : STR.edAdd}
                           variant="secondary"
