@@ -126,7 +126,7 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
   });
   const [latePicks, setLatePicks] = React.useState<LatenessPick[]>([]);
   React.useEffect(() => {
-    const list = lateData?.latenessChargeCandidates.rows ?? [];
+    const list = lateData?.latenessChargeCandidates?.rows ?? [];
     setLatePicks((prev) =>
       list.map((c) => {
         const had = prev.find((p) => p.staffProfileId === c.staffProfileId);
@@ -136,7 +136,7 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
       }),
     );
   }, [lateData]);
-  const lateRows = new Map((lateData?.latenessChargeCandidates.rows ?? []).map((c) => [c.staffProfileId, c]));
+  const lateRows = new Map((lateData?.latenessChargeCandidates?.rows ?? []).map((c) => [c.staffProfileId, c]));
   const invalidLate = latePicks.filter((p) => !latenessPickValid(p));
   function patchLate(staffProfileId: string, part: Partial<LatenessPick>): void {
     setLatePicks((ps) => ps.map((p) => (p.staffProfileId === staffProfileId ? { ...p, ...part } : p)));
@@ -228,7 +228,7 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
           <Muted style={{ marginTop: space(2) }}>{STR.stfLeaveChargeMonthFirst}</Muted>
         ) : lateFetching && !lateData ? (
           <Loader label={STR.loading} />
-        ) : lateData?.latenessChargeCandidates.ruleOn ? (
+        ) : lateData?.latenessChargeCandidates?.ruleOn ? (
           <Notice tone="info" message={STR.stfLateChargeRuleOn} />
         ) : latePicks.length === 0 ? (
           <Muted style={{ marginTop: space(2) }}>{STR.stfLateChargeNone}</Muted>
@@ -243,7 +243,7 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
                   {STR.stfLateChargeLine
                     .replace("{late}", bnNum(String(c?.lateCount ?? 0)))
                     .replace("{days}", bnNum(String(p.maxDays)))
-                    .replace("{per}", bnNum(String(lateData?.latenessChargeCandidates.lateDaysPerCharge ?? 3)))}
+                    .replace("{per}", bnNum(String(lateData?.latenessChargeCandidates?.lateDaysPerCharge ?? 3)))}
                 </Muted>
                 <Body style={{ marginTop: space(1) }}>{STR.stfLeaveChargeAsk}</Body>
                 <ChipRow>
