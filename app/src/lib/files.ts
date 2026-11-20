@@ -1345,6 +1345,48 @@ export async function pickAndUploadClassBook(input: {
   return { bookId: body.bookId };
 }
 
+/** Pick a book's printed PDF and upload it (PB-1, D-#1657; POST /files/book-pdf); null when cancelled. */
+export async function pickAndUploadBookPdf(input: { bookCode: string; versionLabel: string }): Promise<{ pdfId: string } | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["application/pdf"],
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: rnUploadName(asset.name),
+      type: asset.mimeType ?? "application/pdf",
+    } as unknown as Blob);
+  }
+  form.append("bookCode", input.bookCode);
+  if (input.versionLabel.trim()) form.append("versionLabel", input.versionLabel.trim());
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/book-pdf`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { pdfId: string };
+  return { pdfId: body.pdfId };
+}
+
 // ---------------------------------------------------------------------------
 // Activity sheets (AS-1, server: POST /files/activity-bank and /files/activity-sheets).
 // The Office picks the files first (index CSV, sheets PDF, answers PDF), then sends one form.

@@ -5,7 +5,7 @@
  * plane answers `available: false` with a Bangla reason — it never throws to the screen.
  */
 import { builder } from "../../../schema";
-import { planBookForCaller, type PlanBookChapterItem, type PlanBookPicture, type PlanBookResult } from "../../book-lifecycle/services/planBook";
+import { planBookForCaller, type PlanBookChapterItem, type PlanBookPdf, type PlanBookPicture, type PlanBookResult } from "../../book-lifecycle/services/planBook";
 
 const ChapterItemRef = builder.objectRef<PlanBookChapterItem>("PlanBookChapterItem").implement({
   fields: (t) => ({
@@ -17,6 +17,18 @@ const ChapterItemRef = builder.objectRef<PlanBookChapterItem>("PlanBookChapterIt
 
 const PictureRef = builder.objectRef<PlanBookPicture>("PlanBookPicture").implement({
   fields: (t) => ({ path: t.exposeString("path"), url: t.exposeString("url") }),
+});
+
+const PdfRef = builder.objectRef<PlanBookPdf>("PlanBookPdf").implement({
+  description: "The printed PDF pages of the book (PB-2): page images are fetched with bookPdfPage.",
+  fields: (t) => ({
+    pdfId: t.exposeString("pdfId"),
+    versionLabel: t.exposeString("versionLabel"),
+    pageCount: t.exposeInt("pageCount"),
+    pageAspect: t.exposeFloat("pageAspect"),
+    fromPage: t.exposeInt("fromPage", { nullable: true }),
+    toPage: t.exposeInt("toPage", { nullable: true }),
+  }),
 });
 
 const PlanBookChapterRef = builder.objectRef<PlanBookResult>("PlanBookChapter").implement({
@@ -34,6 +46,7 @@ const PlanBookChapterRef = builder.objectRef<PlanBookResult>("PlanBookChapter").
     teacherNote: t.exposeString("teacherNote", { nullable: true }),
     anchorMissing: t.exposeBoolean("anchorMissing"),
     pictures: t.field({ type: [PictureRef], resolve: (r) => r.pictures }),
+    pdf: t.field({ type: PdfRef, nullable: true, resolve: (r) => r.pdf }),
   }),
 });
 

@@ -65,6 +65,9 @@ export type StoredFileKind =
    *  rendered to JPEG pages at upload and is never stored or served; readers get pages.
    *  Staff read via class_books:view/manage; a guardian only for their own child's class. */
   | "class_book_page"
+  /** One page image of a school book's printed PDF (PB-1, D-#1657). Teachers read
+   *  (lesson_plans:read_book / class_books:view); never a guardian. */
+  | "bookpdf_page"
   /** A storybook cover / preview page (SB-1, D-#986, docs/prd-storybook-reading.md). Only
    *  the cover and up to 3 preview pages of a book are kept — never the whole book. Staff
    *  read via library:view; a guardian only for a published book of their child's age band. */
@@ -118,6 +121,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "archive_photo",
   "classtest_script",
   "class_book_page",
+  "bookpdf_page",
   "storybook_page",
   "activity_bank_pdf",
   "activity_answer_pdf",

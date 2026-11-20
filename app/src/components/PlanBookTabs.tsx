@@ -11,6 +11,8 @@ import { useQuery, type CombinedError } from "urql";
 import { PLAN_BOOK_CHAPTER, type PlanBookChapterT } from "../graphql/planBook";
 import { Chip, ChipRow, ErrorBanner, Loader, Muted, Notice, Select } from "./ui";
 import Markdown from "./Markdown";
+import BookPdfPages from "./BookPdfPages";
+import { bookHtmlToMarkdown } from "../lib/bookHtml";
 import { STR } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { getItem, setItem } from "../lib/storage";
@@ -53,6 +55,8 @@ function BookPane({
   if (!b.available) return <Notice message={b.reason || STR.pbNoBook} tone="warn" />;
 
   const options = b.chapters.map((c) => ({ label: c.title, value: c.key }));
+  // The real printed pages when a PDF is uploaded and this chapter has a page range; else the text.
+  const hasPdf = !!b.pdf && b.pdf.fromPage !== null && b.pdf.toPage !== null;
   return (
     <View>
       {b.chapterKey === null && chapterKey === null ? <Notice message={STR.pbChapterMissing} tone="warn" /> : null}
@@ -73,7 +77,13 @@ function BookPane({
       ) : null}
       {b.chapterKey ? (
         <View style={{ marginTop: space(2) }}>
-          {b.childText ? <Markdown source={b.childText} images /> : <Notice message={STR.pbNoText} tone="warn" />}
+          {hasPdf ? (
+            <BookPdfPages pdfId={b.pdf!.pdfId} fromPage={b.pdf!.fromPage!} toPage={b.pdf!.toPage!} pageAspect={b.pdf!.pageAspect} />
+          ) : b.childText ? (
+            <Markdown source={bookHtmlToMarkdown(b.childText)} images />
+          ) : (
+            <Notice message={STR.pbNoText} tone="warn" />
+          )}
           {b.teacherNote && !b.anchorMissing ? (
             <View style={styles.fold}>
               <Pressable onPress={() => setNoteOpen((o) => !o)} accessibilityRole="button" style={styles.foldHead}>
@@ -84,7 +94,7 @@ function BookPane({
               </Pressable>
               {noteOpen ? (
                 <View style={styles.foldBody}>
-                  <Markdown source={b.teacherNote} images />
+                  <Markdown source={bookHtmlToMarkdown(b.teacherNote)} images />
                 </View>
               ) : null}
             </View>

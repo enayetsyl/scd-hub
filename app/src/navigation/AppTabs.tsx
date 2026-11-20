@@ -203,6 +203,9 @@ import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
 import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
 import VivaResultsScreen from "../screens/viva/VivaResultsScreen";
 import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
+import BookPdfShelfScreen from "../screens/classbooks/BookPdfShelfScreen";
+import BookPdfReaderScreen from "../screens/classbooks/BookPdfReaderScreen";
+import BookPdfAdminScreen from "../screens/classbooks/BookPdfAdminScreen";
 import WinterBookletsScreen from "../screens/winterTask/WinterBookletsScreen";
 import WinterBookletScreen from "../screens/winterTask/WinterBookletScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
@@ -2067,6 +2070,9 @@ function ClassBooksNavigator(): React.ReactElement {
     <ClassBooksStack.Navigator screenOptions={stackOptions}>
       <ClassBooksStack.Screen name="ClassBooks" component={ClassBooksScreen} options={{ title: STR.cbTitle }} />
       <ClassBooksStack.Screen name="ClassBookReader" component={ClassBookReaderScreen} options={{ title: STR.cbTitle }} />
+      <ClassBooksStack.Screen name="BookPdfShelf" component={BookPdfShelfScreen} options={{ title: STR.bpdShelfTitle }} />
+      <ClassBooksStack.Screen name="BookPdfReader" component={BookPdfReaderScreen} options={{ title: STR.bpdShelfTitle }} />
+      <ClassBooksStack.Screen name="BookPdfAdmin" component={BookPdfAdminScreen} options={{ title: STR.bpdAdminTitle }} />
     </ClassBooksStack.Navigator>
   );
 }
