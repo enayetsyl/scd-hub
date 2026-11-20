@@ -38,6 +38,9 @@ const DELIBERATE_FAULTS = new Set([
   // outage. One that ESCAPES to a resolver is a caller bug, so it should page, and its
   // English technical message must stay masked from the teacher.
   "AiProviderError",
+  // A Gemini transcription call that failed (voice-note transcripts, D-#1662): the service
+  // catches it and stores QUOTA / FAILED on the clip. One that ESCAPES is a bug and should page.
+  "TranscriptHttpError",
 ]);
 
 function findErrorClasses(): Map<string, string> {

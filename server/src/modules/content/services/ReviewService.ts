@@ -21,6 +21,7 @@ import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitReviewAssigned } from "../../notifications/services/emitters";
 import { attachDraftVoiceNotes, countReviewVoiceNotes } from "./ReviewVoiceNoteService";
+import { queueVoiceTranscripts } from "./ReviewVoiceTranscriptService";
 
 /** Raised for review-loop rule violations (mapped to a 4xx-ish error by the resolver). */
 export class ReviewError extends Error {
@@ -430,6 +431,8 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
 
   // The reviewer's draft voice clips become part of the review (VN-1, D-#1658).
   const voiceNotes = await attachDraftVoiceNotes(input.assignmentId, input.reviewerId);
+  // VN-T1 (D-#1662): queue the automatic transcripts — background, never blocks or fails the submit.
+  if (voiceNotes > 0) await queueVoiceTranscripts(input.assignmentId, input.reviewerId);
 
   // Sync the quality gate to the current verdict, both directions (D-#38 + R4 resubmit):
   // APPROVE drives draft→reviewed; a resubmitted CHANGES_REQUESTED reverts reviewed→draft.

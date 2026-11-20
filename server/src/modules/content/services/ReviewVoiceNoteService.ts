@@ -2,7 +2,7 @@
  * ReviewVoiceNoteService — voice notes on a review round (VN-1, D-#1658).
  *
  * A reviewer records short clips (up to 90 s each, up to 10 per round) instead of typing; each may
- * carry a "spot" tag. AUDIO ONLY (owner 2026-11-20). Clips are saved the moment they are recorded,
+ * carry a "spot" tag. AUDIO is the source of truth (an automatic transcript follows, VN-T1, D-#1662). Clips are saved the moment they are recorded,
  * as DRAFTS, so an app restart or dropped connection before Submit loses nothing; submitting the
  * verdict makes them part of the review.
  *
@@ -118,6 +118,10 @@ export interface ReviewVoiceNoteDTO {
   spot: string | null;
   /** True once the review was submitted; false = a private draft. */
   submitted: boolean;
+  /** VN-T1: the automatic transcript — only ever set once DONE; null otherwise. Same row-scope as the clip. */
+  transcript: string | null;
+  /** PENDING | DONE | FAILED | QUOTA | NO_KEY | OFF; null before the clip is sent. */
+  transcriptStatus: string | null;
   createdAt: string;
 }
 
@@ -130,6 +134,8 @@ export function toVoiceNoteDTO(d: IReviewVoiceNote): ReviewVoiceNoteDTO {
     seconds: d.seconds,
     spot: d.spot ?? null,
     submitted: !!d.submitted,
+    transcript: d.transcriptStatus === "DONE" ? d.transcript ?? "" : null,
+    transcriptStatus: d.transcriptStatus ?? null,
     createdAt: (d.createdAt ?? new Date()).toISOString(),
   };
 }
