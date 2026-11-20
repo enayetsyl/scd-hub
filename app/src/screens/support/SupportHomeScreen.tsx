@@ -63,7 +63,7 @@ export default function SupportHomeScreen({ navigation }: Props): React.ReactEle
   });
   const [, setSwitch] = useMutation(SET_SUPPORT_SWITCH);
   const [, choose] = useMutation(RECORD_APPROVAL_LOAD_CHOICE);
-  const on = setting.data?.supportProfileSetting.switchedOn;
+  const on = setting.data?.supportProfileSetting?.switchedOn;
   let ld: Load | null = null;
   try {
     ld = load.data?.supportApprovalLoadJson ? (JSON.parse(load.data.supportApprovalLoadJson) as Load) : null;

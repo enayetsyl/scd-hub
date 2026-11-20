@@ -19,7 +19,7 @@ export default function LessonPlanQuestionSwitchCard(): React.ReactElement {
   const [saveMut, save] = useMutation(SET_LESSON_PLAN_QUESTION_ON);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
-  const on = q.data?.lessonPlanQuestionSetting.on ?? false;
+  const on = q.data?.lessonPlanQuestionSetting?.on ?? false;
 
   async function flip(): Promise<void> {
     setError(null);
@@ -28,7 +28,7 @@ export default function LessonPlanQuestionSwitchCard(): React.ReactElement {
       setError(friendlyError(res.error));
       return;
     }
-    toast.show(res.data?.setLessonPlanQuestionOn.on ? STR.lpQuestionSavedOn : STR.lpQuestionSavedOff, "ok");
+    toast.show(res.data?.setLessonPlanQuestionOn?.on ? STR.lpQuestionSavedOn : STR.lpQuestionSavedOff, "ok");
     refetch({ requestPolicy: "network-only" });
   }
 

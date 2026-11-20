@@ -36,7 +36,7 @@ export function SupportSeedPrompt({ commentId }: { commentId: string | null }): 
   const choose = async (choice: "NOW" | "LATER" | "NO") => {
     const r = await answer({ commentId, choice });
     setOffer(null);
-    const draft = r.data?.answerSupportSeed.draft;
+    const draft = r.data?.answerSupportSeed?.draft;
     if (choice === "NOW" && draft) {
       const parent = nav.getParent() as unknown as { navigate: (n: string, p: unknown) => void } | undefined;
       (parent ?? (nav as unknown as { navigate: (n: string, p: unknown) => void })).navigate("HomeTab", { screen: "SupportReportForm", params: { studentId: draft.studentId, reportId: draft.id } });

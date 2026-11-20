@@ -77,7 +77,7 @@ export default function BookLcAiEditScreen({ navigation, route }: Props): React.
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useMsg();
 
-  const rows = fq.data?.bookLcFeedbackPage.rows ?? [];
+  const rows = fq.data?.bookLcFeedbackPage?.rows ?? [];
   const openPicked = rows.filter((f) => items.includes(f.code) && f.status === "open");
   // "সব অধ্যায়" is sent as "*" (the server expands it to every chapter); none = auto.
   const input = (confirmLarge = false): BlJobInputT => ({ feedback: items, instructions: instr, scopeChapterKeys: allChapters ? ["*"] : [], model, reasoning: "low", capUsd: Number(cap) || 3, confirmLarge });
@@ -204,7 +204,7 @@ export default function BookLcAiEditScreen({ navigation, route }: Props): React.
       ) : null}
 
       <SectionTitle>{BL.pastJobs}</SectionTitle>
-      {(lq.data?.bookLcEditJobsPage.rows ?? []).map((j) => (
+      {(lq.data?.bookLcEditJobsPage?.rows ?? []).map((j) => (
         <View key={j.id} style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center", marginBottom: space(1) }}>
           <Badge text={statusBn(j.status)} tone={tone(j.status)} />
           <Muted>
@@ -213,7 +213,7 @@ export default function BookLcAiEditScreen({ navigation, route }: Props): React.
           <Button title={BL.open} variant="ghost" onPress={() => setJobId(j.id)} />
         </View>
       ))}
-      <Pager page={page} pageSize={10} total={lq.data?.bookLcEditJobsPage.total ?? 0} onPage={setPage} />
+      <Pager page={page} pageSize={10} total={lq.data?.bookLcEditJobsPage?.total ?? 0} onPage={setPage} />
     </Screen>
   );
 }

@@ -263,7 +263,7 @@ function BandsTab({ setMsg }: { setMsg: (m: Msg) => void }): React.ReactElement 
 /** SB-2 (W8): the usual student rule (LibraryPolicy STUDENT) and dated holiday rules. */
 function StudentPolicyCard({ setMsg }: { setMsg: (m: Msg) => void }): React.ReactElement {
   const [q] = useQuery({ query: LIBRARY_POLICIES_QUERY });
-  const p = q.data?.libraryPolicies.find((x) => x.borrowerType === "STUDENT");
+  const p = q.data?.libraryPolicies?.find((x) => x.borrowerType === "STUDENT");
   const [{ fetching }, upsert] = useMutation(UPSERT_LIBRARY_POLICY);
   const [vals, setVals] = useState<Record<string, string> | null>(null);
   const v = vals ?? (p ? { max: String(p.maxConcurrent), days: String(p.loanDays), renew: String(p.maxRenewals), hold: String(p.holdDays) } : null);

@@ -52,8 +52,8 @@ export default function BookLcListScreen({ navigation }: Props): React.ReactElem
           <Chip key={s} label={LIST_STATUS_LABEL(s)} selected={status === s} onPress={() => (setStatus(s), setPage(1))} />
         ))}
       </ChipRow>
-      <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })} isEmpty={!data?.rows.length} empty={<EmptyState message={BL.noBooks} />}>
-        {data?.rows.map((b) => (
+      <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })} isEmpty={!data?.rows?.length} empty={<EmptyState message={BL.noBooks} />}>
+        {data?.rows?.map((b) => (
           <Card key={b.id} onPress={() => navigation.navigate("BookLcBook", { bookId: b.id })} style={{ marginTop: space(3) }}>
             <Body style={{ fontWeight: "700" }}>
               {b.titleBn} · {b.code}

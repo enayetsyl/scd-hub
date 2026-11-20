@@ -20,12 +20,14 @@ import * as Application from "expo-application";
 import * as Notifications from "expo-notifications";
 import { REGISTER_PUSH_DEVICE, UNREGISTER_PUSH_DEVICE } from "../graphql/operations";
 import { captureAppError } from "../observability/sentry";
+import { countFailure } from "../observability/dailyCounts";
 
 /** The token this device registered this session — what logout unregisters. */
 let registeredToken: string | null = null;
 
 export async function registerPushToken(client: Client): Promise<void> {
   if (Platform.OS === "web") return; // no Expo push on web
+  let tokenStage: "setup" | "fetch" | "register" = "setup";
   try {
     if (!Device.isDevice) return; // emulators don't receive a push token
 
@@ -49,9 +51,11 @@ export async function registerPushToken(client: Client): Promise<void> {
     const projectId =
       (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
         ?.projectId ?? Constants.easConfig?.projectId;
+    tokenStage = "fetch";
     const tokenResp = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined,
     );
+    tokenStage = "register";
     const token = tokenResp.data;
     if (!token) return;
 
@@ -72,7 +76,11 @@ export async function registerPushToken(client: Client): Promise<void> {
     // maintainer once per phone per session for a failure that is already explained.
     // Only a build that should work is worth hearing about.
     const expectedToWork = Platform.OS !== "android" || Number(Application.nativeBuildVersion ?? 0) >= FIRST_FCM_BUILD;
-    if (!reportedFailure && expectedToWork) {
+    if (tokenStage === "fetch") {
+      // D-#1657: "Fetching the token failed" / "Error encountered while fetching Expo token"
+      // are device-side and far too frequent for one event each — fold into the daily count.
+      if (expectedToWork) countFailure("push-token");
+    } else if (!reportedFailure && expectedToWork) {
       reportedFailure = true;
       captureAppError(
         err,

@@ -154,7 +154,7 @@ function CopiesCard({ seriesId, onDone }: { seriesId: string; onDone: (m: Msg) =
   const make = async (): Promise<void> => {
     const res = await add({ seriesId, copiesEach: each });
     if (res.error) return onDone({ tone: "danger", text: friendlyError(res.error) });
-    const n = res.data?.addStoryCopies.length ?? 0;
+    const n = res.data?.addStoryCopies?.length ?? 0;
     onDone({ tone: "ok", text: n > 0 ? STR.stbCopiesMade.replace("{n}", bnNum(n)) : STR.stbCopiesNone });
   };
   return (
@@ -300,8 +300,8 @@ export default function StorySeriesScreen({ route, navigation }: Props): React.R
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
 
-  const series = q.data?.storySeries.series;
-  const books = useMemo(() => q.data?.storySeries.books ?? [], [q.data]);
+  const series = q.data?.storySeries?.series;
+  const books = useMemo(() => q.data?.storySeries?.books ?? [], [q.data]);
   const changed = (m: Msg): void => {
     setMsg(m);
     reload();

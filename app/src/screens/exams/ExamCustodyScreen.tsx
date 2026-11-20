@@ -58,8 +58,8 @@ export default function ExamCustodyScreen({ route }: Props): React.ReactElement 
     query: EXAM_CUSTODY_EVENTS_PAGE_QUERY,
     variables: { examId, paperId: paperId ?? null, page, pageSize: PAGE_SIZE },
   });
-  const events = eventsQ.data?.examCustodyEventsPage.rows ?? [];
-  const eventsTotal = eventsQ.data?.examCustodyEventsPage.total ?? 0;
+  const events = eventsQ.data?.examCustodyEventsPage?.rows ?? [];
+  const eventsTotal = eventsQ.data?.examCustodyEventsPage?.total ?? 0;
 
   const [balanceQ, refetchBalance] = useQuery({
     query: EXAM_CUSTODY_BALANCE_QUERY,

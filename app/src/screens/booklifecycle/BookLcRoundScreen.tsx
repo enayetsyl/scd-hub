@@ -102,8 +102,8 @@ export default function BookLcRoundScreen({ route }: Props): React.ReactElement 
     }
   };
 
-  const feedback = fq.data?.bookLcFeedbackPage.rows ?? [];
-  const decisions = dq.data?.bookLcDecisionsPage.rows ?? [];
+  const feedback = fq.data?.bookLcFeedbackPage?.rows ?? [];
+  const decisions = dq.data?.bookLcDecisionsPage?.rows ?? [];
   const asked = useMemo(() => (r ? feedback.filter((f) => r.feedbackIds.includes(f.id)) : []), [r, feedback]);
   const askedD = useMemo(() => (r ? decisions.filter((d) => r.decisionIds.includes(d.id)) : []), [r, decisions]);
   const offerable = feedback.filter((f) => f.status === "with_reviewer");

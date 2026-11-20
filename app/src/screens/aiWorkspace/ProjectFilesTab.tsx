@@ -90,7 +90,7 @@ export function ProjectFilesTab({ project, onViewText, onChanged }: { project: A
   const [uploading, setUploading] = React.useState(false);
   const canEdit = project.myRole !== "viewer";
   const data = q.data?.aiProjectFilesPage;
-  const processing = !!data?.rows.some((r) => r.status === "processing");
+  const processing = !!data?.rows?.some((r) => r.status === "processing");
 
   const refresh = React.useCallback(() => {
     refetch({ requestPolicy: "network-only" });
@@ -128,7 +128,7 @@ export function ProjectFilesTab({ project, onViewText, onChanged }: { project: A
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.awFilesNone}</Muted> : null}
-      {data?.rows.map((f) => (
+      {data?.rows?.map((f) => (
         <FileCard key={f.id} f={f} canEdit={canEdit} onViewText={() => onViewText(f.id)} onChanged={refresh} />
       ))}
       {data ? <Pager page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}

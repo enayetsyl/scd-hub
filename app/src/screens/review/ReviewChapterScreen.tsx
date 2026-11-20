@@ -38,7 +38,7 @@ export default function ReviewChapterScreen({ navigation, route }: Props): React
     }, [refetch]),
   );
 
-  const book = q.data?.myReviewPath.books.find((b) => b.key === bookKey) ?? null;
+  const book = q.data?.myReviewPath?.books.find((b) => b.key === bookKey) ?? null;
   const chapter = book?.chapters.find((c) => c.key === chapterKey) ?? null;
   const nextItem = useMemo(() => chapter?.items.find((i) => i.left > 0) ?? null, [chapter]);
 
