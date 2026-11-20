@@ -99,6 +99,8 @@ const dedupeKeys = {
   questionReviewAssigned: (reviewerId: string, stamp: string) => `QREV:${reviewerId}:${stamp}`,
   /** Per substitution: one notification per recorded cover. */
   coverAssigned: (substitutionId: string) => `COV:${substitutionId}`,
+  /** Exam sitting duty (D-#1660): per duty row + its revision + RECIPIENT — a swap tells the new AND the old teacher, and A→B→A tells A again. */
+  examDuty: (dutyId: string, rev: number, recipientUserId: string, what: string) => `EXDUTY:${dutyId}:${rev}:${recipientUserId}:${what}`,
   /** One delivered-notice per print job (PQ-5, D-#281). */
   printDelivered: (printRequestId: string) => `PRD:${printRequestId}`,
   /** One new-request notice per print job per operator (D-#296). */
@@ -2609,6 +2611,45 @@ export async function emitStaffMistakeDaily(ev: {
       bodyBn: ev.bodyBn,
       refs: { date: ev.dateKey },
       dedupeKey: dedupeKeys.staffMistakeDaily(ev.dateKey, ev.recipientUserId.toString()),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// D-#1660 — exam sitting duty: the teacher is TOLD when put on, moved, or taken off a sitting.
+// SCHOOL_NOTICE (no new kind — vocab is a contract file); the tap opens "আমার পরীক্ষার ডিউটি".
+// ---------------------------------------------------------------------------
+
+export const EXAM_DUTY_TARGET = "SyllabusTab/MyExamDuty";
+
+export interface ExamDutyEvent {
+  dutyId: IdLike;
+  rev: number;
+  recipientUserId: IdLike;
+  /** ASSIGNED = new duty, CHANGED = room changed, REMOVED = taken off. */
+  what: "ASSIGNED" | "CHANGED" | "REMOVED";
+  dateKey: string;
+  subject: string;
+  classLabelBn: string;
+  start: string;
+  end: string;
+  room: string;
+}
+
+export async function emitExamDuty(ev: ExamDutyEvent): Promise<void> {
+  return bestEffort("exam duty", async () => {
+    const [y, m, d] = ev.dateKey.split("-");
+    const when = `${bnNum(`${d}/${m}/${y}`)}${ev.start ? `, ${bnNum(ev.start)}–${bnNum(ev.end)}` : ""}`;
+    const what = `${ev.classLabelBn}, ${subjectLabel(ev.subject)}${ev.room ? `, কক্ষ ${ev.room}` : ""}`;
+    const titleBn =
+      ev.what === "ASSIGNED" ? "আপনাকে পরীক্ষার ডিউটি দেওয়া হয়েছে" : ev.what === "CHANGED" ? "পরীক্ষার ডিউটি বদলেছে" : "পরীক্ষার ডিউটি থেকে বাদ দেওয়া হয়েছে";
+    await emit({
+      recipientUserId: ev.recipientUserId.toString(),
+      kind: "SCHOOL_NOTICE",
+      titleBn,
+      bodyBn: `${when} — ${what}।`,
+      refs: { screenTarget: EXAM_DUTY_TARGET, date: ev.dateKey },
+      dedupeKey: dedupeKeys.examDuty(ev.dutyId.toString(), ev.rev, ev.recipientUserId.toString(), ev.what),
     });
   });
 }

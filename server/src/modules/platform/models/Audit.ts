@@ -427,6 +427,9 @@ export type AuditEventKind =
   | "VIVA_SET_DRAWN"              // a child's oral question set drawn at the examiner's tap (D-#1276) — meta.studentId/setKey/counts
   | "EXAM_ROUTINE_SAVED"          // one class's exam routine saved (D-#883) — meta.classId/slots
   | "EXAM_ROUTINE_PUBLISHED"      // the exam routine published or withdrawn (D-#883) — meta.published
+  | "EXAM_SITTING_DUTY_ASSIGNED"          // a teacher put on an exam sitting (D-#1660) — meta.examId/classId/dateKey/subject/kind/seat/teacherId
+  | "EXAM_SITTING_DUTY_CHANGED"           // the teacher on a sitting swapped (D-#1660) — meta as above + fromTeacherId/reason
+  | "EXAM_SITTING_DUTY_CLEARED"           // a duty removed (D-#1660) — meta as above + fromTeacherId/reason
   | "GUARDIAN_FEATURE_SET"        // a guardian feature switched on/off for all or one guardian (D-#1011) — meta.feature/onForAll/guardianId/on
   // Exams (docs/prd-exams.md, D-#375–#382). The custody rows are the point: the paper
   // sheets carry names and signatures but no counts and no issue/return record, so

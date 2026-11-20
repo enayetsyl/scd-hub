@@ -323,6 +323,8 @@ import SyllabusApprovalsScreen from "../screens/syllabus/SyllabusApprovalsScreen
 import SyllabusClassNoteScreen from "../screens/syllabus/SyllabusClassNoteScreen";
 import ExamRoutineScreen from "../screens/syllabus/ExamRoutineScreen";
 import ExamRoutineEditScreen from "../screens/syllabus/ExamRoutineEditScreen";
+import ExamDutyRosterScreen from "../screens/syllabus/ExamDutyRosterScreen";
+import MyExamDutyScreen from "../screens/syllabus/MyExamDutyScreen";
 import SyllabusExamsScreen from "../screens/syllabus/SyllabusExamsScreen";
 import ChildSyllabusScreen from "../screens/guardian/ChildSyllabusScreen";
 import ChildExamRoutineScreen from "../screens/guardian/ChildExamRoutineScreen";
@@ -1458,6 +1460,8 @@ function SyllabusNavigator(): React.ReactElement {
       />
       <SyllabusStack.Screen name="ExamRoutine" component={ExamRoutineScreen} options={{ title: STR.exrNav }} />
       <SyllabusStack.Screen name="ExamRoutineEdit" component={ExamRoutineEditScreen} options={{ title: STR.exrEdit }} />
+      <SyllabusStack.Screen name="ExamDutyRoster" component={ExamDutyRosterScreen} options={{ title: STR.edNav }} />
+      <SyllabusStack.Screen name="MyExamDuty" component={MyExamDutyScreen} options={{ title: STR.edMyNav }} />
     </SyllabusStack.Navigator>
   );
 }

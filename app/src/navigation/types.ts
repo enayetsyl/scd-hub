@@ -656,6 +656,9 @@ export type SyllabusStackParamList = {
   /** D-#883: the exam routine, read beside the syllabus. */
   ExamRoutine: undefined;
   ExamRoutineEdit: { examId: string };
+  /** D-#1660: the Office exam duty roster and a teacher's own duties. */
+  ExamDutyRoster: undefined;
+  MyExamDuty: undefined;
 };
 
 export type GuardianSyllabusStackParamList = {
