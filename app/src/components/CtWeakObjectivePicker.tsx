@@ -32,7 +32,9 @@ export function locativeBn(word: string): string {
 /** Whether the picker would show for this test — the screen uses it to send the field at all. */
 export function useCtWeakLoAvailable(testId: string, pause = false): boolean {
   const [q] = useQuery({ query: CT_WEAK_LO_OPTIONS_QUERY, variables: { testId }, pause });
-  return !!q.data?.classTestWeakObjectiveOptions.available;
+  // The field is null when the query errors (e.g. no class_test:enter_results or no read scope on the
+  // test) — urql then hands back { classTestWeakObjectiveOptions: null } (GlitchTip #79/#80).
+  return !!q.data?.classTestWeakObjectiveOptions?.available;
 }
 
 type Group = { key: string; title: string; rows: CtWeakLoOptionT[] };
