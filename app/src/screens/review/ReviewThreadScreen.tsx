@@ -55,6 +55,8 @@ import {
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
+import { PLAN_DOC_TYPES } from "@scd/shared";
+import PlanBookTabs from "../../components/PlanBookTabs";
 type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewThread">;
 
 function RoundCard({ r }: { r: ReviewAssignmentT }): React.ReactElement {
@@ -173,6 +175,8 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
     refresh();
   }
 
+  // "পরিকল্পনা | বই" tabs only for people who may read the book (lesson_plans:read_book).
+  const showBook = can("lesson_plans:read_book") && !!artifact && (PLAN_DOC_TYPES as readonly string[]).includes(artifact.docType);
   if (fetching) return <Loader label={STR.loading} />;
   if (error) {
     return (
@@ -192,8 +196,8 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
   // anyway with a documented reason.
   const canOverride = !!artifact && !isReviewed && !isGold;
 
-  return (
-    <Screen scroll>
+  const planBody = (
+    <>
       <H1>{title}</H1>
       {artifact ? (
         <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1) }}>
@@ -278,6 +282,13 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
           />
         </Card>
       ) : null}
+    </>
+  );
+  return showBook ? (
+    <Screen>
+      <PlanBookTabs artifactId={artifactId}>{planBody}</PlanBookTabs>
     </Screen>
+  ) : (
+    <Screen scroll>{planBody}</Screen>
   );
 }

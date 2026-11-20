@@ -33,7 +33,7 @@ export async function lcEvent(p: {
   }
 }
 
-export type ContentSurface = "app" | "mcp" | "bundle" | "packet";
+export type ContentSurface = "app" | "mcp" | "bundle" | "packet" | "plan";
 
 /** One CONTENT_READ per (user, version, surface) per Dhaka day — the unique dedupeKey makes a
  *  repeat a silent no-op, so a read storm writes one row. */

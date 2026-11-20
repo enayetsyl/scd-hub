@@ -966,8 +966,12 @@ const ROLE_CHECK_DEFAULTS = {
     "exam_custody:view", "exam_custody:hand_over", "exam_custody:acknowledge",
     // Student support profile (D-#1547/#1548): a current teacher reads the card and writes reports.
     // Narrowed per child by currentSupportReaders (§8.2); Office never holds these.
-    "support_profile:view", "support_profile:report"],
+    "support_profile:view", "support_profile:report",
+    // Plan beside the book (PB-1, D-#1653): everyone who can open a plan reads the matching book chapter.
+    "lesson_plans:read_book"],
   OFFICE: ["homework:view_all", "homework:undo_any",
+    // Plan beside the book (PB-1, D-#1653): the Office reads the book chapter beside a plan too.
+    "lesson_plans:read_book",
     // AI Assist rules (AI-3, D-#1093): the Office reads the active standard too.
     "ai_assist:read_rules",
     // AI comment checker (AI-5, D-#1095): the Office writes comments too.
