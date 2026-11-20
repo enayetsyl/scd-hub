@@ -1769,6 +1769,10 @@ function AdminNavigator(): React.ReactElement {
   return (
     <AdminStack.Navigator screenOptions={stackOptions}>
       <AdminStack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: STR.admin }} />
+      <AdminStack.Screen name="AdminPeople" component={AdminHomeScreen} options={{ title: STR.admGPeople }} />
+      <AdminStack.Screen name="AdminClasses" component={AdminHomeScreen} options={{ title: STR.admGClass }} />
+      <AdminStack.Screen name="AdminYear" component={AdminHomeScreen} options={{ title: STR.admGYear }} />
+      <AdminStack.Screen name="AdminWatch" component={AdminHomeScreen} options={{ title: STR.admGWatch }} />
       <AdminStack.Screen name="Import" component={ImportScreen} options={{ title: STR.importContent }} />
       <AdminStack.Screen name="UserList" component={UserListScreen} options={{ title: STR.users }} />
       <AdminStack.Screen name="ScopeGrant" component={ScopeGrantScreen} options={{ title: STR.scopeGrants }} />
@@ -2336,7 +2340,7 @@ export function AppTabs(): React.ReactElement {
     "teaching_assignments:assign_subject_teacher", "teaching_assignments:assign_supervisor",
     "cover:assign_proxy", "staff_records:view", "guardians:reset_password", "guardians:link",
     "message_templates:view", "access_control:edit", "audit_log:view", "audit_log:view_activity",
-    "system_health:view", "routine:settings",
+    "system_health:view", "routine:settings", "routine:edit_calendar",
   ); // D-#861: the ranking, guardian-claims and guardian-usage cards moved to the Reports tab.
   // Support-book production: gated on the caller's EFFECTIVE permissions, never the
   // role template — `book:*` sits only on the PRINCIPAL template and every
