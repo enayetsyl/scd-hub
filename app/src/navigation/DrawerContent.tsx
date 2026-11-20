@@ -24,6 +24,7 @@ import { SUPPORT_ENABLED } from "../graphql/supportProfile";
 import type { Role } from "@scd/shared";
 
 import { STR } from "../lib/labels";
+import { useMasteryLevelLabels } from "../lib/useMasteryLevelLabels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
 import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS } from "../graphql/classTest";
@@ -575,6 +576,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const basket = useBasket();
   const { role, can, viewAs } = useAuth();
   const lessonProgressOn = useLessonProgressOn();
+  // The mastery catalogue row names the objective level, which পলিসি can rename (D-#923).
+  const msLevels = useMasteryLevelLabels(!can("mastery:view"));
+  const leafLabel = React.useCallback((l: NavLeaf): string => STR[l.labelKey].replace("{level}", msLevels.objective), [msLevels.objective]);
   const supportAny = can("support_profile:report") || can("support_profile:view_all") || can("safeguarding:receive");
   const [supportQ] = useQuery<{ supportProfileEnabled: boolean }>({ query: SUPPORT_ENABLED, pause: !supportAny, requestPolicy: "cache-and-network" });
   const supportOn = supportQ.data?.supportProfileEnabled === true;
@@ -933,7 +937,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
           }}
           numberOfLines={1}
         >
-          {STR[leaf.labelKey]}
+          {leafLabel(leaf)}
         </Text>
         {badge !== undefined ? (
           <View
@@ -1078,6 +1082,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
           sections={arrangeSections(draft.mode, draft.order)}
           favourites={pinnedLeaves(draft.pinned)}
           visibleLeaf={visibleLeaf}
+          leafLabel={leafLabel}
           busy={navBusy}
           error={navError}
           onSave={() => void finishArrange("save")}
@@ -1122,6 +1127,7 @@ function ArrangePanel({
   sections,
   favourites,
   visibleLeaf,
+  leafLabel,
   busy,
   error,
   onSave,
@@ -1133,6 +1139,7 @@ function ArrangePanel({
   sections: NavSection[];
   favourites: NavLeaf[];
   visibleLeaf: (l: NavLeaf) => boolean;
+  leafLabel: (l: NavLeaf) => string;
   busy: boolean;
   error: string | null;
   onSave: () => void;
@@ -1264,7 +1271,7 @@ function ArrangePanel({
         <Text style={{ ...typeScale.caption, color: colors.textSecondary }}>{STR.navNoFavourites}</Text>
       ) : (
         favourites.map((l, i) => (
-          <Row key={`fav:${leafKey(l)}`} icon={l.icon} title={STR[l.labelKey]}>
+          <Row key={`fav:${leafKey(l)}`} icon={l.icon} title={leafLabel(l)}>
             <IconBtn
               glyph="↑"
               label={STR.navMoveUp}
@@ -1314,7 +1321,7 @@ function ArrangePanel({
               {arrows}
             </Row>
             {dedupeByLabel(s.items.filter(visibleLeaf)).map((l) => (
-              <Row key={leafKey(l)} icon={l.icon} title={STR[l.labelKey]} indent>
+              <Row key={leafKey(l)} icon={l.icon} title={leafLabel(l)} indent>
                 <Star leaf={l} />
               </Row>
             ))}

@@ -7797,7 +7797,7 @@ const STR_BN = {
   msTitle: "শিখন-দক্ষতা",
   msDrawerGroup: "শিখন-দক্ষতা",
   msCatalogueHome: "তালিকা",
-  msCatalogueNav: "শিখনফল তালিকা",
+  msCatalogueNav: "{level} তালিকা", // {level} = the objective-level word from পলিসি (D-#923)
   msCatalogueTitle: "{objective} তালিকা",
   msTags: "নির্ণয়ের ট্যাগ",
   msPolicy: "পলিসি ও চালু/বন্ধ",
@@ -16797,7 +16797,7 @@ const STR_EN: StrTable = {
   msTitle: "Learning mastery",
   msDrawerGroup: "Learning mastery",
   msCatalogueHome: "Catalogue",
-  msCatalogueNav: "Outcome list",
+  msCatalogueNav: "{level} list",
   msCatalogueTitle: "{objective} list",
   msTags: "Diagnosis tags",
   msPolicy: "Policy & switch",

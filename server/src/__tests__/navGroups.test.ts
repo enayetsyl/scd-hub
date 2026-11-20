@@ -525,3 +525,14 @@ describe("migrateOrder: an order saved BEFORE the change keeps every new group a
     expect(idx(next, "g:navGOffice")).toBeLessThan(idx(next, "HelpTab:"));
   });
 });
+
+describe("the mastery catalogue row reads the level word from পলিসি (D-#923)", () => {
+  it("label holds {level}, never a fixed level word, and the drawer fills it from the hook", () => {
+    const rows = labels.split(/\r?\n/).filter((l) => /^\s+msCatalogueNav:/.test(l));
+    expect(rows).toHaveLength(2);
+    for (const r of rows) expect(r).toContain("{level}");
+    expect(drawer).toContain('useMasteryLevelLabels(!can("mastery:view"))');
+    expect(drawer).toContain('.replace("{level}", msLevels.objective)');
+    expect(drawer).not.toMatch(/STR\[(l|leaf)\.labelKey\]\}?\s*(\}|>|\n)/);
+  });
+});
