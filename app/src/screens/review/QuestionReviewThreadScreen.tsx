@@ -30,10 +30,11 @@ import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
+import { questionReviewNeighbours } from "../../lib/questionReviewNav";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewThread">;
 
-export default function QuestionReviewThreadScreen({ route }: Props): React.ReactElement {
+export default function QuestionReviewThreadScreen({ route, navigation }: Props): React.ReactElement {
   const colors = useColors();
   const { artifactId } = route.params;
   const { can, user } = useAuth();
@@ -121,8 +122,21 @@ export default function QuestionReviewThreadScreen({ route }: Props): React.Reac
 
   const myClips = mine?.voiceNotes ?? [];
 
+  // ‹ আগের / পরের › through the list this screen was opened from (owner 20 Nov 2026). `replace`, so
+  // Back still returns to the list in one tap and each question starts with a fresh decision card.
+  const nb = questionReviewNeighbours(artifactId);
+  const go = (id: string): void => navigation.replace("QuestionReviewThread", { artifactId: id });
+  const navRow = nb ? (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginVertical: space(2) }}>
+      <Button title={STR.qrPrevQuestion} variant="secondary" disabled={!nb.prev} onPress={() => nb.prev && go(nb.prev)} />
+      <Muted>{`${bnNum(nb.index + 1)} / ${bnNum(nb.total)}`}</Muted>
+      <Button title={STR.qrNextQuestion} variant="secondary" disabled={!nb.next} onPress={() => nb.next && go(nb.next)} />
+    </View>
+  ) : null;
+
   const body = (
     <>
+      {navRow}
       <H2>{STR.reviewThread}</H2>
       {first ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
@@ -235,6 +249,7 @@ export default function QuestionReviewThreadScreen({ route }: Props): React.Reac
           {saved ? <Notice message={STR.qrDecisionSaved} tone="ok" /> : null}
         </Card>
       ) : null}
+      {navRow}
     </>
   );
 
