@@ -142,6 +142,10 @@ ExamReportStatusRef.implement({
       description: "Office/Principal's share: submitted by the teacher, still unpublished past the deadline.",
     }),
     schoolDaysLate: t.exposeInt("schoolDaysLate"),
+    sentBack: t.exposeBoolean("sentBack", {
+      description: "F3 (D-#1659): Office/Principal sent the marks back and the teacher has not re-submitted yet.",
+    }),
+    sentBackReason: t.exposeString("sentBackReason", { nullable: true }),
   }),
 });
 

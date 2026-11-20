@@ -91,6 +91,7 @@ import { useColors } from "../../theme";
 import { radius, space, typeScale } from "../../theme/tokens";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { dateKey } from "../../lib/dates";
+import { sentBackBanner } from "../../lib/ctSentBack";
 
 const todayISO = (): string => dateKey();
 
@@ -633,13 +634,17 @@ export default function TodayScreen(): React.ReactElement {
               <AlertCard
                 key={r.testId}
                 icon="flask-conical"
-                tone={r.teacherOverdue ? "error" : "gold"}
-                title={`${STR.tdCtResultPending}: ${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}${
+                tone={r.teacherOverdue || r.sentBack ? "error" : "gold"}
+                title={`${r.sentBack ? STR.ctSentBackChip : STR.tdCtResultPending}: ${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}${
                   sectionName(r.sectionId) ? ` · ${sectionName(r.sectionId)}` : ""
                 }`}
-                sub={`${bnNum(dateKey(new Date(r.examDate)))} · ${STR.ctEntered} ${bnNum(r.enteredCount)}/${bnNum(r.rosterCount)}${
-                  r.teacherOverdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""
-                }`}
+                sub={
+                  r.sentBack
+                    ? sentBackBanner(`${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}`, r.sentBackReason)
+                    : `${bnNum(dateKey(new Date(r.examDate)))} · ${STR.ctEntered} ${bnNum(r.enteredCount)}/${bnNum(r.rosterCount)}${
+                        r.teacherOverdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""
+                      }`
+                }
                 onPress={() =>
                   nav.navigate("ClassTestTab", {
                     screen: "ClassTestResults",
