@@ -30,7 +30,7 @@ import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
-import { questionReviewNeighbours } from "../../lib/questionReviewNav";
+import { questionReviewNeighbours, loadQuestionReviewOrder } from "../../lib/questionReviewNav";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewThread">;
 
@@ -38,6 +38,17 @@ export default function QuestionReviewThreadScreen({ route, navigation }: Props)
   const colors = useColors();
   const { artifactId } = route.params;
   const { can, user } = useAuth();
+  // After a web reload the remembered list is read back from storage; re-render once it is there.
+  const [, setNavReady] = React.useState(false);
+  React.useEffect(() => {
+    let off = false;
+    void loadQuestionReviewOrder().then(() => {
+      if (!off) setNavReady(true);
+    });
+    return () => {
+      off = true;
+    };
+  }, []);
   const [{ data, fetching, error }, refetch] = useQuery({
     query: QUESTION_REVIEW_THREAD,
     variables: { artifactId },

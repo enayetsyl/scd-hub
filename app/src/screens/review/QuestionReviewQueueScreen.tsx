@@ -12,7 +12,7 @@
  * An already-decided round stays editable until it closes, so the card keeps its verdict
  * badge and the reviewer can change their mind.
  */
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { View, ScrollView, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -166,15 +166,32 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
     });
   }, [data?.myQuestionReviews]);
 
-  /** Forget every page and pull the first again — used on pull-to-refresh and on focus. */
+  /**
+   * Forget every page and pull the first again — used on pull-to-refresh and on focus.
+   *
+   * STABLE on purpose (owner bug 20 Nov 2026): urql's `refetch` changes identity whenever the
+   * variables change, so a reload that depended on it was a NEW callback after every "আরও দেখুন";
+   * useFocusEffect then re-ran it on the still-focused screen, which cleared the list, put the
+   * offset back to 0 and threw the reader to the top with the same first 50 rows. The refetches
+   * now run from an effect after the offset-0 render, through refs that always hold the current one.
+   */
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+  const refetchCountRef = useRef(refetchCount);
+  refetchCountRef.current = refetchCount;
+  const [reloadTick, setReloadTick] = useState(0);
   const reload = useCallback(() => {
     setRefreshing(true);
     setRows([]);
     setOffset(0);
     setLastPageSize(null);
-    refetch({ requestPolicy: "network-only" });
-    refetchCount({ requestPolicy: "network-only" });
-  }, [refetch, refetchCount]);
+    setReloadTick((t) => t + 1);
+  }, []);
+  useEffect(() => {
+    if (reloadTick === 0) return;
+    refetchRef.current({ requestPolicy: "network-only" });
+    refetchCountRef.current({ requestPolicy: "network-only" });
+  }, [reloadTick]);
 
   /**
    * Drop rounds that have just been decided, instead of re-pulling the list.
