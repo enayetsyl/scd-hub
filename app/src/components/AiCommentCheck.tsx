@@ -68,7 +68,10 @@ export function useAiCommentCheck(kind: CheckKindT): AiCommentCheck {
   const { can } = useAuth();
   const allowed = can("ai_assist:check_comment");
   const [q] = useQuery({ query: COMMENT_CHECK_AVAILABILITY, pause: !allowed, requestPolicy: "cache-and-network" });
-  const available = allowed && (kind === "DAILY" ? !!q.data?.commentCheckAvailability.daily : !!q.data?.commentCheckAvailability.ct);
+  // The field is null when the query errors (e.g. the server denies ai_assist:check_comment or the
+  // config lookup fails) — urql then hands back { commentCheckAvailability: null } (GlitchTip #84).
+  const avail = q.data?.commentCheckAvailability;
+  const available = allowed && (kind === "DAILY" ? !!avail?.daily : !!avail?.ct);
   const [, run] = useMutation(CHECK_COMMENT);
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<CommentCheckResultT | null>(null);
