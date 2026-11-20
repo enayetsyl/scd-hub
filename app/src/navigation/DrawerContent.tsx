@@ -431,16 +431,31 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "finSnapshotTitle", icon: "🧾", screen: "DailySnapshot", perms: REPORT_LEAF_ACTIONS.DailySnapshot },
       { route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
       { route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
+      // Owner 2026-11-20: the one প্রশাসন row became four, one per Admin-hub section. Each `perms` is exactly the
+      // actions behind that section's cards (AdminHomeScreen); canAdmin in AppTabs stays wider so moved leaves can mount the tab.
+      // routine:view is the routine card's second condition, not a way in.
       {
-        route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️",
-        // Exactly the actions behind the cards still on the Admin hub (AdminHomeScreen); canAdmin in AppTabs stays wider
-        // so the moved leaves can still mount the tab. routine:view is the card's second condition, not a way in.
+        route: "AdminTab", screen: "AdminPeople", labelKey: "admGPeople", icon: "🔐",
         perms: [
-          "staff_logins:view", "cover:assign_proxy", "teaching_assignments:assign_subject_teacher", "teaching_assignments:assign_supervisor",
-          "students:view_all", "students:edit", "teaching_assignments:assign_class_teacher", "teaching_assignments:assign_homework_checker",
-          "classes_sections:merge_split", "classes_sections:settings", "year_change:view", "routine:settings",
-          "guardians:reset_password", "guardians:link", "access_control:edit", "audit_log:view", "audit_log:view_activity", "system_health:view",
+          "staff_logins:view", "guardians:reset_password", "guardians:link", "access_control:edit",
+          "cover:assign_proxy", "teaching_assignments:assign_supervisor",
         ],
+      },
+      {
+        route: "AdminTab", screen: "AdminClasses", labelKey: "admGClass", icon: "🏫",
+        perms: [
+          "students:view_all", "students:edit", "teaching_assignments:assign_subject_teacher",
+          "teaching_assignments:assign_class_teacher", "teaching_assignments:assign_homework_checker",
+          "routine:settings", "classes_sections:merge_split",
+        ],
+      },
+      {
+        route: "AdminTab", screen: "AdminYear", labelKey: "admGYear", icon: "🗓️",
+        perms: ["classes_sections:settings", "year_change:view", "routine:edit_calendar"],
+      },
+      {
+        route: "AdminTab", screen: "AdminWatch", labelKey: "admGWatch", icon: "👁️",
+        perms: ["audit_log:view", "audit_log:view_activity", "system_health:view"],
       },
     ],
   },

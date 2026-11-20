@@ -10125,6 +10125,7 @@ const STR_BN = {
   gpMissedNoGuide: "এই পাঠের বাড়ির গাইড এখনও আসেনি। উপরের ক্লাস নোট দেখে পাঠটি একবার আলোচনা করুন।",
   // YC-5: the Principal's year-change screen
   admSubYearChange: "নতুন শিক্ষাবর্ষের প্রস্তুতি, উত্তরণ ও ফিরিয়ে নেওয়া",
+  admSubPause: "পরীক্ষা বা দীর্ঘ বিরতিতে কোন কাজের তাগাদা বন্ধ থাকবে",
   ycTitle: "শিক্ষাবর্ষ পরিবর্তন",
   ycIntro: "তিন ধাপ: ১) প্রস্তুতি (নতুন বছরের শ্রেণি, শাখা, তালিকা), ২) উত্তরণ (চলতি বছর বদলানো), ৩) ফিরিয়ে নেওয়া। প্রতিটি ধাপে আগে ড্রাই রান দেখা যায় — তখন কিছুই লেখা হয় না।",
   ycStep1: "১ প্রস্তুতি",
@@ -19133,6 +19134,7 @@ const STR_EN: StrTable = {
   gpMissedNoGuide: "The home guide for this lesson has not arrived yet. Read the class note above and go over the lesson once.",
   // YC-5: the Principal's year-change screen
   admSubYearChange: "Prepare, cut over to, or undo the new academic year",
+  admSubPause: "Which reminders stop during exams or long breaks",
   ycTitle: "Year change",
   ycIntro: "Three steps: 1) Prepare (next year's classes, sections, lists), 2) Cut over (switch the current year), 3) Undo. Every step shows a dry run first - nothing is written then.",
   ycStep1: "1 Prepare",

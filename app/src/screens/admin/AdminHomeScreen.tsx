@@ -11,16 +11,30 @@
  */
 import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { AdminStackParamList } from "../../navigation/types";
+import { useNavigation } from "@react-navigation/native";
+import type { NavigationProp } from "@react-navigation/native";
+import type { AdminStackParamList, TabParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Notice } from "../../components/ui";
 import { space } from "../../theme/tokens";
 import { STR } from "../../lib/labels";
 import { useAuth } from "../../auth/AuthContext";
 
-type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
+type Props = NativeStackScreenProps<
+  AdminStackParamList,
+  "AdminHome" | "AdminPeople" | "AdminClasses" | "AdminYear" | "AdminWatch"
+>;
 
-export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
+/**
+ * Owner 2026-11-20: the sidebar has one row per section; each opens this screen filtered to that
+ * section (AdminPeople ① / AdminClasses ② / AdminYear ③ / AdminWatch ④). AdminHome shows all four.
+ */
+export default function AdminHomeScreen({ navigation, route }: Props): React.ReactElement {
   const { can } = useAuth();
+  const rootNav = useNavigation<NavigationProp<TabParamList>>();
+  const only = route.name;
+  const inSection = (name: "AdminPeople" | "AdminClasses" | "AdminYear" | "AdminWatch"): boolean =>
+    only === "AdminHome" || only === name;
+  const heading = only === "AdminHome";
   const canStaffLogins = can("staff_logins:view");
   const canProxy = can("cover:assign_proxy");
   const canAssignSubject = can("teaching_assignments:assign_subject_teacher");
@@ -30,6 +44,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
     can("teaching_assignments:assign_class_teacher") || can("teaching_assignments:assign_homework_checker");
   const canSections = can("classes_sections:merge_split");
   const canYears = can("classes_sections:settings");
+  // Pause windows (D-#1655): a second way to the screen the Routine hub already opens (same action).
+  const canPauses = can("routine:edit_calendar");
   // YC-5: the year-change screen is Principal-only (year_change:* is LOCKED).
   const canYearChange = can("year_change:view");
   // PM: the routine card opens subject-group membership (addGroupMember etc. =
@@ -58,126 +74,140 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // D-#861: Attendance ranking and Guardian reports — unresolved moved to the Reports hub
   // (one switch each); their Admin-stack routes remain for the digest's deep link.
 
-  const showPeople = canStaffLogins || canGuardianCreds || canAccess || canProxy || canAssignSupervisor;
+  const showPeople = inSection("AdminPeople") && (canStaffLogins || canGuardianCreds || canAccess || canProxy || canAssignSupervisor);
   const showClass =
-    canStudents || canBanglaNames || canAssignSubject || canAssignClassTeacher || canRoutine || canSections;
-  const showYear = canYears || canYearChange;
-  const showWatch = canAuditLog || canActivity || canHealth;
+    inSection("AdminClasses") &&
+    (canStudents || canBanglaNames || canAssignSubject || canAssignClassTeacher || canRoutine || canSections);
+  const showYear = inSection("AdminYear") && (canYears || canYearChange || canPauses);
+  const showWatch = inSection("AdminWatch") && (canAuditLog || canActivity || canHealth);
+  const title =
+    only === "AdminPeople" ? STR.admGPeople
+    : only === "AdminClasses" ? STR.admGClass
+    : only === "AdminYear" ? STR.admGYear
+    : only === "AdminWatch" ? STR.admGWatch
+    : STR.admin;
 
   return (
     <Screen scroll>
-      <H2>{STR.admin}</H2>
+      <H2>{title}</H2>
 
-      {showPeople ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGPeople}</Muted> : null}
-      {canStaffLogins ? (
+      {showPeople && heading ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGPeople}</Muted> : null}
+      {canStaffLogins && inSection("AdminPeople") ? (
         <Card onPress={() => navigation.navigate("UserList")}>
           <Body style={{ fontWeight: "700" }}>{STR.users}</Body>
           <Muted>{STR.admSubUsers}</Muted>
         </Card>
       ) : null}
 
-      {canGuardianCreds ? (
+      {canGuardianCreds && inSection("AdminPeople") ? (
         <Card onPress={() => navigation.navigate("GuardianCredentials")}>
           <Body style={{ fontWeight: "700" }}>{STR.guardianCredentials}</Body>
           <Muted>{STR.admSubGuardianCreds}</Muted>
         </Card>
       ) : null}
 
-      {canAccess ? (
+      {canAccess && inSection("AdminPeople") ? (
         <Card onPress={() => navigation.navigate("AccessControlUsers")}>
           <Body style={{ fontWeight: "700" }}>{STR.acTitle}</Body>
           <Muted>{STR.admSubAccess}</Muted>
         </Card>
       ) : null}
 
-      {canProxy ? (
+      {canProxy && inSection("AdminPeople") ? (
         <Card onPress={() => navigation.navigate("ScopeGrant")}>
           <Body style={{ fontWeight: "700" }}>{STR.scopeGrants}</Body>
           <Muted>{STR.admSubScope}</Muted>
         </Card>
       ) : null}
 
-      {canAssignSupervisor ? (
+      {canAssignSupervisor && inSection("AdminPeople") ? (
         <Card onPress={() => navigation.navigate("SupervisoryGrant")}>
           <Body style={{ fontWeight: "700" }}>{STR.sgManage}</Body>
           <Muted>{STR.admSubSupervisory}</Muted>
         </Card>
       ) : null}
 
-      {showClass ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGClass}</Muted> : null}
-      {canStudents ? (
+      {showClass && heading ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGClass}</Muted> : null}
+      {canStudents && inSection("AdminClasses") ? (
         <Card onPress={() => navigation.navigate("Roster")}>
           <Body style={{ fontWeight: "700" }}>{STR.roster}</Body>
           <Muted>{STR.rosterCount}</Muted>
         </Card>
       ) : null}
 
-      {canBanglaNames ? (
+      {canBanglaNames && inSection("AdminClasses") ? (
         <Card onPress={() => navigation.navigate("StudentBanglaNames")}>
           <Body style={{ fontWeight: "700" }}>{STR.sbnTitle}</Body>
           <Muted>{STR.sbnSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {canAssignSubject ? (
+      {canAssignSubject && inSection("AdminClasses") ? (
         <Card onPress={() => navigation.navigate("AssignSubjectTeacher")}>
           <Body style={{ fontWeight: "700" }}>{STR.assignSubjectTeacher}</Body>
           <Muted>{STR.admSubAssignSubject}</Muted>
         </Card>
       ) : null}
 
-      {canAssignClassTeacher ? (
+      {canAssignClassTeacher && inSection("AdminClasses") ? (
         <Card onPress={() => navigation.navigate("AssignClassTeacher")}>
           <Body style={{ fontWeight: "700" }}>{STR.assignClassTeacher}</Body>
           <Muted>{STR.admSubAssignClass}</Muted>
         </Card>
       ) : null}
 
-      {canRoutine ? (
+      {canRoutine && inSection("AdminClasses") ? (
         <Card onPress={() => navigation.navigate("GroupMembers")}>
           <Body style={{ fontWeight: "700" }}>{STR.gmTitle}</Body>
           <Muted>{STR.admSubGroupMembers}</Muted>
         </Card>
       ) : null}
 
-      {canSections ? (
+      {canSections && inSection("AdminClasses") ? (
         <Card onPress={() => navigation.navigate("SectionConfig")}>
           <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
           <Muted>{STR.admSubSection}</Muted>
         </Card>
       ) : null}
 
-      {showYear ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGYear}</Muted> : null}
-      {canYears ? (
+      {showYear && heading ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGYear}</Muted> : null}
+      {canYears && inSection("AdminYear") ? (
         <Card onPress={() => navigation.navigate("AcademicYear")}>
           <Body style={{ fontWeight: "700" }}>{STR.ayManage}</Body>
           <Muted>{STR.ayHint}</Muted>
         </Card>
       ) : null}
 
-      {canYearChange ? (
+      {canYearChange && inSection("AdminYear") ? (
         <Card onPress={() => navigation.navigate("YearChange")}>
           <Body style={{ fontWeight: "700" }}>{STR.ycTitle}</Body>
           <Muted>{STR.admSubYearChange}</Muted>
         </Card>
       ) : null}
 
-      {showWatch ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGWatch}</Muted> : null}
-      {canAuditLog ? (
+      {canPauses && inSection("AdminYear") ? (
+        <Card onPress={() => rootNav.navigate("RoutineTab", { screen: "AcademicPauses", initial: false })}>
+          <Body style={{ fontWeight: "700" }}>{STR.apTitle}</Body>
+          <Muted>{STR.admSubPause}</Muted>
+        </Card>
+      ) : null}
+
+      {showWatch && heading ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGWatch}</Muted> : null}
+      {canAuditLog && inSection("AdminWatch") ? (
         <Card onPress={() => navigation.navigate("AuditLog")}>
           <Body style={{ fontWeight: "700" }}>{STR.audTitle}</Body>
           <Muted>{STR.audSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {canActivity ? (
+      {canActivity && inSection("AdminWatch") ? (
         <Card onPress={() => navigation.navigate("PersonActivity")}>
           <Body style={{ fontWeight: "700" }}>{STR.actTitle}</Body>
           <Muted>{STR.actSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {canHealth ? (
+      {canHealth && inSection("AdminWatch") ? (
         <Card onPress={() => navigation.navigate("SystemHealth")}>
           <Body style={{ fontWeight: "700" }}>{STR.shTitle}</Body>
           <Muted>{STR.shSubtitle}</Muted>
@@ -187,7 +217,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
       {![
         canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
         canAuditLog, canActivity, canHealth, canBanglaNames,
-        canAssignClassTeacher, canRoutine, canSections, canYears, canYearChange, canGuardianCreds, canAccess,
+        canAssignClassTeacher, canRoutine, canSections, canYears, canYearChange, canGuardianCreds, canAccess, canPauses,
       ].some(Boolean) ? (
         <Notice message={STR.noPermission} tone="warn" />
       ) : null}
