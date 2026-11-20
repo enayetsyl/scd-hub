@@ -215,6 +215,10 @@ jest.mock("../modules/review-program/services/ReviewBacklogService", () => ({
   dispatchReviewBacklog: (k: string) => mockReviewBacklog(k),
   REVIEW_BACKLOG_MINUTES: 8 * 60,
 }));
+// VN-T1 — the voice-transcript retry sweep reads the DB; stubbed like every family.
+jest.mock("../modules/content/services/ReviewVoiceTranscriptService", () => ({
+  startVoiceTranscriptSweep: () => false,
+}));
 // PM §5.5 — recipients picked by action (holderIdsOf) read the User model with a sort the
 // User stub above does not have; stubbed so each family names the action it asks about.
 const mockHolderIdsOf = jest.fn((_perm: string) => Promise.resolve([] as string[]));

@@ -8,7 +8,7 @@
  *       spot of each clip (the plan author's / thread view).
  *
  * The component holds no server knowledge: the caller passes `onAdd` / `onDelete` and the clip
- * list, so any review kind can plug its own mutations in. AUDIO ONLY — no transcript.
+ * list, so any review kind can plug its own mutations in. AUDIO is the source of truth; an automatic transcript (VN-T1) shows under a sent clip.
  */
 import React from "react";
 import { Pressable, Text, View } from "react-native";
@@ -30,6 +30,9 @@ export interface VoiceClip {
   spot: string | null;
   /** True once the review was submitted. A sent clip cannot be deleted; a draft (false) shows "not sent yet". */
   submitted?: boolean;
+  /** VN-T1 (D-#1662): automatic transcript. Shown only when DONE (non-empty) or PENDING; any other status shows nothing. */
+  transcript?: string | null;
+  transcriptStatus?: string | null;
 }
 
 /** Length as "12 সেকেন্ড" — whole seconds, never "0". */
@@ -118,6 +121,16 @@ function ClipRow({
           </Pressable>
         ) : null}
       </View>
+      {clip.transcriptStatus === "DONE" && clip.transcript ? (
+        <View style={styles.transcript}>
+          <Text style={styles.transcriptText} selectable>
+            {clip.transcript}
+          </Text>
+          <Text style={styles.transcriptNote}>{STR.vnTranscriptNote}</Text>
+        </View>
+      ) : clip.transcriptStatus === "PENDING" ? (
+        <Text style={styles.transcriptNote}>{STR.vnTranscriptPending}</Text>
+      ) : null}
       {err ? <Notice message={err} tone="danger" /> : null}
     </View>
   );
@@ -311,4 +324,7 @@ const useStyles = makeStyles((colors) => ({
   delete: { paddingVertical: space(2), paddingHorizontal: space(2) },
   deleteText: { ...typeScale.body, color: colors.error },
   pressed: { opacity: 0.6 },
+  transcript: { gap: space(1) },
+  transcriptText: { ...typeScale.body, color: colors.textPrimary },
+  transcriptNote: { ...typeScale.caption, color: colors.textSecondary },
 }));

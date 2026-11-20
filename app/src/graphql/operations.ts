@@ -897,7 +897,7 @@ export interface ReviewAssignmentT {
 }
 
 /** Fields of a review voice clip (VN-1) — defined here so the thread query below can use it. */
-const REVIEW_VOICE_NOTE_FIELDS = `id assignmentId fileId mime seconds spot submitted createdAt`;
+const REVIEW_VOICE_NOTE_FIELDS = `id assignmentId fileId mime seconds spot submitted transcript transcriptStatus createdAt`;
 
 const REVIEW_ASSIGNMENT_FIELDS = `
   id docType subject classLevel anchorWord addressNumber sessionIndex
@@ -967,6 +967,10 @@ export interface ReviewVoiceNoteT {
   spot: string | null;
   /** False = a private draft (the reviewer's own, before Submit). */
   submitted: boolean;
+  /** VN-T1: the automatic transcript; set only when transcriptStatus is DONE. */
+  transcript?: string | null;
+  /** PENDING | DONE | FAILED | QUOTA | NO_KEY | OFF; null before the clip is sent. */
+  transcriptStatus?: string | null;
   createdAt: string;
 }
 

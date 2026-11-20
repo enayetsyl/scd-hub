@@ -350,6 +350,10 @@ export const AI_FEATURES = [
   // Book lifecycle Path A (docs/prd-book-lifecycle.md §14.4, D-#1603): the AI edit job, run by the AI
   // worker; $10 a month, 400 calls a day (owner Q9); OFF at ship; never a cross-provider fallback.
   { key: "book_edit", bn: "বই সংশোধন (এআই)", en: "Book edit (AI)", dailyPerUser: 400, monthlyUsd: 10, perSessionTurns: null, defaultProvider: "anthropic", defaultModel: "claude-opus-5-5", defaultFallback: false },
+  // Review voice-note transcripts (docs: .claude/plans/review-voice-transcript.md, D-#1662): Gemini hears each
+  // sent clip once and writes it down. ON by default (owner 20 Nov); no key = silently idle. Metered through
+  // meteredGeminiFetch and cap-checked (assertWithinCaps) before each call; Gemini only.
+  { key: "voice_transcript", bn: "ভয়েস নোটের লেখা", en: "Voice-note transcripts", dailyPerUser: 1000, monthlyUsd: 3, perSessionTurns: null, defaultProvider: "gemini", defaultFallback: false, defaultEnabled: true },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 
@@ -407,7 +411,7 @@ function featureView(f: (typeof AI_FEATURES)[number], row: FeatureRow | null): A
     feature: f.key,
     labelBn: f.bn,
     labelEn: f.en,
-    enabled: row?.enabled ?? false,
+    enabled: row?.enabled ?? ((f as { defaultEnabled?: boolean }).defaultEnabled ?? false),
     provider,
     modelSaved: row?.modelName || null,
     model: row?.modelName || ("defaultModel" in f && provider === f.defaultProvider ? f.defaultModel : providerModel(provider)),
@@ -474,14 +478,16 @@ export async function setAiFeatureSetting(
   await refreshAiConfig(true);
   const before = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
 
-  const enabled = input.enabled ?? before?.enabled ?? false;
+  const wasEnabled = before?.enabled ?? ((f as { defaultEnabled?: boolean }).defaultEnabled ?? false);
+  const enabled = input.enabled ?? wasEnabled;
   const provider = input.provider ? parseProvider(input.provider) : before?.provider ?? f.defaultProvider;
   const modelChanged = input.model !== undefined && input.model !== null;
+  if (f.key === "voice_transcript" && provider !== "gemini") throw new Error("ভয়েস নোটের লেখা শুধু Gemini দিয়ে চলে");
   const modelName = modelChanged ? input.model!.trim() || null : before?.modelName || null;
   if (modelName && !/^[a-z0-9.\-]{3,80}$/.test(modelName)) throw new Error("মডেলের নাম সঠিক নয়");
   const fallback = input.fallback ?? before?.fallback ?? f.defaultFallback;
 
-  const needsTest = enabled && (!before?.enabled || provider !== (before?.provider ?? f.defaultProvider) || modelChanged);
+  const needsTest = enabled && (!wasEnabled || provider !== (before?.provider ?? f.defaultProvider) || modelChanged);
   if (needsTest) {
     const key = providerKey(provider);
     if (!key) throw new Error(`আগে ${LABEL[provider]}-এর কী দিন`);
