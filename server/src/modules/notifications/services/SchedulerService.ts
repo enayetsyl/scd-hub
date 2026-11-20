@@ -707,9 +707,9 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     const reminderMin = latestOpenMinute(nowMin, HW_CONFIRM_REMINDER_MINUTES);
     const escRung = HW_CONFIRM_ESCALATION_RUNGS.find((r) => windowOpen(nowMin, r.min));
     if (reminderMin === undefined && !escRung) return;
-    // D-#1655: homework is optional inside a HOMEWORK_REQUIRED pause — nobody is nudged to confirm it.
-    if (await isPausedNow("HOMEWORK_REQUIRED", now)) return;
-
+    // D-#1655: deliberately NOT paused — the source only lists days with a still-declared item, so
+    // inside a HOMEWORK_REQUIRED window it nudges only for what a teacher actually declared (and
+    // the coverage gate is skipped on that day, so the confirm can succeed).
     const pending = await pendingHomeworkSections(now);
     if (pending.length === 0) return;
 

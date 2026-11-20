@@ -455,12 +455,16 @@ describe("homework pending-confirm ladder", () => {
     );
   });
 
-  it("HOMEWORK_REQUIRED paused — no pending-confirm reminder or escalation (D-#1655)", async () => {
-    mockPendingHomework.mockResolvedValue([pendingSection()]);
+  it("HOMEWORK_REQUIRED paused — a section with a DECLARED item is still nudged, one with none is not (D-#1655)", async () => {
     mockPausedNow.mockImplementation(async (k: string) => k === "HOMEWORK_REQUIRED");
+    mockPendingHomework.mockResolvedValue([pendingSection()]);
     const s = await runSchedulerTick(at(13, 0));
-    expect(s.hwPendingEmitted).toBe(0);
-    expect(mockPendingHomework).not.toHaveBeenCalled();
+    expect(s.hwPendingEmitted).toBe(1);
+    expect(mockPendingHomework).toHaveBeenCalled();
+    mockEmit.mockClear();
+    mockPendingHomework.mockResolvedValue([]); // nothing declared → nothing pending → no nudge
+    const s2 = await runSchedulerTick(at(13, 30));
+    expect(s2.hwPendingEmitted).toBe(0);
   });
 
   it("reminds BOTH the class teacher AND the delegate (delegate is additive)", async () => {

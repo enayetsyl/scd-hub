@@ -46,7 +46,7 @@ import { isRehomed, resolveRecordOwners } from "../recordOwner";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { recordAbsentAtDelivery } from "./deliveryAttendanceCheck";
 import { dateKeyOf } from "../../attendance/dates";
-import { isPausedNow } from "../../academic-pause/services/AcademicPauseService";
+import { isPausedNow, loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -785,7 +785,14 @@ export async function sweepAssignmentChases(
     dueDate: { $lt: atMidnight(at) },
   };
   if (itemId) filter.asItemId = itemId;
-  const due = await AssignmentStudentRecord.find(filter);
+  const candidates = await AssignmentStudentRecord.find(filter);
+  // D-#1655: a record whose due day fell inside an ASSIGNMENT_CHASE window is never chased,
+  // even after the window ends (same rule as homework).
+  const dueKeys = candidates.filter((r) => r.dueDate).map((r) => dateKeyOf(new Date(r.dueDate as Date))).sort();
+  const isPaused = dueKeys.length
+    ? await loadPausePredicate(dueKeys[0], dueKeys[dueKeys.length - 1])
+    : () => false;
+  const due = candidates.filter((r) => !r.dueDate || !isPaused("ASSIGNMENT_CHASE", dateKeyOf(new Date(r.dueDate))));
   for (const rec of due) {
     rec.state = "CHASE";
     rec.chaseCount += 1;

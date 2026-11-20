@@ -34,10 +34,9 @@ import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { emitMarkSubmissionEscalation } from "../../notifications/services/emitters";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
-
-/** 09:00 Asia/Dhaka — the "বুঝেছি" pop-up opens for teachers still unmarked. */
 import { isPausedOn } from "../../academic-pause/services/AcademicPauseService";
 
+/** 09:00 Asia/Dhaka — the "বুঝেছি" pop-up opens for teachers still unmarked. */
 export const MARK_NINE_MINUTES = 9 * 60;
 /** 09:30 — the scheduler's escalation rung (local clock = Dhaka on the VM). */
 export const MARK_ESCALATION_MINUTES = 9 * 60 + 30;

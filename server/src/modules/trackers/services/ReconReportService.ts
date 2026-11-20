@@ -773,13 +773,13 @@ export async function reconciliationReport(
         : b.weekNumber - a.weekNumber,
     );
 
-  // D-#1655: a paused day owes nothing — homework days under HOMEWORK_REQUIRED, assignment
+  // D-#1655: a paused day owes nothing — undeclared homework under HOMEWORK_REQUIRED, assignment
   // delivery days under ASSIGNMENT_GENERATION. The pause predicate is ONE query for the range.
   const isPaused = await loadPausePredicate(fromKey, toKey);
   return {
     fromKey,
     toKey,
-    hwMisses: hwMisses.filter((m) => !isPaused("HOMEWORK_REQUIRED", m.dateKey)),
+    hwMisses, // D-#1655: declared-but-unconfirmed days stay listed inside a window (declared items can never stall)
     asMisses: asMisses.filter((m) => !isPaused("ASSIGNMENT_GENERATION", m.deliveryDateKey)),
     hwNotDeclared: hwNotDeclared.filter((m) => !isPaused("HOMEWORK_REQUIRED", m.dateKey)),
     hwNilDeclared,

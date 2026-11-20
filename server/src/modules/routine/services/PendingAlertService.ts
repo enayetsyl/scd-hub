@@ -398,7 +398,7 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
   if (!auth) return { alerts: [], assignmentPrep: null };
   const keys = windowKeys(today);
   const dayTypes = await dayTypesForWindow(keys);
-  // D-#1655: pause windows — a day inside one owes no class note / homework confirm.
+  // D-#1655: pause windows — a day inside one owes no class note.
   const isPaused = await loadPausePredicate(keys[0], keys[keys.length - 1]);
 
   const out: PendingAlert[] = [];
@@ -429,12 +429,12 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
     ? await confirmerSections(auth.userId)
     : [];
   if (mySections.length > 0) {
-    const hwPending = (
-      await hwReconcileBacklog(
-        mySections.map((s) => s.sectionId),
-        keys,
-      )
-    ).filter((k) => !isPaused("HOMEWORK_REQUIRED", k));
+    // D-#1655: not filtered by HOMEWORK_REQUIRED — the backlog is only days with a declared item,
+    // which still owe a confirm even inside a window (nothing declared can get stuck).
+    const hwPending = await hwReconcileBacklog(
+      mySections.map((s) => s.sectionId),
+      keys,
+    );
     if (hwPending.length > 0) out.push(alert("hw_reconcile", hwPending));
 
     const asPending = await asReconcileBacklog(

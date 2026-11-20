@@ -42,6 +42,7 @@ import {
   type IssueRosterEntry,
 } from "./HomeworkService";
 import { isWeekend } from "../calendar";
+import { isPausedOn } from "../../academic-pause/services/AcademicPauseService";
 
 // ---------------------------------------------------------------------------
 // tallyDay (handoff §4.2 — live DAY_TOTAL vs ceiling)
@@ -360,7 +361,10 @@ export async function confirmHomeworkDay(
     fromDate: { $lte: dayEnd },
     toDate: { $gte: dayStart },
   }).lean();
-  if (!alreadyReconciled && dayTypeFor(input.date, !!holiday) === "FULL") {
+  // D-#1655: on a HOMEWORK_REQUIRED-paused day homework is optional, so every subject without a
+  // declaration counts as nil — the gate is skipped and what WAS declared issues normally.
+  const hwPaused = await isPausedOn("HOMEWORK_REQUIRED", dateKeyOf(input.date));
+  if (!alreadyReconciled && !hwPaused && dayTypeFor(input.date, !!holiday) === "FULL") {
     const slots = (await RoutineSlot.find({
       groupType: "section",
       groupId: sectionId,

@@ -28,6 +28,8 @@ import { RoutineSlot } from "../modules/routine/models/RoutineSlot";
 import { RoutineSubstitution } from "../modules/routine/models/RoutineSubstitution";
 import { ClassNote } from "../modules/routine/models/ClassNote";
 import { HolidayException } from "../modules/routine/models/HolidayException";
+import { AssignmentFollowUp } from "../modules/trackers/models/AssignmentFollowUp";
+import { Student } from "../modules/foundation/models/Student";
 
 const boom = (): never => {
   throw new Error("DB touched inside a paused day");
@@ -71,6 +73,51 @@ describe("ASSIGNMENT_CHASE", () => {
     mockPausedNow.mockResolvedValue(true);
     jest.spyOn(AssignmentStudentRecord, "find").mockImplementation(boom as never);
     expect(await assignmentChaseList(new Date())).toEqual([]);
+  });
+});
+
+describe("ASSIGNMENT_CHASE — due day inside a window (same rule as homework)", () => {
+  // Window = 1..10 Dec. A record due 10 Dec is never listed/chased afterwards; one due 11 Dec is normal.
+  const inWindow = (k: string, d: string) => k === "ASSIGNMENT_CHASE" && d >= "2026-12-01" && d <= "2026-12-10";
+  const rec = (id: string, due: Date) => ({
+    _id: id,
+    state: "CHASE",
+    chaseCount: 1,
+    dueDate: due,
+    asItemId: "i1",
+    asId: "AS-1",
+    studentId: "st1",
+    sectionId: "sec1",
+    classId: "c1",
+  });
+
+  function stubChaseJoins(): void {
+    jest.spyOn(AssignmentItem, "find").mockReturnValue({ lean: async () => [] } as never);
+    jest.spyOn(Student, "find").mockReturnValue({ select: () => ({ lean: async () => [] }) } as never);
+    jest.spyOn(AssignmentFollowUp, "find").mockReturnValue({ select: () => ({ lean: async () => [] }) } as never);
+  }
+
+  it("the chase list on 11 Dec omits a record due 10 Dec (in window) and keeps one due 11 Dec", async () => {
+    mockPredicate.mockImplementation(inWindow);
+    stubChaseJoins();
+    jest
+      .spyOn(AssignmentStudentRecord, "find")
+      .mockReturnValue({ lean: async () => [rec("a", new Date(2026, 11, 10, 9)), rec("b", new Date(2026, 11, 11, 9))] } as never);
+    const rows = await assignmentChaseList(new Date(2026, 11, 12, 9));
+    expect(rows.map((r) => r.recordId)).toEqual(["b"]);
+    expect(rows[0].daysOverdue).toBe(1);
+  });
+
+  it("the sweep on 12 Dec never chases a record due 10 Dec, and chases one due 11 Dec", async () => {
+    mockPredicate.mockImplementation(inWindow);
+    const mk = (due: Date) => ({ dueDate: due, state: "DUE", chaseCount: 0, stateDates: [] as unknown[], save: jest.fn() });
+    const a = mk(new Date(2026, 11, 10, 9));
+    const b = mk(new Date(2026, 11, 11, 9));
+    jest.spyOn(AssignmentStudentRecord, "find").mockResolvedValue([a, b] as never);
+    expect(await sweepAssignmentChases(new Date(2026, 11, 12, 9))).toBe(1);
+    expect(a.save).not.toHaveBeenCalled();
+    expect(a.state).toBe("DUE");
+    expect(b.state).toBe("CHASE");
   });
 });
 
