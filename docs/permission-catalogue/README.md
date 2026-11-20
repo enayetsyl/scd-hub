@@ -751,7 +751,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `lesson_plans:view` | View lesson plans | পাঠ পরিকল্পনা দেখা | Plan tree, a plan, its PDF | on | — | | content:read |
 | `lesson_plans:view_all` | Every plan | সব পাঠ পরিকল্পনা দেখা | Plans beyond own routine/supervisory scope | — | on | †, 2H, F-27 | contentScope primary-role P/O = all |
 | `lesson_plans:import` | Import lesson plans | পাঠ পরিকল্পনা ইম্পোর্ট করা | Upload a plan pair or envelope | — | on | | content:import |
-| `lesson_plans:read_book` | Read the book beside a plan | পরিকল্পনার পাশে বই পড়া | The matching chapter of the school's released book on the plan screen (children's text, teacher note folded); its pictures. Also needs the plan's own read scope | on | on | | — (new) |
+| `lesson_plans:read_book` | Read the book beside a plan or a question | পরিকল্পনা ও প্রশ্নের পাশে বই পড়া | The matching chapter of the school's released book on the plan and question-review screens (children's text, teacher note folded); its pictures. Also needs the plan's (or question's) own read scope — a reviewer passes it through an open round on that version | on | on | | — (new) |
 | `home_guide:import` | Import home guides | বাড়ির গাইড ইম্পোর্ট করা | Load the per-session guardian home guides (steps + classwork items) from a plan pack file (GH-4, D-#1528) | — | — | | — (new) |
 | `plan_review:assign` | Assign plan reviewers | রিভিউয়ার বরাদ্দ করা | Assign/move/cancel rounds; board, inbox, load; any thread | — | on | F-26 | content:assign_review; isAdminStaff (thread) |
 | `plan_review:review` | Review plans | পরিকল্পনা রিভিউ করা | Verdict on an assigned plan | on | — | DESIGNATION:assigned_reviewer | content:review |
@@ -768,7 +768,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `question_hint:import` | Load question hints | প্রশ্নের ইঙ্গিত লোড করা | Dry-run or load a hint file (3 steps per question); refused when a step contains the answer (GH-1, D-#1520) | — | — | | new |
 | `question_review:assign` | Assign question reviewers | প্রশ্ন রিভিউ বরাদ্দ করা | Assign by question/chapter, move, clear a condition, picker | — | on | | content:assign_review |
 | `question_review:view_all` | Review progress | রিভিউয়ের অগ্রগতি দেখা | Inbox, progress, drill-downs, coverage, slices, any thread | — | on | | content:assign_review; isAdminStaff (thread) |
-| `question_review:review` | Review questions | প্রশ্ন রিভিউ করা | Verdict (single/bulk); IMPORTANT on own rounds | on | — | DESIGNATION:assigned_reviewer | content:review |
+| `question_review:review` | Review questions | প্রশ্ন রিভিউ করা | Verdict (single/bulk); IMPORTANT on own rounds; voice notes on own rounds | on | — | DESIGNATION:assigned_reviewer | content:review |
 | `question_review:publish` | Publish questions | প্রশ্ন প্রকাশ করা | Gold: single with override, bulk, publish-all | — | — | | content:promote_gold |
 
 #### `book_production` — বই তৈরি

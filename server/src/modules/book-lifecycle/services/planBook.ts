@@ -1,6 +1,7 @@
 /**
  * "পরিকল্পনা | বই" — the matching chapter of the school's own book beside a lesson plan
- * (.claude/plans/plan-book-tab.md, Step 1; D-#1653).
+ * (.claude/plans/plan-book-tab.md, Step 1; D-#1653) — and, since PB-3 (D-#1663), beside a question
+ * on the question-review screen (docType "question"; its address carries the chapter tag).
  *
  * Only the FINAL, released copy is ever served: the current print release's version, else the book's
  * final version. Never a draft, never `latestVersionId`. A missing book / version / book plane is an
@@ -242,7 +243,8 @@ export async function planBookForCaller(ctx: AppContext, artifactId: string, cha
   const doc = await ContentArtifact.findById(artifactId).select("docType subject classLevel address").lean();
   if (!doc) return unavailable(NO_BOOK_BN);
   await assertMayReadArtifact(ctx, doc);
-  if (!(PLAN_DOC_TYPES as readonly string[]).includes(doc.docType)) return unavailable(NO_BOOK_BN);
+  // Plans, and (PB-3) the questions of the question-review screen — both sit beside the same chapter.
+  if (doc.docType !== "question" && !(PLAN_DOC_TYPES as readonly string[]).includes(doc.docType)) return unavailable(NO_BOOK_BN);
 
   if (!isBookDbReady()) return unavailable(PLANE_DOWN_BN);
   const book = await SchoolBook.findOne({ classLevel: doc.classLevel, subject: doc.subject, archived: false }).sort({ code: 1 });
@@ -286,7 +288,7 @@ export async function planBookForCaller(ctx: AppContext, artifactId: string, cha
     else reason = NO_CHAPTER_BN;
   } else chosen = matchDefaultChapter(items, doc.address as { anchorWord?: string; number?: number | string; title?: string } | undefined);
 
-  await recordContentRead({ bookId: v.bookId, versionId: v._id, userId: auth.userId, surface: "plan" });
+  await recordContentRead({ bookId: v.bookId, versionId: v._id, userId: auth.userId, surface: doc.docType === "question" ? "question" : "plan" });
   if (!chosen) return { ...base, reason, chapterKey: null, title: null, childText: null, teacherNote: null, anchorMissing: false, pictures: [], pdf: pdfOf(null) };
 
   const cut = (await cutVersion(v, chapters, book.chapterHeadingLevel ?? 2)).get(chosen);

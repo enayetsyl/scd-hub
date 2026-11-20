@@ -1216,6 +1216,8 @@ export interface QuestionReviewRoundT {
   artifactSuperseded: boolean;
   /** Marked important (QR-9, D-#550) — the reviewer toggles it from her queue. */
   important: boolean;
+  /** Voice clips — only the thread query asks for them (the queue must not fetch clips per card). */
+  voiceNotes?: ReviewVoiceNoteT[];
 }
 
 const QUESTION_ROUND_FIELDS = `
@@ -1593,7 +1595,7 @@ export const QUESTION_REVIEW_THREAD = gql<
   { artifactId: string }
 >`
   query QuestionReviewThread($artifactId: String!) {
-    questionReviewThread(artifactId: $artifactId) { ${QUESTION_ROUND_FIELDS} }
+    questionReviewThread(artifactId: $artifactId) { ${QUESTION_ROUND_FIELDS} voiceNotes { ${REVIEW_VOICE_NOTE_FIELDS} } }
   }
 `;
 

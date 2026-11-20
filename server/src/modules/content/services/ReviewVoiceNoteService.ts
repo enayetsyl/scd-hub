@@ -8,13 +8,13 @@
  *
  *   addReviewVoiceNote     — the assigned reviewer, round still open: upload + save a draft clip.
  *   deleteReviewVoiceNote  — the assigned reviewer, round still open: remove one clip.
- *   listReviewVoiceNotes   — reviewer: all clips; plan author / review managers: submitted only.
- *   attachDraftVoiceNotes  — called by submitPlanReview: drafts become part of the review.
+ *   listReviewVoiceNotes   — reviewer: all clips; author (importer) / review managers: submitted only.
+ *   attachDraftVoiceNotes  — called by submitPlanReview / submitQuestionReview: drafts become part of the review.
  *   assertReviewVoiceFileReadAccess — the GET /files/:id gate for kind `review_voice_note`:
- *                            exactly the reviewer, the plan author, and the review managers.
+ *                            exactly the reviewer, the author (importer), and the review managers.
  *
- * Reuse: `docType` rides on each clip, so question reviews (VN-2) can call the same functions and
- * only choose their own manager permission via `managerPermissionFor`.
+ * Plans AND questions (VN-2): `docType` rides on each clip; the review permission and the manager
+ * permission are chosen per doc-type via `reviewPermissionFor` / `managerPermissionFor`.
  */
 import { Types } from "mongoose";
 import { callerHasPermission } from "@scd/shared";
@@ -49,7 +49,7 @@ export const VOICE_NOTE_ERRORS_BN = {
   tooMany: "একটি রিভিউতে সর্বোচ্চ ১০টি ভয়েস নোট রাখা যায়",
   closed: "এই রিভিউ রাউন্ডটি বন্ধ হয়ে গেছে",
   sentLocked: "জমা দেওয়া ভয়েস নোট মোছা যায় না",
-  notPlan: "এই রাউন্ডে এখনো ভয়েস নোট দেওয়া যায় না",
+  notPlan: "এই রাউন্ডে ভয়েস নোট দেওয়া যায় না",
   driveDown: "এই মুহূর্তে রেকর্ডিং সংরক্ষণ করা যাচ্ছে না — পরে আবার চেষ্টা করুন",
 } as const;
 
@@ -97,6 +97,11 @@ export function validateVoiceNoteAudio(
   if (bytes > MAX_VOICE_NOTE_BYTES) return VOICE_NOTE_ERRORS_BN.tooLarge;
   if (seconds > MAX_VOICE_NOTE_SECONDS + SECONDS_SLACK) return VOICE_NOTE_ERRORS_BN.tooLong;
   return null;
+}
+
+/** The permission that lets a person review (and so record clips on) a round of this doc-type. */
+export function reviewPermissionFor(docType: string): "plan_review:review" | "question_review:review" {
+  return docType === "question" ? "question_review:review" : "plan_review:review";
 }
 
 /** The permission that lets a person read EVERY submitted clip of a round of this doc-type. */
@@ -151,6 +156,8 @@ export interface AddVoiceNoteInput {
   mimeType: string;
   seconds: number;
   spot?: string | null;
+  /** Does the caller hold the review permission of the round's doc-type? Checked after the round is loaded. */
+  mayReview?: (docType: string) => boolean;
 }
 
 async function loadOwnOpenRound(assignmentId: string, reviewerId: string) {
@@ -171,8 +178,9 @@ export async function addReviewVoiceNote(input: AddVoiceNoteInput): Promise<Revi
   if (bad || !mime) throw new ReviewError(bad ?? VOICE_NOTE_ERRORS_BN.badAudio);
 
   const round = await loadOwnOpenRound(input.assignmentId, input.reviewerId);
-  // Plans only until VN-2 (question rounds have their own gate and screens).
-  if (!isPlanDocType(round.docType)) throw new ReviewError(VOICE_NOTE_ERRORS_BN.notPlan);
+  // Plan rounds and question rounds (VN-2); any other doc-type is refused.
+  if (!isPlanDocType(round.docType) && round.docType !== "question") throw new ReviewError(VOICE_NOTE_ERRORS_BN.notPlan);
+  if (input.mayReview && !input.mayReview(round.docType)) throw new ReviewError("FORBIDDEN: no review permission for this round");
   const have = await ReviewVoiceNote.countDocuments({ assignmentId: round._id });
   if (have >= MAX_VOICE_NOTES_PER_ROUND) throw new ReviewError(VOICE_NOTE_ERRORS_BN.tooMany);
 
@@ -223,10 +231,15 @@ export async function addReviewVoiceNote(input: AddVoiceNoteInput): Promise<Revi
   return toVoiceNoteDTO(note);
 }
 
-export async function deleteReviewVoiceNote(input: { noteId: string; reviewerId: string }): Promise<boolean> {
+export async function deleteReviewVoiceNote(input: {
+  noteId: string;
+  reviewerId: string;
+  mayReview?: (docType: string) => boolean;
+}): Promise<boolean> {
   const note = await ReviewVoiceNote.findById(input.noteId);
   if (!note) throw new ReviewError(VOICE_NOTE_ERRORS_BN.notFound);
   if (note.reviewerId.toString() !== input.reviewerId) throw new ReviewError("FORBIDDEN: not your voice note");
+  if (input.mayReview && !input.mayReview(note.docType)) throw new ReviewError("FORBIDDEN: no review permission for this round");
   await loadOwnOpenRound(note.assignmentId.toString(), input.reviewerId);
   // A SENT clip is part of the submitted review — deleting it could leave a CHANGES_REQUESTED round
   // with no feedback. Only drafts can be removed.

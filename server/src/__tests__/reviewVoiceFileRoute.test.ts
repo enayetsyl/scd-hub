@@ -50,6 +50,8 @@ jest.mock("../modules/notifications/services/emitters", () => ({ emitReviewAssig
 // One person who holds ONLY question_review:assign (no plan_review:assign): everyone else keeps the
 // real permission table. Everything that calls callerHasPermission goes through this one module.
 const QUESTION_MGR = oid().toString();
+// And one who holds ONLY plan_review:assign (VN-2: must not hear a question clip).
+const PLAN_MGR = oid().toString();
 jest.mock("@scd/shared", () => {
   const actual = jest.requireActual("@scd/shared");
   return {
@@ -57,6 +59,8 @@ jest.mock("@scd/shared", () => {
     callerHasPermission: (profile: { userId?: string }, perm: string, ...rest: unknown[]) =>
       profile.userId === QUESTION_MGR
         ? perm === "question_review:assign"
+        : profile.userId === PLAN_MGR
+        ? perm === "plan_review:assign"
         : (actual.callerHasPermission as (...a: unknown[]) => boolean)(profile, perm, ...rest),
   };
 });
@@ -76,13 +80,13 @@ const STRANGER = oid();
 const ARTIFACT = oid();
 const FILE = oid();
 
-function note(submitted: boolean) {
+function note(submitted: boolean, docType = "chapter_plan") {
   return {
     _id: oid(),
     assignmentId: oid(),
     artifactId: ARTIFACT,
     reviewerId: REVIEWER,
-    docType: "chapter_plan",
+    docType,
     fileId: FILE,
     mime: "audio/wav",
     seconds: 5,
@@ -129,6 +133,22 @@ describe("GET /files/:id for a review voice note", () => {
     mockNoteFindOne.mockResolvedValue(note(true));
     expect((await get(QUESTION_MGR, "OFFICE")).status).toBe(403);
     expect((await get(STRANGER.toString(), "TEACHER")).status).toBe(403);
+  });
+
+  test("a SENT question clip (VN-2): reviewer, importer and a question manager read it; a plan-only manager and a stranger do not", async () => {
+    mockNoteFindOne.mockResolvedValue(note(true, "question"));
+    expect((await get(REVIEWER.toString(), "TEACHER")).status).toBe(200);
+    expect((await get(AUTHOR.toString(), "TEACHER")).status).toBe(200);
+    expect((await get(QUESTION_MGR, "OFFICE")).status).toBe(200);
+    expect((await get(PLAN_MGR, "OFFICE")).status).toBe(403);
+    expect((await get(STRANGER.toString(), "TEACHER")).status).toBe(403);
+  });
+
+  test("a DRAFT question clip: only its reviewer, not even a question manager", async () => {
+    mockNoteFindOne.mockResolvedValue(note(false, "question"));
+    expect((await get(REVIEWER.toString(), "TEACHER")).status).toBe(200);
+    expect((await get(QUESTION_MGR, "OFFICE")).status).toBe(403);
+    expect((await get(AUTHOR.toString(), "TEACHER")).status).toBe(403);
   });
 
   test("the response never carries the Drive id; a file with no clip row is 403", async () => {
