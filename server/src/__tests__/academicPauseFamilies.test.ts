@@ -25,6 +25,8 @@ import { AssignmentItem } from "../modules/trackers/models/AssignmentItem";
 import { AssignmentStudentRecord } from "../modules/trackers/models/AssignmentStudentRecord";
 import { HomeworkStudentRecord } from "../modules/trackers/models/HomeworkStudentRecord";
 import { RoutineSlot } from "../modules/routine/models/RoutineSlot";
+import { RoutineSubstitution } from "../modules/routine/models/RoutineSubstitution";
+import { ClassNote } from "../modules/routine/models/ClassNote";
 import { HolidayException } from "../modules/routine/models/HolidayException";
 
 const boom = (): never => {
@@ -108,6 +110,10 @@ describe("CLASS_NOTE_CHASE", () => {
   it("outside the window the routine slots are read as before", async () => {
     const chain = { sort: () => ({ lean: async () => [] }) };
     const find = jest.spyOn(RoutineSlot, "find").mockReturnValue(chain as never);
+    // The cover overlay + written-note lookups follow; stub them so the suite stays DB-free.
+    const selectLean = { select: () => ({ lean: async () => [] }) };
+    jest.spyOn(RoutineSubstitution, "find").mockReturnValue(selectLean as never);
+    jest.spyOn(ClassNote, "find").mockReturnValue(selectLean as never);
     expect(await unwrittenClassNoteSlots(new Date(2026, 11, 11))).toEqual([]);
     expect(find).toHaveBeenCalled();
   });
