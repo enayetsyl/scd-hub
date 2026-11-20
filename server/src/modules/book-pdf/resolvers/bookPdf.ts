@@ -1,5 +1,5 @@
 /**
- * Book PDF resolvers (PB-1/PB-2, D-#1657). The upload itself is a REST route
+ * Book PDF resolvers (PB-1/PB-2, D-#1661). The upload itself is a REST route
  * (POST /files/book-pdf, multipart PDF + bookCode); everything else is here.
  *
  *   bookPdfShelf       — teachers (plan-book read / class_books:view|manage): READY books + chapter ranges.

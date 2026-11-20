@@ -381,7 +381,7 @@ describe("GET /files/:id gate for book pictures", () => {
   });
 });
 
-describe("the printed PDF pages (PB-2, D-#1657)", () => {
+describe("the printed PDF pages (PB-2, D-#1661)", () => {
   async function pdfFor(bookCode: string, over: Partial<{ status: string; active: boolean; chapters: { key: string; title: string; fromPage: number; toPage: number }[]; pageCount: number }> = {}) {
     const pageFileIds = Array.from({ length: over.pageCount ?? 12 }, () => new Types.ObjectId());
     return BookPdf.create({

@@ -393,10 +393,10 @@ export type AuditEventKind =
   | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
   | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
   | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)
-  | "BOOK_PDF_UPLOADED"       // a printed-book PDF uploaded / replaced for the Book tab (PB-1, D-#1657) — meta.bookCode/sourceName
-  | "BOOK_PDF_CHAPTERS_SET"   // the chapter to page ranges of a book PDF edited (PB-1, D-#1657) — meta.bookCode/count
-  | "BOOK_PDF_EDITED"        // a book PDF hidden / shown or its edition label changed (PB-1, D-#1657) - meta before/after
-  | "BOOK_PDF_DELETED"        // a book PDF removed with its page images (PB-1, D-#1657)
+  | "BOOK_PDF_UPLOADED"       // a printed-book PDF uploaded / replaced for the Book tab (PB-1, D-#1661) — meta.bookCode/sourceName
+  | "BOOK_PDF_CHAPTERS_SET"   // the chapter to page ranges of a book PDF edited (PB-1, D-#1661) — meta.bookCode/count
+  | "BOOK_PDF_EDITED"        // a book PDF hidden / shown or its edition label changed (PB-1, D-#1661) - meta before/after
+  | "BOOK_PDF_DELETED"        // a book PDF removed with its page images (PB-1, D-#1661)
   | "WINTER_BOOKLET_IMPORTED"  // a winter booklet imported / re-imported (D-#1620) — meta code/version/kept/stale
   | "WINTER_CHANGE_SUGGESTED"  // reviewer suggested an edit or left a page note (D-#1620) — meta bookletId/pageN/blockId
   | "WINTER_CHANGE_EDITED"     // reviewer edited her own open suggestion (D-#1620) — meta before/after

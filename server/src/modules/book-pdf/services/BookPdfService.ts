@@ -1,6 +1,6 @@
 /**
  * BookPdfService — the real printed pages of a school book beside a plan and in the teachers'
- * viewer (PB-1/PB-2, D-#1657; nov-ops F4). Built on the class-books pipeline (D-#870): the PDF is
+ * viewer (PB-1/PB-2, D-#1661; nov-ops F4). Built on the class-books pipeline (D-#870): the PDF is
  * rendered to 150 dpi JPEG pages (pdfPages.ts), each page a StoredFile of kind `bookpdf_page`,
  * served one at a time. The PDF itself is never stored.
  *

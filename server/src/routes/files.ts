@@ -1243,7 +1243,7 @@ filesRouter.post("/class-book", parseClassBookUpload, async (req: Request, res: 
 
 // ---------------------------------------------------------------------------
 // POST /files/book-pdf — the Office uploads (or replaces) a school book's printed PDF (PB-1,
-// D-#1657). Multipart `file` + fields bookCode, versionLabel?. class_books:manage, PDF <= 80 MB.
+// D-#1661). Multipart `file` + fields bookCode, versionLabel?. class_books:manage, PDF <= 80 MB.
 // Answers once the row exists; pages render in the background (PROCESSING -> READY). A
 // re-upload keeps the chapter page ranges and the old pages serve until the swap.
 // ---------------------------------------------------------------------------
@@ -1650,7 +1650,7 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // a guardian only for a READY, visible book of their child's class.
       await assertClassBookFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "bookpdf_page") {
-      // A printed-book page (PB-1, D-#1657): teachers only — plan-book read / class_books view|manage.
+      // A printed-book page (PB-1, D-#1661): teachers only — plan-book read / class_books view|manage.
       await assertBookPdfFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "reference_paper_page" || file.kind === "reference_paper_source") {
       // Another branch's past paper (D-#1030): staff with exam_papers:view_reference /

@@ -1,5 +1,5 @@
 /**
- * BookPdfShelfScreen (PB-2, D-#1657; nov-ops F4) — the teachers' viewer of the printed book PDFs:
+ * BookPdfShelfScreen (PB-2, D-#1661; nov-ops F4) — the teachers' viewer of the printed book PDFs:
  * a book, its chapter list, and tapping a chapter opens that chapter's real pages. Teachers only
  * (the server refuses guardians); view only.
  */

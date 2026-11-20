@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 /**
- * BookPdf — the REAL printed pages of a school book (PB-1, D-#1657; nov-ops F4).
+ * BookPdf — the REAL printed pages of a school book (PB-1, D-#1661; nov-ops F4).
  * The book PDF is rendered to JPEG pages by the class-books pipeline (StoredFile kind
  * `bookpdf_page`); the PDF itself is not kept. One row per book, keyed by the SAME identity the
  * plan Book tab uses: SchoolBook.code (the book plane's book), and `chapters[].key` are that book's

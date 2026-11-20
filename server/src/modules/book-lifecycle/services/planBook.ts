@@ -38,7 +38,7 @@ export interface PlanBookPicture {
   url: string;
 }
 
-/** The printed PDF pages of the book (PB-2, D-#1657); fromPage/toPage null when the chapter has no range. */
+/** The printed PDF pages of the book (PB-2, D-#1661); fromPage/toPage null when the chapter has no range. */
 export interface PlanBookPdf {
   pdfId: string;
   versionLabel: string;

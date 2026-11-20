@@ -1378,7 +1378,7 @@ export async function pickAndUploadClassBook(input: {
   return { bookId: body.bookId };
 }
 
-/** Pick a book's printed PDF and upload it (PB-1, D-#1657; POST /files/book-pdf); null when cancelled. */
+/** Pick a book's printed PDF and upload it (PB-1, D-#1661; POST /files/book-pdf); null when cancelled. */
 export async function pickAndUploadBookPdf(input: { bookCode: string; versionLabel: string }): Promise<{ pdfId: string } | null> {
   const picked = await DocumentPicker.getDocumentAsync({
     type: ["application/pdf"],

@@ -335,7 +335,7 @@ export type ExamPapersStackParamList = {
 export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
-  /** PB-1/PB-2 (D-#1657): the printed book PDFs by chapter (teachers) and the Office upload screen. */
+  /** PB-1/PB-2 (D-#1661): the printed book PDFs by chapter (teachers) and the Office upload screen. */
   BookPdfShelf: undefined;
   BookPdfReader: { pdfId: string; title: string; fromPage: number; toPage: number; pageAspect: number };
   BookPdfAdmin: undefined;

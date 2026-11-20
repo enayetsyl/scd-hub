@@ -1,5 +1,5 @@
 /**
- * BookPdfAdminScreen (PB-1, D-#1657; nov-ops F4) — Office / Principal (class_books:manage) upload a
+ * BookPdfAdminScreen (PB-1, D-#1661; nov-ops F4) — Office / Principal (class_books:manage) upload a
  * school book's printed PDF and set each chapter's page range. A re-upload keeps the ranges; the
  * chapter list can be filled from the book's own chapter keys (the same keys the plan Book tab
  * uses). Pages render on the server — a PROCESSING book is polled until it settles.

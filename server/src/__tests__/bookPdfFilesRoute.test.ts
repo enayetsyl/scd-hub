@@ -1,5 +1,5 @@
 /**
- * PB-1 (D-#1657) — GET /files/:id for a `bookpdf_page`, through the real files router.
+ * PB-1 (D-#1661) — GET /files/:id for a `bookpdf_page`, through the real files router.
  * The kind must NOT start with `book_` (that prefix dispatches to the book-production gate).
  *
  *   teacher with class_books:view            → 200

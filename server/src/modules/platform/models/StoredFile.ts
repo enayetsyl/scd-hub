@@ -65,7 +65,7 @@ export type StoredFileKind =
    *  rendered to JPEG pages at upload and is never stored or served; readers get pages.
    *  Staff read via class_books:view/manage; a guardian only for their own child's class. */
   | "class_book_page"
-  /** One page image of a school book's printed PDF (PB-1, D-#1657). Teachers read
+  /** One page image of a school book's printed PDF (PB-1, D-#1661). Teachers read
    *  (lesson_plans:read_book / class_books:view); never a guardian. */
   | "bookpdf_page"
   /** A storybook cover / preview page (SB-1, D-#986, docs/prd-storybook-reading.md). Only

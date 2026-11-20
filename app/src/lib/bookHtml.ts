@@ -1,5 +1,5 @@
 /**
- * bookHtmlToMarkdown — the text fallback of the plan Book tab (PB-2, D-#1657).
+ * bookHtmlToMarkdown — the text fallback of the plan Book tab (PB-2, D-#1661).
  *
  * A book chapter's text can carry raw HTML (`<table>`, `<img>`, `<br>`), which the Markdown
  * renderer would print as tags. This turns the HTML it meets into what the renderer shows

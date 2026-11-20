@@ -1,5 +1,5 @@
 /**
- * BookPdfPages (PB-2, D-#1657) — the real printed pages `fromPage..toPage` of a school book, one
+ * BookPdfPages (PB-2, D-#1661) — the real printed pages `fromPage..toPage` of a school book, one
  * under the other (the host scrolls), each fitted to the pane width. Tap a page to open it large
  * (zoom steps, sideways + up/down scroll). Pages load one after another so a long chapter does not
  * fire every request at once. View only: the image sits under a transparent cover, no save control.

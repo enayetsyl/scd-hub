@@ -1,5 +1,5 @@
 /**
- * BookPdfReaderScreen (PB-2, D-#1657) — one chapter (or the whole book) of the printed PDF, page
+ * BookPdfReaderScreen (PB-2, D-#1661) — one chapter (or the whole book) of the printed PDF, page
  * images one under the other; tap a page to enlarge. Teachers only; view only.
  */
 import React from "react";

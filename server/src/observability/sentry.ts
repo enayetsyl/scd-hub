@@ -35,7 +35,7 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "BookLcError",
   "BookMarkdownError",
   "ImmutableVersionError",
-  // Book PDF pages (D-#1657): a second upload while one is still rendering → 409, a Bangla sentence.
+  // Book PDF pages (D-#1661): a second upload while one is still rendering → 409, a Bangla sentence.
   "BookPdfBusyError",
   // pdftotext absent on a host: the page map falls back to "set by hand" — never a fault.
   "PopplerMissingError",
