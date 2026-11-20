@@ -43,6 +43,7 @@ import { AssignmentItem } from "../../trackers/models/AssignmentItem";
 import { HomeworkItem } from "../../trackers/models/HomeworkItem";
 import { expectedItemsForWeek } from "../../trackers/services/AssignmentScheduleService";
 import { weekNumberFor } from "../../trackers/assignmentCalendar";
+import { loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
 import { currentYearFilter, currentYearSectionFilter } from "../../foundation/services/currentYear";
 
 /** Owner ruling (D-#279): look back one week, school days only. */
@@ -397,6 +398,8 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
   if (!auth) return { alerts: [], assignmentPrep: null };
   const keys = windowKeys(today);
   const dayTypes = await dayTypesForWindow(keys);
+  // D-#1655: pause windows — a day inside one owes no class note / homework confirm.
+  const isPaused = await loadPausePredicate(keys[0], keys[keys.length - 1]);
 
   const out: PendingAlert[] = [];
   let assignmentPrep: AssignmentPrep | null = null;
@@ -408,7 +411,8 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
   }
 
   if (callerHasPermission(auth, "class_note:create")) {
-    const pending = await classNoteBacklog(auth.userId, keys, dayTypes);
+    const noteKeys = keys.filter((k) => !isPaused("CLASS_NOTE_CHASE", k));
+    const pending = noteKeys.length > 0 ? await classNoteBacklog(auth.userId, noteKeys, dayTypes) : [];
     if (pending.length > 0) out.push(alert("class_note", pending));
   }
 
@@ -425,10 +429,12 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
     ? await confirmerSections(auth.userId)
     : [];
   if (mySections.length > 0) {
-    const hwPending = await hwReconcileBacklog(
-      mySections.map((s) => s.sectionId),
-      keys,
-    );
+    const hwPending = (
+      await hwReconcileBacklog(
+        mySections.map((s) => s.sectionId),
+        keys,
+      )
+    ).filter((k) => !isPaused("HOMEWORK_REQUIRED", k));
     if (hwPending.length > 0) out.push(alert("hw_reconcile", hwPending));
 
     const asPending = await asReconcileBacklog(

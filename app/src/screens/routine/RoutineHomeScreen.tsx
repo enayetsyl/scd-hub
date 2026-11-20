@@ -60,7 +60,10 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
           <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
         ) : null}
         {canCalendar ? (
-          <Button title={STR.hxManage} variant="secondary" onPress={() => navigation.navigate("Holidays")} />
+          <>
+            <Button title={STR.hxManage} variant="secondary" onPress={() => navigation.navigate("Holidays")} />
+            <Button title={STR.apManage} variant="secondary" onPress={() => navigation.navigate("AcademicPauses")} />
+          </>
         ) : null}
         {canNotesAll ? (
           <>

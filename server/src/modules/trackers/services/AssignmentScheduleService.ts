@@ -22,6 +22,7 @@ import { Section } from "../../foundation/models/Section";
 import { AssignmentSchedule, type IAssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentNilDeclaration, AS_NIL_REASONS, type AsNilReason } from "../models/AssignmentNilDeclaration";
+import { isPausedOnDate } from "../../academic-pause/services/AcademicPauseService";
 import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
 import { deliveryDayCovers, coverCellKey } from "../assignmentCover";
@@ -326,13 +327,21 @@ export async function resolveScheduleWeek(
   const weekStart = weekStartOf(schedule.termStartDate, weekNumber);
   const windowEnd = new Date(weekStart.getTime() + 70 * 86_400_000); // covers the 60-day due roll
   const isOpen = await loadOpenDayPredicate(weekStart, windowEnd);
-  return resolveWeekDates(
+  const resolved = resolveWeekDates(
     schedule.termStartDate,
     weekNumber,
     schedule.deliveryDayOfWeek,
     schedule.dueDayOfWeek,
     isOpen,
   );
+  // D-#1655: a week whose delivery day falls in an ASSIGNMENT_GENERATION pause window is
+  // SUSPENDED like a holiday week — nothing is expected, prepped, delivered or alerted.
+  // Every consumer (prep prompts, Today alerts, the auto-issue sweep, the delivery pass,
+  // the recon report) already honours `suspended`, so this is the one chokepoint.
+  if (!resolved.suspended && resolved.deliveryDate && (await isPausedOnDate("ASSIGNMENT_GENERATION", resolved.deliveryDate))) {
+    return { ...resolved, suspended: true, deliveryDate: null, dueDate: null };
+  }
+  return resolved;
 }
 
 /**

@@ -44,6 +44,7 @@ import type { AttendanceReminderTier } from "@scd/shared";
 import { WORK_CLAIM_DIGEST_MIN } from "@scd/shared";
 import { ROUTINE_SUBJECT_LABELS_BN } from "@scd/shared";
 import { resolveDayType } from "../../routine/calendar";
+import { isPausedNow } from "../../academic-pause/services/AcademicPauseService";
 import { hhmmToMinutes } from "../../routine/schedule";
 import { bellSchedule, unwrittenClassNoteSlots } from "../../routine/services/RoutineTriggerService";
 import { PeriodGrid } from "../../routine/models/PeriodGrid";
@@ -538,6 +539,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("homework weekly digest", async () => {
     if (!windowOpen(nowMin, HW_WEEKLY_DIGEST_MINUTES, HW_WEEKLY_DIGEST_STALE_MINUTES)) return;
     if (!(await isHomeworkWeeklyDigestDay(now))) return;
+    if (await isPausedNow("HOMEWORK_REQUIRED", now)) return; // D-#1655
     await runOnce(dateKey, "HWWD", async () => {
       const res = await dispatchHomeworkWeeklyDigest(now);
       summary.hwWeeklyDigestEmitted = res.notified;
@@ -705,6 +707,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     const reminderMin = latestOpenMinute(nowMin, HW_CONFIRM_REMINDER_MINUTES);
     const escRung = HW_CONFIRM_ESCALATION_RUNGS.find((r) => windowOpen(nowMin, r.min));
     if (reminderMin === undefined && !escRung) return;
+    // D-#1655: homework is optional inside a HOMEWORK_REQUIRED pause — nobody is nudged to confirm it.
+    if (await isPausedNow("HOMEWORK_REQUIRED", now)) return;
 
     const pending = await pendingHomeworkSections(now);
     if (pending.length === 0) return;

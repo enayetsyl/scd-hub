@@ -32,7 +32,12 @@ const mockSweepHomeworkAutoChase = jest.fn();
 const mockIsDigestDay = jest.fn();
 const mockDispatchDigest = jest.fn();
 const mockEmit = jest.fn();
+const mockPausedNow = jest.fn();
 
+// D-#1655: pause windows are DB-backed; the scheduler only asks "is this kind paused now?".
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedNow: (k: unknown, d: unknown) => mockPausedNow(k, d),
+}));
 jest.mock("../modules/routine/calendar", () => ({
   resolveDayType: (d: unknown) => mockResolveDayType(d),
 }));
@@ -252,6 +257,7 @@ beforeEach(() => {
   mockOverdueCounts.mockResolvedValue({ overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 });
   mockSweepHomeworkAutoChase.mockResolvedValue(0);
   mockIsDigestDay.mockResolvedValue(false);
+  mockPausedNow.mockResolvedValue(false);
   mockDispatchDigest.mockResolvedValue({ students: 0, notified: 0 });
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
   mockRunDailyReport.mockResolvedValue(0);
@@ -291,6 +297,22 @@ describe("homework weekly digest family", () => {
     const s = await runSchedulerTick(at(21, 5));
     expect(mockDispatchDigest).not.toHaveBeenCalled();
     expect(s.hwWeeklyDigestEmitted).toBe(0);
+  });
+
+  it("HOMEWORK_REQUIRED paused today — no digest (D-#1655)", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    mockPausedNow.mockImplementation(async (k: string) => k === "HOMEWORK_REQUIRED");
+    const s = await runSchedulerTick(at(17, 0));
+    expect(mockDispatchDigest).not.toHaveBeenCalled();
+    expect(s.hwWeeklyDigestEmitted).toBe(0);
+  });
+
+  it("an unrelated pause kind does not silence the digest", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    mockDispatchDigest.mockResolvedValue({ students: 1, notified: 1 });
+    mockPausedNow.mockImplementation(async (k: string) => k === "CLASS_NOTE_CHASE");
+    const s = await runSchedulerTick(at(17, 0));
+    expect(s.hwWeeklyDigestEmitted).toBe(1);
   });
 
   it("not a digest day — silent even at 17:00", async () => {
@@ -431,6 +453,14 @@ describe("homework pending-confirm ladder", () => {
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ recipientUserId: "ct1", kind: "HW_PENDING_REMINDER" }),
     );
+  });
+
+  it("HOMEWORK_REQUIRED paused — no pending-confirm reminder or escalation (D-#1655)", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection()]);
+    mockPausedNow.mockImplementation(async (k: string) => k === "HOMEWORK_REQUIRED");
+    const s = await runSchedulerTick(at(13, 0));
+    expect(s.hwPendingEmitted).toBe(0);
+    expect(mockPendingHomework).not.toHaveBeenCalled();
   });
 
   it("reminds BOTH the class teacher AND the delegate (delegate is additive)", async () => {

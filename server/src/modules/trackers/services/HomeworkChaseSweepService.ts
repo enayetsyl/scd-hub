@@ -27,6 +27,7 @@ import { transitionRecord } from "./HomeworkService";
 import { dateKeyOf } from "../../attendance/dates";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { HomeworkItem } from "../models/HomeworkItem";
+import { isPausedOn, loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
 
 /** Local-clock rung: 17:30 — after the auto-issue window closes at 17:00 and
  *  the 16:00 escalations are done; early enough that the guardian push is
@@ -43,12 +44,15 @@ export const HW_AUTO_CHASE_LOOKBACK_DAYS = 3;
  *  fell within the lookback window ending today. Returns how many were chased. */
 export async function sweepHomeworkAutoChase(now = new Date()): Promise<number> {
   const todayKey = dateKeyOf(now);
+  // D-#1655: homework is optional inside a HOMEWORK_REQUIRED pause — chase nothing.
+  if (await isPausedOn("HOMEWORK_REQUIRED", todayKey)) return 0;
   const floor = new Date(now);
   floor.setDate(floor.getDate() - HW_AUTO_CHASE_LOOKBACK_DAYS);
   floor.setHours(0, 0, 0, 0);
   const endOfToday = new Date(now);
   endOfToday.setHours(24, 0, 0, 0);
 
+  const isPaused = await loadPausePredicate(dateKeyOf(floor), todayKey);
   const records = await HomeworkStudentRecord.find({
     state: { $in: ["GIVEN", "DUE"] },
     chaseCount: 0,
@@ -63,6 +67,8 @@ export async function sweepHomeworkAutoChase(now = new Date()): Promise<number> 
     // Day-granular guard (dueDate carries the issue-time clock): due day must
     // have arrived. The $lt bound already ensures it; this is belt-and-braces.
     if (!rec.dueDate || dateKeyOf(new Date(rec.dueDate)) > todayKey) continue;
+    // A record that fell due on an optional day is never chased, even after the window ends.
+    if (isPaused("HOMEWORK_REQUIRED", dateKeyOf(new Date(rec.dueDate)))) continue;
     // GIVEN → DUE → CHASE is the legal fast-forward when the morning sweep was
     // missed; DUE → CHASE otherwise. No actorId — a system stamp carries no `by`.
     if (rec.state === "GIVEN") {

@@ -36,6 +36,8 @@ import { emitMarkSubmissionEscalation } from "../../notifications/services/emitt
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 /** 09:00 Asia/Dhaka — the "বুঝেছি" pop-up opens for teachers still unmarked. */
+import { isPausedOn } from "../../academic-pause/services/AcademicPauseService";
+
 export const MARK_NINE_MINUTES = 9 * 60;
 /** 09:30 — the scheduler's escalation rung (local clock = Dhaka on the VM). */
 export const MARK_ESCALATION_MINUTES = 9 * 60 + 30;
@@ -83,6 +85,8 @@ async function unmarkedIds(ids: Types.ObjectId[]): Promise<Set<string>> {
 /** Every ISSUED assignment due today, with its teachers and marked state. */
 export async function dueItemsToday(now: Date = new Date()): Promise<DueItemShape[]> {
   const today = dhakaDayKey(now);
+  // D-#1655: no marking pop-ups / escalation on an ASSIGNMENT_CHASE-paused day.
+  if (await isPausedOn("ASSIGNMENT_CHASE", today)) return [];
   const items = (
     await AssignmentItem.find({
       status: "ISSUED",

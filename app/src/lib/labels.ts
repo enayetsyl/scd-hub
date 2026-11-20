@@ -604,6 +604,22 @@ export function dhakaDateKey(input?: string | Date | null): string {
   return `${y}-${m}-${dd}`;
 }
 
+/** D-#1655: the label of an academic-pause kind. */
+export function pauseKindLabel(kind: string): string {
+  switch (kind) {
+    case "ASSIGNMENT_GENERATION":
+      return STR.apKindAssignmentGeneration;
+    case "ASSIGNMENT_CHASE":
+      return STR.apKindAssignmentChase;
+    case "HOMEWORK_REQUIRED":
+      return STR.apKindHomeworkRequired;
+    case "CLASS_NOTE_CHASE":
+      return STR.apKindClassNoteChase;
+    default:
+      return kind;
+  }
+}
+
 /** Compact Dhaka date+time for a full ISO timestamp: "২০২৬-০৭-১৭ ১৪:৩০".
  *  Deterministic replacement for `toLocaleString()` (device-ICU; Hermes-Intl crash
  *  vector on some Android Go devices, owner 2026-07-27). Fixed Dhaka offset — every
@@ -3563,6 +3579,34 @@ const STR_BN = {
   hxBadDate: "তারিখ YYYY-MM-DD আকারে দিন।",
   hxBadRange: "শুরুর তারিখ শেষ তারিখের পরে হতে পারে না।",
   hxNeedName: "ছুটির নাম দিন।",
+
+  // Academic pause windows (D-#1655) — dates on which chasers and "late" counts stand down
+  apTitle: "একাডেমিক বিরতি",
+  apManage: "একাডেমিক বিরতি",
+  apEffect:
+    "বিরতির তারিখগুলোতে নির্বাচিত কাজের তাগাদা, রিমাইন্ডার ও \"দেরি\" গণনা বন্ধ থাকে। উপস্থিতি, রুটিন ও ঘণ্টা আগের মতোই চলে।",
+  apAdd: "বিরতি যোগ করুন",
+  apEditing: "বিরতি সম্পাদনা",
+  apLabel: "নাম",
+  apLabelPh: "যেমন: বার্ষিক পরীক্ষা",
+  apWhat: "কী বন্ধ থাকবে",
+  apKindAssignmentGeneration: "নতুন অ্যাসাইনমেন্ট দেওয়া",
+  apKindAssignmentChase: "অ্যাসাইনমেন্টের তাগাদা",
+  apKindHomeworkRequired: "বাড়ির কাজ (বাধ্যতামূলক নয়, তাগাদা বন্ধ)",
+  apKindClassNoteChase: "ক্লাস নোট জমার তাগাদা",
+  apSave: "সংরক্ষণ করুন",
+  apSaved: "বিরতি সংরক্ষণ হয়েছে।",
+  apCancelEdit: "বাতিল",
+  apEdit: "সম্পাদনা",
+  apDelete: "মুছুন",
+  apDeleteConfirm: "এই বিরতি মুছবেন? ওই তারিখগুলোতে আবার নিয়মিত তাগাদা চলবে।",
+  apUpcoming: "চলমান ও আসন্ন বিরতি",
+  apPast: "আগের বিরতি",
+  apNone: "কোনো বিরতি নেই।",
+  apNeedLabel: "বিরতির নাম দিন।",
+  apNeedKind: "অন্তত একটি কাজ বেছে নিন।",
+  apBanner: "বিরতি চলছে",
+  apBannerNote: "এই সময়ে ক্লাস নোট জমার তাগাদা বন্ধ আছে।",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "ক্লাস নোট",
@@ -12595,6 +12639,34 @@ const STR_EN: StrTable = {
   hxBadDate: "Enter the date as YYYY-MM-DD.",
   hxBadRange: "The from-date cannot be after the to-date.",
   hxNeedName: "Give the holiday a name.",
+
+  // Academic pause windows (D-#1655)
+  apTitle: "Academic pauses",
+  apManage: "Academic pauses",
+  apEffect:
+    "On the paused dates the chosen nudges, reminders and \"late\" counts stand down. Attendance, the routine and bells run as usual.",
+  apAdd: "Add a pause",
+  apEditing: "Edit pause",
+  apLabel: "Name",
+  apLabelPh: "e.g. Annual exam",
+  apWhat: "What stops",
+  apKindAssignmentGeneration: "New assignments",
+  apKindAssignmentChase: "Assignment chasing",
+  apKindHomeworkRequired: "Homework (optional, chasing off)",
+  apKindClassNoteChase: "Class-note reminders",
+  apSave: "Save",
+  apSaved: "Pause saved.",
+  apCancelEdit: "Cancel",
+  apEdit: "Edit",
+  apDelete: "Delete",
+  apDeleteConfirm: "Delete this pause? Normal chasing resumes on those dates.",
+  apUpcoming: "Current and upcoming pauses",
+  apPast: "Past pauses",
+  apNone: "No pauses.",
+  apNeedLabel: "Give the pause a name.",
+  apNeedKind: "Choose at least one thing to pause.",
+  apBanner: "Pause in effect",
+  apBannerNote: "Class-note reminders are off for this period.",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "Class note",

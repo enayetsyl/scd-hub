@@ -24,6 +24,7 @@ import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { Student } from "../../foundation/models/Student";
 import { hasOpenClaim } from "./WorkClaimService";
 import { emitAssignmentGuardianChase } from "../../notifications/services/emitters";
+import { isPausedNow } from "../../academic-pause/services/AcademicPauseService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
@@ -110,6 +111,7 @@ type ChaseRecordLean = {
 };
 
 export async function assignmentChaseList(asOf: Date = new Date()): Promise<ChaseListEntry[]> {
+  if (await isPausedNow("ASSIGNMENT_CHASE", asOf)) return []; // D-#1655
   const records = (await AssignmentStudentRecord.find({ state: "CHASE" }).lean()) as unknown as ChaseRecordLean[];
   return (await chaseEntries(records, asOf)).sort((a, b) => b.daysOverdue - a.daysOverdue);
 }
@@ -121,6 +123,7 @@ export async function assignmentChaseList(asOf: Date = new Date()): Promise<Chas
  * joined for THIS page's records only.
  */
 export async function assignmentChaseListPage(args: PageArgs, asOf: Date = new Date()): Promise<Page<ChaseListEntry>> {
+  if (await isPausedNow("ASSIGNMENT_CHASE", asOf)) return pageOf([], args) as unknown as Page<ChaseListEntry>; // D-#1655
   const keys = (await AssignmentStudentRecord.find({ state: "CHASE" })
     .select("_id dueDate")
     .lean()) as unknown as Array<{ _id: { toString(): string }; dueDate?: Date }>;

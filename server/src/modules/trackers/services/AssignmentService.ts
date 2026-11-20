@@ -46,6 +46,7 @@ import { isRehomed, resolveRecordOwners } from "../recordOwner";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { recordAbsentAtDelivery } from "./deliveryAttendanceCheck";
 import { dateKeyOf } from "../../attendance/dates";
+import { isPausedNow } from "../../academic-pause/services/AcademicPauseService";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -777,6 +778,8 @@ export async function sweepAssignmentChases(
   at: Date = new Date(),
   itemId?: string,
 ): Promise<number> {
+  // D-#1655: no assignment chasing on a paused day.
+  if (await isPausedNow("ASSIGNMENT_CHASE", at)) return 0;
   const filter: Record<string, unknown> = {
     state: "DUE",
     dueDate: { $lt: atMidnight(at) },
