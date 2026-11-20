@@ -167,6 +167,8 @@ export function VoiceNoteRecorder({
   maxClips = MAX_VOICE_CLIPS,
   disabled = false,
   roundSubmitted = false,
+  hint,
+  resubmitNote,
 }: {
   clips: VoiceClip[];
   /** Spot choices (plan step / section labels); empty hides the picker. */
@@ -177,6 +179,10 @@ export function VoiceNoteRecorder({
   disabled?: boolean;
   /** The round already has a submitted verdict: new clips go out with the next resubmit (a notice says so). */
   roundSubmitted?: boolean;
+  /** Overrides the helper line (default: the plan wording). */
+  hint?: string;
+  /** Overrides the already-submitted notice (default: the plan wording). */
+  resubmitNote?: string;
 }): React.ReactElement {
   const styles = useStyles();
   const [phase, setPhase] = React.useState<Phase>("idle");
@@ -255,10 +261,10 @@ export function VoiceNoteRecorder({
   return (
     <View style={styles.box}>
       <Text style={styles.heading}>{STR.vnTitle}</Text>
-      <Muted>{STR.vnHint}</Muted>
+      <Muted>{hint ?? STR.vnHint}</Muted>
 
       {!canRecord ? <Notice message={STR.vnNativeUpdate} tone="info" /> : null}
-      {roundSubmitted ? <Notice message={STR.vnResubmitNote} tone="info" /> : null}
+      {roundSubmitted ? <Notice message={resubmitNote ?? STR.vnResubmitNote} tone="info" /> : null}
 
       {canRecord && spots.length > 0 && phase === "idle" && !full ? (
         <View style={styles.spotPick}>

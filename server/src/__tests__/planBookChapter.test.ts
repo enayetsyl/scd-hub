@@ -119,9 +119,9 @@ async function finalBook(opts: { code?: string; classLevel?: number; subject?: s
   return { book: await loadBook(book._id), version: await loadVersion(version._id) };
 }
 
-async function plan(address: { anchorWord: string; number: number | string; title?: string }, over: { classLevel?: number; subject?: string } = {}) {
+async function plan(address: { anchorWord: string; number: number | string; title?: string }, over: { classLevel?: number; subject?: string; docType?: string } = {}) {
   const d = await ContentArtifact.create({
-    docType: "chapter_plan",
+    docType: over.docType ?? "chapter_plan",
     subject: over.subject ?? "BAN",
     classLevel: over.classLevel ?? 3,
     address,
@@ -327,6 +327,18 @@ describe("gates", () => {
     await expect(planBookForCaller(ctx(school.otherTeacher), id)).rejects.toBeInstanceOf(ForbiddenError);
     // the teacher who teaches it, the Principal and Office (view_all) are in
     for (const who of [school.routineTeacher, P(), fx.auth.office]) expect((await planBookForCaller(ctx(who), id)).available).toBe(true);
+  });
+
+  it("a question artifact is served too (PB-3): chapter from address.number, surface question", async () => {
+    const { version } = await finalBook({ release: true });
+    const id = await plan({ anchorWord: "পাঠ", number: 2 }, { docType: "question" });
+    const r = await planBookForCaller(ctx(P()), id);
+    expect(r.available).toBe(true);
+    expect(r.chapterKey).toBe("ch-002");
+    const n = await BookEvent.countDocuments({ kind: "CONTENT_READ", "refs.versionId": version._id, summary: /content read \(question/ });
+    expect(n).toBe(1);
+    const other = await plan({ anchorWord: "পাঠ", number: 2 }, { docType: "question_set" });
+    expect((await planBookForCaller(ctx(P()), other)).available).toBe(false);
   });
 
   it("records one content read (surface plan) per user, version and day", async () => {
