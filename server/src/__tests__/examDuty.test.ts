@@ -77,7 +77,7 @@ async function setup() {
     examId: exam.insertedId.toString(),
     c3: c3.insertedId.toString(),
     c4: c4.insertedId.toString(),
-    office: ctxOf("OFFICE", ["exam:manage", "exam:read"]),
+    office: ctxOf("OFFICE", ["exam_routine:manage", "exam_routine:view"]),
   };
 }
 
@@ -193,11 +193,11 @@ describe("exam duty roster (D-#1660)", () => {
     await assignExamDuty(s.office, base(s, a, { room: "১০১" }));
     await assignExamDuty(s.office, { ...base(s, b), classId: s.c4 });
 
-    const mine = await myExamDuties(ctxOf("TEACHER", ["exam:read"], a));
+    const mine = await myExamDuties(ctxOf("TEACHER", ["exam_routine:view"], a));
     expect(mine).toHaveLength(1);
     expect(mine[0]).toMatchObject({ dateKey: D1, subject: "BAN", classLabelBn: "৩য় শ্রেণি", start: "07:30", end: "10:30", room: "১০১" });
 
-    const teacherCtx = ctxOf("TEACHER", ["exam:read"], a);
+    const teacherCtx = ctxOf("TEACHER", ["exam_routine:view"], a);
     await expect(examDutyRoster(teacherCtx, s.examId)).rejects.toThrow("অনুমতি");
     await expect(assignExamDuty(teacherCtx, base(s, a))).rejects.toThrow("অনুমতি");
     await expect(myExamDuties(ctxOf("GUARDIAN", []))).rejects.toThrow("অনুমতি");

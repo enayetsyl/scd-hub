@@ -543,7 +543,7 @@ export default function TodayScreen(): React.ReactElement {
       {can("viva:examine") ? <VivaTodayCard /> : null}
 
       {/* Exam duty roster (D-#1660): my upcoming invigilation duties. Own query → outside the gate. */}
-      {can("exam:read") ? <ExamDutyTodayCard /> : null}
+      {can("exam_routine:view") ? <ExamDutyTodayCard /> : null}
 
       {/* D-#1052 — a shared daily school report, until it is opened. Own query → outside the gate. */}
       {Object.values(DAILY_REPORT_SECTION_PERMISSION).some((p) => can(p)) ? <DailyReportTodayCard /> : null}

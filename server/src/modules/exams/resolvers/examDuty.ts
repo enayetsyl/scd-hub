@@ -1,11 +1,11 @@
 /**
  * Exam duty roster resolvers (D-#1660).
  *
- *   sittingDutyRoster    — exam:manage: the whole roster of one exam.
- *   sittingDutyCandidates — exam:manage: who can be put on a duty.
- *   mySittingDuties      — exam:read: the caller's own upcoming duties.
- *   assignSittingDuty    — exam:manage: put on / swap (reason needed to swap).
- *   clearSittingDuty     — exam:manage: take off (reason needed).
+ *   sittingDutyRoster    — exam_routine:manage: the whole roster of one exam.
+ *   sittingDutyCandidates — exam_routine:manage: who can be put on a duty.
+ *   mySittingDuties      — exam_routine:view: the caller's own upcoming duties.
+ *   assignSittingDuty    — exam_routine:manage: put on / swap (reason needed to swap).
+ *   clearSittingDuty     — exam_routine:manage: take off (reason needed).
  */
 import { builder } from "../../../schema";
 import {
@@ -100,7 +100,7 @@ builder.queryField("sittingDutyRoster", (t) =>
   t.field({
     type: RosterRef,
     description: "Every sitting of the exam routine with its invigilators, conflicts and per-teacher counts (D-#1660).",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_routine:manage" },
     args: { examId: t.arg.string({ required: true }) },
     resolve: (_r, args, ctx) => examDutyRoster(ctx, args.examId),
   }),
@@ -109,7 +109,7 @@ builder.queryField("sittingDutyRoster", (t) =>
 builder.queryField("sittingDutyCandidates", (t) =>
   t.field({
     type: [CandidateRef],
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_routine:manage" },
     resolve: (_r, _a, ctx) => dutyCandidates(ctx),
   }),
 );
@@ -118,7 +118,7 @@ builder.queryField("mySittingDuties", (t) =>
   t.field({
     type: [MineRef],
     description: "The caller's own upcoming exam duties (D-#1660).",
-    authScopes: { hasAnyPermission: ["exam:read", "exam:manage"] },
+    authScopes: { hasAnyPermission: ["exam_routine:view", "exam_routine:manage"] },
     resolve: (_r, _a, ctx) => myExamDuties(ctx),
   }),
 );
@@ -127,7 +127,7 @@ builder.mutationField("assignSittingDuty", (t) =>
   t.field({
     type: DutyRef,
     description: "Put a teacher on a sitting seat, or swap the one already there (a reason is then required).",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_routine:manage" },
     args: {
       examId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -146,7 +146,7 @@ builder.mutationField("assignSittingDuty", (t) =>
 builder.mutationField("clearSittingDuty", (t) =>
   t.boolean({
     description: "Take a duty off a sitting (reason required).",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_routine:manage" },
     args: { dutyId: t.arg.string({ required: true }), reason: t.arg.string({ required: true }) },
     resolve: (_r, a, ctx) => clearExamDuty(ctx, a.dutyId, a.reason),
   }),

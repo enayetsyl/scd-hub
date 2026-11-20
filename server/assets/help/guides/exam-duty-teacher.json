@@ -6,7 +6,7 @@
   "title": "আমার পরীক্ষার ডিউটি দেখা",
   "intro": "পরীক্ষায় আপনি কোন দিন, কখন, কোন শ্রেণিতে পাহারায় আছেন তা দেখার নিয়ম।",
   "keywords": ["পরীক্ষার ডিউটি", "আমার ডিউটি", "পাহারা", "পরীক্ষা"],
-  "perms": ["exam:read"],
+  "perms": ["exam_routine:view"],
   "screens": ["SyllabusTab/MyExamDuty"],
   "goTo": { "route": "SyllabusTab", "screen": "MyExamDuty" },
   "sections": [

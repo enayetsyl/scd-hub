@@ -1,12 +1,12 @@
 /**
  * Exam duty roster (D-#1660) — who invigilates each sitting of the exam routine (D-#883).
  *
- *   examDutyRoster   — exam:manage: every sitting of the routine with its invigilators, the
+ *   examDutyRoster   — exam_routine:manage: every sitting of the routine with its invigilators, the
  *                      conflicts, and a per-teacher count (fairness).
- *   myExamDuties     — exam:read: the caller's own upcoming duties (the teacher's screen + Today).
- *   assignExamDuty   — exam:manage: put a teacher on a sitting seat, or swap the teacher
+ *   myExamDuties     — exam_routine:view: the caller's own upcoming duties (the teacher's screen + Today).
+ *   assignExamDuty   — exam_routine:manage: put a teacher on a sitting seat, or swap the teacher
  *                      already there (a reason is then required). Audited; the teacher is told.
- *   clearExamDuty    — exam:manage: take a duty off (reason required). Audited; the teacher is told.
+ *   clearExamDuty    — exam_routine:manage: take a duty off (reason required). Audited; the teacher is told.
  *
  * A sitting is a routine slot (class, date, subject, kind); time and class come from the
  * routine live. Conflicts are FLAGGED, never refused — the Office decides: the same teacher
@@ -106,7 +106,7 @@ const keyOf = (x: SittingKey) => `${String(x.classId)}|${x.dateKey}|${x.subject}
 const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) =>
   !!a.start && !!b.start && a.start < b.end && b.start < a.end;
 
-function must(ctx: AppContext, perm: "exam:manage" | "exam:read") {
+function must(ctx: AppContext, perm: "exam_routine:manage" | "exam_routine:view") {
   if (!ctx.auth || !callerHasPermission(ctx.auth, perm)) throw new ExamDutyError("এই কাজের অনুমতি আপনার নেই।");
   return ctx.auth;
 }
@@ -152,7 +152,7 @@ async function mustExam(examId: string) {
 }
 
 export async function examDutyRoster(ctx: AppContext, examId: string): Promise<DutyRosterShape> {
-  must(ctx, "exam:manage");
+  must(ctx, "exam_routine:manage");
   const exam = await mustExam(examId);
   const [routine, duties, classes] = await Promise.all([
     ExamRoutine.findOne({ examId: exam._id }).lean(),
@@ -225,7 +225,7 @@ export async function examDutyRoster(ctx: AppContext, examId: string): Promise<D
 
 /** The caller's own duties from today on (all exams), in date/time order. */
 export async function myExamDuties(ctx: AppContext): Promise<MyDutyShape[]> {
-  const auth = must(ctx, "exam:read");
+  const auth = must(ctx, "exam_routine:view");
   const today = dhakaDayKey(new Date());
   const rows = await ExamSittingDuty.find({ teacherId: oid(auth.userId), dateKey: { $gte: today } }).lean();
   if (!rows.length) return [];
@@ -259,7 +259,7 @@ export async function myExamDuties(ctx: AppContext): Promise<MyDutyShape[]> {
 }
 
 export async function dutyCandidates(ctx: AppContext): Promise<DutyCandidateShape[]> {
-  must(ctx, "exam:manage");
+  must(ctx, "exam_routine:manage");
   const users = await User.find({ role: { $in: DUTY_ROLES }, active: true }, { name: 1, nameBn: 1 }).lean();
   return users
     .map((u) => ({ userId: String(u._id), name: personName(u as { name?: string; nameBn?: string }, "—") }))
@@ -308,7 +308,7 @@ async function shapeOne(d: IExamSittingDuty): Promise<DutyShape> {
 }
 
 export async function assignExamDuty(ctx: AppContext, input: AssignDutyInput): Promise<DutyShape> {
-  const auth = must(ctx, "exam:manage");
+  const auth = must(ctx, "exam_routine:manage");
   const exam = await mustExam(input.examId);
   const classId = oid(input.classId);
   if (!DATE_KEY.test(input.dateKey)) throw new ExamDutyError("তারিখ YYYY-MM-DD আকারে দিন।");
@@ -377,7 +377,7 @@ export async function assignExamDuty(ctx: AppContext, input: AssignDutyInput): P
 }
 
 export async function clearExamDuty(ctx: AppContext, dutyId: string, reason: string): Promise<boolean> {
-  const auth = must(ctx, "exam:manage");
+  const auth = must(ctx, "exam_routine:manage");
   const duty = await ExamSittingDuty.findById(oid(dutyId));
   if (!duty) return true;
   const why = (reason ?? "").trim();

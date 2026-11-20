@@ -47,8 +47,8 @@ describe("পরীক্ষা sidebar group (D-#1652)", () => {
     const leaves = [
       'route: "ClassTestTab", labelKey: "tabClassTest"',
       'screen: "ExamRoutine", perms: ["exam_routine:view", "exam_routine:manage", "exam_routine:publish"]',
-      'screen: "ExamDutyRoster", perms: ["exam:manage"]',
-      'screen: "MyExamDuty", perms: ["exam:read"]',
+      'screen: "ExamDutyRoster", perms: ["exam_routine:manage"]',
+      'screen: "MyExamDuty", perms: ["exam_routine:view"]',
       'labelKey: "syRead", icon: "📋", screen: "SyllabusHome" }',
       'screen: "SyllabusEntry", perms: ["exam_syllabus:edit"]',
       'labelKey: "syApprovalsNav", icon: "✅", screen: "SyllabusApprovals" }',

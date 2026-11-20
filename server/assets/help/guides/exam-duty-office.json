@@ -6,7 +6,7 @@
   "title": "পরীক্ষার ডিউটি: শিক্ষক বাছাই ও বদল (অফিস)",
   "intro": "কোন পরীক্ষায় কোন শিক্ষক পাহারায় থাকবেন তা ঠিক করার ও দরকারে বদলানোর নিয়ম। শিক্ষক নিজের ফোনে নোটিফিকেশন পান।",
   "keywords": ["পরীক্ষার ডিউটি", "পাহারা", "ডিউটি", "শিক্ষক বদল", "পরীক্ষা"],
-  "perms": ["exam:manage"],
+  "perms": ["exam_routine:manage"],
   "screens": ["SyllabusTab/ExamDutyRoster"],
   "goTo": { "route": "SyllabusTab", "screen": "ExamDutyRoster" },
   "sections": [
