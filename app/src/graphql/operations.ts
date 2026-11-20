@@ -5511,6 +5511,57 @@ export const RETIRE_HOLIDAY = gql<{ retireHolidayException: HolidayT }, { id: st
   }
 `;
 
+// --- Academic pause windows (D-#1655) ---
+
+export interface AcademicPauseT {
+  id: string;
+  fromKey: string;
+  toKey: string;
+  label: string;
+  pauses: string[];
+}
+
+const PAUSE_FIELDS = `id fromKey toKey label pauses`;
+
+export const ACADEMIC_PAUSES_QUERY = gql<{ academicPauses: AcademicPauseT[] }, Record<string, never>>`
+  query AcademicPauses {
+    academicPauses { ${PAUSE_FIELDS} }
+  }
+`;
+
+export const ACADEMIC_PAUSES_IN_RANGE_QUERY = gql<
+  { academicPausesInRange: AcademicPauseT[] },
+  { fromKey: string; toKey: string }
+>`
+  query AcademicPausesInRange($fromKey: String!, $toKey: String!) {
+    academicPausesInRange(fromKey: $fromKey, toKey: $toKey) { ${PAUSE_FIELDS} }
+  }
+`;
+
+export const CREATE_ACADEMIC_PAUSE = gql<
+  { createAcademicPause: AcademicPauseT },
+  { fromKey: string; toKey: string; label: string; pauses: string[] }
+>`
+  mutation CreateAcademicPause($fromKey: String!, $toKey: String!, $label: String!, $pauses: [String!]!) {
+    createAcademicPause(fromKey: $fromKey, toKey: $toKey, label: $label, pauses: $pauses) { ${PAUSE_FIELDS} }
+  }
+`;
+
+export const UPDATE_ACADEMIC_PAUSE = gql<
+  { updateAcademicPause: AcademicPauseT },
+  { id: string; fromKey: string; toKey: string; label: string; pauses: string[] }
+>`
+  mutation UpdateAcademicPause($id: String!, $fromKey: String!, $toKey: String!, $label: String!, $pauses: [String!]!) {
+    updateAcademicPause(id: $id, fromKey: $fromKey, toKey: $toKey, label: $label, pauses: $pauses) { ${PAUSE_FIELDS} }
+  }
+`;
+
+export const DELETE_ACADEMIC_PAUSE = gql<{ deleteAcademicPause: boolean }, { id: string }>`
+  mutation DeleteAcademicPause($id: String!) {
+    deleteAcademicPause(id: $id)
+  }
+`;
+
 // --- Class-teacher generalization: support + history + my-sections (CT-1) ---
 
 export const SET_SUPPORT_TEACHER = gql<

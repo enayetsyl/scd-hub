@@ -58,6 +58,12 @@ jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
   HomeworkNilDeclaration: { find: (f: unknown) => ({ select: () => ({ lean: () => mockNilFind(f) }) }) },
 }));
 
+// D-#1655 — the pause service is stubbed (default: nothing paused) so the suite stays DB-free.
+const mockPausedOn = jest.fn();
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedOn: (k: string, d: string) => mockPausedOn(k, d),
+}));
+
 // Import AFTER mocks
 import {
   tallyDay,
@@ -114,6 +120,7 @@ beforeEach(() => {
   mockSlotFind.mockResolvedValue([]);
   mockHolidayFindOne.mockResolvedValue(null);
   mockNilFind.mockResolvedValue([]);
+  mockPausedOn.mockReset().mockResolvedValue(false);
 });
 
 // ===========================================================================
@@ -408,6 +415,32 @@ describe("D-#310 — confirmHomeworkDay subject-coverage gate", () => {
     ).rejects.toThrow(/BAN still owe a declaration/);
     expect(mockIssue).not.toHaveBeenCalled();
     expect(mockReconUpdate).not.toHaveBeenCalled();
+  });
+
+  test("D-#1655: on a HOMEWORK_REQUIRED-paused day the gate is skipped — what WAS declared issues", async () => {
+    mockPausedOn.mockImplementation(async (k: string, d: string) => k === "HOMEWORK_REQUIRED" && d === "2026-06-02");
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]); // BAN missing, no nil
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [{ studentId: "s1", present: true }],
+      actorId: ACTOR_ID,
+    });
+    expect(r.reconState).toBe("reconciled");
+    expect(r.issuedItems).toBe(1);
+    expect(mockIssue).toHaveBeenCalledTimes(1);
+    expect(mockPausedOn).toHaveBeenCalledWith("HOMEWORK_REQUIRED", "2026-06-02");
+  });
+
+  test("D-#1655: a pause that does NOT cover the day, or covers another kind, leaves the gate on", async () => {
+    mockPausedOn.mockImplementation(async (k: string) => k === "ASSIGNMENT_CHASE");
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
+    ).rejects.toThrow(/BAN still owe a declaration/);
+    expect(mockIssue).not.toHaveBeenCalled();
   });
 
   test("an explicit 'no homework today' (D-#299) satisfies the missing subject", async () => {

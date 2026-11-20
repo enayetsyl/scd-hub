@@ -34,6 +34,7 @@ import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { expectedItemsForWeek } from "./AssignmentScheduleService";
+import { loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
 import { weekNumberFor } from "../assignmentCalendar";
 import { PrintRequest } from "../../printing/models/PrintRequest";
 import { printMatchKey } from "../assignmentPrintMatch";
@@ -772,15 +773,18 @@ export async function reconciliationReport(
         : b.weekNumber - a.weekNumber,
     );
 
+  // D-#1655: a paused day owes nothing — undeclared homework under HOMEWORK_REQUIRED, assignment
+  // delivery days under ASSIGNMENT_GENERATION. The pause predicate is ONE query for the range.
+  const isPaused = await loadPausePredicate(fromKey, toKey);
   return {
     fromKey,
     toKey,
-    hwMisses,
-    asMisses,
-    hwNotDeclared,
+    hwMisses, // D-#1655: declared-but-unconfirmed days stay listed inside a window (declared items can never stall)
+    asMisses: asMisses.filter((m) => !isPaused("ASSIGNMENT_GENERATION", m.deliveryDateKey)),
+    hwNotDeclared: hwNotDeclared.filter((m) => !isPaused("HOMEWORK_REQUIRED", m.dateKey)),
     hwNilDeclared,
     asNilDeclared,
-    asNotDeclared,
+    asNotDeclared: asNotDeclared.filter((m) => !m.deliveryDateKey || !isPaused("ASSIGNMENT_GENERATION", m.deliveryDateKey)),
     asNotPrinted,
   };
 }

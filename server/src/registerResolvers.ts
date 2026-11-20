@@ -52,6 +52,7 @@ import "./modules/trackers/resolvers/classTestWeakObjectives";
 import "./modules/trackers/resolvers/classTestScripts";
 import "./modules/improvement/resolvers/improvement";
 import "./modules/trackers/resolvers/classTestSummary";
+import "./modules/academic-pause/resolvers/academicPause";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";

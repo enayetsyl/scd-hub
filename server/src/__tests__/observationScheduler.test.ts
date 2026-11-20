@@ -26,6 +26,9 @@ const DAY = 24 * 60 * 60 * 1000;
 // ---------------------------------------------------------------------------
 
 const mockObsFind = jest.fn();
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedNow: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/classroom-observation/models/ClassroomObservation", () => ({
   ClassroomObservation: { find: (q: unknown) => mockObsFind(q) },
 }));
