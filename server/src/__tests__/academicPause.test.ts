@@ -2,6 +2,8 @@
  * AcademicPauseService (D-#1655) — the window store: validation, inclusive boundaries on
  * Asia/Dhaka day keys, kind independence, delete. In-memory MongoDB, real service.
  */
+// The real pause service (jest.config setupFilesAfterEnv stubs it for every other suite).
+jest.unmock("../modules/academic-pause/services/AcademicPauseService");
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import {

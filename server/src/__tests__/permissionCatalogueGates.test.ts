@@ -57,6 +57,8 @@ const appFiles = walk(APP_SRC).map((f) => ({ f: rel(f, APP_SRC), s: code(f) }));
 
 /** Fields open to any login, each with the reason it needs no catalogue action. */
 const OPEN_FIELDS: Record<string, string> = {
+  // School-wide pause windows (D-#1655): dates + labels only, no PII; every routine / Today screen reads them.
+  academicPauses: "school calendar", academicPausesInRange: "school calendar", academicPauseKinds: "fixed list",
   // Sign-in and the caller's own session / profile / access (SELF; a guardian uses them too).
   staffLogin: "sign-in", guardianLogin: "sign-in", refreshSession: "own session", endImpersonation: "end own View-as",
   me: "own profile", myPermissions: "own access", myTemplates: "own templates", myScopes: "own scope grants",

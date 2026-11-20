@@ -4,6 +4,8 @@
  * and real models; rows go in raw (collection.insertOne) so only the fields each path
  * reads need to exist. Only the permission check is stubbed.
  */
+// The real pause service (jest.config setupFilesAfterEnv stubs it for every other suite).
+jest.unmock("../modules/academic-pause/services/AcademicPauseService");
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
