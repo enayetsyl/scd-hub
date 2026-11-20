@@ -232,6 +232,8 @@ export type RoutineStackParamList = {
   BellSchedule: undefined;
   /** D-#50 holiday exceptions — the admin face the mutation never had. */
   Holidays: undefined;
+  /** D-#1655 academic pause windows (Office/Principal). */
+  AcademicPauses: undefined;
   SectionPicker: undefined;
   /** D-#327: a teacher's own class-load detail (shared screen, self-scoped). */
   TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
@@ -759,6 +761,11 @@ export type FinanceStackParamList = {
 export type AdminStackParamList = {
   StudentProfile: StudentProfileParams;
   AdminHome: undefined;
+  /** Owner 2026-11-20: one sidebar row per hub section; AdminHome (all sections) stays the initial route. */
+  AdminPeople: undefined;
+  AdminClasses: undefined;
+  AdminYear: undefined;
+  AdminWatch: undefined;
   Import: undefined;
   UserList: undefined;
   ScopeGrant: undefined;

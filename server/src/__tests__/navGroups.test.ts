@@ -194,8 +194,15 @@ const NEW_STAFF_LEAVES = [
   "AdminTab:AiSettings",
   "AdminTab:AiRules",
   "AdminTab:AiExchanges",
+  // Owner 2026-11-20: the single "AdminTab:" row was split into one row per Admin-hub section.
+  "AdminTab:AdminPeople",
+  "AdminTab:AdminClasses",
+  "AdminTab:AdminYear",
+  "AdminTab:AdminWatch",
 ];
-const GONE = ["AdminTab:YearChange"]; // lives in Admin ③ (the Admin hub card) now
+// "AdminTab:" (its gate is now split into the four section rows, whose union is the old gate plus routine:edit_calendar —
+// asserted below); "AdminTab:YearChange" lives in Admin ③ (the Admin hub card) now.
+const GONE = ["AdminTab:YearChange", "AdminTab:"];
 
 function gatesOf(l: Leaf): Record<string, unknown> {
   const o: Record<string, unknown> = { l: l.labelKey };
@@ -252,7 +259,8 @@ describe("sidebar groups (D-#1654): staff", () => {
     expect(keys("navGComms")).toEqual(["ChatTab:", "CommentsTab:", "PopupNoticesTab:", "HomeTab:MyPopups", "AdminTab:MessageTemplates"]);
     expect(keys("navGAi")).toEqual(["AiAssistTab:", "AiWorkspaceTab:", "AdminTab:AiSettings", "AdminTab:AiRules", "AdminTab:AiExchanges"]);
     expect(keys("navGOffice")).toEqual([
-      "FinanceTab:", "ReportsTab:FinanceDashboard", "ReportsTab:DailySnapshot", "HrTab:", "PrintTab:", "AdminTab:",
+      "FinanceTab:", "ReportsTab:FinanceDashboard", "ReportsTab:DailySnapshot", "HrTab:", "PrintTab:",
+      "AdminTab:AdminPeople", "AdminTab:AdminClasses", "AdminTab:AdminYear", "AdminTab:AdminWatch",
     ]);
   });
 
@@ -300,7 +308,7 @@ describe("sidebar groups (D-#1654): staff", () => {
         k, nl: !!f.nl, ns: !!f.ns, v: !!f.v,
       });
     }
-    // Nothing else is new except the five Admin-hub cards that became leaves (their gates equal the card's).
+    // Nothing else is new except the five Admin-hub cards and the four Admin sections that became leaves (their gates equal the card's).
     const added = [...now.keys()].filter((k) => !(k in FROZEN_STAFF));
     expect([...added].sort()).toEqual([...NEW_STAFF_LEAVES].sort());
   });
@@ -378,17 +386,50 @@ describe("the new names and the Admin / HR move (D-#1654)", () => {
     }
   });
 
-  test("the plain প্রশাসন leaf shows only for an action that still has a card on the Admin hub", () => {
-    const leaf = flat(STAFF).map((x) => x.leaf).find((l) => key(l) === "AdminTab:");
-    expect(leaf?.perms).toBeDefined();
-    const used = [...adminHome.matchAll(/\bcan\("([a-z_]+:[a-z_]+)"\)/g)].map((m) => m[1]);
-    expect(used.length).toBeGreaterThan(10);
-    // routine:view is the routine card's second condition (with routine:settings), not a way in on its own.
-    for (const a of used.filter((u) => u !== "routine:view")) expect(leaf!.perms).toContain(a);
+  test("the four Admin section leaves: each card's can() action is in exactly its section's leaf, and every leaf perm is used", () => {
+    const by = new Map(flat(STAFF).map((x) => [key(x.leaf), x.leaf]));
+    const secs = ["AdminPeople", "AdminClasses", "AdminYear", "AdminWatch"];
+    const perms = (sec: string): string[] => by.get(`AdminTab:${sec}`)?.perms ?? [];
+    // Which can-consts each section's cards use: read the source between each section's first and last card guard.
+    const cards = [...adminHome.matchAll(/\{(can\w+) && inSection\("(Admin\w+)"\)/g)];
+    expect(cards.length).toBeGreaterThan(14);
+    const consts = new Map([...adminHome.matchAll(/const (can\w+) =\s*([^;]+);/g)].map((m) => [m[1], m[2]]));
+    const actionsOf = (c: string): string[] => [...(consts.get(c) ?? "").matchAll(/can\("([a-z_]+:[a-z_]+)"\)/g)].map((m) => m[1]);
+    const used: Record<string, Set<string>> = {};
+    for (const sec of secs) used[sec] = new Set();
+    for (const [, c, sec] of cards) {
+      expect(actionsOf(c).length).toBeGreaterThan(0);
+      for (const a of actionsOf(c)) if (a !== "routine:view") used[sec].add(a);
+    }
+    for (const sec of secs) {
+      expect([...used[sec]].sort()).toEqual([...perms(sec)].sort()); // exact: every card action in the leaf, every leaf perm used
+      for (const other of secs.filter((o) => o !== sec)) {
+        for (const a of used[sec]) expect(perms(other)).not.toContain(a);
+      }
+    }
+    // The union is the old single row's gate plus the pause action (no one gains a screen, only a second path).
+    const oldPerms = FROZEN_STAFF["AdminTab:"].p as string[];
+    expect([...new Set(secs.flatMap(perms))].sort()).toEqual([...oldPerms, "routine:edit_calendar"].sort());
+    expect(perms("AdminYear")).toContain("routine:edit_calendar");
     // and nothing from the moved cards leaks in
     for (const a of ["staff_records:view", "lesson_plans:import", "question_bank:import", "message_templates:view", "system_health:ai_key"]) {
-      expect(leaf!.perms).not.toContain(a);
+      for (const sec of secs) expect(perms(sec)).not.toContain(a);
     }
+    for (const sec of secs) expect(by.get(`AdminTab:${sec}`)?.screen).toBe(sec);
+  });
+
+  test("the Admin stack registers the four section screens; AdminHome stays first; pause card opens RoutineTab/AcademicPauses", () => {
+    const stack = appTabs.slice(appTabs.indexOf("function AdminNavigator"));
+    const order = ["AdminHome", "AdminPeople", "AdminClasses", "AdminYear", "AdminWatch"].map((n) => stack.indexOf(`<AdminStack.Screen name="${n}"`));
+    expect(order.every((i) => i > -1)).toBe(true);
+    expect([...order].sort((x, y) => x - y)).toEqual(order);
+    expect(adminHome).toContain('"RoutineTab", { screen: "AcademicPauses", initial: false }');
+    expect(adminHome).toContain('can("routine:edit_calendar")');
+  });
+
+  test("canAdmin includes routine:edit_calendar", () => {
+    const from = appTabs.indexOf("const canAdmin = any(");
+    expect(appTabs.slice(from, appTabs.indexOf(");", from))).toContain('"routine:edit_calendar"');
   });
 
   test("কর্মী তালিকা is a gated HR card; the HR stack registers the list and every screen it opens; the Admin route stays", () => {

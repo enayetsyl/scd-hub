@@ -41,6 +41,7 @@ import {
   type WorkCardKind,
 } from "@scd/shared";
 import { dateKeyOf, dateKeysBetween, parseDateKey } from "../../attendance/dates";
+import { loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
 import { buildDayTypeResolver, dayTypeAdmitsTrack } from "../../routine/calendar";
 import { hhmmToMinutes } from "../../routine/schedule";
 import { enrichRoutineSlots } from "../../routine/slotView";
@@ -256,6 +257,8 @@ async function periodCards(userIds: string[], fromKey: string, toKey: string, ke
   const noted = new Set(noteRows.map((n) => `${n.slotId.toString()}:${dateKeyOf(new Date(n.date))}`));
 
   const todayKey = dateKeyOf(new Date());
+  // D-#1655: no class-note cards (so no overdue ones) on a CLASS_NOTE_CHASE-paused day.
+  const isPaused = await loadPausePredicate(fromKey, toKey);
   const out: WorkCard[] = [];
   const push = (slot: IRoutineSlot, userId: string, dateKey: string, kind: "PERIOD" | "COVER", absentName: string | null) => {
     const view = viewById.get(slot._id.toString());
@@ -289,6 +292,7 @@ async function periodCards(userIds: string[], fromKey: string, toKey: string, ke
   };
 
   for (const day of schoolDays) {
+    if (isPaused("CLASS_NOTE_CHASE", day.key)) continue;
     const dow = DAYS_OF_WEEK[day.date.getDay()];
     for (const s of own) {
       if (s.dayOfWeek !== dow || !isLiveOn(s, day.date)) continue;
@@ -317,6 +321,7 @@ async function periodCards(userIds: string[], fromKey: string, toKey: string, ke
     const slot = slotById.get(slotId);
     const day = schoolDays.find((d) => d.key === dateKey);
     if (!slot || !day) return;
+    if (isPaused("CLASS_NOTE_CHASE", dateKey)) return;
     if (!dayTypeAdmitsTrack(day.dayType, slot.track as PeriodTrack)) return;
     seen.add(k);
     const absent = absentId ?? slot.teacherId?.toString() ?? null;

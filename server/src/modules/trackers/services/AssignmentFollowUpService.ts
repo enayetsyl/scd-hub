@@ -24,6 +24,8 @@ import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { Student } from "../../foundation/models/Student";
 import { hasOpenClaim } from "./WorkClaimService";
 import { emitAssignmentGuardianChase } from "../../notifications/services/emitters";
+import { isPausedNow, loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
+import { dateKeyOf } from "../../attendance/dates";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
@@ -109,8 +111,21 @@ type ChaseRecordLean = {
   chaseCount: number;
 };
 
+/**
+ * D-#1655: a record whose due day fell inside an ASSIGNMENT_CHASE window is never listed
+ * (and so never counted as overdue) afterwards. ONE window query for the whole range.
+ */
+async function withoutPausedDue<T extends { dueDate?: Date }>(records: T[]): Promise<T[]> {
+  const keys = records.filter((r) => r.dueDate).map((r) => dateKeyOf(new Date(r.dueDate as Date))).sort();
+  if (keys.length === 0) return records;
+  const isPaused = await loadPausePredicate(keys[0], keys[keys.length - 1]);
+  return records.filter((r) => !r.dueDate || !isPaused("ASSIGNMENT_CHASE", dateKeyOf(new Date(r.dueDate))));
+}
+
 export async function assignmentChaseList(asOf: Date = new Date()): Promise<ChaseListEntry[]> {
-  const records = (await AssignmentStudentRecord.find({ state: "CHASE" }).lean()) as unknown as ChaseRecordLean[];
+  if (await isPausedNow("ASSIGNMENT_CHASE", asOf)) return []; // D-#1655
+  const all = (await AssignmentStudentRecord.find({ state: "CHASE" }).lean()) as unknown as ChaseRecordLean[];
+  const records = await withoutPausedDue(all);
   return (await chaseEntries(records, asOf)).sort((a, b) => b.daysOverdue - a.daysOverdue);
 }
 
@@ -121,12 +136,13 @@ export async function assignmentChaseList(asOf: Date = new Date()): Promise<Chas
  * joined for THIS page's records only.
  */
 export async function assignmentChaseListPage(args: PageArgs, asOf: Date = new Date()): Promise<Page<ChaseListEntry>> {
+  if (await isPausedNow("ASSIGNMENT_CHASE", asOf)) return pageOf([], args) as unknown as Page<ChaseListEntry>; // D-#1655
   const keys = (await AssignmentStudentRecord.find({ state: "CHASE" })
     .select("_id dueDate")
     .lean()) as unknown as Array<{ _id: { toString(): string }; dueDate?: Date }>;
   const dueMs = (k: { dueDate?: Date }) => (k.dueDate ? atMidnight(new Date(k.dueDate)).getTime() : Infinity);
   keys.sort((a, b) => dueMs(a) - dueMs(b) || (a._id.toString() < b._id.toString() ? -1 : a._id.toString() > b._id.toString() ? 1 : 0));
-  const page = pageOf(keys, args);
+  const page = pageOf(await withoutPausedDue(keys), args);
   if (page.rows.length === 0) return { ...page, rows: [] };
   const ids = page.rows.map((k) => k._id.toString());
   const records = (await AssignmentStudentRecord.find({ _id: { $in: ids } }).lean()) as unknown as ChaseRecordLean[];

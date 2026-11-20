@@ -25,6 +25,8 @@ import {
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { loadOpenDayPredicate } from "./AssignmentScheduleService";
+import { loadPausePredicate } from "../../academic-pause/services/AcademicPauseService";
+import { dateKeyOf } from "../../attendance/dates";
 import {
   atMidnight,
   resolveWeekDates,
@@ -112,6 +114,7 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
     weekStartOf(schedule.termStartDate, weekTo).getTime() + 70 * 86_400_000,
   );
   const isOpen = await loadOpenDayPredicate(rangeStart, rangeEnd);
+  const isPaused = await loadPausePredicate(dateKeyOf(rangeStart), dateKeyOf(rangeEnd)); // D-#1655
 
   // Expected cells per (teacher × class × week), suspended weeks excluded.
   const suspendedWeeks: number[] = [];
@@ -124,7 +127,7 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
     const resolved = resolveWeekDates(
       schedule.termStartDate, w, schedule.deliveryDayOfWeek, schedule.dueDayOfWeek, isOpen,
     );
-    if (resolved.suspended) {
+    if (resolved.suspended || (resolved.deliveryDate && isPaused("ASSIGNMENT_GENERATION", dateKeyOf(resolved.deliveryDate)))) {
       suspendedWeeks.push(w);
       continue;
     }

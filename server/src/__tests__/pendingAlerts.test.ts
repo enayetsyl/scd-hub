@@ -32,6 +32,14 @@ const mockHwItemFind = jest.fn();
 const mockHwReconFind = jest.fn();
 
 // No DB here: the current-year helper (YC-0 step 3) means "no current year => no filter".
+// D-#1655 — no pause windows here (DB-free suite: the real service would query AcademicPause and hang).
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedNow: async () => false,
+  isPausedOn: async () => false,
+  isPausedOnDate: async () => false,
+  loadPausePredicate: async () => () => false,
+}));
+
 jest.mock("../modules/foundation/services/currentYear", () => ({
   currentAcademicYearId: async () => null,
   currentYearClassIds: async () => null,

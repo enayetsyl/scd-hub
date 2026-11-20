@@ -80,6 +80,11 @@ jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: { find: (f: unknown) => chain(mockPrintReqFind)(f) },
 }));
 
+// D-#1655 — no pause windows here (DB-free suite: the real service would query AcademicPause and hang).
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  loadPausePredicate: async () => () => false,
+}));
+
 import { reconciliationReport } from "../modules/trackers/services/ReconReportService";
 
 const SEC = "sec-1";

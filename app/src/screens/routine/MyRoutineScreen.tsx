@@ -8,7 +8,7 @@ import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { DAYS_OF_WEEK } from "@scd/shared";
-import { MY_ROUTINE_QUERY, MY_CLASS_NOTE_PROMPTS_QUERY } from "../../graphql/operations";
+import { MY_ROUTINE_QUERY, MY_CLASS_NOTE_PROMPTS_QUERY, ACADEMIC_PAUSES_IN_RANGE_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Loader, Notice } from "../../components/ui";
 import { SlotList } from "./SlotList";
@@ -32,6 +32,9 @@ export default function MyRoutineScreen({ navigation }: Props): React.ReactEleme
   const [date, setDate] = useState<string>(todayISO());
   const [q] = useQuery({ query: MY_ROUTINE_QUERY, variables: { date } });
   const [promptsQ] = useQuery({ query: MY_CLASS_NOTE_PROMPTS_QUERY, variables: { date: todayISO() } });
+  // D-#1655: an academic pause that switches class-note chasing off — say so, instead of a bare empty list.
+  const [pauseQ] = useQuery({ query: ACADEMIC_PAUSES_IN_RANGE_QUERY, variables: { fromKey: todayISO(), toKey: todayISO() } });
+  const notePause = (pauseQ.data?.academicPausesInRange ?? []).find((p) => p.pauses.includes("CLASS_NOTE_CHASE"));
   const today = DAYS_OF_WEEK[weekdayOfKey(date)];
   const prompts = promptsQ.data?.myClassNotePrompts ?? [];
 
@@ -39,6 +42,7 @@ export default function MyRoutineScreen({ navigation }: Props): React.ReactEleme
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         <DateField label={STR.rtRoutineForDate} value={date} onChange={(v) => setDate(v || todayISO())} />
+        {notePause ? <Notice message={`${STR.apBanner}: ${notePause.label}. ${STR.apBannerNote}`} tone="info" /> : null}
         {prompts.length > 0 ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.rtNotesToPublish}</Body>

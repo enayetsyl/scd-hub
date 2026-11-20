@@ -25,6 +25,7 @@ import {
   TRIM_RANKS,
 } from "@scd/shared";
 import type { HwSubject, TrimRank, ReconState } from "@scd/shared";
+import { isValidObjectId } from "mongoose";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { HomeworkNilDeclaration } from "../models/HomeworkNilDeclaration";
@@ -42,6 +43,7 @@ import {
   type IssueRosterEntry,
 } from "./HomeworkService";
 import { isWeekend } from "../calendar";
+import { isPausedOn } from "../../academic-pause/services/AcademicPauseService";
 
 // ---------------------------------------------------------------------------
 // tallyDay (handoff §4.2 — live DAY_TOTAL vs ceiling)
@@ -105,7 +107,30 @@ function toItemView(d: LeanItem): DayItemView {
   };
 }
 
-export async function tallyDay(classId: string, date: Date, sectionId?: string): Promise<DayTallyResult> {
+/** The class to tally. A caller can send `classId: ""` (a selection/slot with no class
+ *  yet, or an older bundle) — Mongo cannot cast "" to an ObjectId and the query 500s
+ *  (GlitchTip #74). Take the class from the section instead; null = nothing to tally. */
+async function resolveTallyClassId(classId: string, sectionId?: string): Promise<string | null> {
+  if (isValidObjectId(classId)) return classId;
+  if (!sectionId || !isValidObjectId(sectionId)) return null;
+  const sec = await Section.findById(sectionId).select("classId").lean();
+  return sec?.classId ? sec.classId.toString() : null;
+}
+
+export async function tallyDay(classIdGiven: string, date: Date, sectionId?: string): Promise<DayTallyResult> {
+  const classId = (await resolveTallyClassId(classIdGiven, sectionId)) ?? "";
+  if (!classId) {
+    return {
+      classId: classIdGiven,
+      dayTotal: 0,
+      ceiling: HW_DAILY_CEILING_MIN,
+      overBy: 0,
+      withinCeiling: true,
+      state: "within_ceiling",
+      items: [],
+      bandWarnings: [],
+    };
+  }
   const docs = await listDailyItems(classId, date, sectionId);
   const labelByCode = await topicLabelByCode(docs.flatMap((d) => d.topTags ?? []));
   const items = docs.map((d) => ({ ...toItemView(d), topicLabelBn: joinTopicLabels(d.topTags ?? [], labelByCode) }));
@@ -360,7 +385,10 @@ export async function confirmHomeworkDay(
     fromDate: { $lte: dayEnd },
     toDate: { $gte: dayStart },
   }).lean();
-  if (!alreadyReconciled && dayTypeFor(input.date, !!holiday) === "FULL") {
+  // D-#1655: on a HOMEWORK_REQUIRED-paused day homework is optional, so every subject without a
+  // declaration counts as nil — the gate is skipped and what WAS declared issues normally.
+  const hwPaused = await isPausedOn("HOMEWORK_REQUIRED", dateKeyOf(input.date));
+  if (!alreadyReconciled && !hwPaused && dayTypeFor(input.date, !!holiday) === "FULL") {
     const slots = (await RoutineSlot.find({
       groupType: "section",
       groupId: sectionId,

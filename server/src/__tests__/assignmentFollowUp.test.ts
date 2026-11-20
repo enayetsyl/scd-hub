@@ -27,6 +27,14 @@ const mockGuardianLinkFind = jest.fn();
 
 // GC-2: the follow-up ladder now asks whether a guardian claim is open before it
 // pushes the family (§6.4). Stubbed EMPTY here — without it every step buffers.
+// D-#1655 — no pause windows here (DB-free suite: the real service would query AcademicPause and hang).
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedNow: async () => false,
+  isPausedOn: async () => false,
+  isPausedOnDate: async () => false,
+  loadPausePredicate: async () => () => false,
+}));
+
 jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
   GuardianWorkClaim: { exists: () => Promise.resolve(null) },
 }));

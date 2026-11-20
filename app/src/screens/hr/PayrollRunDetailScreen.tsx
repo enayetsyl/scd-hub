@@ -199,7 +199,7 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
   const [reopenReason, setReopenReason] = React.useState("");
   // The run list carries the reopen history (D-#904); this screen only gets the id.
   const [{ data: runsData }, refetchRuns] = useQuery({ query: PAYROLL_RUNS_QUERY, requestPolicy: "cache-and-network" });
-  const thisRun = runsData?.payrollRuns.find((r) => r.id === runId);
+  const thisRun = runsData?.payrollRuns?.find((r) => r.id === runId);
 
   const payslips = data?.payslipsForRun ?? [];
 

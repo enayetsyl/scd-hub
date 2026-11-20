@@ -22,6 +22,8 @@ module.exports = {
       },
     ],
   },
+  // D-#1655: DB-free suites default to "nothing paused" (see src/test-setup/pauseStub.ts).
+  setupFilesAfterEnv: ["<rootDir>/src/test-setup/pauseStub.ts"],
   forceExit: true,
   testTimeout: 15000,
 };

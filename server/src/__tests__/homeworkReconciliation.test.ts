@@ -58,6 +58,21 @@ jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
   HomeworkNilDeclaration: { find: (f: unknown) => ({ select: () => ({ lean: () => mockNilFind(f) }) }) },
 }));
 
+// D-#1655 — the pause service is stubbed (default: nothing paused) so the suite stays DB-free.
+const mockPausedOn = jest.fn();
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedOn: (k: string, d: string) => mockPausedOn(k, d),
+}));
+
+// GlitchTip #74 — tallyDay falls back to the section's class when classId is "".
+const mockSectionFindById = jest.fn();
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: {
+    findById: (id: unknown) => ({ select: () => ({ lean: () => mockSectionFindById(id) }) }),
+    find: () => ({ select: () => ({ lean: () => Promise.resolve([]) }), lean: () => Promise.resolve([]) }),
+  },
+}));
+
 // Import AFTER mocks
 import {
   tallyDay,
@@ -114,6 +129,7 @@ beforeEach(() => {
   mockSlotFind.mockResolvedValue([]);
   mockHolidayFindOne.mockResolvedValue(null);
   mockNilFind.mockResolvedValue([]);
+  mockPausedOn.mockReset().mockResolvedValue(false);
 });
 
 // ===========================================================================
@@ -146,6 +162,23 @@ describe("T2.1/T2.5 — tallyDay (live DAY_TOTAL vs 120)", () => {
     expect(r.bandWarnings).toContain("HW-C1-MATH-0009");
     expect(r.items[0].bandWarning).toBe(true);
     expect(r.withinCeiling).toBe(true); // 45 ≤ 120 day-sum → not blocked
+  });
+
+  test("GlitchTip #74: classId \"\" is resolved from the section, never queried as \"\"", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: new mongoose.Types.ObjectId(CLASS_ID) });
+    mockList.mockResolvedValue([leanItem({ timeDecl: 25 })]);
+    const r = await tallyDay("", A_TUESDAY, SECTION_ID);
+    expect(mockList).toHaveBeenCalledWith(CLASS_ID, A_TUESDAY, SECTION_ID);
+    expect(r.dayTotal).toBe(25);
+  });
+
+  test("GlitchTip #74: classId \"\" with no resolvable section → empty tally, no query", async () => {
+    mockSectionFindById.mockResolvedValue(null);
+    const r = await tallyDay("", A_TUESDAY, SECTION_ID);
+    expect(mockList).not.toHaveBeenCalled();
+    expect(r.items).toEqual([]);
+    expect(r.dayTotal).toBe(0);
+    expect(r.state).toBe("within_ceiling");
   });
 
   test("a reconciled day reports state=reconciled", async () => {
@@ -408,6 +441,32 @@ describe("D-#310 — confirmHomeworkDay subject-coverage gate", () => {
     ).rejects.toThrow(/BAN still owe a declaration/);
     expect(mockIssue).not.toHaveBeenCalled();
     expect(mockReconUpdate).not.toHaveBeenCalled();
+  });
+
+  test("D-#1655: on a HOMEWORK_REQUIRED-paused day the gate is skipped — what WAS declared issues", async () => {
+    mockPausedOn.mockImplementation(async (k: string, d: string) => k === "HOMEWORK_REQUIRED" && d === "2026-06-02");
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]); // BAN missing, no nil
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [{ studentId: "s1", present: true }],
+      actorId: ACTOR_ID,
+    });
+    expect(r.reconState).toBe("reconciled");
+    expect(r.issuedItems).toBe(1);
+    expect(mockIssue).toHaveBeenCalledTimes(1);
+    expect(mockPausedOn).toHaveBeenCalledWith("HOMEWORK_REQUIRED", "2026-06-02");
+  });
+
+  test("D-#1655: a pause that does NOT cover the day, or covers another kind, leaves the gate on", async () => {
+    mockPausedOn.mockImplementation(async (k: string) => k === "ASSIGNMENT_CHASE");
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
+    ).rejects.toThrow(/BAN still owe a declaration/);
+    expect(mockIssue).not.toHaveBeenCalled();
   });
 
   test("an explicit 'no homework today' (D-#299) satisfies the missing subject", async () => {

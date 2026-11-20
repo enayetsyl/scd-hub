@@ -21,6 +21,14 @@ const chain = (val: () => unknown) => {
   return o;
 };
 
+// D-#1655 — no pause windows here (DB-free suite: the real service would query AcademicPause and hang).
+jest.mock("../modules/academic-pause/services/AcademicPauseService", () => ({
+  isPausedNow: async () => false,
+  isPausedOn: async () => false,
+  isPausedOnDate: async () => false,
+  loadPausePredicate: async () => () => false,
+}));
+
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: { find: (q: unknown) => chain(() => mockRecFind(q)) },
 }));

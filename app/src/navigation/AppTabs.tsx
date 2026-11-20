@@ -233,6 +233,7 @@ import ClassNoteReportScreen from "../screens/routine/ClassNoteReportScreen";
 import ClassNotesAdminScreen from "../screens/routine/ClassNotesAdminScreen";
 import BellScheduleScreen from "../screens/routine/BellScheduleScreen";
 import HolidaysScreen from "../screens/routine/HolidaysScreen";
+import AcademicPausesScreen from "../screens/routine/AcademicPausesScreen";
 import AttendanceHomeScreen from "../screens/attendance/AttendanceHomeScreen";
 import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
 import AttendanceAdminScreen from "../screens/attendance/AttendanceAdminScreen";
@@ -506,7 +507,7 @@ import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
 import DrawerContent from "./DrawerContent";
-import { HELP_BUTTON_WIDTH, HelpHeaderButton, useScreenGuides } from "../components/HelpHeaderButton";
+import { HELP_BUTTON_WIDTH, HelpGuidesProvider, HelpHeaderButton, useScreenGuides } from "../components/HelpHeaderButton";
 import { screenKey } from "../lib/helpGuides";
 import HelpHomeScreen from "../screens/help/HelpHomeScreen";
 import HelpGuideScreen from "../screens/help/HelpGuideScreen";
@@ -1093,6 +1094,7 @@ function RoutineNavigator(): React.ReactElement {
       <RoutineStack.Screen name="ClassNotesAdmin" component={ClassNotesAdminScreen} options={{ title: STR.cnClassNotesAdmin }} />
       <RoutineStack.Screen name="BellSchedule" component={BellScheduleScreen} options={{ title: STR.bellScheduleTitle }} />
       <RoutineStack.Screen name="Holidays" component={HolidaysScreen} options={{ title: STR.hxTitle }} />
+      <RoutineStack.Screen name="AcademicPauses" component={AcademicPausesScreen} options={{ title: STR.apTitle }} />
       <RoutineStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </RoutineStack.Navigator>
   );
@@ -1767,6 +1769,10 @@ function AdminNavigator(): React.ReactElement {
   return (
     <AdminStack.Navigator screenOptions={stackOptions}>
       <AdminStack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: STR.admin }} />
+      <AdminStack.Screen name="AdminPeople" component={AdminHomeScreen} options={{ title: STR.admGPeople }} />
+      <AdminStack.Screen name="AdminClasses" component={AdminHomeScreen} options={{ title: STR.admGClass }} />
+      <AdminStack.Screen name="AdminYear" component={AdminHomeScreen} options={{ title: STR.admGYear }} />
+      <AdminStack.Screen name="AdminWatch" component={AdminHomeScreen} options={{ title: STR.admGWatch }} />
       <AdminStack.Screen name="Import" component={ImportScreen} options={{ title: STR.importContent }} />
       <AdminStack.Screen name="UserList" component={UserListScreen} options={{ title: STR.users }} />
       <AdminStack.Screen name="ScopeGrant" component={ScopeGrantScreen} options={{ title: STR.scopeGrants }} />
@@ -2334,7 +2340,7 @@ export function AppTabs(): React.ReactElement {
     "teaching_assignments:assign_subject_teacher", "teaching_assignments:assign_supervisor",
     "cover:assign_proxy", "staff_records:view", "guardians:reset_password", "guardians:link",
     "message_templates:view", "access_control:edit", "audit_log:view", "audit_log:view_activity",
-    "system_health:view", "routine:settings",
+    "system_health:view", "routine:settings", "routine:edit_calendar",
   ); // D-#861: the ranking, guardian-claims and guardian-usage cards moved to the Reports tab.
   // Support-book production: gated on the caller's EFFECTIVE permissions, never the
   // role template — `book:*` sits only on the PRINCIPAL template and every
@@ -2417,6 +2423,8 @@ export function AppTabs(): React.ReactElement {
 
   return (
     <GuardianChildProvider enabled={role === "GUARDIAN"}>
+      {/* One myHelpGuides read for every header ? (GlitchTip #77). */}
+      <HelpGuidesProvider>
       {/* VA-1 (D-#638): while the Principal is inside someone else's account this sits
           above everything and never scrolls away. Nothing is refused during a View-as
           session (the owner's G6 decision), so being unmistakably told whose account you
@@ -2512,6 +2520,7 @@ export function AppTabs(): React.ReactElement {
         {/* Help is for every login; the server decides which guides each person gets. */}
         <Drawer.Screen name="HelpTab" component={HelpNavigator} />
       </Drawer.Navigator>
+      </HelpGuidesProvider>
     </GuardianChildProvider>
   );
 }

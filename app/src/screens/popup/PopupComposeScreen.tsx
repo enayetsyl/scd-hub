@@ -209,7 +209,7 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
     setShowEn(!!(loaded.titleEn || loaded.bodyEn));
     setTone(loaded.tone);
     setAttachmentUrl(loaded.attachmentUrl);
-    setRules(loaded.rules);
+    setRules(noTypename(loaded.rules));
     setActions(loaded.actions.map((a) => ({ kind: a.kind, labelBn: a.labelBn, labelEn: a.labelEn, target: a.target })));
     if (loaded.startsAt && loaded.status === "DRAFT") {
       setStartLater(true);
@@ -226,9 +226,17 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
     if (pickedQ.data) setPicked(pickedQ.data.popupPickedPeople);
   }, [pickedQ.data]);
 
+  /** Query results carry urql's `__typename`; an input type rejects it ("Field
+   *  __typename is not defined by type PopupStaffFilterInput"), so drop it before an
+   *  object read from the server goes back as an input. */
+  function noTypename<T extends object>(o: T): T {
+    const { __typename: _drop, ...rest } = o as T & { __typename?: string };
+    return rest as T;
+  }
+
   function applyAudience(a: PopupAudienceT): void {
     setStaffOn(!!a.staff);
-    setStaff(a.staff ? { ...a.staff } : { ...EMPTY_STAFF });
+    setStaff(a.staff ? noTypename(a.staff) : { ...EMPTY_STAFF });
     setGuardOn(!!a.guardian);
     setGuardLevels(a.guardian?.classLevels ?? []);
     setSectionIds(a.guardian?.sectionIds ?? []);
@@ -279,9 +287,9 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
   const pv = previewQ.data?.popupAudiencePreview;
 
   const [listsQ, refetchLists] = useQuery({ query: POPUP_AUDIENCE_LISTS_PAGE, variables: { page: 1, pageSize: 100 }, pause: live });
-  const lists = listsQ.data?.popupAudienceListsPage.rows ?? [];
+  const lists = listsQ.data?.popupAudienceListsPage?.rows ?? [];
   const [searchQ] = useQuery({ query: SEARCH_POPUP_PEOPLE, variables: { query: search, page: 1, pageSize: 20 }, pause: search.trim().length < 2 });
-  const hits = (searchQ.data?.searchPopupPeople.rows ?? []).filter(
+  const hits = (searchQ.data?.searchPopupPeople?.rows ?? []).filter(
     (h) => (h.kind === "USER" ? canStaff : canGuardian) && !picked.some((p) => p.id === h.id),
   );
   const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: ayId }, pause: !guardOn || !ayId });

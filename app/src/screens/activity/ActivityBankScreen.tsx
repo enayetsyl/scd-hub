@@ -233,8 +233,8 @@ export default function ActivityBankScreen({ route }: Props): React.ReactElement
     setMsg(m);
     if (m?.tone === "ok") reload();
   };
-  const bank = q.data?.activityBank.bank;
-  const sheets = (q.data?.activityBank.sheets ?? []).filter((s) => s.level === levelFilter && (showRetired || s.active));
+  const bank = q.data?.activityBank?.bank;
+  const sheets = (q.data?.activityBank?.sheets ?? []).filter((s) => s.level === levelFilter && (showRetired || s.active));
 
   const setStatus = (status: string): void => {
     if (!bank) return;

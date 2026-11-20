@@ -24,6 +24,7 @@ import { buildBellSchedule, type BellTrigger } from "../trigger";
 import { ForbiddenError } from "../../../middleware/authz";
 import { emitClassNotePublished } from "../../notifications/services/emitters";
 import { liveWindow } from "../liveWindow";
+import { isPausedOnDate } from "../../academic-pause/services/AcademicPauseService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
@@ -693,6 +694,15 @@ export interface ClassNoteSubmissionRow {
  *  subject-group + teacher. One row collects the subjects that are already posted
  *  and the subjects still pending for that teacher's date work-list. */
 export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSubmissionRow[]> {
+  const rows = await classNoteSubmissionReportRaw(date);
+  // D-#1655: on a paused day nothing is pending — keep only what was actually posted.
+  if (!(await isPausedOnDate("CLASS_NOTE_CHASE", date))) return rows;
+  return rows
+    .filter((r) => r.publishedCount > 0)
+    .map((r) => ({ ...r, pendingSubjects: [], pendingCount: 0 }));
+}
+
+async function classNoteSubmissionReportRaw(date: Date): Promise<ClassNoteSubmissionRow[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
   const { start, end } = dayBounds(date);
   const slots = (await RoutineSlot.find({
@@ -844,6 +854,9 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
 }
 
 export async function unwrittenClassNoteSlots(date: Date, teacherId?: string): Promise<IRoutineSlot[]> {
+  // D-#1655: inside a CLASS_NOTE_CHASE pause nothing is "unwritten" — no ladder rung,
+  // escalation or in-app prompt (all three read this one function).
+  if (await isPausedOnDate("CLASS_NOTE_CHASE", date)) return [];
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
   // The teacher filter is applied AFTER the cover overlay below, not in the query —
   // on a covered day the person who owes the note is the one who taught it, not the
