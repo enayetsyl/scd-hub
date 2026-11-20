@@ -93,7 +93,7 @@ import {
   overdueChaseList,
   overdueCounts,
 } from "../modules/trackers/services/ClassTestSummaryService";
-import { deriveReportOwnership, effectiveRosterCount } from "../modules/trackers/services/ClassTestResultService";
+import { deriveReportOwnership, deriveSentBack, effectiveRosterCount } from "../modules/trackers/services/ClassTestResultService";
 import { interpolate } from "../modules/templates/services/MessageTemplateService";
 import { MESSAGE_TEMPLATE_REGISTRY } from "@scd/shared";
 
@@ -114,6 +114,8 @@ type ExamCounts = {
   /** D-#603 handoff state. Default 0 = the teacher has not proposed release yet. */
   submitted?: number;
   published?: number;
+  /** F3 (D-#1659): send-back stamps of rows still waiting on the teacher. */
+  sentBackRows?: Array<{ sendBackAt: Date; sendBackReason?: string | null }>;
 };
 
 function withCounts(exams: ExamCounts[], submitted: Array<{ _id: unknown; latest: Date }> = []): void {
@@ -138,6 +140,7 @@ function withCounts(exams: ExamCounts[], submitted: Array<{ _id: unknown; latest
           // A published row counts as handed off (publishExam stamps every row).
           submittedCount: Math.max(e.submitted ?? 0, e.published ?? 0),
           publishedCount: e.published ?? 0,
+          sentBackRows: e.sentBackRows ?? [],
         })),
       );
     }
@@ -167,6 +170,33 @@ beforeEach(() => {
 // ===========================================================================
 // Pure helpers
 // ===========================================================================
+
+describe("deriveSentBack (F3, D-#1659 - sent back, not just late)", () => {
+  const at = (d: number) => new Date(2026, 10, d);
+  test("no send-back stamp anywhere -> not sent back", () => {
+    expect(deriveSentBack([{ submittedAt: null }, {}])).toEqual({ sentBack: false, sentBackReason: null });
+  });
+  test("an un-submitted, un-published row with a stamp -> sent back, with the reason", () => {
+    expect(deriveSentBack([{ sendBackAt: at(19), sendBackReason: "  মার্ক ভুল  " }])).toEqual({
+      sentBack: true,
+      sentBackReason: "মার্ক ভুল",
+    });
+  });
+  test("the NEWEST stamp's reason wins", () => {
+    const r = deriveSentBack([
+      { sendBackAt: at(18), sendBackReason: "old" },
+      { sendBackAt: at(19), sendBackReason: "new" },
+    ]);
+    expect(r.sentBackReason).toBe("new");
+  });
+  test("re-submitted (submittedAt back) or published rows never read as sent back", () => {
+    expect(deriveSentBack([{ sendBackAt: at(19), sendBackReason: "x", submittedAt: at(20) }]).sentBack).toBe(false);
+    expect(deriveSentBack([{ sendBackAt: at(19), sendBackReason: "x", publishedAt: at(20) }]).sentBack).toBe(false);
+  });
+  test("a stamp with a blank reason is still sent back (reason null, the app words it)", () => {
+    expect(deriveSentBack([{ sendBackAt: at(19), sendBackReason: " " }])).toEqual({ sentBack: true, sentBackReason: null });
+  });
+});
 
 describe("reportStateOf (4-way partition)", () => {
   test("complete > overdue > in_progress > not_started", () => {
@@ -350,6 +380,19 @@ describe("reportsStatus / principalDashboard", () => {
     expect(rows[0].teacherName).toBe("Teacher A");
     expect(rows[0].submittedAt).toBe(new Date(2026, 6, 12).toISOString());
     expect(rows[1].submittedAt).toBeNull();
+  });
+
+  test("a sent-back exam reads sentBack + reason while it stays teacherOverdue (card says ফেরত এসেছে, not দেরি)", async () => {
+    const e1 = exam({ _id: oid(), testNumber: 1 });
+    const e2 = exam({ _id: oid(), testNumber: 2 });
+    mockCtFind.mockReturnValue(leanChain([e1, e2]));
+    withCounts([
+      { id: e1._id, sectionId: SECTION, roster: 10, entered: 10, sentBackRows: [{ sendBackAt: new Date(2026, 6, 19), sendBackReason: "নম্বর মেলেনি" }] },
+      { id: e2._id, sectionId: SECTION, roster: 10, entered: 4 },
+    ]);
+    const rows = await reportsStatus({ asOf: NOW });
+    expect(rows[0]).toMatchObject({ sentBack: true, sentBackReason: "নম্বর মেলেনি", teacherOverdue: true });
+    expect(rows[1]).toMatchObject({ sentBack: false, sentBackReason: null, teacherOverdue: true });
   });
 
   // The perf property (2026-08-16): the roster/result reads and the calendar are
