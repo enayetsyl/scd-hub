@@ -56,7 +56,7 @@ export default function AiAssistHomeScreen({ navigation }: Props): React.ReactEl
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.aasNone}</Muted> : null}
-      {data?.rows.map((s) => (
+      {data?.rows?.map((s) => (
         <SessionCard key={s.id} s={s} showTeacher={all} onPress={() => navigation.navigate("AiAssistChat", { sessionId: s.id })} />
       ))}
       {data ? <Pager page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}

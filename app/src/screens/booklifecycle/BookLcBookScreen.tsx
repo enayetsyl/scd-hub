@@ -149,8 +149,8 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
             </ChipRow>
 
             {tab === "versions" ? (
-              <QueryGate result={vq} onRetry={refresh} isEmpty={!vq.data?.bookLcVersionsPage.rows.length} empty={<EmptyState message="—" />}>
-                {vq.data?.bookLcVersionsPage.rows.map((v) => (
+              <QueryGate result={vq} onRetry={refresh} isEmpty={!vq.data?.bookLcVersionsPage?.rows.length} empty={<EmptyState message="—" />}>
+                {vq.data?.bookLcVersionsPage?.rows.map((v) => (
                   <Card key={v.id} onPress={() => navigation.navigate("BookLcVersion", { versionId: v.id })} style={{ marginTop: space(2) }}>
                     <Body style={{ fontWeight: "700" }}>
                       {v.labelBn} — {v.statusBn}
@@ -170,8 +170,8 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
             ) : null}
 
             {tab === "rounds" ? (
-              <QueryGate result={rq} onRetry={refresh} isEmpty={!rq.data?.bookLcRoundsPage.rows.length} empty={<EmptyState message={BL.noRounds} />}>
-                {rq.data?.bookLcRoundsPage.rows.map((r) => (
+              <QueryGate result={rq} onRetry={refresh} isEmpty={!rq.data?.bookLcRoundsPage?.rows.length} empty={<EmptyState message={BL.noRounds} />}>
+                {rq.data?.bookLcRoundsPage?.rows.map((r) => (
                   <Card key={r.id} onPress={() => navigation.navigate("BookLcRound", { roundId: r.id })} style={{ marginTop: space(2) }}>
                     <Body style={{ fontWeight: "700" }}>
                       {BL.memo} {bnNum(r.memoNo)} · {r.versionLabel} · {r.reviewerName}
@@ -203,8 +203,8 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
                     />
                   </Card>
                 ) : null}
-                <QueryGate result={dq} onRetry={refresh} isEmpty={!dq.data?.bookLcDecisionsPage.rows.length} empty={<EmptyState message={BL.noDecisions} />}>
-                  {dq.data?.bookLcDecisionsPage.rows.map((d) => (
+                <QueryGate result={dq} onRetry={refresh} isEmpty={!dq.data?.bookLcDecisionsPage?.rows.length} empty={<EmptyState message={BL.noDecisions} />}>
+                  {dq.data?.bookLcDecisionsPage?.rows.map((d) => (
                     <Card key={d.id} style={{ marginTop: space(2) }}>
                       <Body style={{ fontWeight: "700" }}>
                         {d.code} — {d.questionBn}
@@ -231,8 +231,8 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
             ) : null}
 
             {tab === "drafts" ? (
-              <QueryGate result={drq} onRetry={refresh} isEmpty={!drq.data?.bookLcDraftsPage.rows.length} empty={<EmptyState message={BL.noDrafts} />}>
-                {drq.data?.bookLcDraftsPage.rows.map((d) => (
+              <QueryGate result={drq} onRetry={refresh} isEmpty={!drq.data?.bookLcDraftsPage?.rows.length} empty={<EmptyState message={BL.noDrafts} />}>
+                {drq.data?.bookLcDraftsPage?.rows.map((d) => (
                   <Card key={d.id} onPress={() => navigation.navigate("BookLcDraft", { draftId: d.id })} style={{ marginTop: space(2) }}>
                     <Body style={{ fontWeight: "700" }}>
                       {d.baseLabel} · {d.source} · {d.status}
@@ -245,9 +245,9 @@ export default function BookLcBookScreen({ navigation, route }: Props): React.Re
             ) : null}
 
             {tab === "history" ? (
-              <QueryGate result={eq} onRetry={refresh} isEmpty={!eq.data?.bookLcEventsPage.rows.length} empty={<EmptyState message={BL.noEvents} />}>
+              <QueryGate result={eq} onRetry={refresh} isEmpty={!eq.data?.bookLcEventsPage?.rows.length} empty={<EmptyState message={BL.noEvents} />}>
                 <SectionTitle>{BL.tabHistory}</SectionTitle>
-                {eq.data?.bookLcEventsPage.rows.map((e, i) => (
+                {eq.data?.bookLcEventsPage?.rows.map((e, i) => (
                   <Muted key={i}>
                     {ymd(e.at)} · {e.actorName ?? "—"}
                     {e.origin === "claude" ? " (Claude)" : ""} · {e.summary}

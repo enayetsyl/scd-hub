@@ -61,12 +61,12 @@ export default function BookLcBundleScreen({ navigation, route }: Props): React.
       <SectionTitle>{BL.bundleDownload}</SectionTitle>
       <Muted>{BL.bundleHint}</Muted>
       <ChipRow>
-        {(fq.data?.bookLcFeedbackPage.rows ?? []).map((f) => (
+        {(fq.data?.bookLcFeedbackPage?.rows ?? []).map((f) => (
           <Chip key={f.id} label={`${f.code} ${f.textBn.slice(0, 24)}`} selected={items.includes(f.code)} onPress={() => toggle(items, setItems, f.code)} />
         ))}
       </ChipRow>
       <ChipRow>
-        {(iq.data?.bookLcInstructionsPage.rows ?? []).map((i) => (
+        {(iq.data?.bookLcInstructionsPage?.rows ?? []).map((i) => (
           <Chip key={i.id} label={`${i.code} ${i.textBn.slice(0, 24)}`} selected={instr.includes(i.id)} onPress={() => toggle(instr, setInstr, i.id)} />
         ))}
       </ChipRow>

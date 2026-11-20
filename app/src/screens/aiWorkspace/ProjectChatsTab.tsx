@@ -36,7 +36,7 @@ export function ProjectChatsTab({ project, onOpen }: { project: AiProjectT; onOp
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.awChatsNone}</Muted> : null}
-      {data?.rows.map((c) => (
+      {data?.rows?.map((c) => (
         <Card key={c.id} onPress={() => onOpen(c.id)}>
           <Body style={{ fontWeight: "700" }}>{c.title}</Body>
           <Muted>{fill(STR.awChatMeta, { turns: c.turns, who: c.startedByName ?? "—", when: isoDateTimeLabel(c.lastAt) })}</Muted>

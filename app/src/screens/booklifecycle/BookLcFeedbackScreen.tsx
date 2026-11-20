@@ -40,7 +40,7 @@ export default function BookLcFeedbackScreen({ route }: Props): React.ReactEleme
   const [msg, setMsg] = useMsg();
   const [form, setForm] = useState({ source: "school", chapterKey: "", page: "", quote: "", textBn: "", category: "spelling" as BookFeedbackCategory });
   const pull = usePullRefresh(q.fetching, () => refetch({ requestPolicy: "network-only" }));
-  const rows = q.data?.bookLcFeedbackPage.rows ?? [];
+  const rows = q.data?.bookLcFeedbackPage?.rows ?? [];
 
   const act = async (ids: string[], action: string): Promise<void> => {
     const res = await triage({ ids, action, reasonBn: reason || null, duplicateOfCode: dupOf || null });

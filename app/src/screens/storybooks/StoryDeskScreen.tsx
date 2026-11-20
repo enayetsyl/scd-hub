@@ -79,7 +79,7 @@ function LendPanel({ copy, onDone }: { copy: StoryCopyLookupT; onDone: (m: Msg) 
     if (res.error) return onDone({ tone: "danger", text: friendlyError(res.error) });
     onDone({
       tone: "ok",
-      text: STR.stbDeskGiven.replace("{book}", copy.titleBn).replace("{name}", picked.name).replace("{due}", isoDateLabel(res.data?.issueBook.dueDate)),
+      text: STR.stbDeskGiven.replace("{book}", copy.titleBn).replace("{name}", picked.name).replace("{due}", isoDateLabel(res.data?.issueBook?.dueDate)),
     });
   };
 
@@ -184,7 +184,7 @@ export default function StoryDeskScreen(): React.ReactElement {
     if (reload && copy) {
       // After a return: if another child waits, the copy is now held — say so.
       const res = await client.query(STORY_COPY_BY_CODE, { code: copy.code }, { requestPolicy: "network-only" }).toPromise();
-      const held = res.data?.storyCopyByCode.heldFor;
+      const held = res.data?.storyCopyByCode?.heldFor;
       setMsg(held ? { tone: "info", text: `${m?.text ?? ""}\n${STR.stbDeskHoldFor.replace("{name}", held.name).replace("{cls}", held.classLabelBn)}` } : m);
     } else {
       setMsg(m);

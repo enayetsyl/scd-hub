@@ -69,7 +69,7 @@ export default function DataAssistantLogScreen(): React.ReactElement {
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.daLogNone}</Muted> : null}
-      {data?.rows.map((r) => <Row key={r.id} r={r} />)}
+      {data?.rows?.map((r) => <Row key={r.id} r={r} />)}
       {data ? <Pager page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}
     </Screen>
   );

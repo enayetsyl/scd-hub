@@ -49,8 +49,8 @@ export default function BookLcRuleSetsScreen(): React.ReactElement {
           {msg}
         </Card>
       ) : null}
-      <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })} isEmpty={!q.data?.bookLcRuleSetsPage.rows.length} empty={<EmptyState message={BL.noRuleSets} />}>
-        {q.data?.bookLcRuleSetsPage.rows.map((r) => (
+      <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })} isEmpty={!q.data?.bookLcRuleSetsPage?.rows.length} empty={<EmptyState message={BL.noRuleSets} />}>
+        {q.data?.bookLcRuleSetsPage?.rows.map((r) => (
           <Card key={r.id} onPress={() => setOpen(open === r.id ? null : r.id)} style={{ marginBottom: space(2) }}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center" }}>
               <Body style={{ fontWeight: "700" }}>

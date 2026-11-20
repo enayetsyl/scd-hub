@@ -34,7 +34,7 @@ export default function SafeguardingReferralsScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         {q.fetching && !q.data ? <Loader /> : null}
         {q.error ? <Notice message={friendlyError(q.error)} tone="danger" /> : null}
-        {q.data?.safeguardingReferralsPage.rows.map((r) => (
+        {q.data?.safeguardingReferralsPage?.rows.map((r) => (
           <Card key={r.id}>
             <Badge text={r.status === "RAISED" ? STR.supRefRaised : r.status === "SEEN" ? STR.supRefSeenS : r.status === "CLOSED_OUTSIDE_APP" ? STR.supRefClosedS : r.status} />
             <Body style={{ fontWeight: "700" }}>{`${r.studentName} · ${dhakaDay(r.raisedAt)}`}</Body>

@@ -59,7 +59,7 @@ export default function DataAssistantHomeScreen({ navigation }: Props): React.Re
           {q.fetching && !data ? <Loader /> : null}
           {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
           {data && data.rows.length === 0 ? <Muted>{STR.daNoChats}</Muted> : null}
-          {data?.rows.map((c) => (
+          {data?.rows?.map((c) => (
             <ChatCard key={c.id} c={c} onPress={() => navigation.navigate("DataChat", { sessionId: c.id })} />
           ))}
           {data ? <Pager page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} /> : null}

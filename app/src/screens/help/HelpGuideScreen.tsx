@@ -38,8 +38,8 @@ export default function HelpGuideScreen({ navigation, route }: Props): React.Rea
   const colors = useColors();
 
   const data = q.data?.myHelpGuides;
-  const guide = data?.guides.find((g) => g.id === guideId) ?? null;
-  const category = data?.categories.find((c) => c.id === guide?.category)?.title ?? "";
+  const guide = data?.guides?.find((g) => g.id === guideId) ?? null;
+  const category = data?.categories?.find((c) => c.id === guide?.category)?.title ?? "";
   // D-#1280: a reading guide is text sections instead of screenshot rows.
   const isRead = guide?.kind === "read";
 

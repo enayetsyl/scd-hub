@@ -352,7 +352,7 @@ function Marking({ row, date, onDone }: { row: RevisionListeningRowT; date: stri
 export default function ListenStudentScreen({ route, navigation }: Props): React.ReactElement {
   const { studentId, date } = route.params;
   const [q] = useQuery({ query: MY_REVISION_LISTENING_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
-  const row = q.data?.myRevisionListening.find((r) => r.studentId === studentId) ?? null;
+  const row = q.data?.myRevisionListening?.find((r) => r.studentId === studentId) ?? null;
 
   return (
     <Screen padded={false}>

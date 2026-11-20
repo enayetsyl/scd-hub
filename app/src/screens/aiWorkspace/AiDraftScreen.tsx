@@ -53,7 +53,7 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
   const client = useClient();
   const { confirmAction } = useConfirm();
   const [q, refetch] = useQuery({ query: AI_DRAFT, variables: { id: draftId }, requestPolicy: "cache-and-network" });
-  const projectId = q.data?.aiDraft.draft.projectId;
+  const projectId = q.data?.aiDraft?.draft.projectId;
   const [pq] = useQuery({ query: AI_PROJECT, variables: { id: projectId ?? "" }, pause: !projectId });
   const [cq] = useQuery({ query: AI_PRICE_CLOCK });
   const [vPage, setVPage] = usePageState(draftId);
@@ -79,9 +79,9 @@ export default function AiDraftScreen({ route, navigation }: Props): React.React
   const [busy, setBusy] = React.useState<string | null>(null);
   const [showJson, setShowJson] = React.useState(false);
 
-  const d = q.data?.aiDraft.draft;
-  const v = q.data?.aiDraft.version;
-  const role = pq.data?.aiProject.myRole ?? "viewer";
+  const d = q.data?.aiDraft?.draft;
+  const v = q.data?.aiDraft?.version;
+  const role = pq.data?.aiProject?.myRole ?? "viewer";
   const canEdit = role !== "viewer";
   const reviseActive = d?.revise && (d.revise.status === "running" || d.revise.status === "queued");
 
