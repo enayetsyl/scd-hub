@@ -30,7 +30,7 @@ export async function fetchNextItem(
 ): Promise<{ item: ReviewPathItemT | null; error: null } | { item: null; error: CombinedError }> {
   const res = await client.query(MY_REVIEW_PATH, {}, { requestPolicy: "network-only" }).toPromise();
   if (res.error) return { item: null, error: res.error };
-  return { item: res.data?.myReviewPath.next?.item ?? null, error: null };
+  return { item: res.data?.myReviewPath?.next?.item ?? null, error: null };
 }
 
 /**

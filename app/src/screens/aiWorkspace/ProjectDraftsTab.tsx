@@ -31,7 +31,7 @@ export function ProjectDraftsTab({ project, onOpen, onNew }: { project: AiProjec
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.awDraftsNone}</Muted> : null}
-      {data?.rows.map((d) => (
+      {data?.rows?.map((d) => (
         <Card key={d.id} onPress={() => onOpen(d.id)}>
           <Body style={{ fontWeight: "700" }}>{d.title}</Body>
           <Muted>{fill(STR.awDraftMeta, { v: d.currentVersion, kind: kindLabel(d.kind), who: d.createdByName ?? "—" })}</Muted>

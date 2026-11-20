@@ -24,7 +24,7 @@ export function SupportProfileButton({ studentId, via, compact = false }: { stud
     const parent = nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined;
     (parent ?? (nav as unknown as { navigate: (r: string, p: unknown) => void })).navigate("HomeTab", { screen, params });
   };
-  const hasCard = allowed && !!q.data?.supportProfileChips.includes(studentId);
+  const hasCard = allowed && !!q.data?.supportProfileChips?.includes(studentId);
   // §9.3: a teacher can start a report on any child they teach, with or without a published profile.
   const showWrite = canReport && en.data?.supportProfileEnabled === true && !compact;
   if (!hasCard && !showWrite) return null;
@@ -45,7 +45,7 @@ export function SupportProfileRow({ students, via }: { students: { id: string; n
   const nav = useNavigation();
   const ids = students.map((s) => s.id);
   const [q] = useQuery<{ supportProfileChips: string[] }>({ query: SUPPORT_CHIPS, variables: { studentIds: ids }, pause: !allowed || ids.length === 0 });
-  const withProfile = students.filter((s) => q.data?.supportProfileChips.includes(s.id));
+  const withProfile = students.filter((s) => q.data?.supportProfileChips?.includes(s.id));
   if (!allowed || withProfile.length === 0) return null;
   const parent = nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined;
   const go = (studentId: string) => (parent ?? (nav as unknown as { navigate: (r: string, p: unknown) => void })).navigate("HomeTab", { screen: "SupportCard", params: { studentId, via } });

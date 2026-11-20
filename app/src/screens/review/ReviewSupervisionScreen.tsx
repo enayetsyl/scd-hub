@@ -198,7 +198,7 @@ export default function ReviewSupervisionScreen({ navigation }: Props): React.Re
     setNewBatchName("");
     setNewStart("");
     setNewTarget("");
-    const createdId = res.data?.createReviewProgram.id ?? null;
+    const createdId = res.data?.createReviewProgram?.id ?? null;
     justCreated.current = createdId;
     setProgramId(createdId);
     setBatch(null);

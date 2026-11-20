@@ -36,8 +36,8 @@ export default function BookLcMyBooksScreen({ navigation }: Props): React.ReactE
     <Screen scroll refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}>
       {msg}
       {viewer ? (
-        <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })} isEmpty={!q.data?.myBookLcBooks.length} empty={<EmptyState message={BL.noMyBooks} />}>
-          {q.data?.myBookLcBooks.map((b) => (
+        <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })} isEmpty={!q.data?.myBookLcBooks?.length} empty={<EmptyState message={BL.noMyBooks} />}>
+          {q.data?.myBookLcBooks?.map((b) => (
             <Card key={b.bookId} style={{ marginBottom: space(3) }}>
               <Body style={{ fontWeight: "700" }}>
                 {b.titleBn} · {b.versionLabel}
@@ -72,8 +72,8 @@ export default function BookLcMyBooksScreen({ navigation }: Props): React.ReactE
       {reporter ? (
         <>
           <SectionTitle>{BL.myReports}</SectionTitle>
-          <QueryGate result={rq} onRetry={() => refetchR({ requestPolicy: "network-only" })} isEmpty={!rq.data?.myBookLcReports.length} empty={<EmptyState message="—" />}>
-            {rq.data?.myBookLcReports.map((r) => (
+          <QueryGate result={rq} onRetry={() => refetchR({ requestPolicy: "network-only" })} isEmpty={!rq.data?.myBookLcReports?.length} empty={<EmptyState message="—" />}>
+            {rq.data?.myBookLcReports?.map((r) => (
               <Card key={`${r.bookId}-${r.code}`} style={{ marginBottom: space(2) }}>
                 <View style={{ flexDirection: "row", gap: space(2), alignItems: "center" }}>
                   <Body style={{ fontWeight: "700" }}>{r.code}</Body>

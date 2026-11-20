@@ -2,7 +2,8 @@ import { AppState, Platform } from "react-native";
 import { createClient, type Client, cacheExchange, fetchExchange, mapExchange, getOperationName } from "urql";
 import { getToken } from "../lib/tokenStore";
 import { isKnownOffline } from "../lib/netStatus";
-import { captureAppError } from "../observability/sentry";
+import { stripTypename } from "../lib/stripTypename";
+import { countFailure } from "../observability/dailyCounts";
 
 // On WEB the app is served same-origin behind the reverse proxy (Caddy serves
 // the static bundle and proxies /graphql, /pdf, /files), so a RELATIVE URL is
@@ -44,6 +45,15 @@ export const REST_BASE = API_URL.replace(/\/graphql\/?$/, "");
 // gated on connectivity instead; see `isKnownOffline` below.
 const EXPECTED_NETWORK_ERRORS = [/^No Content$/i];
 
+const stripTypenameExchange = mapExchange({
+  onOperation(operation) {
+    const vars = operation.variables;
+    if (!vars) return operation;
+    const clean = stripTypename(vars);
+    return clean === vars ? operation : { ...operation, variables: clean };
+  },
+});
+
 const errorReportExchange = mapExchange({
   onError(error, operation) {
     if (!error.networkError) return;
@@ -67,27 +77,17 @@ const errorReportExchange = mapExchange({
     // phone that is in use. Web is left alone: a hidden tab keeps its network.
     if (Platform.OS !== "web" && AppState.currentState !== "active") return;
     const operationName = getOperationName(operation.query) ?? "unknown";
-    captureAppError(
-      error.networkError,
-      {
-        kind: "network",
-        operation: operationName,
-        operationKind: operation.kind,
-        url: API_URL,
-      },
-      // ONE issue for every transport failure. The stack is the fetch polyfill's, so it
-      // split the same event into a new issue per frame it happened to die in (ten open
-      // issues on 2026-10-18, all "Network request failed"). The operation rides as a tag,
-      // so the issue still filters by caller, and an outage shows as a spike on one row.
-      { fingerprint: ["app-network-failure"], tags: { operation: operationName } },
-    );
+    // D-#1657: no per-failure event. The failure is only COUNTED (by operation name); one
+    // daily message per device carries the counts (observability/dailyCounts.ts). A failure
+    // here has no usable stack (the fetch polyfill's) and an outage shows as a count spike.
+    countFailure(operationName);
   },
 });
 
 function makeClient(): Client {
   return createClient({
     url: API_URL,
-    exchanges: [cacheExchange, errorReportExchange, fetchExchange],
+    exchanges: [stripTypenameExchange, cacheExchange, errorReportExchange, fetchExchange],
     // Token is read synchronously per request from the in-memory holder, which is
     // hydrated from SecureStore/localStorage at boot (see lib/tokenStore).
     fetchOptions: () => {

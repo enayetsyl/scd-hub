@@ -287,13 +287,13 @@ export default function ReviewSupervisionReviewerScreen({ route, navigation }: P
     () => (onlyOpen ? tasks.filter(isLive) : tasks).slice().sort((a, b) => (a.dueKey ?? "9999").localeCompare(b.dueKey ?? "9999")),
     [tasks, onlyOpen],
   );
-  const row = overviewQ.data?.reviewProgramOverview.reviewers.find((r) => r.reviewerId === reviewerId) ?? null;
+  const row = overviewQ.data?.reviewProgramOverview?.reviewers.find((r) => r.reviewerId === reviewerId) ?? null;
   const teachers = useMemo(
     () => (teachersQ.data?.teachers ?? []).map((t) => ({ label: t.name, value: t.id })),
     [teachersQ.data],
   );
   const totalCount = row ? row.plansTotal + row.questionsTotal : 0;
-  const target = overviewQ.data?.reviewProgramOverview.targetDate ?? null;
+  const target = overviewQ.data?.reviewProgramOverview?.targetDate ?? null;
   const needLabel =
     row?.requiredPacePerDay != null
       ? minutesLabel(row.requiredPacePerDay)
@@ -304,7 +304,7 @@ export default function ReviewSupervisionReviewerScreen({ route, navigation }: P
   const names = useMemo(() => {
     const m = new Map<string, string>();
     for (const t of teachersQ.data?.teachers ?? []) m.set(t.id, t.name);
-    for (const r of overviewQ.data?.reviewProgramOverview.reviewers ?? []) if (r.reviewerName) m.set(r.reviewerId, r.reviewerName);
+    for (const r of overviewQ.data?.reviewProgramOverview?.reviewers ?? []) if (r.reviewerName) m.set(r.reviewerId, r.reviewerName);
     return m;
   }, [teachersQ.data, overviewQ.data]);
   const nameOf = (id: string | null): string => (id ? names.get(id) ?? "-" : "-");

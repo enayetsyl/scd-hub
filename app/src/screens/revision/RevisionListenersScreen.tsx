@@ -28,8 +28,8 @@ export default function RevisionListenersScreen(): React.ReactElement {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const students = q.data?.revisionListenerBoard.students ?? [];
-  const listeners = q.data?.revisionListenerBoard.listeners ?? [];
+  const students = q.data?.revisionListenerBoard?.students ?? [];
+  const listeners = q.data?.revisionListenerBoard?.listeners ?? [];
   const levels = useMemo(() => [...new Set(students.map((s) => s.level))], [students]);
   const shown = students.filter((s) => !level || s.level === level);
   const nameOf = useMemo(() => new Map(listeners.map((l) => [l.userId, l.name])), [listeners]);

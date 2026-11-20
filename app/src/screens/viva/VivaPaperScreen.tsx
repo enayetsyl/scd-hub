@@ -74,7 +74,7 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
   const { paperId } = route.params;
   const [q, reexec] = useQuery({ query: VIVA_SHEET, variables: { paperId } });
   const refetch = React.useCallback(() => reexec({ requestPolicy: "network-only" }), [reexec]);
-  const paper = q.data?.vivaSheet.paper;
+  const paper = q.data?.vivaSheet?.paper;
   const [sets, setSets] = React.useState<DraftSet[]>([]);
   const [cur, setCur] = React.useState(0);
   const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
@@ -82,7 +82,7 @@ export default function VivaPaperScreen({ route, navigation }: Props): React.Rea
   // Picture questions: thumbnails of the saved pictures, plus any the picker has shown.
   const [savedPics] = useQuery({ query: VIVA_PICTURES, variables: { paperId } });
   const [seen, setSeen] = React.useState<Map<string, VivaPictureT>>(new Map());
-  const picOf = (id: string) => seen.get(id) ?? savedPics.data?.vivaPictures.find((p) => p.id === id);
+  const picOf = (id: string) => seen.get(id) ?? savedPics.data?.vivaPictures?.find((p) => p.id === id);
   const onSeen = React.useCallback((ps: VivaPictureT[]) => setSeen((m) => new Map([...m, ...ps.map((p) => [p.id, p] as const)])), []);
   const [picking, setPicking] = React.useState<number | null>(null);
 

@@ -94,7 +94,7 @@ function MyCallsCard(): React.ReactElement | null {
       <Body style={{ fontWeight: "700" }}>{STR.daMyCallsTitle}</Body>
       {q.error ? <Notice tone="danger" message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.daMyCallsNone}</Muted> : null}
-      {data?.rows.map((r) => (
+      {data?.rows?.map((r) => (
         <Muted key={r.id}>{`${isoDateTimeLabel(r.at)} · ${r.surface === "claude" ? r.clientName ?? "Claude" : STR.daLogInApp} · ${r.tool} · ${r.outcome}`}</Muted>
       ))}
       {data ? <Pager page={page} pageSize={MY_CALLS_PAGE_SIZE} total={data.total} onPage={setPage} /> : null}

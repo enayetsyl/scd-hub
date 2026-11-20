@@ -27,7 +27,7 @@ export function ProjectJobsTab({ project, onOpen, onNew }: { project: AiProjectT
       {q.fetching && !data ? <Loader /> : null}
       {q.error ? <ErrorBanner message={friendlyError(q.error as never)} /> : null}
       {data && data.rows.length === 0 ? <Muted>{STR.awJobsNone}</Muted> : null}
-      {data?.rows.map((j) => (
+      {data?.rows?.map((j) => (
         <Card key={j.id} onPress={() => onOpen(j.id)}>
           <Body style={{ fontWeight: "700" }}>{j.title}</Body>
           <Badge text={jobStatusLabel(j.status)} tone={j.status === "done" ? "ok" : j.status === "failed" ? "danger" : "info"} />
