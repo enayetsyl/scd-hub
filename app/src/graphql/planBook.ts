@@ -14,6 +14,8 @@ export interface PlanBookChapterT {
   teacherNote: string | null;
   anchorMissing: boolean;
   pictures: { path: string; url: string }[];
+  /** The real printed pages (PB-2, D-#1657); from/to null when this chapter has no page range. */
+  pdf: { pdfId: string; versionLabel: string; pageCount: number; pageAspect: number; fromPage: number | null; toPage: number | null } | null;
 }
 
 export const PLAN_BOOK_CHAPTER = gql<{ planBookChapter: PlanBookChapterT }, { artifactId: string; chapterKey?: string | null }>`
@@ -37,6 +39,14 @@ export const PLAN_BOOK_CHAPTER = gql<{ planBookChapter: PlanBookChapterT }, { ar
       pictures {
         path
         url
+      }
+      pdf {
+        pdfId
+        versionLabel
+        pageCount
+        pageAspect
+        fromPage
+        toPage
       }
     }
   }

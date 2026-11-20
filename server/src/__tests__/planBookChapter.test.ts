@@ -13,6 +13,7 @@ import { loadBook, loadVersion } from "../modules/book-lifecycle/services/store"
 import { BookMediaAsset } from "../modules/book-lifecycle/models/BookVersion";
 import { BookEvent } from "../modules/support-book/models/BookEvent";
 import { StoredFile } from "../modules/platform/models/StoredFile";
+import { BookPdf } from "../modules/book-pdf/models/BookPdf";
 import { ContentArtifact } from "../modules/content/models/ContentArtifact";
 import { planBookForCaller, chapterNumberOfTitle, matchDefaultChapter, clearPlanBookCache, planBookCacheSize } from "../modules/book-lifecycle/services/planBook";
 import { assertBookLcFileReadAccess } from "../modules/book-lifecycle/routes/bookLcFiles";
@@ -44,6 +45,7 @@ const MASTER = [
   J(
     "## পাঠ ১: গাছ",
     "![গাছ](media/tree.jpg)",
+    '<table><tr><td><img src="media/tree.jpg" alt="গাছ"></td></tr></table>',
     "**পর্যালোচনা-নোট — শুধু পর্যালোচকের জন্য**",
     "গোপন পর্যালোচনা: ছবির মান দেখুন।",
     "**শিক্ষক-নোট — পাঠ ১**",
@@ -304,6 +306,7 @@ describe("pictures", () => {
     const url = `/files/${asset!.storedFileId}`;
     expect(r.childText).toContain(`![গাছ](${url})`);
     expect(r.childText).not.toContain("media/tree.jpg");
+    expect(r.childText).toContain(`<img src="${url}"`);
     expect(r.pictures).toEqual([{ path: "media/tree.jpg", url }]);
   });
 });
@@ -375,6 +378,73 @@ describe("GET /files/:id gate for book pictures", () => {
     await BookMediaAsset.create({ bookId: book._id, sha256: "f".repeat(64), originalName: "x.jpg", mime: "image/jpeg", bytes: 4, storedFileId: sf._id });
     await expect(assertBookLcFileReadAccess(ctx(school.routineTeacher), sf)).rejects.toBeInstanceOf(ForbiddenError);
     expect(version.media.length).toBe(1);
+  });
+});
+
+describe("the printed PDF pages (PB-2, D-#1657)", () => {
+  async function pdfFor(bookCode: string, over: Partial<{ status: string; active: boolean; chapters: { key: string; title: string; fromPage: number; toPage: number }[]; pageCount: number }> = {}) {
+    const pageFileIds = Array.from({ length: over.pageCount ?? 12 }, () => new Types.ObjectId());
+    return BookPdf.create({
+      bookCode,
+      classLevel: 3,
+      subject: "BAN",
+      titleBn: "পরীক্ষার বই",
+      versionLabel: "v2.1",
+      status: over.status ?? "READY",
+      active: over.active ?? true,
+      pageFileIds,
+      pageCount: pageFileIds.length,
+      pageAspect: 1.4,
+      chapters: over.chapters ?? [
+        { key: "ch-001", title: "পাঠ ১: গাছ", fromPage: 3, toPage: 5 },
+        { key: "ch-002", title: "পাঠ ২: ফুল", fromPage: 6, toPage: 99 },
+      ],
+      uploadedBy: new Types.ObjectId(),
+    });
+  }
+  beforeEach(async () => {
+    await BookPdf.deleteMany({});
+  });
+
+  it("no PDF uploaded → pdf is null and the text stays (fallback)", async () => {
+    await finalBook({ release: true });
+    const r = await planBookForCaller(ctx(school.routineTeacher), await plan({ anchorWord: "পাঠ", number: 1 }));
+    expect(r.pdf).toBeNull();
+    expect(r.childText).toBeTruthy();
+  });
+
+  it("a READY PDF gives the matched chapter's page range, keyed by the same chapter keys (clamped to the book)", async () => {
+    await finalBook({ release: true });
+    await pdfFor("C3-BAN");
+    const id = await plan({ anchorWord: "পাঠ", number: 1 });
+    const r = await planBookForCaller(ctx(school.routineTeacher), id);
+    expect(r.chapterKey).toBe("ch-001");
+    expect(r.pdf).toMatchObject({ versionLabel: "v2.1", pageCount: 12, fromPage: 3, toPage: 5 });
+    const two = await planBookForCaller(ctx(school.routineTeacher), id, "ch-002");
+    expect(two.pdf).toMatchObject({ fromPage: 6, toPage: 12 });
+    // a chapter with no range → pdf present, range null → the app falls back to text
+    const three = await planBookForCaller(ctx(school.routineTeacher), id, "ch-003");
+    expect(three.pdf).toMatchObject({ fromPage: null, toPage: null });
+  });
+
+  it("a hidden or still-processing PDF is not offered", async () => {
+    await finalBook({ release: true });
+    const row = await pdfFor("C3-BAN", { active: false });
+    const id = await plan({ anchorWord: "পাঠ", number: 1 });
+    expect((await planBookForCaller(ctx(school.routineTeacher), id)).pdf).toBeNull();
+    await BookPdf.updateOne({ _id: row._id }, { $set: { active: true, status: "PROCESSING" } });
+    expect((await planBookForCaller(ctx(school.routineTeacher), id)).pdf).toBeNull();
+  });
+
+  it("a book with no final version but an uploaded PDF still opens, from the PDF's chapter map", async () => {
+    await finalBook({ state: "draft" });
+    await pdfFor("C3-BAN");
+    const r = await planBookForCaller(ctx(school.routineTeacher), await plan({ anchorWord: "পাঠ", number: 2 }));
+    expect(r.available).toBe(true);
+    expect(r.chapterKey).toBe("ch-002");
+    expect(r.childText).toBeNull();
+    expect(r.pdf).toMatchObject({ fromPage: 6, toPage: 12 });
+    expect(r.chapters.map((c) => c.key)).toEqual(["ch-001", "ch-002"]);
   });
 });
 

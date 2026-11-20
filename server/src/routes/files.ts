@@ -84,6 +84,14 @@ import {
   validateClassBookUpload,
 } from "../modules/class-books/services/ClassBookService";
 import {
+  BOOK_PDF_ERRORS_BN,
+  BOOK_PDF_MAX_BYTES,
+  BookPdfBusyError,
+  assertBookPdfFileReadAccess,
+  startBookPdfUpload,
+  validateBookPdfUpload,
+} from "../modules/book-pdf/services/BookPdfService";
+import {
   REFERENCE_PAPER_ERRORS_BN,
   REFERENCE_PAPER_MAX_BYTES,
   assertReferencePaperFileReadAccess,
@@ -1233,6 +1241,68 @@ filesRouter.post("/class-book", parseClassBookUpload, async (req: Request, res: 
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/book-pdf — the Office uploads (or replaces) a school book's printed PDF (PB-1,
+// D-#1657). Multipart `file` + fields bookCode, versionLabel?. class_books:manage, PDF <= 80 MB.
+// Answers once the row exists; pages render in the background (PROCESSING -> READY). A
+// re-upload keeps the chapter page ranges and the old pages serve until the swap.
+// ---------------------------------------------------------------------------
+
+const uploadBookPdf = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: BOOK_PDF_MAX_BYTES + 1 },
+});
+
+const parseBookPdfUpload: express.RequestHandler = (req, res, next) => {
+  uploadBookPdf.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: BOOK_PDF_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/book-pdf", parseBookPdfUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "class_books:manage")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateBookPdfUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const { pdf, done } = await startBookPdfUpload({
+      actorId: ctx.auth.userId,
+      bookCode: String(req.body?.bookCode ?? ""),
+      versionLabel: req.body?.versionLabel ? String(req.body.versionLabel) : null,
+      sourceName: decodeUploadName(file.originalname),
+      pdf: file.buffer,
+    });
+    done.catch((e) => console.warn("book pdf render crashed:", (e as Error)?.message));
+    res.json({ pdfId: pdf.id, status: pdf.status });
+  } catch (e) {
+    if (e instanceof BookPdfBusyError) {
+      res.status(409).json({ error: e.message });
+      return;
+    }
+    // A bare Error is a validation message for the person (unknown book).
+    if ((e as Error)?.constructor === Error) {
+      res.status(422).json({ error: (e as Error).message });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/reference-paper — another branch's past paper (D-#1030). Multipart `file`
 // (the PDF the reader shows, required) + optional `source` (the original, usually .docx) +
 // fields term, year, classLevel?, subject, title. exam_papers:manage_reference, ≤ 40 MB each.
@@ -1574,6 +1644,9 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // A class book page (D-#870): the book's own read gate — staff by class_books:view,
       // a guardian only for a READY, visible book of their child's class.
       await assertClassBookFileReadAccess(ctx, file._id.toString());
+    } else if (file.kind === "bookpdf_page") {
+      // A printed-book page (PB-1, D-#1657): teachers only — plan-book read / class_books view|manage.
+      await assertBookPdfFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "reference_paper_page" || file.kind === "reference_paper_source") {
       // Another branch's past paper (D-#1030): staff with exam_papers:view_reference /
       // manage_reference, and only for a file that belongs to a paper.
