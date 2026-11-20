@@ -96,6 +96,12 @@ ReviewVoiceNoteRef.implement({
     seconds: t.exposeFloat("seconds"),
     spot: t.string({ nullable: true, resolve: (r) => r.spot }),
     submitted: t.exposeBoolean("submitted"),
+    transcript: t.string({
+      nullable: true,
+      description: "Automatic transcript (VN-T1); set only when transcriptStatus is DONE. Same read scope as the clip.",
+      resolve: (r) => r.transcript,
+    }),
+    transcriptStatus: t.string({ nullable: true, resolve: (r) => r.transcriptStatus }),
     createdAt: t.exposeString("createdAt"),
   }),
 });

@@ -128,8 +128,8 @@ describe("testDeepseek — the save-time check", () => {
 describe("per-feature settings", () => {
   test("every feature starts OFF, on DeepSeek, fallback on — except the workspace's Gemini reader (D-#1226/#1227)", async () => {
     const list = await aiFeatureSettings(principal);
-    expect(list.map((f) => f.feature)).toEqual(["comment_check", "assistant", "workspace_ocr", "workspace_chat", "workspace_draft", "workspace_job", "data_assistant", "book_edit"]);
-    for (const f of list.filter((x) => !x.feature.startsWith("workspace_") && x.feature !== "data_assistant" && x.feature !== "book_edit")) {
+    expect(list.map((f) => f.feature)).toEqual(["comment_check", "assistant", "workspace_ocr", "workspace_chat", "workspace_draft", "workspace_job", "data_assistant", "book_edit", "voice_transcript"]);
+    for (const f of list.filter((x) => !x.feature.startsWith("workspace_") && x.feature !== "data_assistant" && x.feature !== "book_edit" && x.feature !== "voice_transcript")) {
       expect(f).toMatchObject({ enabled: false, provider: "deepseek", model: "deepseek-flash", fallback: true, providerReady: false });
     }
     expect(list.find((x) => x.feature === "workspace_ocr")).toMatchObject({ enabled: false, provider: "gemini", fallback: false });
@@ -138,6 +138,14 @@ describe("per-feature settings", () => {
     expect(list.find((x) => x.feature === "data_assistant")).toMatchObject({ enabled: false, provider: "anthropic", model: "claude-sonnet-5-5", fallback: false, dailyPerUser: 300, monthlyUsd: 5 });
     // Book edit job (docs/prd-book-lifecycle.md §14.4, D-#1603, owner Q9): OFF, Claude Opus 5.5, no fallback, $10/month, 400 a day.
     expect(list.find((x) => x.feature === "book_edit")).toMatchObject({ enabled: false, provider: "anthropic", model: "claude-opus-5-5", fallback: false, dailyPerUser: 400, monthlyUsd: 10, perSessionTurns: null });
+    // Voice-note transcripts (owner 20 Nov 2026): ON by default with the school Gemini key, no fallback.
+    expect(list.find((x) => x.feature === "voice_transcript")).toMatchObject({ enabled: true, provider: "gemini", fallback: false, monthlyUsd: 3 });
+  });
+
+  test("voice_transcript accepts Gemini only", async () => {
+    await expect(setAiFeatureSetting(principal, { feature: "voice_transcript", provider: "deepseek" }, async () => {})).rejects.toThrow("শুধু Gemini");
+    await expect(setAiFeatureSetting(principal, { feature: "voice_transcript", provider: "anthropic" }, async () => {})).rejects.toThrow("শুধু Gemini");
+    expect(mockFeatures.voice_transcript).toBeUndefined();
   });
 
   test("switching on needs the provider's key, and tests that provider with the feature's model", async () => {

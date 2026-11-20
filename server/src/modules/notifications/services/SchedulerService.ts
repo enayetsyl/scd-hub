@@ -83,6 +83,7 @@ import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAuto
 import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { captureReviewSnapshots } from "../../review-program/services/ReviewProgressService";
+import { startVoiceTranscriptSweep } from "../../content/services/ReviewVoiceTranscriptService";
 import { dispatchReviewBacklog, REVIEW_BACKLOG_MINUTES } from "../../review-program/services/ReviewBacklogService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
@@ -447,7 +448,10 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
 
   const dayType = await resolveDayType(now);
   summary.dayType = dayType;
-  if (dayType === "OFF" || dayType === "HOLIDAY") return summary; // N2.5 — silent
+  if (dayType === "OFF" || dayType === "HOLIDAY") {
+    startVoiceTranscriptSweep(); // transcripts keep retrying on non-school days (not awaited)
+    return summary; // N2.5 — silent
+  }
   const nowMin = minutesOfDay(now);
 
   // --- Daily school report (D-#1050/#1052) — saved once at the send time on a school day,
@@ -916,6 +920,11 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await dispatchLibraryReminders(now);
     });
   });
+
+  // --- Review voice-note transcripts (VN-T1, D-#1662): retry sweep, LAST in the tick and NOT awaited —
+  // Gemini is slow and must never delay the other families. An in-process flag skips a tick while a
+  // sweep is still running; the sweep itself takes at most 2 clips per run.
+  startVoiceTranscriptSweep();
 
   return summary;
 }
