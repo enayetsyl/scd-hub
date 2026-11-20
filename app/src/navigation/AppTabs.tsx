@@ -1686,6 +1686,14 @@ function HrNavigator(): React.ReactElement {
         component={OffboardingCaseScreen}
         options={({ route }) => ({ title: route.params.name || STR.hrOffboarding })}
       />
+      {/* D-#1654: কর্মী তালিকা lives here now; the staff screens it opens are registered beside it. */}
+      <HrStack.Screen name="StaffList" component={StaffListScreen} options={{ title: STR.staff }} />
+      <HrStack.Screen name="StaffForm" component={StaffFormScreen} options={{ title: STR.staffNew }} />
+      <HrStack.Screen name="StaffHub" component={StaffHubScreen} options={{ title: STR.stfTitle }} />
+      <HrStack.Screen name="StaffJoin" component={StaffJoinScreen} options={{ title: STR.stfJoinTitle }} />
+      <HrStack.Screen name="IssueLetter" component={IssueLetterScreen} options={{ title: STR.stfIssueLetterTitle }} />
+      <HrStack.Screen name="ConfirmEmployment" component={ConfirmEmploymentScreen} options={{ title: STR.stfConfirmTitle }} />
+      <HrStack.Screen name="StaffPayEdit" component={StaffPayEditScreen} options={{ title: STR.stfSetPay }} />
     </HrStack.Navigator>
   );
 }

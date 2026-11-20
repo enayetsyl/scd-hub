@@ -68,6 +68,20 @@ export function migrateOrder(order: string[], migrations: NavOrderMigration[]): 
   return next;
 }
 
+/**
+ * D-#1654: inside one group, two leaves that share a label (শিক্ষার্থীর অগ্রগতি and পাঠ পরিকল্পনার
+ * অগ্রগতি each exist in two stacks, behind different gates) show ONE row — the first. Pass the
+ * VISIBLE leaves, so a person who passes only the second gate still sees it. Order is kept.
+ */
+export function dedupeByLabel<T extends { labelKey: unknown }>(leaves: T[]): T[] {
+  const seen = new Set<unknown>();
+  return leaves.filter((l) => {
+    if (seen.has(l.labelKey)) return false;
+    seen.add(l.labelKey);
+    return true;
+  });
+}
+
 /** Most-used first; never-used keep their default order at the end. */
 export function orderByUse<T>(items: T[], useOf: (t: T) => number): T[] {
   return stableSort(items, (t) => -useOf(t));

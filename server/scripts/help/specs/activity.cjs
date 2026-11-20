@@ -207,7 +207,7 @@ async function report(h, O) {
   await O.evaluate(() => window.scrollTo(0, 0));
   await O.waitForTimeout(500);
   await h.openMenu(O);
-  await h.tap(O, "রিপোর্ট", 1500);
+  await h.tap(O, "বাকি কাজের রিপোর্ট", 1500);
   await h.shot(O, "activity-report", 0, [{ text: "অ্যাক্টিভিটি শিট রিপোর্ট" }]);
   await h.tap(O, "অ্যাক্টিভিটি শিট রিপোর্ট", 3500);
   await h.shot(O, "activity-report", 1, [{ text: "দক্ষতা", minY: 60 }, { text: "ব্যাংক", minY: 60 }, { text: "শিক্ষার্থী", minY: 60 }]);

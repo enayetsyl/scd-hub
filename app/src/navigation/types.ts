@@ -486,6 +486,15 @@ export type HrStackParamList = {
   // PR-4: offboarding
   OffboardingHome: undefined;
   OffboardingCase: { caseId: string; name: string };
+  // D-#1654: the staff list moved here from the Admin hub (কর্মী তালিকা). It and the screens it
+  // opens are registered in BOTH stacks (the Admin ones stay for old deep links). None is first.
+  StaffList: undefined;
+  StaffForm: { staff?: import("../graphql/operations").StaffT } | undefined;
+  StaffHub: { staff: import("../graphql/operations").StaffT };
+  StaffJoin: undefined;
+  IssueLetter: { staff: import("../graphql/operations").StaffT; kind: string };
+  ConfirmEmployment: { staff: import("../graphql/operations").StaffT };
+  StaffPayEdit: { staff: import("../graphql/operations").StaffT };
 };
 
 /** Vocabulary tracker (VC-5) — staff stack (tracker:read tab). */

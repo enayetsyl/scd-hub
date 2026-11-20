@@ -3,11 +3,17 @@
  * PM (docs/permission-catalogue/foundation-platform.md §f): each card checks the
  * catalogue action its screen performs, so a Principal role edit or a per-person
  * grant shows/hides exactly that card. The server re-gates every call.
+ *
+ * D-#1654 (owner 2026-11-19): the cards sit under four sub-headings (people & logins, classes /
+ * teachers / students, the academic year, oversight); a heading shows only when one of its cards
+ * does. Import, message templates and the three AI screens moved to the sidebar (their routes stay
+ * in this stack), and the staff list moved to the HR hub.
  */
 import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Notice } from "../../components/ui";
+import { space } from "../../theme/tokens";
 import { STR } from "../../lib/labels";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -15,7 +21,6 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
   const { can } = useAuth();
-  const canImport = can("lesson_plans:import") || can("question_bank:import");
   const canStaffLogins = can("staff_logins:view");
   const canProxy = can("cover:assign_proxy");
   const canAssignSubject = can("teaching_assignments:assign_subject_teacher");
@@ -31,21 +36,14 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // routine:settings). The screen first lists the groups on routine:view, so the card
   // needs both (owner rule 2026-10-25: no card onto a refusal).
   const canRoutine = can("routine:settings") && can("routine:view");
-  const canStaff = can("staff_records:view");
   const canGuardianCreds = can("guardians:reset_password") || can("guardians:link");
-  // message_templates:* and access_control:* are LOCKED (Principal-only).
-  const canTemplates = can("message_templates:view");
+  // access_control:* is LOCKED (Principal-only).
   const canAccess = can("access_control:edit");
   // audit:read split four ways (PM): the log, one person's activity, system health,
   // guardian app usage (the last is a report — Reports hub since D-#861).
   const canAuditLog = can("audit_log:view");
   const canActivity = can("audit_log:view_activity");
   const canHealth = can("system_health:view");
-  const canAiKey = can("system_health:ai_key");
-  // AI-3 (D-#1093): the Principal writes the AI rules; the Office (and teachers) read them.
-  const canAiRules = can("ai_assist:edit_rules") || can("ai_assist:read_rules");
-  // D-#1179: the AI request & reply log — the Principal only (LOCKED).
-  const canAiLog = can("ai_assist:read_ai_log");
   // AI-4 (D-#1131): the Office writes children's Bangla names so the AI can hide them.
   const canBanglaNames = can("students:edit");
   // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
@@ -60,21 +58,35 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // D-#861: Attendance ranking and Guardian reports — unresolved moved to the Reports hub
   // (one switch each); their Admin-stack routes remain for the digest's deep link.
 
+  const showPeople = canStaffLogins || canGuardianCreds || canAccess || canProxy || canAssignSupervisor;
+  const showClass =
+    canStudents || canBanglaNames || canAssignSubject || canAssignClassTeacher || canRoutine || canSections;
+  const showYear = canYears || canYearChange;
+  const showWatch = canAuditLog || canActivity || canHealth;
+
   return (
     <Screen scroll>
       <H2>{STR.admin}</H2>
 
-      {canImport ? (
-        <Card onPress={() => navigation.navigate("Import")}>
-          <Body style={{ fontWeight: "700" }}>{STR.importContent}</Body>
-          <Muted>{STR.admSubImport}</Muted>
-        </Card>
-      ) : null}
-
+      {showPeople ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGPeople}</Muted> : null}
       {canStaffLogins ? (
         <Card onPress={() => navigation.navigate("UserList")}>
           <Body style={{ fontWeight: "700" }}>{STR.users}</Body>
           <Muted>{STR.admSubUsers}</Muted>
+        </Card>
+      ) : null}
+
+      {canGuardianCreds ? (
+        <Card onPress={() => navigation.navigate("GuardianCredentials")}>
+          <Body style={{ fontWeight: "700" }}>{STR.guardianCredentials}</Body>
+          <Muted>{STR.admSubGuardianCreds}</Muted>
+        </Card>
+      ) : null}
+
+      {canAccess ? (
+        <Card onPress={() => navigation.navigate("AccessControlUsers")}>
+          <Body style={{ fontWeight: "700" }}>{STR.acTitle}</Body>
+          <Muted>{STR.admSubAccess}</Muted>
         </Card>
       ) : null}
 
@@ -85,13 +97,6 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canAssignSubject ? (
-        <Card onPress={() => navigation.navigate("AssignSubjectTeacher")}>
-          <Body style={{ fontWeight: "700" }}>{STR.assignSubjectTeacher}</Body>
-          <Muted>{STR.admSubAssignSubject}</Muted>
-        </Card>
-      ) : null}
-
       {canAssignSupervisor ? (
         <Card onPress={() => navigation.navigate("SupervisoryGrant")}>
           <Body style={{ fontWeight: "700" }}>{STR.sgManage}</Body>
@@ -99,62 +104,11 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {showClass ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGClass}</Muted> : null}
       {canStudents ? (
         <Card onPress={() => navigation.navigate("Roster")}>
           <Body style={{ fontWeight: "700" }}>{STR.roster}</Body>
           <Muted>{STR.rosterCount}</Muted>
-        </Card>
-      ) : null}
-
-      {/* Owner asks 2026-07-20 + 2026-10-26 (D-#861): the report cards (Reconciliation,
-          HW lifecycle, Attendance ranking, Guardian reports) live in the Reports hub; their
-          Admin-stack routes remain for deep links. */}
-
-      {canAuditLog ? (
-        <Card onPress={() => navigation.navigate("AuditLog")}>
-          <Body style={{ fontWeight: "700" }}>{STR.audTitle}</Body>
-          <Muted>{STR.audSubtitle}</Muted>
-        </Card>
-      ) : null}
-
-      {/* AL-1 (D-#645): audit_log:view_activity — the audit log read the other way round — the
-          audit log is the whole school newest-first, this is ONE person over a
-          window, with the tracker passes the audit log never carried. */}
-      {canActivity ? (
-        <Card onPress={() => navigation.navigate("PersonActivity")}>
-          <Body style={{ fontWeight: "700" }}>{STR.actTitle}</Body>
-          <Muted>{STR.actSubtitle}</Muted>
-        </Card>
-      ) : null}
-
-      {/* SH-1 (D-#414): `system_health:view` (was audit:read) — Principal by default, and
-          infrastructure headroom is a Principal decision (prune, archive, or pay). */}
-      {canHealth ? (
-        <Card onPress={() => navigation.navigate("SystemHealth")}>
-          <Body style={{ fontWeight: "700" }}>{STR.shTitle}</Body>
-          <Muted>{STR.shSubtitle}</Muted>
-        </Card>
-      ) : null}
-
-      {/* D-#967: the Gemini key + model, set here instead of the server's .env (LOCKED). */}
-      {canAiKey ? (
-        <Card onPress={() => navigation.navigate("AiSettings")}>
-          <Body style={{ fontWeight: "700" }}>{STR.aiTitle}</Body>
-          <Muted>{STR.aiSubtitle}</Muted>
-        </Card>
-      ) : null}
-
-      {canAiRules ? (
-        <Card onPress={() => navigation.navigate("AiRules")}>
-          <Body style={{ fontWeight: "700" }}>{STR.airTitle}</Body>
-          <Muted>{STR.airSubtitle}</Muted>
-        </Card>
-      ) : null}
-
-      {canAiLog ? (
-        <Card onPress={() => navigation.navigate("AiExchanges")}>
-          <Body style={{ fontWeight: "700" }}>{STR.axlTitle}</Body>
-          <Muted>{STR.axlSubtitle}</Muted>
         </Card>
       ) : null}
 
@@ -165,17 +119,10 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {/* GE-1/GE-3 (D-#464/#465): guardian app usage moved to the Reports hub (D-#861) —
-          `reports:guardian_engagement`, Principal-only by default like the audit log. */}
-
-      {/* SB-2..SB-4: the four support-book screens are NOT cards here — they live in
-          their own 📕 drawer group, because the Admin tab's own gate (content:import /
-          staff logins) is a role template no granted illustrator or reviewer passes. */}
-
-      {canStaff ? (
-        <Card onPress={() => navigation.navigate("Staff")}>
-          <Body style={{ fontWeight: "700" }}>{STR.staff}</Body>
-          <Muted>{STR.staffCount}</Muted>
+      {canAssignSubject ? (
+        <Card onPress={() => navigation.navigate("AssignSubjectTeacher")}>
+          <Body style={{ fontWeight: "700" }}>{STR.assignSubjectTeacher}</Body>
+          <Muted>{STR.admSubAssignSubject}</Muted>
         </Card>
       ) : null}
 
@@ -200,13 +147,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canYearChange ? (
-        <Card onPress={() => navigation.navigate("YearChange")}>
-          <Body style={{ fontWeight: "700" }}>{STR.ycTitle}</Body>
-          <Muted>{STR.admSubYearChange}</Muted>
-        </Card>
-      ) : null}
-
+      {showYear ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGYear}</Muted> : null}
       {canYears ? (
         <Card onPress={() => navigation.navigate("AcademicYear")}>
           <Body style={{ fontWeight: "700" }}>{STR.ayManage}</Body>
@@ -214,32 +155,39 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canGuardianCreds ? (
-        <Card onPress={() => navigation.navigate("GuardianCredentials")}>
-          <Body style={{ fontWeight: "700" }}>{STR.guardianCredentials}</Body>
-          <Muted>{STR.admSubGuardianCreds}</Muted>
+      {canYearChange ? (
+        <Card onPress={() => navigation.navigate("YearChange")}>
+          <Body style={{ fontWeight: "700" }}>{STR.ycTitle}</Body>
+          <Muted>{STR.admSubYearChange}</Muted>
         </Card>
       ) : null}
 
-
-      {canTemplates ? (
-        <Card onPress={() => navigation.navigate("MessageTemplates")}>
-          <Body style={{ fontWeight: "700" }}>{STR.mtMessageTemplates}</Body>
-          <Muted>{STR.admSubTemplates}</Muted>
+      {showWatch ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGWatch}</Muted> : null}
+      {canAuditLog ? (
+        <Card onPress={() => navigation.navigate("AuditLog")}>
+          <Body style={{ fontWeight: "700" }}>{STR.audTitle}</Body>
+          <Muted>{STR.audSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {canAccess ? (
-        <Card onPress={() => navigation.navigate("AccessControlUsers")}>
-          <Body style={{ fontWeight: "700" }}>{STR.acTitle}</Body>
-          <Muted>{STR.admSubAccess}</Muted>
+      {canActivity ? (
+        <Card onPress={() => navigation.navigate("PersonActivity")}>
+          <Body style={{ fontWeight: "700" }}>{STR.actTitle}</Body>
+          <Muted>{STR.actSubtitle}</Muted>
+        </Card>
+      ) : null}
+
+      {canHealth ? (
+        <Card onPress={() => navigation.navigate("SystemHealth")}>
+          <Body style={{ fontWeight: "700" }}>{STR.shTitle}</Body>
+          <Muted>{STR.shSubtitle}</Muted>
         </Card>
       ) : null}
 
       {![
-        canImport, canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
-        canAuditLog, canActivity, canHealth, canAiKey, canAiRules, canAiLog, canBanglaNames, canStaff,
-        canAssignClassTeacher, canRoutine, canSections, canYears, canGuardianCreds, canTemplates, canAccess,
+        canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
+        canAuditLog, canActivity, canHealth, canBanglaNames,
+        canAssignClassTeacher, canRoutine, canSections, canYears, canYearChange, canGuardianCreds, canAccess,
       ].some(Boolean) ? (
         <Notice message={STR.noPermission} tone="warn" />
       ) : null}

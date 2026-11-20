@@ -222,7 +222,7 @@ async function family(h, O) {
 
   // ── Office: the report ───────────────────────────────────────────────────
   await h.openMenu(O);
-  await h.tap(O, "রিপোর্ট", 1500);
+  await h.tap(O, "বাকি কাজের রিপোর্ট", 1500);
   await h.shot(O, "storybook-report", 0, [{ text: "গল্পের বই রিপোর্ট" }]);
   await h.tap(O, "গল্পের বই রিপোর্ট", 3500);
   await h.shot(O, "storybook-report", 1, [{ text: "সিরিজ", minY: 60 }, { text: "বই", minY: 60 }, { text: "পাঠক" }, { text: "৩০ দিন" }]);

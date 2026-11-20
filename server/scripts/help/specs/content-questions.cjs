@@ -49,8 +49,8 @@ exports.run = async (h) => {
   // ── office: import a plan and a bank, assign questions, progress, correct ─
   const O = await L.login(h, "office@help.test");
   await L.openItem(h, O, null, null);
-  await h.shot(O, "content-import-plan", 0, [{ text: "প্রশাসন" }]);
-  await h.tap(O, "প্রশাসন", 3500);
+  await h.shot(O, "content-import-plan", 0, [{ text: "প্রশ্ন ও রিভিউ" }]);
+  await h.tap(O, "প্রশ্ন ও রিভিউ", 3500);
   await h.shot(O, "content-import-plan", 1, [{ text: "কন্টেন্ট ইম্পোর্ট" }]);
   await h.tap(O, "কন্টেন্ট ইম্পোর্ট", 3000);
   await L.chooseFiles(h, O, "ফাইল নির্বাচন (JSON + Markdown)", [files.plan]);
@@ -66,8 +66,8 @@ exports.run = async (h) => {
 
   await L.home(O);
   await L.openItem(h, O, null, null);
-  await h.shot(O, "content-import-bank", 0, [{ text: "প্রশাসন" }]);
-  await h.tap(O, "প্রশাসন", 3500);
+  await h.shot(O, "content-import-bank", 0, [{ text: "প্রশ্ন ও রিভিউ" }]);
+  await h.tap(O, "প্রশ্ন ও রিভিউ", 3500);
   await h.shot(O, "content-import-bank", 1, [{ text: "কন্টেন্ট ইম্পোর্ট" }]);
   await h.tap(O, "কন্টেন্ট ইম্পোর্ট", 3000);
   await L.chooseFiles(h, O, "ফাইল নির্বাচন (JSON + Markdown)", [files.bank]);

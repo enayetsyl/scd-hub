@@ -5,12 +5,12 @@
  */
 const { PASSWORD, menuShot, fill, home } = require("./ops-common.cjs");
 
-/** From a fresh start: open the menu, unfold রিপোর্ট, shoot the leaf, open it. */
+/** From a fresh start: open the menu, unfold বাকি কাজের রিপোর্ট and বিশ্লেষণ (D-#1654), shoot the leaf, open it. */
 async function reportLeaf(h, page, guide, leaf) {
   await home(page);
   await h.openMenu(page);
   const onTop = await h.topmost(page, { text: leaf }, { scroll: true }).then(() => true, () => false);
-  if (!onTop) await h.tap(page, "রিপোর্ট", 1500);
+  if (!onTop) { await h.tap(page, "বাকি কাজের রিপোর্ট", 1000); await h.tap(page, "বিশ্লেষণ", 1500); }
   await h.shot(page, guide, 0, [{ text: leaf }]);
   await h.tap(page, leaf, 4000);
 }
@@ -26,8 +26,8 @@ function lastSchoolDay() {
 exports.run = async (h) => {
   const O = (await h.login("office@help.test", PASSWORD)).page;
 
-  await menuShot(h, O, "ops-reports-open", 0, [{ text: "রিপোর্ট" }]);
-  await h.tap(O, "রিপোর্ট", 1500);
+  await menuShot(h, O, "ops-reports-open", 0, [{ text: "বাকি কাজের রিপোর্ট" }]);
+  await h.tap(O, "বাকি কাজের রিপোর্ট", 1500);
   await h.shot(O, "ops-reports-open", 1, [{ text: "অনুপস্থিতির প্রতিবেদন" }]);
   await h.tap(O, "অনুপস্থিতির প্রতিবেদন", 4000);
   await fill(h, O, { css: "input" }, lastSchoolDay(), 3500);
