@@ -158,6 +158,9 @@ const STAFF_NAV: NavSection[] = [
       { route: "ClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
       // D-#883: the exam routine (general + Quran exam days).
       { route: "SyllabusTab", labelKey: "exrNav", icon: "🗓️", screen: "ExamRoutine", perms: ["exam_routine:view", "exam_routine:manage", "exam_routine:publish"] },
+      // D-#1660: exam duty roster — Office assigns and changes; every teacher sees their own.
+      { route: "SyllabusTab", labelKey: "edNav", icon: "🧑", screen: "ExamDutyRoster", perms: ["exam_routine:manage"] },
+      { route: "SyllabusTab", labelKey: "edMyNav", icon: "📌", screen: "MyExamDuty", perms: ["exam_routine:view"] },
       { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
       { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam_syllabus:edit"] },
       { route: "SyllabusTab", labelKey: "syApprovalsNav", icon: "✅", screen: "SyllabusApprovals" },

@@ -991,6 +991,39 @@ export async function openPdfOnDevice(path: string, fileStem: string): Promise<v
   await androidView(uri, "application/pdf");
 }
 
+/**
+ * A local, playable address for a stored file's bytes (voice clips, VN-1): a blob URL on web,
+ * a cache file on Android. Goes through the same authenticated GET /files/:id route as every
+ * other file — the read gate decides, no Drive URL ever reaches the phone. Android keeps the
+ * cache copy (a clip never changes once saved), so a replay needs no second download.
+ */
+export async function localUriForStoredFile(fileId: string, ext: string): Promise<string> {
+  const url = `${REST_BASE}/files/${encodeURIComponent(fileId)}`;
+  if (Platform.OS === "android") {
+    const target = `${FileSystem.cacheDirectory}scdhub-voice-${fileId}.${ext}`;
+    const have = await FileSystem.getInfoAsync(target);
+    if (have.exists) return target;
+    const tmp = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}-${++tmpSeq}`;
+    const res = await androidDownload(url, tmp);
+    await FileSystem.moveAsync({ from: res.uri, to: target });
+    return target;
+  }
+  if (Platform.OS !== "web") throw new FileUploadError("File playback is not supported in this build");
+  const token = getToken();
+  const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    let message = `file request failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  return URL.createObjectURL(await res.blob());
+}
+
 async function openStoredFileAndroid(fileId: string): Promise<void> {
   // Per-call suffix: two overlapping opens of the same attachment must not share a temp
   // path (the first move would break the second — GlitchTip, prod).
@@ -1343,6 +1376,48 @@ export async function pickAndUploadClassBook(input: {
   }
   const body = (await res.json()) as { bookId: string };
   return { bookId: body.bookId };
+}
+
+/** Pick a book's printed PDF and upload it (PB-1, D-#1661; POST /files/book-pdf); null when cancelled. */
+export async function pickAndUploadBookPdf(input: { bookCode: string; versionLabel: string }): Promise<{ pdfId: string } | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["application/pdf"],
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: rnUploadName(asset.name),
+      type: asset.mimeType ?? "application/pdf",
+    } as unknown as Blob);
+  }
+  form.append("bookCode", input.bookCode);
+  if (input.versionLabel.trim()) form.append("versionLabel", input.versionLabel.trim());
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/book-pdf`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { pdfId: string };
+  return { pdfId: body.pdfId };
 }
 
 // ---------------------------------------------------------------------------

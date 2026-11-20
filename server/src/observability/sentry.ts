@@ -35,6 +35,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "BookLcError",
   "BookMarkdownError",
   "ImmutableVersionError",
+  // Book PDF pages (D-#1661): a second upload while one is still rendering → 409, a Bangla sentence.
+  "BookPdfBusyError",
   // pdftotext absent on a host: the page map falls back to "set by hand" — never a fault.
   "PopplerMissingError",
   // An AI feature that is switched off (AI-1, D-#1122): "এই এআই সুবিধাটি এখন বন্ধ আছে".
@@ -189,6 +191,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "VivaError",
   // Exam routine (D-#883): a bad date/time or a duplicate slot — the Office's input.
   "ExamRoutineError",
+  // Exam duty roster (D-#1660): a sitting not in the routine, a swap without a reason — the Office's input.
+  "ExamDutyError",
   // Exam cycle EX-1..EX-9 (D-#375–#382): components not summing to 100, a locked paper, not on
   // duty, a custody count that does not balance — a person's input, never a fault.
   "ExamError",

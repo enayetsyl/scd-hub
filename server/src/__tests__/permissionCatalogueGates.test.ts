@@ -59,6 +59,8 @@ const appFiles = walk(APP_SRC).map((f) => ({ f: rel(f, APP_SRC), s: code(f) }));
 const OPEN_FIELDS: Record<string, string> = {
   // School-wide pause windows (D-#1655): dates + labels only, no PII; every routine / Today screen reads them.
   academicPauses: "school calendar", academicPausesInRange: "school calendar", academicPauseKinds: "fixed list",
+  // Review voice clips (D-#1658): row-scoped in the service — own reviewer (drafts), plan author, matching manager.
+  reviewVoiceNotes: "row-scoped in the service",
   // Sign-in and the caller's own session / profile / access (SELF; a guardian uses them too).
   staffLogin: "sign-in", guardianLogin: "sign-in", refreshSession: "own session", endImpersonation: "end own View-as",
   me: "own profile", myPermissions: "own access", myTemplates: "own templates", myScopes: "own scope grants",

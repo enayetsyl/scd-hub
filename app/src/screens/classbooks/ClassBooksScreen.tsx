@@ -250,6 +250,12 @@ export default function ClassBooksScreen({ navigation }: Props): React.ReactElem
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Notice tone="info" message={isGuardian ? STR.cbGuardianHint : STR.cbStaffHint} />
+        {!isGuardian ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginBottom: space(3) }}>
+            <Button title={STR.bpdOpenShelf} variant="secondary" onPress={() => navigation.navigate("BookPdfShelf")} />
+            {manage ? <Button title={STR.bpdAdminOpen} variant="ghost" onPress={() => navigation.navigate("BookPdfAdmin")} /> : null}
+          </View>
+        ) : null}
         {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
         {manage ? (
           <UploadCard

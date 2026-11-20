@@ -36,6 +36,7 @@ import { enrolmentsInUse, placementSpans, type PlacementSpan } from "../../found
 import {
   examReportStatus,
   deriveReportOwnership,
+  deriveSentBack,
   effectiveRosterCount,
   type ExamReportStatus,
 } from "./ClassTestResultService";
@@ -177,6 +178,7 @@ function examStatusFrom(
     presentCount: number;
     submittedCount: number;
     publishedCount: number;
+    sentBackRows?: Array<{ sendBackAt: Date; sendBackReason?: string | null }>;
   },
 ): ExamReportStatus {
   const { now, isOpenDay, enteredCount, presentCount, submittedCount, publishedCount } = io;
@@ -210,6 +212,7 @@ function examStatusFrom(
     submittedCount,
     publishedCount,
     ...owned,
+    ...deriveSentBack(io.sentBackRows ?? []),
   };
 }
 
@@ -260,6 +263,22 @@ export async function reportsStatus(
           $sum: { $cond: [{ $or: [notNull("$submittedAt"), notNull("$publishedAt")] }, 1, 0] },
         },
         publishedCount: { $sum: { $cond: [notNull("$publishedAt"), 1, 0] } },
+        // F3 (D-#1659): the send-back stamps of rows still waiting on the teacher.
+        sentBackRows: {
+          $push: {
+            $cond: [
+              {
+                $and: [
+                  notNull("$sendBackAt"),
+                  { $not: [notNull("$submittedAt")] },
+                  { $not: [notNull("$publishedAt")] },
+                ],
+              },
+              { sendBackAt: "$sendBackAt", sendBackReason: "$sendBackReason" },
+              "$$REMOVE",
+            ],
+          },
+        },
       },
     },
   ])) as Array<{
@@ -268,6 +287,7 @@ export async function reportsStatus(
     publishedLatest: Date | null;
     submittedCount: number;
     publishedCount: number;
+    sentBackRows?: Array<{ sendBackAt: Date; sendBackReason?: string | null }>;
   }>;
   const handoffByTest = new Map(handoff.map((h) => [h._id.toString(), h]));
 
@@ -381,6 +401,7 @@ export async function reportsStatus(
       presentCount: presentByTest.get(exam._id.toString()) ?? 0,
       submittedCount: ho?.submittedCount ?? 0,
       publishedCount: ho?.publishedCount ?? 0,
+      sentBackRows: ho?.sentBackRows ?? [],
     });
     const teacherId = accountableOf(exam);
     const sub = ho?.submittedLatest ?? null;

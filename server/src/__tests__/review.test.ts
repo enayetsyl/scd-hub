@@ -44,6 +44,14 @@ jest.mock("../modules/content/models/ReviewAssignment", () => ({
   },
 }));
 
+// Voice notes (VN-1): submitPlanReview counts + flips the reviewer's clips; none here.
+jest.mock("../modules/content/models/ReviewVoiceNote", () => ({
+  ReviewVoiceNote: {
+    countDocuments: jest.fn().mockResolvedValue(0),
+    updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
+  },
+}));
+
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));

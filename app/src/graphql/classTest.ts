@@ -448,6 +448,9 @@ export interface ClassTestReportStatusRowT {
   /** Office/Principal own it (submitted, not published). */
   publishOverdue: boolean;
   schoolDaysLate: number;
+  /** F3 (D-#1659): sent back to the teacher, not re-submitted yet. */
+  sentBack: boolean;
+  sentBackReason: string | null;
   state: string;
   /** CS-1 (D-#715): the script stage (CT_SCRIPT_STAGES) — null when not in the flow. */
   scriptStage: string | null;
@@ -492,7 +495,7 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
       testId ctId subject testNumber classLevel sectionId subjectGroupId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete
       submittedCount publishedCount submitComplete publishComplete
-      overdue teacherOverdue publishOverdue schoolDaysLate state scriptStage
+      overdue teacherOverdue publishOverdue schoolDaysLate sentBack sentBackReason state scriptStage
     }
   }
 `;

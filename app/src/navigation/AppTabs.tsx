@@ -203,6 +203,9 @@ import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
 import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
 import VivaResultsScreen from "../screens/viva/VivaResultsScreen";
 import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
+import BookPdfShelfScreen from "../screens/classbooks/BookPdfShelfScreen";
+import BookPdfReaderScreen from "../screens/classbooks/BookPdfReaderScreen";
+import BookPdfAdminScreen from "../screens/classbooks/BookPdfAdminScreen";
 import WinterBookletsScreen from "../screens/winterTask/WinterBookletsScreen";
 import WinterBookletScreen from "../screens/winterTask/WinterBookletScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
@@ -323,6 +326,8 @@ import SyllabusApprovalsScreen from "../screens/syllabus/SyllabusApprovalsScreen
 import SyllabusClassNoteScreen from "../screens/syllabus/SyllabusClassNoteScreen";
 import ExamRoutineScreen from "../screens/syllabus/ExamRoutineScreen";
 import ExamRoutineEditScreen from "../screens/syllabus/ExamRoutineEditScreen";
+import ExamDutyRosterScreen from "../screens/syllabus/ExamDutyRosterScreen";
+import MyExamDutyScreen from "../screens/syllabus/MyExamDutyScreen";
 import SyllabusExamsScreen from "../screens/syllabus/SyllabusExamsScreen";
 import ChildSyllabusScreen from "../screens/guardian/ChildSyllabusScreen";
 import ChildExamRoutineScreen from "../screens/guardian/ChildExamRoutineScreen";
@@ -1458,6 +1463,8 @@ function SyllabusNavigator(): React.ReactElement {
       />
       <SyllabusStack.Screen name="ExamRoutine" component={ExamRoutineScreen} options={{ title: STR.exrNav }} />
       <SyllabusStack.Screen name="ExamRoutineEdit" component={ExamRoutineEditScreen} options={{ title: STR.exrEdit }} />
+      <SyllabusStack.Screen name="ExamDutyRoster" component={ExamDutyRosterScreen} options={{ title: STR.edNav }} />
+      <SyllabusStack.Screen name="MyExamDuty" component={MyExamDutyScreen} options={{ title: STR.edMyNav }} />
     </SyllabusStack.Navigator>
   );
 }
@@ -2063,6 +2070,9 @@ function ClassBooksNavigator(): React.ReactElement {
     <ClassBooksStack.Navigator screenOptions={stackOptions}>
       <ClassBooksStack.Screen name="ClassBooks" component={ClassBooksScreen} options={{ title: STR.cbTitle }} />
       <ClassBooksStack.Screen name="ClassBookReader" component={ClassBookReaderScreen} options={{ title: STR.cbTitle }} />
+      <ClassBooksStack.Screen name="BookPdfShelf" component={BookPdfShelfScreen} options={{ title: STR.bpdShelfTitle }} />
+      <ClassBooksStack.Screen name="BookPdfReader" component={BookPdfReaderScreen} options={{ title: STR.bpdShelfTitle }} />
+      <ClassBooksStack.Screen name="BookPdfAdmin" component={BookPdfAdminScreen} options={{ title: STR.bpdAdminTitle }} />
     </ClassBooksStack.Navigator>
   );
 }

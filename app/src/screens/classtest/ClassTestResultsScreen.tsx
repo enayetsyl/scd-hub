@@ -28,6 +28,7 @@ import {
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
 import { CT_RECHECK_QUERY } from "../../graphql/classTestRecheck";
 import { ctrcFill } from "../../components/CtRecheckPanel";
+import { sentBackBanner } from "../../lib/ctSentBack";
 import { DateField } from "../../components/DateField";
 import { STR, hwSubjectLabel, ctUnitLabel, bnNum, isoDateLabel, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -92,6 +93,11 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   // "did my submit go through?" for the exam as a whole (owner report 2026-09-03).
   const anyPublished = results.some((r) => !!r.publishedAt);
   const allSubmitted = results.length > 0 && results.every((r) => !!r.submittedAt || !!r.publishedAt);
+
+  // F3 (D-#1659): marks Office/Principal SENT BACK. The send-back clears submittedAt and
+  // stamps the reason; the next submit clears both, so the banner goes by itself.
+  const sentBackReason =
+    results.find((r) => !r.submittedAt && !r.publishedAt && !!r.sendBackReason)?.sendBackReason ?? null;
 
   // Who may correct the details: Principal/Office, or the exam's OWN teacher — the
   // accountable subject teacher or whoever filed it (the same "mine" listMyClassTests
@@ -385,6 +391,12 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
           </View>
+          {sentBackReason ? (
+            <Notice
+              message={sentBackBanner(title, sentBackReason)}
+              tone="warn"
+            />
+          ) : null}
           {ctrcOpen > 0 && !allSubmitted ? (
             <Notice message={ctrcFill(STR.ctrcBannerTeacher, { n: bnNum(ctrcOpen) })} tone="warn" />
           ) : null}

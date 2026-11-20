@@ -322,6 +322,31 @@ export interface ExamReportStatus {
   /** Past deadline, handed off, still unpublished — the OFFICE/PRINCIPAL's delay. */
   publishOverdue: boolean;
   schoolDaysLate: number;
+  /** F3 (D-#1659): Office/Principal sent the marks back and the teacher has not
+   *  re-submitted. A send-back clears `submittedAt` and stamps `sendBackReason`;
+   *  the next submit `$unset`s both, so this clears itself. Drives the "ফেরত এসেছে"
+   *  card label (instead of a bare দেরি) and the banner on the entry screen. */
+  sentBack: boolean;
+  sentBackReason: string | null;
+}
+
+/** Row fields `deriveSentBack` reads. */
+export interface SentBackRowLite {
+  submittedAt?: Date | null;
+  publishedAt?: Date | null;
+  sendBackAt?: Date | null;
+  sendBackReason?: string | null;
+}
+
+/** PURE. A test is "sent back" while any row is un-submitted, un-published and still
+ *  carries a send-back stamp; the reason is the newest stamp's. */
+export function deriveSentBack(rows: SentBackRowLite[]): { sentBack: boolean; sentBackReason: string | null } {
+  let best: SentBackRowLite | null = null;
+  for (const r of rows) {
+    if (r.submittedAt || r.publishedAt || !r.sendBackAt) continue;
+    if (!best || new Date(r.sendBackAt).getTime() > new Date(best.sendBackAt as Date).getTime()) best = r;
+  }
+  return best ? { sentBack: true, sentBackReason: best.sendBackReason?.trim() || null } : { sentBack: false, sentBackReason: null };
 }
 
 /** Inputs to the ownership split — the counts, plus the raw calendar verdict. */
@@ -394,9 +419,9 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
       examDate: test.examDate,
     }),
     ClassTestResult.find({ testId: new Types.ObjectId(testId) })
-      .select("status submittedAt publishedAt")
+      .select("status submittedAt publishedAt sendBackAt sendBackReason")
       .lean() as Promise<
-      Array<{ status: ClassTestAttendanceStatus; submittedAt?: Date | null; publishedAt?: Date | null }>
+      Array<{ status: ClassTestAttendanceStatus } & SentBackRowLite>
     >,
   ]);
   const enteredCount = results.length;
@@ -436,6 +461,7 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
     submittedCount,
     publishedCount,
     ...owned,
+    ...deriveSentBack(results),
   };
 }
 
