@@ -44,6 +44,13 @@ import {
   type PlanReviewCancelResult,
   type AssignablePlansPage,
 } from "../services/ReviewService";
+import {
+  addReviewVoiceNote as addVoiceSvc,
+  deleteReviewVoiceNote as deleteVoiceSvc,
+  listReviewVoiceNotes as listVoiceSvc,
+  managerPermissionFor,
+  type ReviewVoiceNoteDTO,
+} from "../services/ReviewVoiceNoteService";
 
 // ---------------------------------------------------------------------------
 // Object shape
@@ -75,6 +82,40 @@ ReviewAssignmentRef.implement({
     artifactReviewStatus: t.string({ nullable: true, resolve: (r) => r.artifactReviewStatus ?? null }),
   }),
 });
+
+const ReviewVoiceNoteRef = builder.objectRef<ReviewVoiceNoteDTO>("ReviewVoiceNote");
+ReviewVoiceNoteRef.implement({
+  description:
+    "One recorded voice clip on a review round (VN-1, D-#1658). Audio only. `fileId` plays through " +
+    "GET /files/:id (read-gated: the reviewer, the plan author, the review managers).",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    assignmentId: t.exposeString("assignmentId"),
+    fileId: t.exposeString("fileId"),
+    mime: t.exposeString("mime"),
+    seconds: t.exposeFloat("seconds"),
+    spot: t.string({ nullable: true, resolve: (r) => r.spot }),
+    submitted: t.exposeBoolean("submitted"),
+    createdAt: t.exposeString("createdAt"),
+  }),
+});
+
+// The clips of a round, for the caller: the reviewer sees all of theirs (drafts included); the plan
+// author and the review managers see the submitted ones. Resolved per round so the thread screen and
+// the review-submit screen share one field.
+builder.objectField(ReviewAssignmentRef, "voiceNotes", (t) =>
+  t.field({
+    type: [ReviewVoiceNoteRef],
+    description: "Voice clips on this round the caller may see (VN-1).",
+    resolve: async (r, _args, ctx) => {
+      if (!ctx.auth) return [];
+      return listVoiceSvc(r.id, {
+        userId: ctx.auth.userId,
+        managerFor: (docType) => callerHasPermission(ctx.auth!, managerPermissionFor(docType)),
+      });
+    },
+  }),
+);
 
 /**
  * Map a ReviewError to a client-facing GraphQL error. Row-scope denials → ForbiddenError;
@@ -159,6 +200,78 @@ builder.mutationField("submitPlanReview", (t) =>
       } catch (err) {
         return mapReviewError(err);
       }
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Voice notes (VN-1, D-#1658): add / delete a draft clip, list the caller's view of a round's clips
+// ---------------------------------------------------------------------------
+
+builder.mutationField("addReviewVoiceNote", (t) =>
+  t.field({
+    type: ReviewVoiceNoteRef,
+    description:
+      "Save one recorded clip (base64 WAV/AAC, up to 90 s) as a DRAFT on the caller's own open review " +
+      "round, with an optional spot tag. At most 10 per round. Submitting the verdict sends the drafts. " +
+      "Requires plan_review:review.",
+    authScopes: { hasPermission: "plan_review:review" },
+    args: {
+      assignmentId: t.arg.string({ required: true }),
+      audioBase64: t.arg.string({ required: true }),
+      mimeType: t.arg.string({ required: true }),
+      seconds: t.arg.float({ required: true }),
+      spot: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await addVoiceSvc({
+          assignmentId: args.assignmentId,
+          reviewerId: ctx.auth.userId,
+          audioBase64: args.audioBase64,
+          mimeType: args.mimeType,
+          seconds: args.seconds,
+          spot: args.spot ?? null,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+builder.mutationField("deleteReviewVoiceNote", (t) =>
+  t.boolean({
+    description: "Delete one of the caller's own voice clips while the round is still open. Requires plan_review:review.",
+    authScopes: { hasPermission: "plan_review:review" },
+    args: { noteId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await deleteVoiceSvc({ noteId: args.noteId, reviewerId: ctx.auth.userId });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+builder.queryField("reviewVoiceNotes", (t) =>
+  t.field({
+    type: [ReviewVoiceNoteRef],
+    description:
+      "The voice clips of one review round that the caller may see: the reviewer all of theirs (drafts " +
+      "included), the plan author / review managers the submitted ones.",
+    authScopes: { authenticated: true },
+    args: { assignmentId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return listVoiceSvc(args.assignmentId, {
+        userId: ctx.auth.userId,
+        // Decided from the ROUND'S own doc-type (same rule as the voiceNotes field and the /files gate).
+        managerFor: (docType) => callerHasPermission(ctx.auth!, managerPermissionFor(docType)),
+      });
     },
   }),
 );

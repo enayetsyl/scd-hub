@@ -20,6 +20,7 @@ import { ContentArtifact } from "../models/ContentArtifact";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitReviewAssigned } from "../../notifications/services/emitters";
+import { attachDraftVoiceNotes, countReviewVoiceNotes } from "./ReviewVoiceNoteService";
 
 /** Raised for review-loop rule violations (mapped to a 4xx-ish error by the resolver). */
 export class ReviewError extends Error {
@@ -400,8 +401,11 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
     throw new ReviewError("APPROVE_WITH_CONDITION is not available on plan reviews");
   }
   const feedback = input.feedback?.trim() ?? "";
+  // Voice notes (VN-1, D-#1658) count as feedback: a reviewer who spoke instead of typing may ask
+  // for changes with no text, as long as at least one clip is recorded on the round.
   if (verdict === "CHANGES_REQUESTED" && feedback.length === 0) {
-    throw new ReviewError("feedback is required when requesting changes");
+    const clips = await countReviewVoiceNotes(input.assignmentId, input.reviewerId);
+    if (clips === 0) throw new ReviewError("feedback is required when requesting changes");
   }
 
   const assignment = await ReviewAssignment.findById(input.assignmentId);
@@ -424,6 +428,9 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
   assignment.status = "submitted";
   await assignment.save();
 
+  // The reviewer's draft voice clips become part of the review (VN-1, D-#1658).
+  const voiceNotes = await attachDraftVoiceNotes(input.assignmentId, input.reviewerId);
+
   // Sync the quality gate to the current verdict, both directions (D-#38 + R4 resubmit):
   // APPROVE drives draft→reviewed; a resubmitted CHANGES_REQUESTED reverts reviewed→draft.
   let advancedTo: ReviewStatus | null = null;
@@ -443,7 +450,7 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
     actorRole: input.actorRole,
     targetId: assignment._id.toString(),
     targetKind: "ReviewAssignment",
-    meta: { verdict, advancedTo, artifactId: assignment.artifactId.toString(), resubmit: isResubmit },
+    meta: { verdict, advancedTo, artifactId: assignment.artifactId.toString(), resubmit: isResubmit, voiceNotes },
   });
 
   return toDTO(assignment as unknown as RawAssignment);

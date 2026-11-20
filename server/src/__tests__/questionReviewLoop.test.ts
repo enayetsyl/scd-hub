@@ -56,6 +56,14 @@ jest.mock("../modules/content/models/ReviewAssignment", () => ({
 const mockReviewUpdateMany = jest.fn().mockResolvedValue({ modifiedCount: 0 });
 const mockReviewCount = jest.fn().mockResolvedValue(0);
 
+// D-#1658: submitPlanReview counts the reviewer's voice clips (CHANGES_REQUESTED needs text OR a clip).
+jest.mock("../modules/content/models/ReviewVoiceNote", () => ({
+  ReviewVoiceNote: {
+    countDocuments: jest.fn().mockResolvedValue(0),
+    updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
+  },
+}));
+
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => ({ select: () => ({ lean: () => mockUserFind(f) }) }) },
 }));

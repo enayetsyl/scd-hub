@@ -7,11 +7,17 @@
  * feedback (the text the admin carries to Claude Desktop). On success → back to the
  * review home.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation, useClient } from "urql";
-import { ARTIFACT_QUERY, SUBMIT_PLAN_REVIEW } from "../../graphql/operations";
+import {
+  ARTIFACT_QUERY,
+  SUBMIT_PLAN_REVIEW,
+  REVIEW_VOICE_NOTES,
+  ADD_REVIEW_VOICE_NOTE,
+  DELETE_REVIEW_VOICE_NOTE,
+} from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -31,6 +37,9 @@ import {
 } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import Markdown from "../../components/Markdown";
+import { VoiceNoteRecorder, MAX_VOICE_CLIPS } from "../../components/VoiceNotes";
+import { planSpotOptions } from "../../lib/reviewSpots";
+import type { Recording } from "../../lib/voiceRecorder";
 import {
   STR,
   subjectLabel,
@@ -54,6 +63,16 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
   const client = useClient();
   const [{ data, fetching, error }, refetch] = useQuery({ query: ARTIFACT_QUERY, variables: { id: artifactId } });
   const [, submitReview] = useMutation(SUBMIT_PLAN_REVIEW);
+  // Voice notes (VN-1): clips are saved server-side the moment they are recorded (drafts), so an app
+  // restart or a dropped connection before Submit loses nothing; Submit then sends them with the text.
+  const [{ data: voiceData }, refetchVoice] = useQuery({
+    query: REVIEW_VOICE_NOTES,
+    variables: { assignmentId },
+    requestPolicy: "cache-and-network",
+  });
+  const [, addVoice] = useMutation(ADD_REVIEW_VOICE_NOTE);
+  const [, deleteVoice] = useMutation(DELETE_REVIEW_VOICE_NOTE);
+  const clips = voiceData?.reviewVoiceNotes ?? [];
 
   // Re-opening an already-decided round (R4): prefill the prior verdict + feedback so
   // the reviewer edits, not re-enters. submitPlanReview treats this as a resubmit.
@@ -68,6 +87,27 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const a = data?.artifact;
+  const spots = useMemo(() => planSpotOptions(a?.renderedMarkdown), [a?.renderedMarkdown]);
+
+  async function onAddClip(rec: Recording, spot: string | null): Promise<string | null> {
+    const res = await addVoice({
+      assignmentId,
+      audioBase64: rec.base64,
+      mimeType: rec.mimeType,
+      seconds: rec.seconds,
+      spot,
+    });
+    if (res.error) return friendlyError(res.error);
+    refetchVoice({ requestPolicy: "network-only" });
+    return null;
+  }
+
+  async function onDeleteClip(id: string): Promise<string | null> {
+    const res = await deleteVoice({ noteId: id });
+    if (res.error) return friendlyError(res.error);
+    refetchVoice({ requestPolicy: "network-only" });
+    return null;
+  }
 
   async function onExport(): Promise<void> {
     setPdfBusy(true);
@@ -84,7 +124,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
   async function onSubmit(): Promise<void> {
     if (busy || !verdict) return;
     setErr(null);
-    if (verdict === "CHANGES_REQUESTED" && feedback.trim() === "") {
+    if (verdict === "CHANGES_REQUESTED" && feedback.trim() === "" && clips.length === 0) {
       setErr(STR.feedbackRequired);
       return;
     }
@@ -183,6 +223,15 @@ export default function ReviewSubmitScreen({ route, navigation }: Props): React.
           onChangeText={setFeedback}
           multiline
           placeholder={STR.feedbackForClaude}
+        />
+        <VoiceNoteRecorder
+          clips={clips}
+          spots={spots}
+          onAdd={onAddClip}
+          onDelete={onDeleteClip}
+          maxClips={MAX_VOICE_CLIPS}
+          disabled={busy}
+          roundSubmitted={isResubmit}
         />
         {err ? <Notice message={err} tone="danger" /> : null}
         <Button

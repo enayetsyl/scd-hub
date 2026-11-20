@@ -57,10 +57,13 @@ import { space } from "../../theme/tokens";
 
 import { PLAN_DOC_TYPES } from "@scd/shared";
 import PlanBookTabs from "../../components/PlanBookTabs";
+import { VoiceNoteList } from "../../components/VoiceNotes";
 type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewThread">;
 
 function RoundCard({ r }: { r: ReviewAssignmentT }): React.ReactElement {
   const [copied, setCopied] = useState(false);
+  // Only SENT clips here — a draft belongs to the reviewer's own submit screen (VN-1).
+  const clips = (r.voiceNotes ?? []).filter((n) => n.submitted);
   async function onCopy(): Promise<void> {
     if (!r.feedback) return;
     await Clipboard.setStringAsync(r.feedback);
@@ -83,9 +86,10 @@ function RoundCard({ r }: { r: ReviewAssignmentT }): React.ReactElement {
           <Muted style={{ marginTop: space(2) }}>{r.feedback}</Muted>
           <Button title={copied ? STR.copied : STR.copyFeedback} onPress={onCopy} variant="ghost" style={{ marginTop: space(2) }} />
         </>
-      ) : (
+      ) : clips.length === 0 ? (
         <Muted style={{ marginTop: space(2) }}>{STR.awaitingReviewer}</Muted>
-      )}
+      ) : null}
+      <VoiceNoteList clips={clips} />
     </Card>
   );
 }

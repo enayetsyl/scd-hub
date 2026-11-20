@@ -95,7 +95,10 @@ export type StoredFileKind =
   | "book_lc_print"
   | "book_lc_history"
   /** The printed PDF of a winter-holiday booklet (D-#1620). Read-gated by winter_task:review | manage. */
-  | "winter_booklet_pdf";
+  | "winter_booklet_pdf"
+  /** One recorded voice clip on a review round (VN-1, D-#1658). Read-gated by
+   *  `assertReviewVoiceFileReadAccess`: the reviewer, the plan author, the review managers. */
+  | "review_voice_note";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -137,6 +140,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "book_lc_print",
   "book_lc_history",
   "winter_booklet_pdf",
+  "review_voice_note",
 ];
 
 

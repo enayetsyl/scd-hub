@@ -46,6 +46,7 @@ import {
   assertClassTestFileReadAccess,
   assertClassTestScriptReadAccess,
 } from "../modules/trackers/services/ClassTestFileService";
+import { assertReviewVoiceFileReadAccess } from "../modules/content/services/ReviewVoiceNoteService";
 import { assertAssignmentFileReadAccess } from "../modules/trackers/services/AssignmentFileService";
 import { assertEnglishDriveFileReadAccess } from "../modules/english-drive/services/EnglishDriveService";
 import { assertTeachingNoteFileReadAccess } from "../modules/teaching-notes/services/TeachingNoteService";
@@ -1609,6 +1610,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       if (!callerHasPermission(ctx.auth, "class_note:view")) {
         await assertClassNoteFileReadAccess(ctx, file._id.toString());
       }
+    } else if (file.kind === "review_voice_note") {
+      // A review voice clip (VN-1, D-#1658): the reviewer who recorded it, and once the review is
+      // submitted the plan author and the review managers - nobody else.
+      await assertReviewVoiceFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "assignment_attachment") {
       await assertAssignmentFileReadAccess(ctx, file);
     } else if (file.kind === "winter_booklet_pdf") {
