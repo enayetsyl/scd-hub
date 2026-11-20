@@ -4,7 +4,7 @@
   "category": "admin_access",
   "order": 63,
   "title": "Claude-এ স্কুলের তথ্য সংযোগ করা",
-  "intro": "নিজের Claude (claude.ai বা Claude Desktop) থেকে স্কুলের তথ্য জিজ্ঞেস করা যায়। Claude আপনার অনুমতি অনুযায়ী শুধু পড়ে; কিছু বদলাতে পারে না। ☰ → তথ্য সহকারী → Claude-এর সঙ্গে সংযোগ কার্ড।",
+  "intro": "নিজের Claude (claude.ai বা Claude Desktop) থেকে স্কুলের তথ্য জিজ্ঞেস করা যায়। Claude আপনার অনুমতি অনুযায়ী শুধু পড়ে; কিছু বদলাতে পারে না। ☰ → বিশ্লেষণ → তথ্য সহকারী → Claude-এর সঙ্গে সংযোগ কার্ড।",
   "keywords": ["Claude", "সংযোগ", "connector", "MCP", "তথ্য সহকারী"],
   "perms": ["data_assistant:connect"],
   "screens": ["DataAssistantTab/DataAssistantHome"],

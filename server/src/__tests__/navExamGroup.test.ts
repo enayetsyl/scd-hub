@@ -69,22 +69,22 @@ describe("পরীক্ষা sidebar group (D-#1652)", () => {
     expect(STAFF.split('route: "ClassTestTab", labelKey: "tabClassTest"').length - 1).toBe(1);
   });
 
-  test("staff: ট্র্যাকার keeps its other items (student progress stays there)", () => {
-    const trackers = groupBody(STAFF, "drawerGroupTrackers");
+  test("staff: বাড়ির কাজ ও ট্র্যাকার keeps its other items; student progress is in বিশ্লেষণ (D-#1654)", () => {
+    const trackers = groupBody(STAFF, "navGHomework");
     expect(trackers).not.toContain('labelKey: "tabClassTest"');
     for (const route of ["TrackersTab", "HomeworkTab", "AssignmentTab", "RevisionTab"]) expect(trackers).toContain(`route: "${route}"`);
-    expect(trackers).toContain('screen: "StudentProgress"');
+    expect(groupBody(STAFF, "navGAnalysis")).toContain('screen: "StudentProgress"');
   });
 
-  test("guardian: class tests, syllabus and routine leave একাডেমিক for the exam group", () => {
+  test("guardian: class tests, syllabus and routine leave the study group for the exam group", () => {
     const exam = groupBody(GUARDIAN, "exGroup");
-    const academics = groupBody(GUARDIAN, "drawerGroupAcademics");
+    const academics = groupBody(GUARDIAN, "navGStudy");
     for (const route of ["GuardianClassTestTab", "GuardianSyllabusTab"]) {
       expect(exam).toContain(`route: "${route}"`);
       expect(academics).not.toContain(`route: "${route}"`);
     }
     expect(exam).toContain('screen: "ChildExamRoutine"');
-    expect(GUARDIAN.indexOf('titleKey: "drawerGroupAcademics"')).toBeLessThan(GUARDIAN.indexOf('titleKey: "exGroup"'));
+    expect(GUARDIAN.indexOf('titleKey: "navGStudy"')).toBeLessThan(GUARDIAN.indexOf('titleKey: "exGroup"'));
   });
 
   test("the new names exist in Bangla and English", () => {

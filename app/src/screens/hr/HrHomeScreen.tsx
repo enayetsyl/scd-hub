@@ -28,7 +28,9 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
   const canMarkNotes = can("mark_submission:view_notes"); // D-#893: everyone's correction notes
   const canReviewMistakes = can("staff_mistakes:review") || can("staff_mistakes:view_all"); // D-#939
   const canMistakeSummary = can("staff_mistakes:view_all"); // D-#942/#1005
+  const canStaffList = can("staff_records:view"); // D-#1654: moved here from the Admin hub
   const showAdmin =
+    canStaffList ||
     canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding || canMarkNotes || canReviewMistakes;
 
   return (
@@ -62,6 +64,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
       ) : null}
 
       {showAdmin ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.hrAdmin}</Muted> : null}
+      {canStaffList ? (
+        <Card onPress={() => navigation.navigate("StaffList")}>
+          <Body style={{ fontWeight: "700" }}>{STR.staff}</Body>
+          <Muted>{STR.staffCount}</Muted>
+        </Card>
+      ) : null}
       {canLeaveManage ? (
         <Card onPress={() => navigation.navigate("LeaveAdmin")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrLeaveAdmin}</Body>

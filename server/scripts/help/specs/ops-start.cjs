@@ -47,8 +47,8 @@ exports.run = async (h) => {
   const T = await loginScreens(h, "teacher@help.test", "ops-login", [{ text: "আজ", minY: 0 }], true);
 
   await h.shot(T, "ops-menu", 0, [{ text: "☰" }]);
-  await menuShot(h, T, "ops-menu", 1, [{ text: "একাডেমিক" }]);
-  await h.tap(T, "একাডেমিক", 1500);
+  await menuShot(h, T, "ops-menu", 1, [{ text: "পাঠদান" }]);
+  await h.tap(T, "পাঠদান", 1500);
   await h.shot(T, "ops-menu", 2, [{ text: "রুটিন" }, { text: "আজ" }]);
   await home(T);
 
