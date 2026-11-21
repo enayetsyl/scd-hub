@@ -53,6 +53,7 @@ import { reportCardPdfRouter } from "./modules/exams/routes/reportCardPdf";
 import { filesRouter } from "./routes/files";
 import { helpShotsRouter } from "./modules/help/routes/helpShots";
 import { triggersRouter } from "./routes/triggers";
+import { telegramWebhookRouter } from "./routes/telegramWebhook";
 import { eventsRouter } from "./routes/events";
 import { bookBuildStreamRouter } from "./routes/bookBuildStream";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
@@ -92,8 +93,14 @@ app.get("/readyz", async (_req, res) => {
   const { isBookDbReady } = await import("./bookDb");
   // The book plane is optional (D-#404): reported, never a reason to fail readiness.
   const book = isBookDbReady() ? "[book] plane connected" : "[book] plane not connected";
-  if (state === 1) res.json({ ok: true, book });
-  else res.status(503).json({ ok: false, dbState: state, book });
+  // AL-1: outgoing switch + which secrets are PRESENT (booleans only). Extra fields only: deploy/CI health
+  // checks use `curl -f` on the status code, never the body shape. The key list shows only while outgoing is
+  // OFF (the dev site, behind its basic auth) — a public prod /readyz does not advertise which keys it holds.
+  const { outgoingState, outgoingKeysPresent } = await import("./lib/outgoing");
+  const outgoing = outgoingState().state;
+  const keys = outgoing === "OFF" ? outgoingKeysPresent() : undefined;
+  if (state === 1) res.json({ ok: true, book, outgoing, keys });
+  else res.status(503).json({ ok: false, dbState: state, book, outgoing, keys });
 });
 // MON-4: notification-ticker heartbeat (no PII). MON-5's off-box monitor watches
 // `ageSeconds` and alerts when the ticker stalls (past ~2× the 60s interval).
@@ -219,6 +226,8 @@ app.use("/book-builds", bookBuildStreamRouter);
 
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
+// Telegram bot webhook (TB-1, D-#1666): secret-header auth, 503 while the bot is off. Before the /triggers router.
+app.use("/triggers/telegram", telegramWebhookRouter);
 app.use("/triggers", triggersRouter);
 
 // Realtime push (D-#295): the authenticated SSE stream the app subscribes to —

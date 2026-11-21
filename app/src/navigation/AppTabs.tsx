@@ -710,6 +710,14 @@ function AvatarMenu(): React.ReactElement {
             ) : null}
             {/* Row shows the language it switches TO (matches the old toggle's intent). */}
             <MenuRow icon="🌐" label={lang === "bn" ? "English" : "বাংলা"} onPress={toggle} />
+            {/* TB-1 (D-#1666): link Telegram to report problems by screenshot + voice. Staff only for now. */}
+            {user?.role !== "GUARDIAN" ? (
+              <MenuRow
+                icon="✈️"
+                label={STR.tgMenu}
+                onPress={() => (navigation as unknown as { navigate: (n: string) => void }).navigate("TelegramLink")}
+              />
+            ) : null}
             <MenuRow
               icon="🐞"
               label={STR.reportProblem}

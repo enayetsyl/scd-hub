@@ -209,3 +209,12 @@ export async function withDeadline<T>(ms: number, provider: AiProviderName, fn: 
     stop?.removeEventListener("abort", onStop);
   }
 }
+
+/** A switched-off feature, or an outgoing kill switch (AL-1): nothing is sent. Lives here so the
+ *  providers can throw it too; aiRouter re-exports it. */
+export class AiFeatureOffError extends Error {
+  constructor(readonly feature: string) {
+    super("এই এআই সুবিধাটি এখন বন্ধ আছে");
+    this.name = "AiFeatureOffError";
+  }
+}

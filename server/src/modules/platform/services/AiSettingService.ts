@@ -18,6 +18,7 @@
  * fall back to another provider once (FALLBACK_TO). The router (`ai/aiRouter.ts`) reads them.
  */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { Types } from "mongoose";
 import type { AuthPayload } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
@@ -173,6 +174,7 @@ export async function aiSettingsView(authIn: AuthPayload | null, providerIn?: st
 }
 
 async function pingGemini(key: string, modelName: string): Promise<number> {
+  if (!outgoingAllowed("ai")) throw new Error("Gemini-তে পৌঁছানো যায়নি — এই ডেটাবেসে বাইরে পাঠানো বন্ধ আছে");
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`, {
       method: "POST",
@@ -186,6 +188,7 @@ async function pingGemini(key: string, modelName: string): Promise<number> {
 }
 
 async function pingDeepseek(key: string, modelName: string): Promise<number> {
+  if (!outgoingAllowed("ai")) throw new Error("DeepSeek-এ পৌঁছানো যায়নি — এই ডেটাবেসে বাইরে পাঠানো বন্ধ আছে");
   try {
     const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
       method: "POST",
@@ -354,6 +357,10 @@ export const AI_FEATURES = [
   // sent clip once and writes it down. ON by default (owner 20 Nov); no key = silently idle. Metered through
   // meteredGeminiFetch and cap-checked (assertWithinCaps) before each call; Gemini only.
   { key: "voice_transcript", bn: "ভয়েস নোটের লেখা", en: "Voice-note transcripts", dailyPerUser: 1000, monthlyUsd: 3, perSessionTurns: null, defaultProvider: "gemini", defaultFallback: false, defaultEnabled: true },
+  // Telegram bot (TB-1, D-#1666, docs/prd-telegram-bot.md): Gemini writes bug reports from voice + screenshots. Uses the BOT's own
+  // key (BOT_GEMINI_API_KEY), not the school key; this row gives it the owner's on/off switch, the $3 monthly cap and a place in the
+  // school budget. ON by default (it only runs once the server has a bot token); Gemini only, no fallback.
+  { key: "telegram_bot", bn: "Telegram বট", en: "Telegram bot", dailyPerUser: 1000, monthlyUsd: 3, perSessionTurns: null, defaultProvider: "gemini", defaultFallback: false, defaultEnabled: true },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
 
@@ -483,6 +490,7 @@ export async function setAiFeatureSetting(
   const provider = input.provider ? parseProvider(input.provider) : before?.provider ?? f.defaultProvider;
   const modelChanged = input.model !== undefined && input.model !== null;
   if (f.key === "voice_transcript" && provider !== "gemini") throw new Error("ভয়েস নোটের লেখা শুধু Gemini দিয়ে চলে");
+  if (f.key === "telegram_bot" && provider !== "gemini") throw new Error("Telegram বট শুধু Gemini দিয়ে চলে");
   const modelName = modelChanged ? input.model!.trim() || null : before?.modelName || null;
   if (modelName && !/^[a-z0-9.\-]{3,80}$/.test(modelName)) throw new Error("মডেলের নাম সঠিক নয়");
   const fallback = input.fallback ?? before?.fallback ?? f.defaultFallback;

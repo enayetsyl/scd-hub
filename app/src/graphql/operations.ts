@@ -10825,3 +10825,29 @@ export const UNPUBLISH_EXAM_RESULTS = gql<{ unpublishExamResults: ExamPublishSta
     unpublishExamResults(examId: $examId) { ${PUBLISH_FIELDS} }
   }
 `;
+
+// ---- Telegram bot link (TB-1, D-#1666) --------------------------------------
+export interface TelegramLinkT {
+  linked: boolean;
+  available: boolean;
+  tgUsername: string | null;
+  linkedAt: string | null;
+}
+
+export const MY_TELEGRAM_LINK = gql<{ myTelegramLink: TelegramLinkT }, Record<string, never>>`
+  query MyTelegramLink {
+    myTelegramLink { linked available tgUsername linkedAt }
+  }
+`;
+
+export const CREATE_TELEGRAM_LINK = gql<{ createTelegramLink: { url: string; expiresAt: string } }, Record<string, never>>`
+  mutation CreateTelegramLink {
+    createTelegramLink { url expiresAt }
+  }
+`;
+
+export const UNLINK_TELEGRAM = gql<{ unlinkTelegram: boolean }, Record<string, never>>`
+  mutation UnlinkTelegram {
+    unlinkTelegram
+  }
+`;

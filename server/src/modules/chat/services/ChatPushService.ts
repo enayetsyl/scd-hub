@@ -32,6 +32,7 @@ import { ConversationMember } from "../models/ConversationMember";
 import { Conversation, type IConversation } from "../models/Conversation";
 import type { IChatMessage } from "../models/ChatMessage";
 import { PushDevice } from "../../attendance/models/PushDevice";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { sendExpoPush, type ExpoPushMessage } from "../../platform/services/ExpoPush";
 import { SYSTEM_SENDER_ID } from "./MessageDispatchService";
 
@@ -50,6 +51,7 @@ const SYSTEM_TITLE = "SCD Hub";
  * fire it with just the persisted message. Never throws.
  */
 export async function pushNewChatMessage(message: IChatMessage): Promise<void> {
+  if (!outgoingAllowed("chat")) return; // AL-1: dev database — nothing goes out
   try {
     const conversationId = message.conversationId.toString();
     const senderId = message.senderId.toString();

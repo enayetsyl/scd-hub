@@ -30,6 +30,10 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
+  // Telegram bot (TB-1, D-#1666): a Bangla refusal for the person (bot off, cap reached, guardian switch OFF), and an
+  // outside service (Telegram / Gemini / GitHub) answering with an error status — both caught inside the bot, never a fault.
+  "TelegramBotError",
+  "TelegramHttpError",
   // Book lifecycle (docs/prd-book-lifecycle.md): a refused upload / transition / validator rule,
   // and a write to an immutable version. Bangla sentences for the person, never faults.
   "BookLcError",
@@ -300,6 +304,17 @@ export function isExpectedError(err: unknown): boolean {
   return false;
 }
 
+/** Telegram puts the bot token IN the URL path (/bot<TOKEN>/method, /file/bot<TOKEN>/path). */
+const BOT_PATH_RE = /\/bot[^/\s?"]+\//g;
+export const scrubBotPath = (v: string): string => v.replace(BOT_PATH_RE, "/bot***/");
+
+/** Rewrite the bot token out of a breadcrumb (fetch/http breadcrumbs keep the URL path). Mutates and returns it. */
+export function scrubBreadcrumb<T extends { message?: string; data?: Record<string, unknown> }>(b: T): T {
+  if (typeof b.message === "string") b.message = scrubBotPath(b.message);
+  if (b.data) for (const [k, v] of Object.entries(b.data)) if (typeof v === "string") b.data[k] = scrubBotPath(v);
+  return b;
+}
+
 const dsn = process.env.SENTRY_DSN;
 
 /** True once `init()` ran with a real DSN — guards the capture helpers + the Express hook. */
@@ -314,7 +329,9 @@ if (sentryEnabled) {
     // Do NOT auto-attach cookies/headers/request body; we add SAFE context explicitly below.
     sendDefaultPii: false,
     // Scrub credentials even though PII-for-debugging is allowed (D-#252 §6):
+    beforeBreadcrumb: (b) => scrubBreadcrumb(b),
     beforeSend(event) {
+      if (event.breadcrumbs) event.breadcrumbs.forEach((b) => scrubBreadcrumb(b));
       const headers = event.request?.headers as Record<string, string> | undefined;
       if (headers) {
         for (const key of Object.keys(headers)) {

@@ -10,6 +10,7 @@
  * Message order keeps the cache: system = stablePrefix (+ context after it), then history,
  * then the new input. DeepSeek caches on a byte prefix, so the rules must come first.
  */
+import { outgoingAllowed } from "../../../lib/outgoing";
 import {
   AiProviderError,
   classifyStatus,
@@ -21,6 +22,7 @@ import {
   type AiSendInput,
   type AiSendResult,
   type FetchLike,
+  AiFeatureOffError,
 } from "./provider";
 
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
@@ -143,6 +145,8 @@ export class DeepseekProvider implements AiProvider {
   ) {}
 
   async send(input: AiSendInput, model: string): Promise<AiSendResult> {
+    // AL-1: every direct provider call is covered, not only the router.
+    if (!outgoingAllowed("ai")) throw new AiFeatureOffError(this.name);
     // The chat API takes text only (W-1): never send a picture's bytes as if they were text.
     if (input.files?.length) throw new AiProviderError("bad_response", "DeepSeek cannot read pictures or PDFs", this.name);
     const started = Date.now();
