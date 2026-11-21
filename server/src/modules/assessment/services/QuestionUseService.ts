@@ -406,8 +406,9 @@ export async function ctBlockedQids(q: {
   subject?: string;
   today?: string;
 }): Promise<{ blocked: string[]; weeks: number }> {
+  // Switch first (§3.6): while it is off nothing else is read.
+  if (q.qids.length === 0 || !(await isLoop2027On())) return { blocked: [], weeks: 4 };
   const weeks = await noRepeatWeeks(q.classToken, q.subject);
-  if (q.qids.length === 0 || !(await isLoop2027On())) return { blocked: [], weeks };
   const roster = await Student.find({ sectionId: oid(q.sectionId), active: true }).select("_id").lean(); // bounded: one roster
   const rows = await usedInWindow({
     sectionIds: [q.sectionId],
