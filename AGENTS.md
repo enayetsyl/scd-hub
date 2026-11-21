@@ -132,6 +132,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-staff-mistakes.md ← Staff mistake record: reason per caught mistake → review → per-person record, slices MR-1..8 (D-#936–#943+)
   prd-class-books.md  ← Class books: guardians read the classroom books page by page, view only (PDF → page images) (D-#870)
   prd-lesson-progress.md ← Lesson-plan progress: session marked on the class note → শাখা tracker, Office overview, student presence + mastery link, LP-1..3 (D-#820–#826)
+  prd-academic-loop-2027.md ← 2027 loop: HW/AS per-question marks as mastery papers, one HW+AS+CT use history, assignment suggestion engine, term targets, outside-help flag, loop health, dev test data; AL-0..13 (D-#1667–#1678)
   prd-worksheets.md   ← Nursery/KG worksheet generator: engine, plan, book picture bank, print + answer key (D-#744–#747)
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
