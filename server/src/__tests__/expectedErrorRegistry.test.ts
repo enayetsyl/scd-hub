@@ -41,6 +41,9 @@ const DELIBERATE_FAULTS = new Set([
   // A Gemini transcription call that failed (voice-note transcripts, D-#1662): the service
   // catches it and stores QUOTA / FAILED on the clip. One that ESCAPES is a bug and should page.
   "TranscriptHttpError",
+  // The dev-data scripts' refusal (AL-2, D-#1677): thrown only by the lead-run CLIs when the target is not a
+  // `_dev` database or the outgoing guard is open. Never reaches a resolver; if it ever does, it should page.
+  "DevGuardError",
 ]);
 
 function findErrorClasses(): Map<string, string> {
