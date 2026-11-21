@@ -626,6 +626,23 @@ export async function withdrawForCancelledPrint(setId: string | Types.ObjectId, 
   }
 }
 
+/**
+ * AL-4 (the AL-3 gap): a retired class test was restored — its set's rows and its linked CT sheet's rows are written
+ * again (the retire withdrew them). Idempotent; the rows come back with the exam date as the given day.
+ */
+export async function restoreForClassTest(testId: string | Types.ObjectId): Promise<void> {
+  try {
+    const test = await ClassTest.findById(testId).select("setId examDate").lean();
+    if (!test) return;
+    if (test.setId) await writeSetUses(test.setId, { classTestId: String(testId) });
+    const { MasteryPaper } = await import("../../mastery/models/MasteryPaper");
+    const paper = await MasteryPaper.findOne({ "links.classTestId": oid(testId) });
+    if (paper) await recordUses(usesOfPaper(paper, "CT", { givenOn: dhakaDayKey(new Date(test.examDate)) }));
+  } catch (err) {
+    console.error("[question-use] re-write on class-test restore failed:", err);
+  }
+}
+
 /** A class test was cancelled / retired: the questions of its set and of its linked CT sheet never sat. */
 export async function withdrawForClassTest(testId: string | Types.ObjectId): Promise<void> {
   try {

@@ -44,7 +44,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import { PrintRequest } from "../../printing/models/PrintRequest";
-import { withdrawForClassTest } from "../../assessment/services/QuestionUseService";
+import { restoreForClassTest, withdrawForClassTest } from "../../assessment/services/QuestionUseService";
 import { ScriptBundle } from "../../archive/models/ScriptBundle";
 import { resolveSubjectTeacher } from "../subjectTeacher";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
@@ -861,6 +861,7 @@ export async function restoreClassTest(id: string, actorId: string): Promise<Cla
     targetKind: "ClassTest",
     meta: { ctId: doc.ctId, restoredTo: "PRINTED" },
   });
+  await restoreForClassTest(doc._id); // AL-4: the retire withdrew the ledger rows — the restored test gives them again
   return classTestShape(doc as unknown as IClassTest);
 }
 

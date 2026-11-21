@@ -29,6 +29,10 @@ import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionServic
 import { recordWorkRevert } from "./WorkMistakeService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
+import { manualCheckRefusal } from "../../mastery/paperLink";
+
+/** AL-4: shown when someone tries to undo the CHECKED step of a record whose marks come from a question sheet. */
+const SHEET_REVERT_MESSAGE = "এই কাজের নম্বর প্রশ্নভিত্তিক শিট থেকে এসেছে — শিটে বদলান; এখানে ফেরানো যায় না।";
 
 export interface HwRevertInput {
   recordId: string;
@@ -91,6 +95,8 @@ export async function revertHomeworkRecord(input: HwRevertInput): Promise<HwReve
         break;
       }
       case "CHECKED":
+        // AL-4 (switch on): a CHECKED stamp on a sheet-linked record is the sheet's confirm — undo it there.
+        if (await manualCheckRefusal("HOMEWORK", rec.hwItemId)) throw new Error(SHEET_REVERT_MESSAGE);
         rec.result = undefined;
         break;
       case "CHASE":

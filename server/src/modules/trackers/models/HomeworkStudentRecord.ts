@@ -57,6 +57,12 @@ export interface IHomeworkStudentRecord extends Document {
    *  per record (a resubmission record may carry its own). Child PII (ADR-005):
    *  download is link-gated; never any corpus path, never a public URL. */
   answerFileId?: Types.ObjectId;
+  /** AL-4 (D-#1669): the child's total on the linked paper — written only by the paper's confirm / correction
+   *  (switch on). Shown as "earned / available · N %"; the stored `result` is internal then (R35). */
+  earnedMarks?: number;
+  availableMarks?: number;
+  /** AL-4 (R22): 0-based indexes of the homework's free lines the child did NOT do (exceptions; empty = all done). */
+  freeLinesNotDone?: number[];
   issuedBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -88,6 +94,9 @@ const HomeworkStudentRecordSchema = new Schema<IHomeworkStudentRecord>(
     topupQids: { type: [String], default: [] },
     topupTime: { type: Number },
     answerFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
+    earnedMarks: { type: Number, min: 0 },
+    availableMarks: { type: Number, min: 0 },
+    freeLinesNotDone: { type: [Number], default: [] },
     issuedBy: { type: Schema.Types.ObjectId, required: true },
   },
   { timestamps: true },

@@ -60,6 +60,14 @@ export interface IMasteryPaper extends Document {
   /** PR-D (D-#1323): an EXTRA homework for weak children (source HW) — per-student items like an AS
    *  sheet; no HomeworkItem, not in the daily minutes. One per section × subject × date. */
   extra?: boolean;
+  /** AL-4 (R20, D-#1669): a class × subject with no locked tree records marks per question on a marks-only paper — no
+   *  loCodes, no `MasteryEnablement`, and confirming it writes NO `MasteryEvidence` (so no weak-objective state, no
+   *  re-teach trigger, no GH-3 case can come from it). */
+  marksOnly?: boolean;
+  /** AL-4 (§3.1 guard 4): set when the paper went to the children — "প্রিন্টে পাঠান" or issue, whichever first. From
+   *  then on its items cannot change; changing a question needs the print request cancelled first. */
+  lockedAt?: Date;
+  printRequestId?: Types.ObjectId;
   items: IMasteryPaperItem[];
   /** RUBRIC papers: the rubric-assessed LOs graded on the 4-step scale. */
   rubricLoCodes: string[];
@@ -78,9 +86,10 @@ const ItemSchema = new Schema<IMasteryPaperItem>(
     artifactId: { type: Schema.Types.ObjectId },
     qid: { type: String, trim: true },
     textBn: { type: String, trim: true },
-    loCodes: { type: [String], required: true },
+    // AL-4: a marks-only paper (and a teacher-written line on a homework paper) names no outcome and no type.
+    loCodes: { type: [String], default: [] },
     chapterNumber: { type: Number, default: null },
-    questionTypeCode: { type: String, required: true, trim: true },
+    questionTypeCode: { type: String, default: "", trim: true },
     marks: { type: Number, required: true, min: 0 },
     stimulusRef: { type: String, trim: true },
     partLabel: { type: String, trim: true },
@@ -110,7 +119,12 @@ const MasteryPaperSchema = new Schema<IMasteryPaper>(
       type: [{ _id: false, studentId: { type: Schema.Types.ObjectId, required: true }, itemNos: { type: [Number], default: [] } }],
       default: [],
     },
-    extra: { type: Boolean },
+    // AL-4: default false so the partial unique index on `links.hwItemId` (extra: false) covers new papers; the
+    // backfill script sets it on the old ones before building that index.
+    extra: { type: Boolean, default: false },
+    marksOnly: { type: Boolean },
+    lockedAt: { type: Date },
+    printRequestId: { type: Schema.Types.ObjectId },
     items: { type: [ItemSchema], default: [] },
     rubricLoCodes: { type: [String], default: [] },
     entryState: { type: String, enum: ["OPEN", "CONFIRMED"], required: true, default: "OPEN" },
@@ -126,6 +140,10 @@ MasteryPaperSchema.index({ paperId: 1 }, { unique: true });
 MasteryPaperSchema.index({ sectionId: 1, subject: 1, date: -1, _id: -1 });
 // PR-D (D-#1323): one extra-homework sheet per section × subject × date.
 MasteryPaperSchema.index({ sectionId: 1, subject: 1, date: 1 }, { unique: true, partialFilterExpression: { extra: true } });
+// AL-4: tracker → paper lookups (the guards, the write-back). Not the unique partial index of §3.1 — that one is
+// built by `server/scripts/backfill-paper-extra-false.ts` once the duplicate check is clean (a different key shape).
+MasteryPaperSchema.index({ "links.hwItemId": 1, extra: 1 });
+MasteryPaperSchema.index({ "links.asItemId": 1 });
 // PR-C (D-#1317): a class test has at most one question sheet (the sheet owns its totals).
 MasteryPaperSchema.index(
   { "links.classTestId": 1 },

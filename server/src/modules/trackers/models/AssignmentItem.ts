@@ -63,6 +63,10 @@ export interface IAssignmentItem extends Document {
   /** Assignment sheet/instruction files attached at the delivery pass (≤5,
    *  `assignment_attachment` kind, D-#298) — the homework D-#297 pattern. */
   attachmentIds?: Types.ObjectId[];
+  /** AL-4 (§3.1, D-#1669): the per-day split of the week's assignment (§4.4) — filled by the AS engine (AL-6/AL-7);
+   *  nothing in AL-4 reads it. */
+  doOnDay?: "FRI" | "SAT" | "BOTH";
+  minutesByDay?: { FRI: number; SAT: number };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +99,8 @@ const AssignmentItemSchema = new Schema<IAssignmentItem>(
     deliveredBy: { type: Schema.Types.ObjectId, required: true },
     deliveredAt: { type: Date, required: true },
     attachmentIds: { type: [Schema.Types.ObjectId], ref: "StoredFile", default: undefined },
+    doOnDay: { type: String, enum: ["FRI", "SAT", "BOTH"] },
+    minutesByDay: { type: new Schema({ FRI: { type: Number, min: 0, default: 0 }, SAT: { type: Number, min: 0, default: 0 } }, { _id: false }), default: undefined },
   },
   { timestamps: true },
 );

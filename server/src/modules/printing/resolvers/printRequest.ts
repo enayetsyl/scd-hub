@@ -122,6 +122,8 @@ PrintRequestRef.implement({
     /** Every attached file, named — the Office opens each one individually. */
     files: t.field({ type: [PrintFileRef], resolve: (v) => v.files }),
     linkUrl: t.string({ nullable: true, resolve: (v) => v.doc.linkUrl ?? null }),
+    /** AL-4: the class homework / assignment paper for a MASTERY_PAPER job (open /pdf/mastery-homework/:id). */
+    masteryPaperId: t.string({ nullable: true, resolve: (v) => v.doc.masteryPaperId?.toString() ?? null }),
     colour: t.string({ resolve: (v) => v.doc.colour }),
     sides: t.string({ resolve: (v) => v.doc.sides }),
     copies: t.int({ resolve: (v) => v.doc.copies }),
@@ -262,7 +264,7 @@ builder.mutationField("createPrintRequest", (t) =>
   t.field({
     type: PrintRequestRef,
     description:
-      "File a print request (PQ-1). Exactly one source: setId | contentArtifactId | fileIds | linkUrl. " +
+      "File a print request (PQ-1). Exactly one source: setId | contentArtifactId | fileIds | linkUrl | masteryPaperId. " +
       "Born REQUESTED, audited. Requires printing:create.",
     authScopes: { hasPermission: "printing:create" },
     args: {
@@ -273,6 +275,7 @@ builder.mutationField("createPrintRequest", (t) =>
       contentArtifactId: t.arg.string({ required: false }),
       fileIds: t.arg.stringList({ required: false }),
       linkUrl: t.arg.string({ required: false }),
+      masteryPaperId: t.arg.string({ required: false, description: "AL-4: a class homework / assignment paper (sourceType MASTERY_PAPER); locks its items." }),
       // MANDATORY on a teacher's request (live-testing requirement) — the Office cannot
       // start a job without knowing how to print it, how many, and by when.
       colour: t.arg.string({ required: true }),
@@ -288,6 +291,11 @@ builder.mutationField("createPrintRequest", (t) =>
       notes: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
+      // AL-4: the paper's row rule (the subject teacher, today's substitute, or mastery:edit_all) — then the same queue.
+      if (args.sourceType === "MASTERY_PAPER" && args.masteryPaperId) {
+        const { assertMayWorkPaperId } = await import("../../mastery/services/MasteryWorkService");
+        await assertMayWorkPaperId(args.masteryPaperId, ctx.auth as never);
+      }
       const doc = await createPrintRequest({ ...args, requestedBy: ctx.auth!.userId });
       return decorateOne(doc);
     },

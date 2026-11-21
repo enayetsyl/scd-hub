@@ -97,6 +97,8 @@ export async function voidHomeworkItem(
   if (await HomeworkStudentRecord.exists({ hwItemId: item._id })) {
     throw new Error("এই বাড়ির কাজের শিক্ষার্থী-রেকর্ড আছে — মুছে ফেলা যাবে না");
   }
+  // AL-4 (AC-B11): a declared item's paper goes with it — its ledger rows withdrawn; refused while a print is live.
+  if (item.paperId) await (await import("../../mastery/services/HomeworkPaperService")).removePaperOfItem(item._id);
   // Conditional on status so a confirm that issues it in between wins, not the delete.
   const removed = await HomeworkItem.findOneAndDelete({ _id: item._id, status: "declared" }).lean();
   if (!removed) throw new Error("এই বাড়ির কাজ শিক্ষার্থীদের দেওয়া হয়ে গেছে — মুছে ফেলা যাবে না");

@@ -6,6 +6,8 @@
  * the composition (fast-forward → check/chase) is genuinely exercised, mirroring
  * homeworkResubmission.test.ts's convention.
  */
+// AL-4: the manual-check guard reads the release switch (a DB read); this suite is DB-free and 2026-only.
+jest.mock("../modules/mastery/paperLink", () => ({ manualCheckRefusal: () => Promise.resolve(null) }));
 import mongoose from "mongoose";
 
 const mockRecFindById = jest.fn();

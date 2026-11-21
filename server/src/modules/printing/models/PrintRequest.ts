@@ -36,6 +36,8 @@ export interface IPrintRequest extends Document {
   contentArtifactId?: Types.ObjectId;
   fileIds?: Types.ObjectId[];
   linkUrl?: string;
+  /** AL-4: the `MasteryPaper` (a class homework / assignment sheet) when `sourceType` is MASTERY_PAPER. */
+  masteryPaperId?: Types.ObjectId;
 
   /** How to print it. MANDATORY on a teacher's request (the Office cannot start a job
    *  without them); defaulted for the internal class-test path and back-filled rows. */
@@ -86,6 +88,7 @@ const PrintRequestSchema = new Schema<IPrintRequest>(
     contentArtifactId: { type: Schema.Types.ObjectId, ref: "ContentArtifact" },
     fileIds: [{ type: Schema.Types.ObjectId, ref: "StoredFile" }],
     linkUrl: { type: String, trim: true },
+    masteryPaperId: { type: Schema.Types.ObjectId, ref: "MasteryPaper" },
 
     // Defaults keep the internal class-test path and migration-backfilled rows valid;
     // the SERVICE enforces them as mandatory on a teacher-submitted request.
@@ -123,13 +126,14 @@ PrintRequestSchema.pre("validate", function (next) {
     this.sourceType === "CONTENT_ARTIFACT" && !!this.contentArtifactId,
     this.sourceType === "UPLOAD" && (this.fileIds?.length ?? 0) > 0,
     this.sourceType === "LINK" && !!this.linkUrl,
+    this.sourceType === "MASTERY_PAPER" && !!this.masteryPaperId,
   ];
   if (present.filter(Boolean).length !== 1) {
     next(new Error(`PrintRequest source '${this.sourceType}' has no matching payload`));
     return;
   }
   // Guard against a second payload smuggled alongside the declared one.
-  const set = [this.setId, this.contentArtifactId, this.linkUrl].filter(Boolean).length;
+  const set = [this.setId, this.contentArtifactId, this.linkUrl, this.masteryPaperId].filter(Boolean).length;
   const uploads = (this.fileIds?.length ?? 0) > 0 ? 1 : 0;
   if (set + uploads !== 1) {
     next(new Error("PrintRequest requires exactly one source payload"));
