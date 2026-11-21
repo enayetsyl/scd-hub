@@ -53,6 +53,7 @@ import { reportCardPdfRouter } from "./modules/exams/routes/reportCardPdf";
 import { filesRouter } from "./routes/files";
 import { helpShotsRouter } from "./modules/help/routes/helpShots";
 import { triggersRouter } from "./routes/triggers";
+import { telegramWebhookRouter } from "./routes/telegramWebhook";
 import { eventsRouter } from "./routes/events";
 import { bookBuildStreamRouter } from "./routes/bookBuildStream";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
@@ -219,6 +220,8 @@ app.use("/book-builds", bookBuildStreamRouter);
 
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
+// Telegram bot webhook (TB-1, D-#1666): secret-header auth, 503 while the bot is off. Before the /triggers router.
+app.use("/triggers/telegram", telegramWebhookRouter);
 app.use("/triggers", triggersRouter);
 
 // Realtime push (D-#295): the authenticated SSE stream the app subscribes to —

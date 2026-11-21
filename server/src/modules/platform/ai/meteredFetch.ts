@@ -16,7 +16,7 @@ import { recordAiUsage } from "../services/AiUsageService";
 import { costUsd } from "./aiPrices";
 import { classifyStatus } from "./provider";
 
-export type LegacyAiFeature = "monthly_comment" | "book_author" | "observation_rota" | "voice_task" | "voice_transcript";
+export type LegacyAiFeature = "telegram_bot" | "monthly_comment" | "book_author" | "observation_rota" | "voice_task" | "voice_transcript";
 
 interface GeminiUsageReply {
   modelVersion?: string;

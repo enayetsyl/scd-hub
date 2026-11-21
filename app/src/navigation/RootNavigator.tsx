@@ -16,6 +16,7 @@ import { AppTabs, LoginScreen } from "./AppTabs";
 import NotificationCenterScreen from "../screens/notifications/NotificationCenterScreen";
 import NotificationDetailScreen from "../screens/notifications/NotificationDetailScreen";
 import ReportProblemScreen from "../screens/common/ReportProblemScreen";
+import TelegramLinkScreen from "../screens/common/TelegramLinkScreen";
 import ViewAsScreen from "../screens/admin/ViewAsScreen";
 
 const RootStack = createNativeStackNavigator();
@@ -68,6 +69,19 @@ export function RootNavigator(): React.ReactElement {
                 headerShown: true,
                 presentation: "modal",
                 title: STR.reportTitle,
+                headerStyle: { backgroundColor: colors.primary },
+                headerTintColor: colors.onPrimary,
+                headerTitleStyle: { fontFamily: fonts.bold },
+              }}
+            />
+            {/* TB-1 (D-#1666): Telegram bot link card, a root modal from the account menu (no route params). */}
+            <RootStack.Screen
+              name="TelegramLink"
+              component={TelegramLinkScreen}
+              options={{
+                headerShown: true,
+                presentation: "modal",
+                title: STR.tgTitle,
                 headerStyle: { backgroundColor: colors.primary },
                 headerTintColor: colors.onPrimary,
                 headerTitleStyle: { fontFamily: fonts.bold },
