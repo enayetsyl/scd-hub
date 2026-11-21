@@ -1926,3 +1926,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-11-20 feat(review): ‹ আগের / পরের › buttons on the question-review thread screen step through the list it was opened from (queue, publish inbox, reviewer rounds) without going back; help guide updated (D-#1665)
 - 2026-11-20 fix(review): ‹ আগের / পরের › on the question-review thread screen survive a page reload (order saved in device storage) (D-#1665)
 - 2026-11-20 fix(review): question-review queue "আরও দেখুন" no longer jumps to the top and reloads the first 50 — the focus reload is a stable callback (D-#1665 follow-up)
+- 2026-11-21 feat(telegram): SCD Telegram bot TB-1 — link from the app, screenshots + voice note → Gemini report → ঠিক আছে → GitHub issue (public scd-hub, screenshots on bug-assets), closed-issue notice, AI feature telegram_bot with $3 cap, breadcrumb token scrub; off until go-live (D-#1666)

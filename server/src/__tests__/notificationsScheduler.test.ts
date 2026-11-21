@@ -219,6 +219,10 @@ jest.mock("../modules/review-program/services/ReviewBacklogService", () => ({
 jest.mock("../modules/content/services/ReviewVoiceTranscriptService", () => ({
   startVoiceTranscriptSweep: () => false,
 }));
+// TB-1 — the Telegram closed-ticket sweep reads the DB and GitHub; stubbed like every family.
+jest.mock("../modules/telegram/services/TelegramNoticeSweep", () => ({
+  startTelegramNoticeSweep: () => false,
+}));
 // PM §5.5 — recipients picked by action (holderIdsOf) read the User model with a sort the
 // User stub above does not have; stubbed so each family names the action it asks about.
 const mockHolderIdsOf = jest.fn((_perm: string) => Promise.resolve([] as string[]));

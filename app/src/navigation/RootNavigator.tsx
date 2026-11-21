@@ -73,6 +73,19 @@ export function RootNavigator(): React.ReactElement {
                 headerTitleStyle: { fontFamily: fonts.bold },
               }}
             />
+            {/* TB-1 (D-#1666): Telegram bot link card, a root modal from the account menu (no route params). */}
+            <RootStack.Screen
+              name="TelegramLink"
+              component={TelegramLinkScreen}
+              options={{
+                headerShown: true,
+                presentation: "modal",
+                title: STR.tgTitle,
+                headerStyle: { backgroundColor: colors.primary },
+                headerTintColor: colors.onPrimary,
+                headerTitleStyle: { fontFamily: fonts.bold },
+              }}
+            />
             {/* VA-1: "View as" — the Principal picks whose account view to open. A root
                 modal so it is reachable from the account menu on every tab, and takes no
                 route params (a param-requiring screen registered here would become an

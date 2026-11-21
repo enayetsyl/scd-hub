@@ -128,8 +128,8 @@ describe("testDeepseek — the save-time check", () => {
 describe("per-feature settings", () => {
   test("every feature starts OFF, on DeepSeek, fallback on — except the workspace's Gemini reader (D-#1226/#1227)", async () => {
     const list = await aiFeatureSettings(principal);
-    expect(list.map((f) => f.feature)).toEqual(["comment_check", "assistant", "workspace_ocr", "workspace_chat", "workspace_draft", "workspace_job", "data_assistant", "book_edit", "voice_transcript"]);
-    for (const f of list.filter((x) => !x.feature.startsWith("workspace_") && x.feature !== "data_assistant" && x.feature !== "book_edit" && x.feature !== "voice_transcript")) {
+    expect(list.map((f) => f.feature)).toEqual(["comment_check", "assistant", "workspace_ocr", "workspace_chat", "workspace_draft", "workspace_job", "data_assistant", "book_edit", "voice_transcript", "telegram_bot"]);
+    for (const f of list.filter((x) => !x.feature.startsWith("workspace_") && x.feature !== "data_assistant" && x.feature !== "book_edit" && x.feature !== "voice_transcript" && x.feature !== "telegram_bot")) {
       expect(f).toMatchObject({ enabled: false, provider: "deepseek", model: "deepseek-flash", fallback: true, providerReady: false });
     }
     expect(list.find((x) => x.feature === "workspace_ocr")).toMatchObject({ enabled: false, provider: "gemini", fallback: false });
@@ -140,6 +140,12 @@ describe("per-feature settings", () => {
     expect(list.find((x) => x.feature === "book_edit")).toMatchObject({ enabled: false, provider: "anthropic", model: "claude-opus-5-5", fallback: false, dailyPerUser: 400, monthlyUsd: 10, perSessionTurns: null });
     // Voice-note transcripts (owner 20 Nov 2026): ON by default with the school Gemini key, no fallback.
     expect(list.find((x) => x.feature === "voice_transcript")).toMatchObject({ enabled: true, provider: "gemini", fallback: false, monthlyUsd: 3 });
+  });
+
+  test("telegram_bot: ON by default, Gemini only, $3 a month, no fallback", async () => {
+    const list = await aiFeatureSettings(principal);
+    expect(list.find((x) => x.feature === "telegram_bot")).toMatchObject({ enabled: true, provider: "gemini", fallback: false, monthlyUsd: 3 });
+    await expect(setAiFeatureSetting(principal, { feature: "telegram_bot", provider: "deepseek" }, async () => {})).rejects.toThrow("শুধু Gemini");
   });
 
   test("voice_transcript accepts Gemini only", async () => {
