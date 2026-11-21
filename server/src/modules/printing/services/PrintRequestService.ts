@@ -17,6 +17,7 @@ import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT
 import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
+import { assertSetCtAllowed, CtBlockError, withdrawForCancelledPrint, writeSetUses } from "../../assessment/services/QuestionUseService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -154,6 +155,14 @@ async function assertSourceResolves(input: CreatePrintRequestInput): Promise<voi
       if (set.status !== "assembled") {
         throw new PrintRequestError("Only an ASSEMBLED set can be sent for printing");
       }
+      // R19 (AL-3, switch on): re-check a class-test set at print — a question may have been given as homework since.
+      try {
+        await assertSetCtAllowed(input.setId!, input.classTestId);
+      } catch (err) {
+        // Only a real R19 block stops the print; an internal failure is logged and the print is allowed.
+        if (err instanceof CtBlockError) throw new PrintRequestError(err.message);
+        console.error("[question-use] class-test check failed (print allowed):", err);
+      }
       break;
     }
     case "CONTENT_ARTIFACT": {
@@ -254,6 +263,16 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     requestedBy: new Types.ObjectId(input.requestedBy),
     requestedAt: new Date(),
   });
+
+  // AL-3 (§3.2, AC-U3): the set's questions go to the children — ledger rows at print (CT: the exam date when a
+  // class test names the set; a group-anchored test writes one row per member শাখা). Never blocks the request.
+  if (source === "SET") {
+    try {
+      await writeSetUses(input.setId!, { classTestId: input.classTestId });
+    } catch (err) {
+      console.error("[question-use] set print write failed:", err);
+    }
+  }
 
   await writeAudit({
     eventKind: "PRINT_REQUEST_CREATED",
@@ -505,6 +524,8 @@ export async function cancelPrintRequest(
     await recordPlaceMistake({ kind: "PRINT_CANCELLED", tier: 2, refKey: doc._id.toString(), ownerId: doc.requestedBy, correctedBy: actorId, at: new Date(), line: `প্রিন্টের অনুরোধ অফিস বাতিল করেছে${opts.reason ? `: "${opts.reason}"` : ""}` });
   }
   await mirrorToClassTest(doc, "CANCELLED", actorId);
+  // AL-3: a cancelled SET print means its questions did not go to the children.
+  if (doc.sourceType === "SET" && doc.setId) await withdrawForCancelledPrint(doc.setId, doc._id);
   publishRealtime("print_queue", { op: "cancelled", id: doc._id.toString() });
   return doc;
 }

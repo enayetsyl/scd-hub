@@ -25,6 +25,16 @@ jest.mock("../modules/assessment/models/AssessmentSet", () => ({
   },
 }));
 
+// AL-3: the ledger's non-set uses are added on top of the sets (never the ledger rows of a set).
+const mockUseAggregate = jest.fn();
+const mockUseFind = jest.fn();
+jest.mock("../modules/assessment/models/QuestionUse", () => ({
+  QuestionUse: {
+    aggregate: (p: unknown) => mockUseAggregate(p),
+    find: (f: unknown) => ({ select: () => ({ lean: async () => mockUseFind(f) }) }),
+  },
+}));
+
 const mockClassFind = jest.fn();
 jest.mock("../modules/foundation/models/Class", () => ({
   Class: { find: (f: unknown) => ({ select: () => ({ lean: async () => mockClassFind(f) }) }) },
@@ -37,6 +47,7 @@ jest.mock("../modules/foundation/models/Section", () => ({
 
 import {
   questionUsage,
+  questionUsageByKind,
   questionUsageCounts,
 } from "../modules/assessment/services/QuestionUsageService";
 
@@ -46,6 +57,8 @@ const SECTION_ID = new mongoose.Types.ObjectId();
 beforeEach(() => {
   jest.clearAllMocks();
   mockAggregate.mockResolvedValue([]);
+  mockUseAggregate.mockResolvedValue([]);
+  mockUseFind.mockResolvedValue([]);
   mockFind.mockResolvedValue([]);
   mockClassFind.mockResolvedValue([{ _id: CLASS_ID, nameBn: "পঞ্চম শ্রেণি", level: 5 }]);
   mockSectionFind.mockResolvedValue([{ _id: SECTION_ID, nameBn: "সম্মিলিত" }]);
@@ -187,5 +200,38 @@ describe("questionUsage — the list", () => {
     expect(await questionUsage("")).toEqual([]);
     expect(await questionUsage("   ")).toEqual([]);
     expect(mockFind).not.toHaveBeenCalled();
+  });
+});
+
+describe("AL-3 — the ledger adds the non-set kinds, never double counts a set", () => {
+  test("the ledger part excludes rows whose source is an AssessmentSet and withdrawn rows", async () => {
+    await questionUsageCounts(["QP-A"]);
+    const m = (mockUseAggregate.mock.calls[0][0] as Record<string, unknown>[])[0].$match as Record<string, unknown>;
+    expect(m.withdrawnAt).toBeNull();
+    expect(m.sourceType).toEqual({ $ne: "ASSESSMENT_SET" });
+  });
+
+  test("counts = every set holding the qid (as before) + the ledger's non-set uses", async () => {
+    mockAggregate.mockResolvedValue([{ _id: "QP-A", n: 2 }]);
+    mockUseAggregate.mockResolvedValue([{ _id: { qid: "QP-A", kind: "HW" }, n: 1 }, { _id: { qid: "QP-B", kind: "AS" }, n: 1 }]);
+    const m = await questionUsageCounts(["QP-A", "QP-B"]);
+    expect(m.get("QP-A")).toBe(3);
+    expect(m.get("QP-B")).toBe(1);
+  });
+
+  test("the badge splits sets by their type and adds homework / assignment / extra homework / CT-paper uses", async () => {
+    mockAggregate.mockResolvedValue([{ _id: { qid: "QP-A", kind: "CT" }, n: 2 }, { _id: { qid: "QP-A", kind: "HW" }, n: 1 }]);
+    mockUseAggregate.mockResolvedValue([
+      { _id: { qid: "QP-A", kind: "EXTRA_HW" }, n: 1 }, { _id: { qid: "QP-A", kind: "AS" }, n: 1 }, { _id: { qid: "QP-A", kind: "RETEST" }, n: 1 },
+    ]);
+    expect((await questionUsageByKind(["QP-A"])).get("QP-A")).toEqual({ total: 6, hw: 2, as: 1, ct: 2 });
+  });
+
+  test("the list adds ledger uses with their kind and day, newest first, beside the sets", async () => {
+    mockFind.mockResolvedValue([{ _id: new mongoose.Types.ObjectId(), name: "set", setType: "CT", status: "draft", classId: CLASS_ID, sectionId: SECTION_ID, createdAt: new Date("2026-08-01T00:00:00.000Z") }]);
+    mockUseFind.mockResolvedValue([{ kind: "EXTRA_HW", sourceType: "MASTERY_PAPER", sourceId: new mongoose.Types.ObjectId(), sectionId: SECTION_ID, givenOn: "2026-09-01" }]);
+    const rows = await questionUsage("QP-A");
+    expect(rows.map((r) => r.kind)).toEqual(["EXTRA_HW", "CT"]);
+    expect(rows[0]).toMatchObject({ setName: null, status: "given", usedOn: "2026-09-01T00:00:00.000Z" });
   });
 });

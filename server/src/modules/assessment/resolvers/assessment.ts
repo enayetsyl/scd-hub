@@ -30,7 +30,7 @@ import {
 import { AssessmentSet } from "../models/AssessmentSet";
 import {
   questionUsage as usageSvc,
-  questionUsageCounts as usageCounts,
+  questionUsageByKind as usageByKind,
   type QuestionUseDTO,
 } from "../services/QuestionUsageService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
@@ -524,12 +524,15 @@ builder.queryField("myRecentSets", (t) =>
 // ---------------------------------------------------------------------------
 
 const QuestionUsageCountRef = builder
-  .objectRef<{ qid: string; count: number }>("QuestionUsageCount");
+  .objectRef<{ qid: string; count: number; hwCount: number; asCount: number; ctCount: number }>("QuestionUsageCount");
 QuestionUsageCountRef.implement({
   description: "How many sets one question appears in. Batched for a whole bank page.",
   fields: (t) => ({
     qid: t.exposeString("qid"),
     count: t.exposeInt("count"),
+    hwCount: t.exposeInt("hwCount", { description: "Homework + extra-homework uses (AL-3)." }),
+    asCount: t.exposeInt("asCount", { description: "Weekly-assignment uses (AL-3)." }),
+    ctCount: t.exposeInt("ctCount", { description: "Class-test uses (AL-3)." }),
   }),
 });
 
@@ -542,6 +545,7 @@ QuestionUseRef.implement({
     setId: t.exposeString("setId"),
     setName: t.string({ nullable: true, resolve: (u) => u.setName }),
     setType: t.exposeString("setType"),
+    kind: t.exposeString("kind", { description: "HW | AS | CT | EXTRA_HW | RETEST (AL-3 ledger)." }),
     status: t.exposeString("status"),
     classLevel: t.int({ nullable: true, resolve: (u) => u.classLevel }),
     className: t.string({ nullable: true, resolve: (u) => u.className }),
@@ -562,8 +566,8 @@ builder.queryField("questionUsageCounts", (t) =>
     args: { qids: t.arg.stringList({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const counts = await usageCounts(args.qids);
-      return [...counts.entries()].map(([qid, count]) => ({ qid, count }));
+      const counts = await usageByKind(args.qids);
+      return [...counts.entries()].map(([qid, c]) => ({ qid, count: c.total, hwCount: c.hw, asCount: c.as, ctCount: c.ct }));
     },
   }),
 );

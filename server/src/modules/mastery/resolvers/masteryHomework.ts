@@ -41,6 +41,7 @@ DraftItemRef.implement({
     questionTypeCode: t.exposeString("questionTypeCode"),
     marks: t.exposeFloat("marks"),
     fromBook: t.exposeBoolean("fromBook"),
+    repeat: t.exposeBoolean("repeat", { description: "R23 (AL-3): a question the শাখা had before, re-offered because no unused one is left (shown 'আবার')." }),
   }),
 });
 

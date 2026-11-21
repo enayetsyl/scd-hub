@@ -55,6 +55,8 @@ import { objectiveGrain } from "./MasteryGuardianService";
 import type { MasteryLevelLabels } from "@scd/shared";
 
 import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
+import { avoidFor, isLoop2027On, recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -354,7 +356,20 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   // PR-J (D-#1420): a question on any child's open extra sheet is seen by that child, so Part A (class-wide) avoids it.
   const extraSeen = await openExtraSeen(ctx.sectionId, input.subject);
   const openExtraQids = new Set([...extraSeen.values()].flatMap((q) => [...q]));
-  const partA = buildPartA(sectionWeak, policy.resolved.sectionTriggerPct, new Set([...studentsByQid.keys(), ...openExtraQids]), bctx, openExtraQids);
+  // AL-3 (D-#1667, §4.3): never a homework question of the year, never a use in the no-repeat window — Part A
+  // (class-wide) avoids every row of the শাখা, Part B each child's own rows. Read always; only R19 / R21 wait for the switch.
+  const ledger = await avoidFor({
+    sectionId: ctx.sectionId, academicYearId: ctx.academicYearId, classToken: ctx.classToken, subject: input.subject,
+    studentIds: roster.map((st) => String(st._id)),
+  });
+  // Switch OFF: the ledger only widens the SOFT "seen" set, so Part A's fallback (a seen question when no unseen one
+  // exists) still works exactly as in 2026. Switch ON: the hard rules of §4.3 (hardAvoid, no fallback).
+  const loopOn = await isLoop2027On();
+  const partA = buildPartA(
+    sectionWeak, policy.resolved.sectionTriggerPct,
+    new Set([...studentsByQid.keys(), ...openExtraQids, ...(loopOn ? [] : ledger.forSection)]), bctx,
+    new Set([...openExtraQids, ...(loopOn ? ledger.forSection : [])]),
+  );
   const partAQids = new Set(partA.map((q) => q.qid));
 
   const now = new Date();
@@ -389,7 +404,7 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
         return s ? [[lo, { state: s.state, lastEvidenceAt: s.lastEvidenceAt, seenQids: extraSeen.has(sid) ? [...new Set([...s.seenQids, ...extraSeen.get(sid)!])] : s.seenQids }] as const] : [];
       }),
     );
-    const built = buildPartB(states, bctx, partAQids);
+    const built = buildPartB(states, bctx, new Set([...partAQids, ...ledger.forChild(sid)]));
     await MasteryAssignmentSheet.updateOne(
       { assignmentId: a._id, studentId: st._id },
       {
@@ -506,6 +521,9 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const seen = new Set(rows.filter((r) => r.studentId === studentId && r.qid).map((r) => r.qid as string));
       for (const q of [...sheet.items, ...a.partA]) if (q.qid) seen.add(q.qid);
       for (const q of (await openExtraSeen(a.sectionId, a.subject)).get(studentId) ?? []) seen.add(q);
+      // AL-3: a swap-in is no more a homework question of the year / in-window repeat than a built item.
+      const ledger = await avoidFor({ sectionId: a.sectionId, academicYearId: a.academicYearId, classToken: a.classToken, subject: a.subject, studentIds: [studentId] });
+      for (const q of ledger.forChild(studentId)) seen.add(q);
       const exposure = new Map<string, number>();
       for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
       // PR-G: the item keeps its type and marks, so a swap-in that carries a different type is not a candidate.
@@ -629,6 +647,8 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
     entryState: "OPEN",
     createdBy: Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined,
   });
+  // AL-3: the AS paper went to the children — Part A (on every sheet) is a whole-শাখা use, Part B per child.
+  await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(new Date()), wholeIfAll: true }));
   a.status = "SENT";
   a.paperId = paper._id;
   a.sentAt = new Date();

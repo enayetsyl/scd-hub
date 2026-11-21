@@ -19,6 +19,12 @@ import { canRead, canWrite } from "../modules/foundation/services/ScopeGrantServ
 import type { ScopeItem } from "../modules/foundation/services/ScopeGrantService";
 
 // ---------------------------------------------------------------------------
+// AL-3: the class-test block (R19) reads the release switch from the DB; this suite is DB-free and the switch is off.
+jest.mock("../modules/assessment/services/QuestionUseService", () => ({
+  ...jest.requireActual("../modules/assessment/services/QuestionUseService"),
+  assertCtAddable: async () => undefined,
+}));
+
 // Mock Mongoose models BEFORE importing services under test
 // ---------------------------------------------------------------------------
 

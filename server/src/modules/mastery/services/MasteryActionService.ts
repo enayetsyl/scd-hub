@@ -34,6 +34,8 @@ import { goldBank, marksTable } from "./MasteryAssignmentService";
 import { pickTyped } from "../assignmentBuilder";
 import { sectionOutcomeSummary, type DiagnosisPolicy } from "../diagnosis";
 import { notifyExtraClass, notifyProposal, outcomeNaming } from "../notify";
+import { recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const DAY = 86_400_000;
@@ -321,6 +323,8 @@ export async function buildRetest(id: string, auth: Auth): Promise<ActionDetail>
     entryState: "OPEN",
     createdBy: byOf(auth),
   });
+  // AL-3: the re-test sheet went to the sitting children — per-child ledger rows (RETEST).
+  await recordUsesSafe(usesOfPaper(paper, "RETEST", { givenOn: dhakaDayKey(new Date()) }));
   a.retestPaperId = paper._id;
   a.status = "CHECKING";
   a.events.push({ at: new Date(), kind: "RETEST_BUILT", by: byOf(auth), note: paper.paperId });

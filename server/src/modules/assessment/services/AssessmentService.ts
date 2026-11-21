@@ -17,6 +17,7 @@ import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { heldRefusal } from "../../mastery/examHold";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
+import { assertCtAddable, classTokenOfLevel } from "./QuestionUseService";
 import { TrackerRecord } from "../../trackers/models/TrackerRecord";
 import type { SetType } from "@scd/shared";
 
@@ -150,6 +151,12 @@ export async function addQuestionToSet(
   const qid = (payload.qid as string | undefined) ?? artifactId;
   const marks = typeof payload.marks === "number" ? payload.marks : 1;
 
+  // R19 (AL-3, release switch on): a class-test basket takes no question the শাখা or a roster child had as
+  // homework / extra homework / assignment in the no-repeat window. Off → no-op (§3.6).
+  if (set.setType === "CT") {
+    await assertCtAddable({ sectionId: set.sectionId, qids: [qid], classToken: classTokenOfLevel(artifact.classLevel), subject: artifact.subject });
+  }
+
   // Avoid duplicates
   const alreadyAdded = set.basketItems.some(
     (item) => item.artifactId.toString() === artifactId,
@@ -234,6 +241,14 @@ export async function createSetWithQuestions(
       classLevel: artifact.classLevel,
     };
   });
+
+  // R19 (AL-3): the whole basket of a new CT set is checked together, so nothing is half-written.
+  if (input.setType === "CT") {
+    await assertCtAddable({
+      sectionId: input.sectionId, qids: items.map((i) => i.qid),
+      classToken: classTokenOfLevel(items[0]?.classLevel), subject: items[0]?.subject,
+    });
+  }
 
   const totalMarks = items.reduce((sum, item) => sum + item.marks, 0);
   /**
@@ -413,6 +428,10 @@ export async function assembleSet(input: AssembleInput): Promise<AssembleResult>
   if (!set) throw new Error("AssessmentSet not found");
   if (set.status !== "draft") throw new Error("Set is already assembled");
   if (set.basketItems.length === 0) throw new Error("Cannot assemble an empty set");
+  // R19 (AL-3): re-checked at finalise — a question may have been given as homework since it was added.
+  if (set.setType === "CT") {
+    await assertCtAddable({ sectionId: set.sectionId, qids: set.basketItems.map((b) => b.qid) });
+  }
 
   const totalMarks = set.basketItems.reduce((sum, item) => sum + item.marks, 0);
   const now = new Date();

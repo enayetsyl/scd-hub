@@ -176,6 +176,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "MonthlyReportError",
   // Own sidebar arrangement (D-#920): an unknown item key or a save while viewing as someone.
   "NavPreferenceError",
+  // Class-test block (AL-3, D-#1667, R19): "এই প্রশ্ন গত ৪ সপ্তাহে বাড়ির কাজ / অ্যাসাইনমেন্টে ছিল" — a refusal for the teacher.
+  "CtBlockError",
   "OffboardingError",
   "ParentMeetingError",
   "PayrollError",

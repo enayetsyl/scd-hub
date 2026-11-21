@@ -38,6 +38,8 @@ import {
 } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { dateKeyOf } from "../../attendance/dates";
+import { recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay } from "../calendar";
@@ -543,6 +545,7 @@ export async function deleteHomeworkItem(itemId: string): Promise<{ itemId: stri
   }
   await assertDayUnreconciled(item.classId.toString(), item.dateGiven as unknown as Date, item.sectionId?.toString());
   await HomeworkItem.deleteOne({ _id: item._id });
+  // AL-3: a declared item has written no ledger row yet (rows are written at issue, and an issued item cannot be deleted).
   return { itemId: item._id.toString(), hwId: item.hwId };
 }
 
@@ -788,6 +791,22 @@ export async function issueHomeworkItem(
   item.status = "issued";
   item.issuedAt = now;
   await item.save();
+
+  // AL-3 (D-#1667): the picked bank questions went to the children — one ledger row each, whole শাখা.
+  // Written regardless of the release switch (§3.6); a failure is logged, never undoes the issue.
+  await recordUsesSafe(
+    [...new Set(item.selectedQids ?? [])].map((qid) => ({
+      qid,
+      kind: "HW" as const,
+      sourceType: "HOMEWORK_ITEM" as const,
+      sourceId: item._id,
+      academicYearId: item.academicYearId,
+      sectionId: item.sectionId,
+      classToken: classTokenOfLevel(item.classLevel),
+      subject: item.subject,
+      givenOn: dhakaDayKey(item.dateGiven),
+    })),
+  );
 
   // D-#1004: the auto-issue roster IS the register; only a person's roster can disagree with it.
   if (actorId !== SYSTEM_ISSUE_ACTOR_ID) {
