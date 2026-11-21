@@ -14,6 +14,7 @@ import {
   MASTERY_CLASS_TOKENS,
   MASTERY_LO_CODE_RE,
   MASTERY_POLICY_DEFAULTS,
+  MASTERY_POLICY_SCHOOL_KEYS,
   MASTERY_QT_CODE_RE,
   MASTERY_STRAND_RE,
   MASTERY_SUBJECTS,
@@ -395,7 +396,11 @@ export function resolvePolicy(
   school: Partial<MasteryPolicyValues> | null | undefined,
   override: Partial<MasteryPolicyValues> | null | undefined,
 ): MasteryPolicyValues {
-  return { ...(MASTERY_POLICY_DEFAULTS as unknown as MasteryPolicyValues), ...(school ?? {}), ...(override ?? {}) };
+  // School-wide keys (PRD-academic-loop-2027 §3.5 "S") come from the SCHOOL row only — an override that somehow
+  // holds one (a script, a direct write) is ignored on read, not just refused on save.
+  const ov: Record<string, unknown> = { ...(override ?? {}) };
+  for (const k of MASTERY_POLICY_SCHOOL_KEYS) delete ov[k];
+  return { ...(MASTERY_POLICY_DEFAULTS as unknown as MasteryPolicyValues), ...(school ?? {}), ...(ov as Partial<MasteryPolicyValues>) };
 }
 
 /** Ranges and orderings, on the RESOLVED values (an override is judged with what it inherits). */
@@ -422,6 +427,28 @@ export function validatePolicy(p: MasteryPolicyValues): string | null {
   for (const k of ["assignmentTotalMarks", "assignmentPartAMarks", "assignmentPartBMarks"] as const) {
     if (!(Number.isFinite(p[k]) && p[k] >= 0 && isHalfStep(p[k]))) return `${k}: ০ বা তার বেশি, ০.৫-এর ধাপে দিন।`;
   }
+  // 2027 academic loop keys (PRD-academic-loop-2027 §3.5, AL-0).
+  const intIn = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >= lo && n <= hi;
+  for (const k of ["homeworkBankSharePct", "suggestRevisionPct", "swapSuggestWeakPct", "sectionTriggerMinAssessedPct", "integrityGapPoints"] as const) {
+    if (!pct(p[k])) return `${k}: ০ থেকে ১০০-এর মধ্যে দিন।`;
+  }
+  for (const k of ["assignmentNoRepeatWeeks", "suggestRecentWeeks", "suggestRecentWeight", "termBehindAlertWeeks", "integrityRecurringCases",
+    "subjectsPerWeekMin", "subjectsPerWeekMax", "asDraftLeadDays", "lateMarksMistakeFromTerm"] as const) {
+    if (!posInt(p[k])) return `${k}: ১ বা তার বেশি পূর্ণসংখ্যা দিন।`;
+  }
+  for (const k of ["suggestMissedEasyQuestions", "suggestMissedObjectivesPerWeek", "hwMarkDeadlineDays"] as const) {
+    if (!intIn(p[k], 0, 52)) return `${k}: ০ থেকে ৫২-এর মধ্যে পূর্ণসংখ্যা দিন।`;
+  }
+  if (!intIn(p.asMarkDeadlineDow, 0, 6) || !intIn(p.guardianSummaryDow, 0, 6)) return "সপ্তাহের দিন ০ (রবিবার) থেকে ৬ (শনিবার)-এর মধ্যে দিন।";
+  if (!intIn(p.asDraftHour, 0, 23) || !intIn(p.guardianSummaryHour, 0, 23)) return "ঘণ্টা ০ থেকে ২৩-এর মধ্যে দিন।";
+  if (!(p.subjectsPerWeekMin <= p.subjectsPerWeekMax)) return "সপ্তাহে বিষয়: সর্বনিম্ন সংখ্যা সর্বোচ্চের বেশি হতে পারে না।";
+  if (!(Number.isFinite(p.weeklyAssignmentHoursCap) && p.weeklyAssignmentHoursCap > 0 && p.weeklyAssignmentHoursCap <= 20 && isHalfStep(p.weeklyAssignmentHoursCap))) {
+    return "সপ্তাহের সর্বোচ্চ ঘণ্টা ০.৫ থেকে ২০-এর মধ্যে, ০.৫-এর ধাপে দিন।";
+  }
+  if (!(Number.isFinite(p.perDayHours) && p.perDayHours > 0 && p.perDayHours <= p.weeklyAssignmentHoursCap && isHalfStep(p.perDayHours))) {
+    return "এক দিনের সর্বোচ্চ ঘণ্টা ০-এর বেশি ও সপ্তাহের সীমার মধ্যে, ০.৫-এর ধাপে দিন।";
+  }
+  if (!(Number.isFinite(p.minutesPerMark) && p.minutesPerMark > 0 && p.minutesPerMark <= 10)) return "প্রতি নম্বরে মিনিট ০-এর বেশি ও ১০-এর মধ্যে দিন।";
   return null;
 }
 
