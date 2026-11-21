@@ -22,6 +22,7 @@
  *     `cacheWriteTokens`, priced at 1.25× in aiPrices.ts); output_tokens includes thinking.
  * Pictures (png/jpeg/gif/webp) and PDFs are sent as image / document blocks.
  */
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { ANTHROPIC_MODELS } from "./models";
 import {
   AiProviderError,
@@ -33,6 +34,7 @@ import {
   type AiReasoning,
   type AiSendInput,
   type AiSendResult,
+  AiFeatureOffError,
 } from "./provider";
 
 export { ANTHROPIC_MODELS };
@@ -156,6 +158,8 @@ export class AnthropicProvider implements AiProvider {
   ) {}
 
   async send(input: AiSendInput, model: string): Promise<AiSendResult> {
+    // AL-1: every direct provider call is covered, not only the router.
+    if (!outgoingAllowed("ai")) throw new AiFeatureOffError(this.name);
     const started = Date.now();
     const body = claudeBody(input, model);
     const msg = await withDeadline(input.timeoutMs ?? DEFAULT_TIMEOUT_MS, this.name, async (signal) => {
@@ -230,6 +234,7 @@ export class AnthropicProvider implements AiProvider {
  * that the model exists, and costs no tokens. Returns the HTTP status (200 = fine).
  */
 export async function pingAnthropic(key: string, model: string, makeClient: ClaudeClientFactory = defaultClient): Promise<number> {
+  if (!outgoingAllowed("ai")) throw new Error("Claude-এ পৌঁছানো যায়নি — এই ডেটাবেসে বাইরে পাঠানো বন্ধ আছে");
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 20_000);
   try {

@@ -18,11 +18,13 @@
 import type { INotification } from "../models/Notification";
 import { registerChannel, type NotificationChannel } from "./NotificationService";
 import { PushDevice } from "../../attendance/models/PushDevice";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { sendExpoPush, type ExpoPushMessage } from "../../platform/services/ExpoPush";
 
 export const expoPushChannel: NotificationChannel = {
   name: "expo-push",
   async deliver(row: INotification): Promise<void> {
+    if (!outgoingAllowed("expo")) return; // AL-1: dev database — nothing goes out
     // Exactly one recipient (D-#72 invariant, asserted by emit before us).
     const owner = row.recipientUserId
       ? { userId: row.recipientUserId }

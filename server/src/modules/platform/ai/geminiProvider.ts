@@ -9,6 +9,7 @@
  * `maxOutputTokens`, so the budget sent is the caller's answer budget PLUS an allowance for
  * the thinking; otherwise the answer is cut off (the 382-of-400-tokens incident).
  */
+import { outgoingAllowed } from "../../../lib/outgoing";
 import {
   AiProviderError,
   classifyStatus,
@@ -20,6 +21,7 @@ import {
   type AiSendInput,
   type AiSendResult,
   type FetchLike,
+  AiFeatureOffError,
 } from "./provider";
 
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -63,6 +65,8 @@ export class GeminiProvider implements AiProvider {
   ) {}
 
   async send(input: AiSendInput, model: string): Promise<AiSendResult> {
+    // AL-1: every direct provider call is covered, not only the router.
+    if (!outgoingAllowed("ai")) throw new AiFeatureOffError(this.name);
     // DA-2: no tool calling through Gemini here (it stays for OCR); refuse before sending.
     if (input.tools?.length) throw new AiProviderError("not_configured", "Gemini cannot call tools in this app", this.name);
     const started = Date.now();

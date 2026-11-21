@@ -18,6 +18,7 @@
  * fall back to another provider once (FALLBACK_TO). The router (`ai/aiRouter.ts`) reads them.
  */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { Types } from "mongoose";
 import type { AuthPayload } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
@@ -173,6 +174,7 @@ export async function aiSettingsView(authIn: AuthPayload | null, providerIn?: st
 }
 
 async function pingGemini(key: string, modelName: string): Promise<number> {
+  if (!outgoingAllowed("ai")) throw new Error("Gemini-তে পৌঁছানো যায়নি — এই ডেটাবেসে বাইরে পাঠানো বন্ধ আছে");
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`, {
       method: "POST",
@@ -186,6 +188,7 @@ async function pingGemini(key: string, modelName: string): Promise<number> {
 }
 
 async function pingDeepseek(key: string, modelName: string): Promise<number> {
+  if (!outgoingAllowed("ai")) throw new Error("DeepSeek-এ পৌঁছানো যায়নি — এই ডেটাবেসে বাইরে পাঠানো বন্ধ আছে");
   try {
     const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
       method: "POST",

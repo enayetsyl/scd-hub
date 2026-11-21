@@ -12,6 +12,7 @@
  * In jest this module is mocked — no live Expo in CI (§9.3 / tests).
  */
 import { capturePushDeliveryFailure } from "../../../observability/sentry";
+import { outgoingAllowed } from "../../../lib/outgoing";
 
 const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
 const CHUNK_SIZE = 100; // Expo accepts up to 100 messages per request.
@@ -74,6 +75,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 export async function sendExpoPush(messages: ExpoPushMessage[]): Promise<ExpoPushResult> {
   const result: ExpoPushResult = { okCount: 0, deadTokens: [] };
   if (messages.length === 0) return result;
+  if (!outgoingAllowed("expo")) return result; // AL-1: dev database — nothing goes out
 
   for (const batch of chunk(messages, CHUNK_SIZE)) {
     try {
