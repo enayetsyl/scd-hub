@@ -296,6 +296,21 @@ describe("report flow", () => {
     expect(lastTo(7)).toContain(GOOD.title);
   });
 
+  test("a model that times out (or drops the connection) falls back to the second (prod 21 Nov 2026)", async () => {
+    const uid = await staff();
+    await linkChat(8, uid);
+    const timeout = Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+    gen.mockRejectedValueOnce(timeout).mockResolvedValueOnce(JSON.stringify(GOOD));
+    await handleUpdate(msg(8, { text: "সমস্যা" }));
+    expect(gen.mock.calls.map((c) => c[0].model)).toEqual(["primary-model", "fallback-model"]);
+    expect(lastTo(8)).toContain(GOOD.title);
+    gen.mockClear();
+    gen.mockRejectedValueOnce(new TypeError("fetch failed")).mockResolvedValueOnce(JSON.stringify(GOOD));
+    await handleUpdate(msg(8, { text: "/cancel" }));
+    await handleUpdate(msg(8, { text: "আরেকটি সমস্যা" }));
+    expect(gen.mock.calls.map((c) => c[0].model)).toEqual(["primary-model", "fallback-model"]);
+  });
+
   test("bad JSON is repaired locally; hopeless output gives a clear Bangla error and no draft", async () => {
     const uid = await staff();
     await linkChat(7, uid);
