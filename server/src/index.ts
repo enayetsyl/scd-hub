@@ -42,6 +42,7 @@ import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { worksheetPdfRouter } from "./modules/worksheets/routes/worksheetPdf";
 import { masteryAssignmentPdfRouter } from "./modules/mastery/routes/masteryAssignmentPdf";
 import { masteryExtraPdfRouter } from "./modules/mastery/routes/masteryExtraPdf";
+import { masteryHomeworkPdfRouter } from "./modules/mastery/routes/masteryHomeworkPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf";
 import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
@@ -204,6 +205,7 @@ app.use("/pdf/monthly-report", monthlyReportPdfRouter);
 // Mastery weekly tailored assignment (M-4, D-#809) — under the allowlisted /pdf prefix.
 app.use("/pdf/mastery-assignment", masteryAssignmentPdfRouter);
 app.use("/pdf/mastery-extra", masteryExtraPdfRouter);
+app.use("/pdf/mastery-homework", masteryHomeworkPdfRouter);
 app.use("/export/monthly-comments", monthlyCommentExportRouter);
 // Under the ALREADY-ALLOWLISTED /export prefix on the VM's Caddyfile — a new top-level
 // prefix would have 200'd the SPA's index.html instead of reaching the server.

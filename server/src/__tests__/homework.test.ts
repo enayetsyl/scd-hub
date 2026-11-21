@@ -9,6 +9,8 @@
  *
  * DB-free: Mongoose models are mocked; the lifecycle engine + calendar are pure.
  */
+// AL-4: the manual-check guard reads the release switch (a DB read); this suite is DB-free and 2026-only.
+jest.mock("../modules/mastery/paperLink", () => ({ manualCheckRefusal: () => Promise.resolve(null) }));
 import mongoose from "mongoose";
 import {
   LIFECYCLE_EDGES,

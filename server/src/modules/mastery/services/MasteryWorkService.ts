@@ -41,8 +41,11 @@ import { reapplyExclusions } from "../exclusions";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { heldRefusal } from "../examHold";
-import { assertCtAddable, CtBlockError, recordUsesSafe, usesOfPaper, withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
+import { assertCtAddable, CtBlockError, isLoop2027On, recordUsesSafe, usesOfPaper, withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { isTrackerLinked } from "../paperLink";
+import { bySchoolId } from "../../year-change/setup";
+import { PrintRequest } from "../../printing/models/PrintRequest";
 import {
   classTestMismatches,
   ctOutcomeOf,
@@ -121,6 +124,12 @@ export async function assertMayWork(auth: Auth, sectionId: Types.ObjectId, subje
   if (callerHasPermission(auth, "mastery:edit_all")) return;
   const teacherId = await resolveSubjectTeacher(String(sectionId), subject, on);
   if (teacherId && String(teacherId) === String(auth.userId)) return;
+  // AL-4 / AC-S1 (switch on): today's substitute for the absent subject teacher reaches the শাখা × subject for the
+  // day — pick, enter marks, finalise — the same rule the mark reminders use (§7). Off → exactly the 2026 rule.
+  if (dhakaDayKey(on) === dhakaDayKey(new Date()) && (await isLoop2027On())) {
+    const { isTodaySubstituteFor } = await import("./HomeworkPaperService");
+    if (await isTodaySubstituteFor(String(auth.userId), sectionId, subject)) return;
+  }
   throw new MasteryWorkError("রুটিন অনুযায়ী এই শাখা ও বিষয়ের দায়িত্ব আপনার নয়।");
 }
 
@@ -140,6 +149,13 @@ export async function loadPaperFor(paperId: string, auth: Auth): Promise<IMaster
 // ---------------------------------------------------------------------------
 // Create / delete a sheet
 // ---------------------------------------------------------------------------
+
+/** AL-4: the row rule for a paper named by its Mongo id (the print request carries the id, not the paperId code). */
+export async function assertMayWorkPaperId(id: string, auth: Auth): Promise<void> {
+  const paper = Types.ObjectId.isValid(id) ? await MasteryPaper.findById(id).select("sectionId subject date").lean() : null;
+  if (!paper) throw new MasteryWorkError("এই কাজটি পাওয়া যায়নি।");
+  await assertMayWork(auth, paper.sectionId, paper.subject, paper.date);
+}
 
 export interface PaperItemInput {
   origin: "BANK" | "TEACHER" | "TEACHER_AI";
@@ -309,10 +325,13 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   }).catch((err: unknown) => {
     // The unique index on links.classTestId closes the race of two sheets for one test.
     if ((err as { code?: number }).code === 11000 && test) throw new MasteryWorkError(ONE_SHEET_PER_TEST);
+    // AL-4: the partial unique index on `links.hwItemId` (built by the backfill script) — one class paper per item.
+    if ((err as { code?: number }).code === 11000 && hwItemId) throw new MasteryWorkError("এই বাড়ির কাজের প্রশ্নভিত্তিক শিট আগেই তৈরি হয়েছে।");
     throw err;
   });
   // AL-3 (§3.2): a CT sheet linked to its class test is given on the exam date; a hand-made HW sheet on its date.
   // (A CT sheet with no test, a rubric: nothing was given yet.) Written regardless of the release switch.
+  // (AL-4: a hand-made paper stays a 2026 paper — only the declare path sets `trackerLinked`.)
   if (paper.source === "HW") await recordUsesSafe(usesOfPaper(paper, "HW", { givenOn: dhakaDayKey(paper.date) }));
   else if (paper.source === "CT" && test) await recordUsesSafe(usesOfPaper(paper, "CT", { givenOn: dhakaDayKey(paper.date) }));
   void writeAudit({
@@ -356,9 +375,15 @@ export async function deletePaper(paperId: string, auth: Auth): Promise<boolean>
   if (paper.source === "AS" || paper.source === "RETEST") throw new MasteryWorkError("অ্যাসাইনমেন্ট বা রি-টেস্টের কাজ এখান থেকে মোছা যায় না।");
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("নিশ্চিত করা কাজ মুছে ফেলা যায় না।");
   if (await MasteryResult.exists({ paperId: paper._id })) throw new MasteryWorkError("নম্বর তোলা শুরু হয়েছে — মুছে ফেলা যায় না।");
+  // AL-4 (switch on): a paper sent to print is deleted only after the print request is cancelled (§3.1 guard 4).
+  if (isTrackerLinked(paper) && (await isLoop2027On()) && (await PrintRequest.exists({ masteryPaperId: paper._id, status: { $ne: "CANCELLED" } }))) {
+    throw new MasteryWorkError("এই কাজের প্রিন্টের অনুরোধ এখনো চালু আছে — আগে সেটি বাতিল করুন।");
+  }
   await MasteryPaper.deleteOne({ _id: paper._id, entryState: "OPEN" });
   // AL-3 / AC-B11: the questions were never worked — withdrawn, and offered again.
   await withdrawUsesSafe("MASTERY_PAPER", paper._id);
+  // AL-4: the tracker row no longer points at a paper that is gone.
+  if (paper.links?.hwItemId) await HomeworkItem.updateOne({ _id: paper.links.hwItemId, paperId: paper._id }, { $unset: { paperId: "" } });
   // PR-D: a deleted extra homework takes its per-child record rows with it (nothing was given).
   if (paper.extra) await MasteryAction.deleteMany({ kind: "EXTRA_HOMEWORK", "plan.note": { $regex: `^${paper.paperId}:` } });
   void writeAudit({
@@ -389,6 +414,10 @@ export interface PaperView {
   classTestId: string | null;
   /** PR-D: an extra homework for weak children (per-student items). */
   extra: boolean;
+  /** AL-4 (R20): a marks-only paper — per-question marks, no outcomes, no evidence on confirm. */
+  marksOnly: boolean;
+  /** AL-4 (§3.1 guard 4): the items are locked — the sheet went to print or was issued. */
+  locked: boolean;
   entryState: string;
   totalMarks: number;
   items: {
@@ -419,6 +448,8 @@ export function paperView(p: IMasteryPaper): PaperView {
     hwItemId: p.links?.hwItemId ? String(p.links.hwItemId) : null,
     classTestId: p.links?.classTestId ? String(p.links.classTestId) : null,
     extra: Boolean(p.extra),
+    marksOnly: Boolean(p.marksOnly),
+    locked: Boolean(p.lockedAt),
     entryState: p.entryState,
     totalMarks: p.items.reduce((s, i) => s + i.marks, 0),
     items: p.items.map((i) => ({
@@ -447,6 +478,13 @@ export interface RosterRow {
   studentId: string;
   name: string;
   rollNumber: string | null;
+  /** AL-4: the student ID — the grid's order and label (D-#1463), never the roll number. */
+  schoolId: string | null;
+  /** AL-4 (switch on, linked paper): the child's cached total from the last confirm / correction. */
+  earnedMarks: number | null;
+  availableMarks: number | null;
+  /** AL-4 (R22): the free lines (0-based) the child did not do. */
+  freeLinesNotDone: number[];
   /** What the student counts as if nothing is entered: the homework record, else PRESENT. */
   defaultStatus: "PRESENT" | "ABSENT" | "NOT_SUBMITTED";
   /** AS papers: the items this student was given; null ⇒ every item. */
@@ -463,6 +501,8 @@ export interface RosterRow {
 
 export interface PaperDetail {
   paper: PaperView;
+  /** AL-4 (R22): the linked homework's free lines (none otherwise). */
+  freeLines: { kind: string; textBn: string; estMinutes: number }[];
   roster: RosterRow[];
   /** PR-C: the linked class test (null when none). */
   classTest: { classTestId: string; ctId: string; totalMarks: number; examDate: string; status: string } | null;
@@ -472,8 +512,8 @@ export interface PaperDetail {
 }
 
 export async function rosterOf(sectionId: Types.ObjectId) {
-  return Student.find({ sectionId, active: true }).select("name nameBn rollNumber").sort({ rollNumber: 1, name: 1 }).lean() as Promise<
-    { _id: Types.ObjectId; name?: string; nameBn?: string; rollNumber?: string }[]
+  return Student.find({ sectionId, active: true }).select("name nameBn rollNumber schoolId").sort({ rollNumber: 1, name: 1 }).lean() as Promise<
+    { _id: Types.ObjectId; name?: string; nameBn?: string; rollNumber?: string; schoolId?: string }[]
   >;
 }
 
@@ -517,20 +557,54 @@ async function trackerDefaults(paper: IMasteryPaper): Promise<Map<string, "PRESE
     : paper.links?.asItemId
       ? await AssignmentStudentRecord.find({ asItemId: paper.links.asItemId, resubOf: null }).select("studentId state").lean()
       : [];
+  // AL-4 §3.1 guard 2 (switch on, a tracker-linked paper): SUBMITTED / CHECKED / RETURNED / RESUBMIT → PRESENT, CHASE →
+  // NOT_SUBMITTED, ABSENT_REDELIVER → ABSENT. A GIVEN / DUE record is refused at confirm, so it reads as not handed in
+  // here — the 2026 map below counted GIVEN as PRESENT (the hole). Off → the 2026 map, unchanged.
+  const strict = isTrackerLinked(paper) && (await isLoop2027On());
   for (const r of recs) {
     const s = r.state as string;
+    if (strict) {
+      out.set(String(r.studentId), s === "ABSENT_REDELIVER" ? "ABSENT" : s === "CHASE" || s === "GIVEN" || s === "DUE" ? "NOT_SUBMITTED" : "PRESENT");
+      continue;
+    }
     out.set(String(r.studentId), s === "ABSENT_REDELIVER" ? "ABSENT" : s === "DUE" || s === "CHASE" ? "NOT_SUBMITTED" : "PRESENT");
   }
   return out;
 }
 
+/** AL-4: is this a tracker-linked paper under the 2027 rules (switch on)? One read of the switch per call. */
+async function trackerMode(paper: IMasteryPaper): Promise<boolean> {
+  return isTrackerLinked(paper) && (await isLoop2027On());
+}
+
+/** The children the paper covers. 2026 / unlinked: the whole roster. Tracker mode: those with a tracker record (§3.1 guard 2). */
+async function paperRoster<T extends { _id: Types.ObjectId; schoolId?: string }>(paper: IMasteryPaper, students: T[]): Promise<T[]> {
+  if (!(await trackerMode(paper))) return students;
+  const { onPaperStudents } = await import("./HomeworkPaperService");
+  const keep = new Set(await onPaperStudents(paper, students.map((s) => String(s._id))));
+  return students.filter((s) => keep.has(String(s._id))).sort((a, b) => bySchoolId(a.schoolId ?? "", b.schoolId ?? ""));
+}
+
 export async function paperDetail(paperId: string, auth: Auth): Promise<PaperDetail> {
   const paper = await loadPaperFor(paperId, auth);
-  const [students, results, defaults] = await Promise.all([
+  const [allStudents, results, defaults] = await Promise.all([
     rosterOf(paper.sectionId),
     MasteryResult.find({ paperId: paper._id }).lean(),
     trackerDefaults(paper),
   ]);
+  // AL-4: tracker mode (switch on) lists only the children with a tracker record, in student-ID order.
+  const students = await paperRoster(paper, allStudents);
+  const cache = new Map<string, { earned: number | null; available: number | null; notDone: number[] }>();
+  if (paper.links?.hwItemId) {
+    for (const r of await HomeworkStudentRecord.find({ hwItemId: paper.links.hwItemId, resubOf: null }).select("studentId earnedMarks availableMarks freeLinesNotDone").lean()) {
+      cache.set(String(r.studentId), { earned: r.earnedMarks ?? null, available: r.availableMarks ?? null, notDone: r.freeLinesNotDone ?? [] });
+    }
+  } else if (paper.links?.asItemId) {
+    for (const r of await AssignmentStudentRecord.find({ asItemId: paper.links.asItemId, resubOf: null }).select("studentId marks availableMarks").lean()) {
+      cache.set(String(r.studentId), { earned: r.marks ?? null, available: r.availableMarks ?? null, notDone: [] });
+    }
+  }
+  const hwFree = paper.links?.hwItemId && !paper.extra ? await HomeworkItem.findById(paper.links.hwItemId).select("freeLines").lean() : null;
   const byStudent = new Map(results.map((r) => [String(r.studentId), r]));
   const given = studentItemsOf(paper);
   const test = await linkedTestOf(paper);
@@ -545,12 +619,17 @@ export async function paperDetail(paperId: string, auth: Auth): Promise<PaperDet
       : null,
     classTestMismatches: mismatches.map((m) => ({ ...m, name: nameOf.get(m.studentId) ?? "" })),
     paper: paperView(paper),
+    freeLines: (hwFree?.freeLines ?? []).map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })),
     roster: students.filter((s) => !given || given.has(String(s._id))).map((s) => {
       const r = byStudent.get(String(s._id));
       return {
         studentId: String(s._id),
         name: personName(s),
         rollNumber: s.rollNumber ?? null,
+        schoolId: s.schoolId ?? null,
+        earnedMarks: cache.get(String(s._id))?.earned ?? null,
+        availableMarks: cache.get(String(s._id))?.available ?? null,
+        freeLinesNotDone: cache.get(String(s._id))?.notDone ?? [],
         defaultStatus: defaults.get(String(s._id)) ?? "PRESENT",
         itemNos: given ? [...(given.get(String(s._id)) ?? [])].sort((a, b) => a - b) : null,
         result: r
@@ -663,6 +742,9 @@ function isEmptyResult(r: ResultInput): boolean {
 
 async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Promise<{ rows: number; skipped: number; behaviour: number }> {
   if (studentIds.length === 0) return { rows: 0, skipped: 0, behaviour: 0 };
+  // AL-4 (R20): a marks-only paper records marks per question but writes NO MasteryEvidence — so no weak-objective state,
+  // no re-teach trigger and no GH-3 case can come from it.
+  if (paper.marksOnly) return { rows: 0, skipped: 0, behaviour: 0 };
   const [results, defaults, tags, policy, live] = await Promise.all([
     MasteryResult.find({ paperId: paper._id, studentId: { $in: studentIds.map(oid) } }).lean(),
     trackerDefaults(paper),
@@ -724,6 +806,7 @@ async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Pro
  * allowed to fail the save — the next confirmation evaluates again.
  */
 export async function afterEvidence(paper: IMasteryPaper): Promise<void> {
+  if (paper.marksOnly) return; // AL-4: no evidence was written, so nothing to evaluate
   try {
     const { evaluateSectionTriggers } = await import("./MasteryActionService");
     await evaluateSectionTriggers(paper.sectionId, paper.subject);
@@ -747,7 +830,8 @@ export async function afterEvidence(paper: IMasteryPaper): Promise<void> {
  */
 export async function saveResults(paperId: string, rows: ResultInput[], auth: Auth): Promise<{ saved: number; evidenceRows: number }> {
   const paper = await loadPaperFor(paperId, auth);
-  const roster = new Set((await rosterOf(paper.sectionId)).map((s) => String(s._id)));
+  const tracker = await trackerMode(paper); // AL-4: switch on + a tracker-linked paper
+  const roster = new Set((await paperRoster(paper, await rosterOf(paper.sectionId))).map((s) => String(s._id)));
   const tags = new Map((await liveTags()).map((t) => [t.code, t as TagLike & { appliesTo: string }]));
   for (const r of rows) {
     const bad = validateResult(paper, r, roster, tags);
@@ -796,6 +880,8 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
     evidenceRows = (await writeEvidenceFor(paper, rows.map((r) => r.studentId))).rows;
     await afterEvidence(paper);
     if (ctNext && paper.links?.classTestId) await syncClassTestResults(paper.links.classTestId, ctNext, auth.userId);
+    // AL-4 (§3.1): a correction rewrites ONLY these children's totals on the tracker.
+    if (tracker) await (await import("./HomeworkPaperService")).writeBackTrackers(paper, rows.map((r) => r.studentId), auth.userId);
   }
   void writeAudit({
     eventKind: "MASTERY_RESULTS_SAVED",
@@ -807,6 +893,11 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
   });
   const perEntrant = new Map<string, number>();
   for (const p of priorEntrants) if (p.enteredBy) perEntrant.set(String(p.enteredBy), (perEntrant.get(String(p.enteredBy)) ?? 0) + 1);
+  // AL-4 (AC-B5): a child who was at full marks has no entrant of their own — the confirmer owns that correction.
+  if (tracker && paper.entryState === "CONFIRMED" && paper.confirmedBy) {
+    const unowned = rows.length - priorEntrants.filter((p) => p.enteredBy).length;
+    if (unowned > 0 && perEntrant.size === 0) perEntrant.set(String(paper.confirmedBy), unowned);
+  }
   for (const [owner, n] of perEntrant) {
     await recordPlaceMistake({
       kind: "MASTERY_CORRECTION",
@@ -832,7 +923,12 @@ export interface ConfirmSummary {
 export async function confirmPaper(paperId: string, auth: Auth): Promise<ConfirmSummary> {
   const paper = await loadPaperFor(paperId, auth);
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("এই কাজটি আগেই নিশ্চিত করা হয়েছে।");
-  const ids = (await rosterOf(paper.sectionId)).map((s) => String(s._id));
+  // AL-4 (switch on, a tracker-linked paper): §3.1 guard 1 — every original record must have left GIVEN / DUE first.
+  const tracker = await trackerMode(paper);
+  const hp = tracker ? await import("./HomeworkPaperService") : null;
+  if (hp) await hp.assertRecordsAccountedFor(paper);
+  const everyone = await rosterOf(paper.sectionId);
+  const ids = (await paperRoster(paper, everyone)).map((s) => String(s._id));
   // PR-C: a linked sheet first checks the test is printed and its day has come, and that no submitted /
   // published result would change; after confirming it writes every roster student's total.
   let ctNext: Map<string, CtOutcome> | null = null;
@@ -851,6 +947,8 @@ export async function confirmPaper(paperId: string, auth: Auth): Promise<Confirm
   paper.confirmedBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await paper.save();
   await afterEvidence(paper);
+  // AL-4 (§3.1): the totals, SUBMITTED → CHECKED and the internal result go back to the tracker records.
+  if (hp) await hp.writeBackTrackers(paper, ids, auth.userId);
   const ctWritten = ctNext && paper.links?.classTestId ? await syncClassTestResults(paper.links.classTestId, ctNext, auth.userId) : 0;
   void writeAudit({
     eventKind: "MASTERY_PAPER_CONFIRMED",

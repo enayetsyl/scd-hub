@@ -83,6 +83,7 @@ import {
 import { callerHasPermission, type Permission } from "@scd/shared";
 import { Subject } from "../../foundation/models/Subject";
 import { HomeworkItem } from "../models/HomeworkItem";
+import { freeLineGrid, freeLineScope, saveFreeLineTicks } from "../services/HomeworkFreeLineService";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { pageRef } from "../../../pageRef";
 import { dhakaDayStart } from "../../../lib/dhakaDay";
@@ -152,7 +153,26 @@ interface HomeworkItemShape {
   questionFileId?: string | null;
   /** Declare-form multi-attachments (≤5, hw_question kind) — empty when none. */
   attachmentIds?: string[];
+  /** AL-4: the HW paper carrying the per-question marks (null: none) and the free lines (R22). */
+  paperId?: string | null;
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
 }
+
+const HomeworkFreeLineRef = builder.objectRef<{ kind: string; textBn: string; estMinutes: number }>("HomeworkFreeLine");
+HomeworkFreeLineRef.implement({
+  description: "AL-4 (R22): a homework line with no marks — tracked done / not done per child.",
+  fields: (t) => ({ kind: t.exposeString("kind"), textBn: t.exposeString("textBn"), estMinutes: t.exposeInt("estMinutes") }),
+});
+const HomeworkFreeLineInput = builder.inputType("HomeworkFreeLineInput", {
+  fields: (t) => ({
+    kind: t.string({ required: true }),
+    textBn: t.string({ required: true }),
+    estMinutes: t.int({ required: true }),
+  }),
+});
+const HomeworkTeacherItemInput = builder.inputType("HomeworkTeacherItemInput", {
+  fields: (t) => ({ textBn: t.string({ required: true }), marks: t.float({ required: true }) }),
+});
 
 const HomeworkItemRef = builder.objectRef<HomeworkItemShape>("HomeworkItem");
 HomeworkItemRef.implement({
@@ -170,6 +190,8 @@ HomeworkItemRef.implement({
     status: t.exposeString("status"),
     questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId ?? null }),
     attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
+    paperId: t.string({ nullable: true, description: "AL-4: the HW paper (MasteryPaper Mongo id) carrying the per-question marks.", resolve: (r) => r.paperId ?? null }),
+    freeLines: t.field({ type: [HomeworkFreeLineRef], resolve: (r) => r.freeLines ?? [] }),
   }),
 });
 
@@ -324,6 +346,9 @@ builder.mutationField("declareHomeworkItem", (t) =>
       // D-#317: the mandatory brief "what is the homework" (card-visible).
       description: t.arg.string({ required: true }),
       attachmentIds: t.arg.stringList({ required: false }),
+      // AL-4 (switch on): free lines (R22) and teacher-written marked items beside the picked bank questions.
+      freeLines: t.arg({ type: [HomeworkFreeLineInput], required: false }),
+      teacherItems: t.arg({ type: [HomeworkTeacherItemInput], required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -344,6 +369,8 @@ builder.mutationField("declareHomeworkItem", (t) =>
         sessionRef: args.sessionRef ?? undefined,
         description: args.description,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
+        freeLines: args.freeLines ? args.freeLines.map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })) : undefined,
+        teacherItems: args.teacherItems ? args.teacherItems.map((i) => ({ textBn: i.textBn, marks: i.marks })) : undefined,
         actorId: ctx.auth.userId as string,
       });
       return { ...res, id: res.itemId };
@@ -374,6 +401,8 @@ builder.mutationField("updateHomeworkItem", (t) =>
       selectedQids: t.arg({ type: ["String"], required: false }),
       revItem: t.arg.boolean({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
+      freeLines: t.arg({ type: [HomeworkFreeLineInput], required: false }),
+      teacherItems: t.arg({ type: [HomeworkTeacherItemInput], required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -397,6 +426,8 @@ builder.mutationField("updateHomeworkItem", (t) =>
         selectedQids: args.selectedQids ? [...args.selectedQids] : undefined,
         revItem: args.revItem ?? undefined,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
+        freeLines: args.freeLines ? args.freeLines.map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })) : undefined,
+        teacherItems: args.teacherItems ? args.teacherItems.map((i) => ({ textBn: i.textBn, marks: i.marks })) : undefined,
         actorId: ctx.auth.userId as string,
       });
       return { ...res, id: res.itemId };
@@ -734,6 +765,8 @@ builder.queryField("homeworkItems", (t) =>
         status: d.status,
         questionFileId: d.questionFileId ? d.questionFileId.toString() : null,
         attachmentIds: (d.attachmentIds ?? []).map((id) => id.toString()),
+        paperId: d.paperId ? d.paperId.toString() : null,
+        freeLines: (d.freeLines ?? []).map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })),
       }));
     },
   }),
@@ -1423,6 +1456,75 @@ builder.mutationField("checkHomeworkRecord", (t) =>
         topup,
         actorId: ctx.auth.userId as string,
       });
+    },
+  }),
+);
+
+// AL-4 (R22): the free-line grid and the "হয়নি" ticks ------------------------------
+interface FreeLineGridShape {
+  hwItemId: string;
+  hwId: string;
+  sectionId: string;
+  subject: string;
+  freeLines: { kind: string; textBn: string; estMinutes: number }[];
+  rows: { recordId: string; studentId: string; name: string; schoolId: string | null; state: string; notDone: number[] }[];
+}
+const FreeLineGridRowRef = builder.objectRef<FreeLineGridShape["rows"][number]>("HomeworkFreeLineGridRow");
+FreeLineGridRowRef.implement({
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
+    schoolId: t.string({ nullable: true, resolve: (r) => r.schoolId }),
+    state: t.exposeString("state"),
+    notDone: t.intList({ resolve: (r) => r.notDone }),
+  }),
+});
+const FreeLineGridRef = builder.objectRef<FreeLineGridShape>("HomeworkFreeLineGrid");
+FreeLineGridRef.implement({
+  description: "AL-4 (R22): a homework's free lines and, per child in student-ID order, the lines not done.",
+  fields: (t) => ({
+    hwItemId: t.exposeString("hwItemId"),
+    hwId: t.exposeString("hwId"),
+    freeLines: t.field({ type: [HomeworkFreeLineRef], resolve: (g) => g.freeLines }),
+    rows: t.field({ type: [FreeLineGridRowRef], resolve: (g) => g.rows }),
+  }),
+});
+const FreeLineTickInput = builder.inputType("HomeworkFreeLineTickInput", {
+  fields: (t) => ({ studentId: t.string({ required: true }), notDone: t.intList({ required: true }) }),
+});
+
+builder.queryField("homeworkFreeLineGrid", (t) =>
+  t.field({
+    type: FreeLineGridRef,
+    description: "AL-4 (R22): the free-line done / not-done grid for one homework. Read-scope enforced.",
+    authScopes: { hasPermission: "homework:view" },
+    args: { hwItemId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const scope = await freeLineScope(args.hwItemId);
+      await assertCanRead(ctx, scope.sectionId, scope.classId, undefined, HW_READ);
+      return freeLineGrid(args.hwItemId);
+    },
+  }),
+);
+
+builder.mutationField("saveHomeworkFreeLineTicks", (t) =>
+  t.field({
+    type: "Int",
+    description:
+      "AL-4 (R22): save which free lines each child did NOT do (exceptions; each row replaces that child's list). " +
+      "Subject-teacher write-scope (the checking duty).",
+    authScopes: { hasPermission: "homework:check" },
+    args: {
+      hwItemId: t.arg.string({ required: true }),
+      rows: t.arg({ type: [FreeLineTickInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const scope = await freeLineScope(args.hwItemId);
+      await assertCanWrite(ctx, scope.sectionId, await resolveSubjectId(scope.subject), "check_homework", HW_WRITE);
+      return saveFreeLineTicks(args.hwItemId, args.rows.map((r) => ({ studentId: r.studentId, notDone: [...r.notDone] })));
     },
   }),
 );

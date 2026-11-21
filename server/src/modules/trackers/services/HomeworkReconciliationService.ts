@@ -43,6 +43,7 @@ import {
   type IssueRosterEntry,
 } from "./HomeworkService";
 import { isWeekend } from "../calendar";
+import { isLoop2027On } from "../../assessment/services/QuestionUseService";
 import { isPausedOn } from "../../academic-pause/services/AcademicPauseService";
 
 // ---------------------------------------------------------------------------
@@ -249,6 +250,8 @@ export async function applyTrim(input: ApplyTrimInput): Promise<ApplyTrimResult>
     }
   }
   if (item.status !== "declared") throw new Error("Only a declared (not-yet-issued) item can be trimmed");
+  // AL-4 (switch on): a paper-linked item's time is its marks × 1.8 — trim by changing the questions, not the count.
+  if (item.paperId && (await isLoop2027On())) throw new Error("প্রশ্নভিত্তিক শিটের সময় প্রশ্ন বদলে কমান");
 
   if (!Number.isInteger(input.newQCount) || input.newQCount < 0) {
     throw new Error("newQCount must be a non-negative integer");

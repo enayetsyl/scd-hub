@@ -19,6 +19,10 @@ import { isSameDhakaDay } from "../../../lib/dhakaDay";
 import { writeAudit } from "../../platform/services/AuditService";
 import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
 import { recordWorkRevert } from "./WorkMistakeService";
+import { manualCheckRefusal } from "../../mastery/paperLink";
+
+/** AL-4: shown when someone tries to undo the CHECKED step of a record whose marks come from a question sheet. */
+const SHEET_REVERT_MESSAGE = "এই কাজের নম্বর প্রশ্নভিত্তিক শিট থেকে এসেছে — শিটে বদলান; এখানে ফেরানো যায় না।";
 
 export interface AsRevertInput {
   recordId: string;
@@ -72,6 +76,8 @@ export async function revertAssignmentRecord(input: AsRevertInput): Promise<AsRe
         break;
       }
       case "CHECKED":
+        // AL-4 (switch on): a CHECKED stamp on a sheet-linked record is the sheet's confirm — undo it there.
+        if (await manualCheckRefusal("ASSIGNMENT", rec.asItemId)) throw new Error(SHEET_REVERT_MESSAGE);
         rec.result = undefined;
         rec.marks = undefined;
         rec.feedback = undefined;

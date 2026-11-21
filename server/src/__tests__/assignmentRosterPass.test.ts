@@ -6,6 +6,8 @@
  * mocked (DB-free), mirroring homeworkRosterPass.test.ts. Focus: first-cross-only
  * chase, chase-BEFORE-due (G7), the owner's 20/15/5 example, and no auto-spawn.
  */
+// AL-4: the manual-check guard reads the release switch (a DB read); this suite is DB-free and 2026-only.
+jest.mock("../modules/mastery/paperLink", () => ({ manualCheckRefusal: () => Promise.resolve(null) }));
 import mongoose from "mongoose";
 
 const mockRecFindById = jest.fn();

@@ -29,6 +29,7 @@ import { emitHwResubmitIssued } from "../../notifications/services/emitters";
 import { heldRefusal } from "../../mastery/examHold";
 import { recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { manualCheckRefusal } from "../../mastery/paperLink";
 
 export interface TopupInput {
   /** Pool question ids selected (never authored) for the top-up (§5.1). */
@@ -122,6 +123,11 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
 
   // The check happens at SUBMITTED → CHECKED (handoff §3 stage 5).
   assertTransition(rec.state, "CHECKED"); // throws unless rec is SUBMITTED
+
+  // AL-4 (§3.1 guard 3, switch on): a record whose homework has a linked question sheet takes no hand-typed result —
+  // only the sheet's confirm / correction writes it. No linked paper / switch off: checks as today.
+  const sheetRefusal = await manualCheckRefusal("HOMEWORK", rec.hwItemId);
+  if (sheetRefusal) throw new Error(sheetRefusal);
 
   const at = input.at ?? new Date();
 

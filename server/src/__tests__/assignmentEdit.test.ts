@@ -34,6 +34,8 @@ jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({ AssignmentSc
 jest.mock("../modules/trackers/models/AssignmentSequence", () => ({ AssignmentSequence: {} }));
 jest.mock("../modules/routine/models/HolidayException", () => ({ HolidayException: { find: () => ({ lean: () => [] }) } }));
 
+// AL-4: deleting a DRAFT also removes an AL-4 AS paper (a DB read); this suite is DB-free and 2026-only.
+jest.mock("../modules/mastery/services/HomeworkPaperService", () => ({ removePaperOfAsItem: () => Promise.resolve() }));
 import {
   updateAssignmentItem,
   deleteAssignmentItem,

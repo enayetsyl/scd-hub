@@ -529,6 +529,8 @@ export async function deleteAssignmentItem(
   }
 
   const asId = item.asId;
+  // AL-4 (AC-B11): an AL-4 AS paper goes with its DRAFT — rows withdrawn, evidence none yet.
+  await (await import("../../mastery/services/HomeworkPaperService")).removePaperOfAsItem(item._id);
   await AssignmentItem.deleteOne({ _id: item._id });
   await writeAudit({
     eventKind: "ASSIGNMENT_ITEM_DELETED",
