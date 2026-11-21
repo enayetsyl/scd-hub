@@ -319,6 +319,9 @@ describe("policy", () => {
     // a non-school loop key may be overridden
     const ov = await savePolicy("C2", "ENG", { assignmentNoRepeatWeeks: 5 }, actor);
     expect(ov.resolved.assignmentNoRepeatWeeks).toBe(5);
+    // and an override row that holds a school key anyway (a direct write) is ignored on read
+    expect(resolvePolicy({ perDayHours: 2.5 }, { perDayHours: 1, academicLoop2027On: true } as never).perDayHours).toBe(2.5);
+    expect(resolvePolicy(null, { academicLoop2027On: true } as never).academicLoop2027On).toBe(false);
   });
 
   it("a SCHOOL save keeps stored loop keys it was not sent (the old screen never resets the switch); {} still resets older keys", async () => {

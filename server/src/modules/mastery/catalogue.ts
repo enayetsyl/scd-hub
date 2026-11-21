@@ -14,6 +14,7 @@ import {
   MASTERY_CLASS_TOKENS,
   MASTERY_LO_CODE_RE,
   MASTERY_POLICY_DEFAULTS,
+  MASTERY_POLICY_SCHOOL_KEYS,
   MASTERY_QT_CODE_RE,
   MASTERY_STRAND_RE,
   MASTERY_SUBJECTS,
@@ -395,7 +396,11 @@ export function resolvePolicy(
   school: Partial<MasteryPolicyValues> | null | undefined,
   override: Partial<MasteryPolicyValues> | null | undefined,
 ): MasteryPolicyValues {
-  return { ...(MASTERY_POLICY_DEFAULTS as unknown as MasteryPolicyValues), ...(school ?? {}), ...(override ?? {}) };
+  // School-wide keys (PRD-academic-loop-2027 §3.5 "S") come from the SCHOOL row only — an override that somehow
+  // holds one (a script, a direct write) is ignored on read, not just refused on save.
+  const ov: Record<string, unknown> = { ...(override ?? {}) };
+  for (const k of MASTERY_POLICY_SCHOOL_KEYS) delete ov[k];
+  return { ...(MASTERY_POLICY_DEFAULTS as unknown as MasteryPolicyValues), ...(school ?? {}), ...(ov as Partial<MasteryPolicyValues>) };
 }
 
 /** Ranges and orderings, on the RESOLVED values (an override is judged with what it inherits). */
@@ -432,7 +437,7 @@ export function validatePolicy(p: MasteryPolicyValues): string | null {
     if (!posInt(p[k])) return `${k}: ১ বা তার বেশি পূর্ণসংখ্যা দিন।`;
   }
   for (const k of ["suggestMissedEasyQuestions", "suggestMissedObjectivesPerWeek", "hwMarkDeadlineDays"] as const) {
-    if (!intIn(p[k], 0, 52)) return `${k}: ০ বা তার বেশি পূর্ণসংখ্যা দিন।`;
+    if (!intIn(p[k], 0, 52)) return `${k}: ০ থেকে ৫২-এর মধ্যে পূর্ণসংখ্যা দিন।`;
   }
   if (!intIn(p.asMarkDeadlineDow, 0, 6) || !intIn(p.guardianSummaryDow, 0, 6)) return "সপ্তাহের দিন ০ (রবিবার) থেকে ৬ (শনিবার)-এর মধ্যে দিন।";
   if (!intIn(p.asDraftHour, 0, 23) || !intIn(p.guardianSummaryHour, 0, 23)) return "ঘণ্টা ০ থেকে ২৩-এর মধ্যে দিন।";

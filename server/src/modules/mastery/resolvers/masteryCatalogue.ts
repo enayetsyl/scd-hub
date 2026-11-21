@@ -682,7 +682,8 @@ builder.mutationFields((t) => ({
     type: PolicyRef,
     description:
       "Save the school policy (no class/subject) or one class × subject override. `values` replaces the " +
-      "scope's own keys; validated on the resolved result.",
+      "scope's own keys (a SCHOOL save keeps the stored 2027-loop keys it is not sent; school-wide keys are " +
+      "refused on an override); validated on the resolved result.",
     authScopes: { hasPermission: "mastery:settings" },
     args: {
       classToken: t.arg.string({ required: false }),

@@ -1088,8 +1088,11 @@ export async function getPolicy(classToken?: MasteryClassToken | null, subject?:
 
 /**
  * Save the school row, or one class × subject override. `values` replaces the scope's own
- * keys wholesale (send {} to make an override inherit everything again). Validated on the
- * RESOLVED result, so an override cannot create an inconsistent set with what it inherits.
+ * keys wholesale (send {} to make an override inherit everything again) — except that a SCHOOL
+ * save keeps any stored 2027-loop key it was not sent (AL-0), so those return to a default only
+ * by sending the default value. School-wide keys are refused on an override; the integrity keys
+ * change only through their own screen. Validated on the RESOLVED result, so an override cannot
+ * create an inconsistent set with what it inherits.
  */
 export async function savePolicy(
   classToken: MasteryClassToken | null,
