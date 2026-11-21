@@ -1689,6 +1689,17 @@ export const NOTIFICATION_KINDS = [
   "BOOK_ERRATUM",
   "BOOK_RELEASED",
   "BOOK_EDIT_READY",
+  // 2027 academic loop (docs/prd-academic-loop-2027.md §7, D-#1668/#1674/#1675/#1676). App-native.
+  // AS_DRAFT_READY → the subject teacher (the Wednesday automatic draft); AS_SWAP_SUGGESTED → the class
+  // teacher + Office (R29); AS_COMMENT → the subject teacher; GUARDIAN_WEEKLY_SUMMARY → one per guardian ×
+  // child per week (R31); INTEGRITY_CASE → the investigator + the Principal (R16); LESSON_BEHIND → the
+  // Principal at 2+ weeks behind a term target (R14).
+  "AS_DRAFT_READY",
+  "AS_SWAP_SUGGESTED",
+  "AS_COMMENT",
+  "GUARDIAN_WEEKLY_SUMMARY",
+  "INTEGRITY_CASE",
+  "LESSON_BEHIND",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1789,6 +1800,12 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   BOOK_ERRATUM: "বইয়ের ভুল-সংশোধনী",
   BOOK_RELEASED: "বইয়ের নতুন সংস্করণ",
   BOOK_EDIT_READY: "এআই সংশোধনের খসড়া তৈরি",
+  AS_DRAFT_READY: "সাপ্তাহিক অ্যাসাইনমেন্টের প্রস্তাব তৈরি",
+  AS_SWAP_SUGGESTED: "অ্যাসাইনমেন্টে বিষয় বদলের প্রস্তাব",
+  AS_COMMENT: "অ্যাসাইনমেন্টে মন্তব্য",
+  GUARDIAN_WEEKLY_SUMMARY: "এই সপ্তাহের পড়াশোনা",
+  INTEGRITY_CASE: "হোমওয়ার্ক যাচাইয়ের নতুন কেস",
+  LESSON_BEHIND: "সিলেবাস লক্ষ্যের পেছনে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1887,6 +1904,12 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BOOK_ERRATUM: "Book errata",
   BOOK_RELEASED: "New book version",
   BOOK_EDIT_READY: "AI edit draft ready",
+  AS_DRAFT_READY: "Weekly assignment draft ready",
+  AS_SWAP_SUGGESTED: "Assignment subject swap suggested",
+  AS_COMMENT: "Comment on an assignment",
+  GUARDIAN_WEEKLY_SUMMARY: "This week's learning",
+  INTEGRITY_CASE: "New homework check case",
+  LESSON_BEHIND: "Behind the syllabus target",
 };
 
 /**
@@ -5667,8 +5690,92 @@ export const MASTERY_POLICY_DEFAULTS = {
   homeworkDraftMaxItems: 6,
   extraHomeworkMaxQuestions: 3,
   extraHomeworkIncludeImproving: false,
+  // 2027 academic loop (docs/prd-academic-loop-2027.md §3.5, D-#1667–#1678). The release switch first:
+  // while it is false nothing below changes a 2026 state or timing (§3.6).
+  academicLoop2027On: false,
+  assignmentNoRepeatWeeks: 4,
+  weeklyAssignmentHoursCap: 6,
+  perDayHours: 3,
+  subjectsPerWeekMin: 2,
+  subjectsPerWeekMax: 3,
+  minutesPerMark: 1.8,
+  homeworkBankSharePct: 50,
+  masteredNeedsInSchool: true,
+  suggestRecentWeeks: 3,
+  suggestRecentWeight: 3,
+  suggestRevisionPct: 20,
+  suggestMissedEasyQuestions: 2,
+  suggestMissedObjectivesPerWeek: 3,
+  swapSuggestWeakPct: 30,
+  asDraftLeadDays: 1,
+  asDraftHour: 6,
+  hwMarkDeadlineDays: 0,
+  asMarkDeadlineDow: 2,
+  termBehindAlertWeeks: 2,
+  lateMarksMistakeFromTerm: 2,
+  guardianSummaryDow: 3,
+  guardianSummaryHour: 18,
+  sectionTriggerMinAssessedPct: 50,
+  integrityGapPoints: 20,
+  integrityRecurringCases: 2,
 } as const;
 export type MasteryPolicyValues = { -readonly [K in keyof typeof MASTERY_POLICY_DEFAULTS]: (typeof MASTERY_POLICY_DEFAULTS)[K] extends boolean ? boolean : number };
+
+/** School-wide policy keys (PRD-academic-loop-2027 §3.5 "S"): read from the SCHOOL row only; a class × subject
+ *  override that names one is refused. The two integrity keys are edited on the হোমওয়ার্ক যাচাই screen
+ *  (`homework_integrity:settings`), the rest on the "সাপ্তাহিক চক্র" card (`mastery:settings`). */
+export const MASTERY_POLICY_SCHOOL_KEYS = [
+  "academicLoop2027On", "weeklyAssignmentHoursCap", "perDayHours", "subjectsPerWeekMin", "subjectsPerWeekMax",
+  "minutesPerMark", "asDraftLeadDays", "asDraftHour", "hwMarkDeadlineDays", "asMarkDeadlineDow",
+  "termBehindAlertWeeks", "lateMarksMistakeFromTerm", "guardianSummaryDow", "guardianSummaryHour",
+  "integrityGapPoints", "integrityRecurringCases",
+] as const satisfies readonly (keyof typeof MASTERY_POLICY_DEFAULTS)[];
+/** Every 2027-loop policy key (§3.5). A SCHOOL save keeps the stored value of any of these the caller did not
+ *  send, so the policy screen (which lists the older keys) never resets the release switch; the older keys keep
+ *  the wholesale save (send {} to go back to the defaults). */
+export const MASTERY_POLICY_LOOP2027_KEYS = [
+  "academicLoop2027On", "assignmentNoRepeatWeeks", "weeklyAssignmentHoursCap", "perDayHours", "subjectsPerWeekMin",
+  "subjectsPerWeekMax", "minutesPerMark", "homeworkBankSharePct", "masteredNeedsInSchool", "suggestRecentWeeks",
+  "suggestRecentWeight", "suggestRevisionPct", "suggestMissedEasyQuestions", "suggestMissedObjectivesPerWeek",
+  "swapSuggestWeakPct", "asDraftLeadDays", "asDraftHour", "hwMarkDeadlineDays", "asMarkDeadlineDow",
+  "termBehindAlertWeeks", "lateMarksMistakeFromTerm", "guardianSummaryDow", "guardianSummaryHour",
+  "sectionTriggerMinAssessedPct", "integrityGapPoints", "integrityRecurringCases",
+] as const satisfies readonly (keyof typeof MASTERY_POLICY_DEFAULTS)[];
+/** The policy keys only `homework_integrity:settings` may change (Principal only, D-#1676). */
+export const MASTERY_POLICY_INTEGRITY_KEYS = ["integrityGapPoints", "integrityRecurringCases"] as const satisfies readonly (keyof typeof MASTERY_POLICY_DEFAULTS)[];
+
+/** Homework lines that are not bank questions and carry no marks (R22): tracked done / not done, with the
+ *  teacher's minutes. */
+export const HOMEWORK_FREE_LINE_KINDS = ["TEXTBOOK", "READING", "MEMORISE", "HANDWRITING", "OTHER"] as const;
+export type HomeworkFreeLineKind = (typeof HOMEWORK_FREE_LINE_KINDS)[number];
+export const HOMEWORK_FREE_LINE_KIND_LABELS_BN: Record<HomeworkFreeLineKind, string> = {
+  TEXTBOOK: "বইয়ের কাজ",
+  READING: "পড়া",
+  MEMORISE: "মুখস্থ",
+  HANDWRITING: "হাতের লেখা",
+  OTHER: "অন্যান্য",
+};
+export const HOMEWORK_FREE_LINE_KIND_LABELS_EN: Record<HomeworkFreeLineKind, string> = {
+  TEXTBOOK: "Textbook work",
+  READING: "Reading",
+  MEMORISE: "Memorise",
+  HANDWRITING: "Handwriting",
+  OTHER: "Other",
+};
+
+/** The guardian level word for a marks percentage (R32): খুব ভালো ≥ 90 · ভালো ≥ 70 · মোটামুটি ≥ 50 ·
+ *  আরও অনুশীলন দরকার < 50. Marked work never shows a CORRECT / PARTIAL / WRONG word (R35). */
+export const MARKS_LEVEL_WORDS = [
+  { minPct: 90, bn: "খুব ভালো", en: "Very good" },
+  { minPct: 70, bn: "ভালো", en: "Good" },
+  { minPct: 50, bn: "মোটামুটি", en: "Fair" },
+  { minPct: 0, bn: "আরও অনুশীলন দরকার", en: "Needs more practice" },
+] as const;
+export function marksLevelWord(pct: number): { bn: string; en: string } {
+  const p = Number.isFinite(pct) ? pct : 0;
+  const hit = MARKS_LEVEL_WORDS.find((w) => p >= w.minPct) ?? MARKS_LEVEL_WORDS[MARKS_LEVEL_WORDS.length - 1];
+  return { bn: hit.bn, en: hit.en };
+}
 
 /** Parse an LO code into its parts, or null when it is not one. */
 export function parseMasteryLoCode(code: string): {

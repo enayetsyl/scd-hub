@@ -25,6 +25,9 @@ import {
   MASTERY_CLASS_TOKENS,
   MASTERY_SUBJECTS,
   checkTreeInvariants,
+  MASTERY_POLICY_INTEGRITY_KEYS,
+  MASTERY_POLICY_LOOP2027_KEYS,
+  MASTERY_POLICY_SCHOOL_KEYS,
   formatTreeViolation,
   isObjectiveTreeFile,
   masteryPartnerSubject,
@@ -1095,8 +1098,24 @@ export async function savePolicy(
   actor: Actor,
 ): Promise<PolicyView> {
   const key = policyScopeKey(classToken, subject);
-  const clean = cleanPolicyValues(values);
+  let clean = cleanPolicyValues(values);
   const school = await MasteryPolicy.findOne({ scopeKey: "SCHOOL" }).lean();
+  // 2027 loop (PRD-academic-loop-2027 §3.5, AL-0). School-wide keys live on the SCHOOL row only.
+  if (key !== "SCHOOL") {
+    const named = MASTERY_POLICY_SCHOOL_KEYS.filter((k) => k in clean);
+    if (named.length) throw new MasteryCatalogueError(`এগুলো পুরো স্কুলের নিয়ম, শ্রেণি-বিষয়ে আলাদা করা যায় না: ${named.join(", ")}`);
+  } else {
+    // A SCHOOL save keeps every stored 2027-loop key the caller did not send, so a screen that does not list
+    // them (or an older app build) never resets them — the release switch above all. Older keys stay wholesale.
+    const stored = cleanPolicyValues((school?.values ?? {}) as Record<string, unknown>);
+    const keep: Record<string, unknown> = {};
+    for (const k of MASTERY_POLICY_LOOP2027_KEYS) if (k in stored && !(k in clean)) keep[k] = stored[k];
+    clean = { ...(keep as Partial<MasteryPolicyValues>), ...clean };
+    // The integrity keys change only through homework_integrity:settings (AL-12), never this mutation.
+    const resolvedStored = resolvePolicy(stored, null);
+    const touched = MASTERY_POLICY_INTEGRITY_KEYS.filter((k) => k in values && values[k] !== null && values[k] !== undefined && values[k] !== resolvedStored[k]);
+    if (touched.length) throw new MasteryCatalogueError("হোমওয়ার্ক যাচাইয়ের নিয়ম হোমওয়ার্ক যাচাই পাতা থেকে বদলান।");
+  }
   const resolved = key === "SCHOOL" ? resolvePolicy(clean, null) : resolvePolicy(school?.values, clean);
   const complaint = validatePolicy(resolved);
   if (complaint) throw new MasteryCatalogueError(complaint);
