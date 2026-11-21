@@ -31,6 +31,14 @@ const KNOWN_UNMAPPED: Record<string, string> = {
   TEACHING_NOTE_PUBLISHED: "TN-3 deep-link (TeachingNoteDoc) not wired yet",
   TEACHING_NOTE_COMMENT: "TN-3 deep-link (TeachingNoteDoc) not wired yet",
   TEACHING_NOTE_COMMENT_ADDRESSED: "TN-3 deep-link (TeachingNoteDoc) not wired yet",
+  // 2027 academic loop (docs/prd-academic-loop-2027.md §7): declared in the AL-0 contract PR, nothing emits them
+  // yet; each slice that starts emitting one wires its deep-link and removes it here.
+  AS_DRAFT_READY: "AL-7/AL-8 week review screen not built yet",
+  AS_SWAP_SUGGESTED: "AL-7/AL-8 swap card not built yet",
+  AS_COMMENT: "AL-8 comment view not built yet",
+  GUARDIAN_WEEKLY_SUMMARY: "AL-10 guardian weekly card not built yet",
+  INTEGRITY_CASE: "AL-12 case deep-link not built yet",
+  LESSON_BEHIND: "AL-11 targets screen not built yet",
 };
 
 const isMapped = (kind: string) => source.includes(`case "${kind}":`);
