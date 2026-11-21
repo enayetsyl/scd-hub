@@ -7,6 +7,7 @@
  * own text. The class-homework twin of `renderExtraHomeworkPdf` (one page per child) — that renderer is untouched.
  */
 import path from "path";
+import { Types } from "mongoose";
 import PDFDocument from "pdfkit";
 
 import { HW_SUBJECT_LABELS_BN, HOMEWORK_FREE_LINE_KIND_LABELS_BN, callerHasPermission } from "@scd/shared";
@@ -31,7 +32,8 @@ const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২
  * narrowest widening (the `/pdf/set` rule): cancelling the job withdraws it again.
  */
 export async function loadPaperForPdf(paperId: string, auth: Auth): Promise<IMasteryPaper> {
-  const paper = await MasteryPaper.findOne({ paperId });
+  // The Office's print row carries the Mongo id; the teacher's screens use the paperId code — accept both.
+  const paper = Types.ObjectId.isValid(paperId) ? await MasteryPaper.findById(paperId) : await MasteryPaper.findOne({ paperId });
   if (!paper) throw new MasteryWorkError("এই কাজটি পাওয়া যায়নি।");
   if (callerHasPermission(auth, "printing:view_all")) {
     if (await PrintRequest.exists({ masteryPaperId: paper._id, status: { $ne: "CANCELLED" } })) return paper;

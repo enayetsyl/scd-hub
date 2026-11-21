@@ -38,7 +38,7 @@ import {
 } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { dateKeyOf } from "../../attendance/dates";
-import { recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
+import { isLoop2027On, recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { manualCheckRefusal } from "../../mastery/paperLink";
 import { Student } from "../../foundation/models/Student";
@@ -523,6 +523,10 @@ export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promis
   if (input.attachmentIds !== undefined) {
     item.attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
   }
+  // AL-4 (switch on): a paper-linked declared item's time and count follow its paper and free lines — change the questions.
+  if (item.paperId && ((input.timeDecl !== undefined && input.timeDecl !== item.timeDecl) || (input.qCount !== undefined && input.qCount !== item.qCount))) {
+    if (await isLoop2027On()) throw new Error("প্রশ্নভিত্তিক শিটের সময় প্রশ্ন বদলে কমান");
+  }
   if (input.timeDecl !== undefined) {
     if (!Number.isInteger(input.timeDecl) || input.timeDecl < 0) {
       throw new Error("TIME_DECL must be a non-negative integer (minutes)");
@@ -851,7 +855,7 @@ export async function issueHomeworkItem(
 
   // AL-4: an item with a linked paper locks it now (if the print did not already) and the PAPER writes the ledger rows —
   // the item's own rows are skipped so a question is never counted twice.
-  let paperCarries = false;
+  let paperCarries: Set<string> | null = null;
   if (item.paperId) {
     try {
       paperCarries = await (await import("../../mastery/services/HomeworkPaperService")).onHomeworkIssued(item);
@@ -861,8 +865,9 @@ export async function issueHomeworkItem(
   }
   // AL-3 (D-#1667): the picked bank questions went to the children — one ledger row each, whole শাখা.
   // Written regardless of the release switch (§3.6); a failure is logged, never undoes the issue.
-  if (!paperCarries) await recordUsesSafe(
-    [...new Set(item.selectedQids ?? [])].map((qid) => ({
+  // (A qid the item names that is NOT on its paper — a hand-made paper — still gets its own row.)
+  await recordUsesSafe(
+    [...new Set(item.selectedQids ?? [])].filter((qid) => !paperCarries?.has(qid)).map((qid) => ({
       qid,
       kind: "HW" as const,
       sourceType: "HOMEWORK_ITEM" as const,

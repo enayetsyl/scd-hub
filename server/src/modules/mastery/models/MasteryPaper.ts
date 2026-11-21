@@ -64,6 +64,9 @@ export interface IMasteryPaper extends Document {
    *  loCodes, no `MasteryEnablement`, and confirming it writes NO `MasteryEvidence` (so no weak-objective state, no
    *  re-teach trigger, no GH-3 case can come from it). */
   marksOnly?: boolean;
+  /** AL-4 only: set by the AL-4 creators (declare → HW paper; the AS creator, AL-6). Every guard / write-back keys on THIS,
+   *  never on `links.*` alone — 2026 hand-made papers already carry links.hwItemId / asItemId and must not change. */
+  trackerLinked?: boolean;
   /** AL-4 (§3.1 guard 4): set when the paper went to the children — "প্রিন্টে পাঠান" or issue, whichever first. From
    *  then on its items cannot change; changing a question needs the print request cancelled first. */
   lockedAt?: Date;
@@ -123,6 +126,7 @@ const MasteryPaperSchema = new Schema<IMasteryPaper>(
     // backfill script sets it on the old ones before building that index.
     extra: { type: Boolean, default: false },
     marksOnly: { type: Boolean },
+    trackerLinked: { type: Boolean },
     lockedAt: { type: Date },
     printRequestId: { type: Schema.Types.ObjectId },
     items: { type: [ItemSchema], default: [] },

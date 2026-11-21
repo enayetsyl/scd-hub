@@ -50,6 +50,8 @@ export interface IAssignmentStudentRecord extends Document {
   /** AL-4 (D-#1669, switch on): Σ available on the child's OWN items of the linked paper (Part B totals differ by
    *  child; ½ marks allowed). Written only by the paper's confirm / correction. */
   availableMarks?: number;
+  /** AL-4 provenance: the paper whose write-back wrote marks / availableMarks — a void clears only what it wrote. */
+  marksPaperId?: Types.ObjectId;
   /** Optional teacher feedback (free text, Bangla expected; D-#87). */
   feedback?: string;
   /** → the prior record this resubmission re-issues (AS-T3). */
@@ -82,6 +84,7 @@ const AssignmentStudentRecordSchema = new Schema<IAssignmentStudentRecord>(
     result: { type: String, enum: HW_RESULTS },
     marks: { type: Number, min: 0 },
     availableMarks: { type: Number, min: 0 },
+    marksPaperId: { type: Schema.Types.ObjectId },
     feedback: { type: String },
     resubOf: { type: Schema.Types.ObjectId },
     issuedBy: { type: Schema.Types.ObjectId, required: true },

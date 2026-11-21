@@ -6,9 +6,11 @@
  * partial unique index `{ "links.hwItemId": 1 }` with `{ extra: false, "links.hwItemId": { $exists: true } }`.
  * The index is built HERE (not by Mongoose autoIndex) only when the duplicate check is clean.
  *
+ * The unique-index step (3) runs only while `academicLoop2027On` is true; the `extra:false` backfill (1) may run any time.
  * Idempotent. `apply: false` (the default) only counts. The script wrapper is `server/scripts/backfill-paper-extra-false.ts`.
  */
 import { MasteryPaper } from "../models/MasteryPaper";
+import { isLoop2027On } from "../../assessment/services/QuestionUseService";
 
 export const PAPER_LINK_INDEX_NAME = "uniq_class_paper_per_hw_item";
 
@@ -20,6 +22,8 @@ export interface PaperLinkIndexReport {
   /** The unique index is present (before this run, or built by it). */
   indexPresent: boolean;
   indexBuilt: boolean;
+  /** --apply asked for the index but academicLoop2027On is false. */
+  indexBlockedBySwitch: boolean;
 }
 
 export async function backfillPaperExtraFalse(opts: { apply?: boolean } = {}): Promise<PaperLinkIndexReport> {
@@ -38,7 +42,11 @@ export async function backfillPaperExtraFalse(opts: { apply?: boolean } = {}): P
   const existing = await MasteryPaper.collection.indexes().catch(() => []);
   let indexPresent = existing.some((i) => i.name === PAPER_LINK_INDEX_NAME);
   let indexBuilt = false;
-  if (apply && duplicates.length === 0 && !indexPresent) {
+  let indexBlockedBySwitch = false;
+  // The unique-index step refuses while the release switch is off (the extra:false backfill may run any time).
+  const switchOn = await isLoop2027On();
+  if (apply && duplicates.length === 0 && !indexPresent && !switchOn) indexBlockedBySwitch = true;
+  if (apply && duplicates.length === 0 && !indexPresent && switchOn) {
     await MasteryPaper.collection.createIndex(
       { "links.hwItemId": 1 },
       { unique: true, name: PAPER_LINK_INDEX_NAME, partialFilterExpression: { extra: false, "links.hwItemId": { $exists: true } } },
@@ -46,5 +54,5 @@ export async function backfillPaperExtraFalse(opts: { apply?: boolean } = {}): P
     indexPresent = true;
     indexBuilt = true;
   }
-  return { missingExtra, duplicates, indexPresent, indexBuilt };
+  return { missingExtra, duplicates, indexPresent, indexBuilt, indexBlockedBySwitch };
 }

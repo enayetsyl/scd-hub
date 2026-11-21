@@ -3,6 +3,7 @@
  * homework papers share a tracker item, then build the partial unique index on `links.hwItemId`. The work lives in
  * `server/src/modules/mastery/services/PaperLinkIndex.ts` (so the tests run it too).
  *
+ * The unique-index step REFUSES while academicLoop2027On is false (the extra:false backfill may run any time).
  * IDEMPOTENT. DRY RUN by default — counts what it would change and writes nothing. Pass --apply to persist.
  *
  *   npx tsx server/scripts/backfill-paper-extra-false.ts            # preview
@@ -22,7 +23,7 @@ async function main(): Promise<void> {
   console.log(`papers without an extra flag: ${r.missingExtra} (${apply ? "set to false" : "would be set to false"})`);
   console.log(`homework items with more than one class paper: ${r.duplicates.length}`);
   for (const d of r.duplicates) console.log(`  ${d.hwItemId}: ${d.papers.join(", ")}`);
-  console.log(`unique index: ${r.indexBuilt ? "BUILT" : r.indexPresent ? "already present" : r.duplicates.length > 0 ? "NOT built — fix the duplicates first" : apply ? "not built" : "would be built"}`);
+  console.log(`unique index: ${r.indexBuilt ? "BUILT" : r.indexPresent ? "already present" : r.indexBlockedBySwitch ? "NOT built — academicLoop2027On is false (switch it on first)" : r.duplicates.length > 0 ? "NOT built — fix the duplicates first" : apply ? "not built" : "would be built"}`);
   if (!apply) console.log("Re-run with --apply to persist.");
   process.exit(0);
 }

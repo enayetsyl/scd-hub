@@ -48,6 +48,9 @@ import {
 } from "../modules/trackers/services/HomeworkService";
 import { checkAssignmentRecord } from "../modules/trackers/services/AssignmentCheckingService";
 import { AssignmentStudentRecord } from "../modules/trackers/models/AssignmentStudentRecord";
+import { revertHomeworkRecord } from "../modules/trackers/services/HomeworkRevertService";
+import { applyTrim } from "../modules/trackers/services/HomeworkReconciliationService";
+import { callerHasPermission } from "@scd/shared";
 import { checkRecord } from "../modules/trackers/services/HomeworkResubmissionService";
 import { tallyDay } from "../modules/trackers/services/HomeworkReconciliationService";
 import { freeLineGrid, saveFreeLineTicks } from "../modules/trackers/services/HomeworkFreeLineService";
@@ -236,9 +239,16 @@ describe("the unique-link index script (dry run first)", () => {
     expect(dry.duplicates).toHaveLength(1);
     expect(dry.indexPresent).toBe(false);
     expect(await MasteryPaper.countDocuments({ extra: { $exists: false } })).toBe(2); // the dry run wrote nothing
+    await setLoop(true);
     const blocked = await backfillPaperExtraFalse({ apply: true });
     expect(blocked.indexBuilt).toBe(false); // duplicates: refuse
     await MasteryPaper.deleteOne({ paperId: "RAW-2" });
+    await setLoop(false);
+    const off = await backfillPaperExtraFalse({ apply: true }); // the extra:false backfill runs; the index waits for the switch
+    expect(off.indexBuilt).toBe(false);
+    expect(off.indexBlockedBySwitch).toBe(true);
+    expect(await MasteryPaper.countDocuments({ extra: { $exists: false } })).toBe(0);
+    await setLoop(true);
     const done = await backfillPaperExtraFalse({ apply: true });
     expect(done.duplicates).toHaveLength(0);
     expect(done.indexBuilt).toBe(true);
@@ -507,6 +517,7 @@ describe("AC-S1: today's substitute", () => {
     await setLoop(true);
     const it = await declare({ dateGiven: "2027-04-01", selectedQids: [MQ(1)], qCount: 1 });
     const paper = (await paperOf(it.itemId))!;
+    await expect(paperDetail(paper.paperId, { userId: SUB, role: "TEACHER" as const })).rejects.toThrow(MasteryWorkError); // no substitution yet
     const [slot] = await RoutineSlot.create([{
       groupType: "section", groupId: new Types.ObjectId(sectionId), dayOfWeek: "SUN", periodNumber: 1, subject: "MATH", track: "general",
       teacherId: new Types.ObjectId(TEACHER_ID), effectiveFrom: new Date("2026-01-01"), active: true, createdBy: new Types.ObjectId(PRINCIPAL.userId),
@@ -516,7 +527,10 @@ describe("AC-S1: today's substitute", () => {
     await RoutineSubstitution.create({ slotId: slot!._id, date: today, coverTeacherId: new Types.ObjectId(SUB), absentTeacherId: new Types.ObjectId(TEACHER_ID), active: true, createdBy: new Types.ObjectId(PRINCIPAL.userId) });
     mockTeacher.mockResolvedValue(TEACHER_ID); // the subject teacher is the absent one
     const substitute = { userId: SUB, role: "TEACHER" as const };
-    expect((await paperDetail(paper.paperId, substitute)).paper.paperId).toBe(paper.paperId); // reach
+    // a PAST paper (dated 2027-04-01) is out of reach even with an active cover today (item 6)
+    await expect(paperDetail(paper.paperId, substitute)).rejects.toThrow(MasteryWorkError);
+    await MasteryPaper.updateOne({ _id: paper._id }, { $set: { date: new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`) } });
+    expect((await paperDetail(paper.paperId, substitute)).paper.paperId).toBe(paper.paperId); // reach: the paper of today
     await expect(paperDetail(paper.paperId, OTHER)).rejects.toThrow(MasteryWorkError); // another teacher: refused
     // an inactive substitution gives nothing; with the switch off the cover has no reach
     await RoutineSubstitution.updateMany({}, { $set: { active: false } });
@@ -559,7 +573,7 @@ describe("an AS paper writes back the child's OWN items (half marks) and guards 
     const mk = (n: number) => ({ itemNo: n, origin: "TEACHER" as const, textBn: `প্রশ্ন ${n}`, loCodes: [A], chapterNumber: 7, questionTypeCode: "QT-SHORT", marks: 2 });
     const paper = await MasteryPaper.create({
       paperId: "MP-C3-MATH-AS-T1", source: "AS", extra: false, sectionId: new Types.ObjectId(sectionId), classId, academicYearId: yearId, classToken: "C3",
-      subject: "MATH", date: new Date("2027-04-04T00:00:00Z"), links: { asItemId }, entryState: "OPEN",
+      subject: "MATH", date: new Date("2027-04-04T00:00:00Z"), links: { asItemId }, entryState: "OPEN", trackerLinked: true,
       items: [mk(1), mk(2), mk(3), mk(4)],
       perStudentItems: [{ studentId: new Types.ObjectId(x), itemNos: [1, 2, 3] }, { studentId: new Types.ObjectId(y), itemNos: [1, 4] }],
     });
@@ -578,5 +592,95 @@ describe("an AS paper writes back the child's OWN items (half marks) and guards 
     expect(await get(y)).toMatchObject({ marks: 4, availableMarks: 4, state: "CHECKED" });
     expect(await get(z)).toMatchObject({ state: "SUBMITTED" }); // no questions of their own: off the paper
     expect((await get(z)).marks).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("review fixes", () => {
+  it("2: a 2026-style hand-made paper with links.hwItemId (no flag) behaves exactly as before, switch OFF and ON", async () => {
+    for (const on of [false, true]) {
+      await setLoop(on);
+      const day = on ? "2027-04-06" : "2027-04-05";
+      const it = await declare({ dateGiven: day, qCount: 1 });
+      await issueHomeworkItem(it.itemId, roster(sids), TEACHER_ID);
+      await handIn(it.itemId, sids);
+      const p = await createPaper({ sectionId, subject: "MATH", source: "HW", date: day, hwItemId: it.itemId, items: [{ origin: "TEACHER", textBn: "ক", loCode: A, questionTypeCode: "QT-SHORT" }] }, TEACHER);
+      const paper = (await MasteryPaper.findOne({ paperId: p.paperId }))!;
+      expect(paper.trackerLinked).toBeUndefined();
+      expect((await itemOf(it.itemId))!.paperId).toBeUndefined();
+      const rec = (await records(it.itemId))[0]!;
+      const out = await checkRecord({ recordId: String(rec._id), result: "CORRECT", actorId: TEACHER_ID }); // manual check allowed
+      expect(out.result).toBe("CORRECT");
+      await revertHomeworkRecord({ recordId: String(rec._id), actorId: TEACHER_ID, admin: true }); // the undo allowed
+      expect((await HomeworkStudentRecord.findById(rec._id))!.state).toBe("SUBMITTED");
+      await saveResults(p.paperId, [{ studentId: kid(1), items: [{ itemNo: 1, marks: 0 }] }], TEACHER);
+      await confirmPaper(p.paperId, TEACHER);
+      await saveResults(p.paperId, [{ studentId: kid(2), items: [{ itemNo: 1, marks: 0 }] }], TEACHER); // correction: no write-back
+      expect(await HomeworkStudentRecord.countDocuments({ hwItemId: new Types.ObjectId(it.itemId), earnedMarks: { $exists: true } })).toBe(0);
+      expect(await QuestionUse.countDocuments({ sourceType: "MASTERY_PAPER", sourceId: paper._id, withdrawnAt: null })).toBe(0); // no bank qid on it
+    }
+  });
+
+  it("1: the void is refused with the switch OFF and for a 2026 paper; a teacher's own AS marks are never cleared", async () => {
+    const asItemId = new Types.ObjectId();
+    const x = kid(4);
+    const paper = await MasteryPaper.create({
+      paperId: "MP-C3-MATH-AS-OLD", source: "AS", extra: false, sectionId: new Types.ObjectId(sectionId), classId, academicYearId: yearId, classToken: "C3",
+      subject: "MATH", date: new Date("2027-04-07T00:00:00Z"), links: { asItemId }, entryState: "CONFIRMED",
+      items: [{ itemNo: 1, origin: "TEACHER", textBn: "ক", loCodes: [A], chapterNumber: 7, questionTypeCode: "QT-SHORT", marks: 2 }],
+      perStudentItems: [{ studentId: new Types.ObjectId(x), itemNos: [1] }],
+    });
+    await AssignmentStudentRecord.create({
+      asItemId, asId: "AS-C3-MATH-9100", studentId: new Types.ObjectId(x), sectionId: new Types.ObjectId(sectionId), classId, state: "CHECKED",
+      stateDates: [{ state: "CHECKED", at: new Date() }], chaseCount: 0, issuedBy: new Types.ObjectId(TEACHER_ID), marks: 7, result: "CORRECT",
+    });
+    for (const on of [false, true]) {
+      await setLoop(on);
+      await expect(voidConfirmedPaper(paper.paperId, PRINCIPAL)).rejects.toThrow(MasteryWorkError);
+      expect((await AssignmentStudentRecord.findOne({ asItemId }).lean())!.marks).toBe(7);
+    }
+    // a RETEST paper is refused too
+    await MasteryPaper.updateOne({ _id: paper._id }, { $set: { source: "RETEST", trackerLinked: true } });
+    await expect(voidConfirmedPaper(paper.paperId, PRINCIPAL)).rejects.toThrow(MasteryWorkError);
+    // an AL-4 paper: a record whose marks were typed by hand (no provenance) keeps them
+    await MasteryPaper.updateOne({ _id: paper._id }, { $set: { source: "AS" } });
+    await voidConfirmedPaper(paper.paperId, PRINCIPAL);
+    expect((await AssignmentStudentRecord.findOne({ asItemId }).lean())!.marks).toBe(7);
+  });
+
+  it("3: the Office opens the sheet from its print request by the Mongo id; another office-less user cannot", async () => {
+    await setLoop(true);
+    const it = await declare({ dateGiven: "2027-04-07", selectedQids: [MQ(2)], qCount: 1 });
+    const paper = (await paperOf(it.itemId))!;
+    expect(paper.trackerLinked).toBe(true);
+    const pr = await createPrintRequest({ title: "x", purpose: "HOMEWORK", sourceType: "MASTERY_PAPER", masteryPaperId: String(paper._id), colour: "BW", sides: "SINGLE", copies: 1, copiesMode: "CLASS_PRESENT", neededByKey: "2027-04-08", requestedBy: TEACHER_ID });
+    const office = { userId: new Types.ObjectId().toString(), role: "OFFICE" as const };
+    expect(callerHasPermission(office as never, "printing:view_all")).toBe(true);
+    mockTeacher.mockResolvedValue(TEACHER_ID); // the office is not the subject teacher
+    const out = await renderHomeworkPaperPdf(String(pr.masteryPaperId), office as never);
+    expect(out.pdf.subarray(0, 4).toString()).toBe("%PDF");
+    await cancelPrintRequest(String(pr._id), TEACHER_ID, { isOffice: false });
+    await expect(renderHomeworkPaperPdf(String(paper._id), office as never)).rejects.toThrow(MasteryWorkError); // cancelled → withdrawn
+  });
+
+  it("4: trim and a direct time / count edit of a paper-linked declared item are refused (switch ON)", async () => {
+    await setLoop(true);
+    const it = await declare({ dateGiven: "2027-04-08", selectedQids: [MQ(3), MQ(4)], qCount: 2 });
+    await expect(
+      applyTrim({ classId: String(classId), sectionId, date: new Date("2027-04-08T00:00:00Z"), itemId: it.itemId, newQCount: 1, rank: "b", actorId: TEACHER_ID } as never),
+    ).rejects.toThrow(/প্রশ্ন বদলে কমান/);
+    await expect(updateHomeworkItem({ itemId: it.itemId, timeDecl: 5, actorId: TEACHER_ID })).rejects.toThrow(/প্রশ্ন বদলে কমান/);
+    await updateHomeworkItem({ itemId: it.itemId, qCount: 2, actorId: TEACHER_ID }); // unchanged value: fine
+  });
+
+  it("8: issue writes the item's own row for a selectedQid that is not on its paper", async () => {
+    await setLoop(true);
+    const it = await declare({ dateGiven: "2027-04-11", selectedQids: [MQ(5)], qCount: 1 });
+    await HomeworkItem.updateOne({ _id: it.itemId }, { $set: { selectedQids: [MQ(5), MQ(6)] } });
+    await issueHomeworkItem(it.itemId, roster(sids), TEACHER_ID);
+    const paper = (await paperOf(it.itemId))!;
+    expect(await QuestionUse.countDocuments({ sourceId: paper._id, qid: MQ(5), withdrawnAt: null })).toBe(1);
+    expect(await QuestionUse.countDocuments({ sourceType: "HOMEWORK_ITEM", sourceId: new Types.ObjectId(it.itemId), qid: MQ(6) })).toBe(1);
+    expect(await QuestionUse.countDocuments({ sourceType: "HOMEWORK_ITEM", sourceId: new Types.ObjectId(it.itemId), qid: MQ(5) })).toBe(0);
   });
 });

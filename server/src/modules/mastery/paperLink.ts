@@ -16,13 +16,13 @@ export const SHEET_GUARD_MESSAGE = "প্রশ্নভিত্তিক শ�
 /** The class HW paper linked to a homework item (never an extra-homework sheet), or null. */
 export async function linkedHwPaper(hwItemId: Types.ObjectId | string): Promise<IMasteryPaper | null> {
   if (!Types.ObjectId.isValid(String(hwItemId))) return null;
-  return MasteryPaper.findOne({ "links.hwItemId": new Types.ObjectId(String(hwItemId)), extra: { $ne: true } });
+  return MasteryPaper.findOne({ "links.hwItemId": new Types.ObjectId(String(hwItemId)), extra: { $ne: true }, trackerLinked: true });
 }
 
 /** The AS paper linked to an assignment item, or null. */
 export async function linkedAsPaper(asItemId: Types.ObjectId | string): Promise<IMasteryPaper | null> {
   if (!Types.ObjectId.isValid(String(asItemId))) return null;
-  return MasteryPaper.findOne({ "links.asItemId": new Types.ObjectId(String(asItemId)) });
+  return MasteryPaper.findOne({ "links.asItemId": new Types.ObjectId(String(asItemId)), trackerLinked: true });
 }
 
 /**
@@ -36,8 +36,8 @@ export async function manualCheckRefusal(tracker: "HOMEWORK" | "ASSIGNMENT", ite
 }
 
 /** True when the paper is tied to a homework / assignment item (so §3.1's guards and write-back apply, switch on). */
-export function isTrackerLinked(paper: Pick<IMasteryPaper, "links" | "extra" | "source">): boolean {
-  if (paper.extra) return false;
+export function isTrackerLinked(paper: Pick<IMasteryPaper, "links" | "extra" | "source" | "trackerLinked">): boolean {
+  if (paper.extra || paper.trackerLinked !== true) return false; // AL-4-created only — never `links.*` alone
   return Boolean(paper.links?.hwItemId) || (paper.source === "AS" && Boolean(paper.links?.asItemId));
 }
 

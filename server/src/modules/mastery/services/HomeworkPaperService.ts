@@ -28,6 +28,7 @@ import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { HomeworkItem, type IHomeworkItem, type IHomeworkFreeLine } from "../../trackers/models/HomeworkItem";
 import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentRecord";
 import { AssignmentStudentRecord } from "../../trackers/models/AssignmentStudentRecord";
+import { AssignmentItem } from "../../trackers/models/AssignmentItem";
 import { PrintRequest } from "../../printing/models/PrintRequest";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
@@ -43,7 +44,7 @@ import { heldRefusal } from "../examHold";
 import { groupStimulusParts, printPlan, stimulusRefOf } from "../parts";
 import { reapplyExclusions } from "../exclusions";
 import { childTotals, isTrackerLinked, resultFromPct, roundHalf } from "../paperLink";
-import { MasteryWorkError, isSameOrEarlierClass, nextPaperId, sectionContext, studentItemsOf, type Auth } from "./MasteryWorkService";
+import { MasteryWorkError, isSameOrEarlierClass, loadPaperFor, nextPaperId, sectionContext, studentItemsOf, type Auth } from "./MasteryWorkService";
 import { dateOnlyISO } from "../../trackers/assignmentCalendar";
 
 const oid = (s: string | Types.ObjectId) => new Types.ObjectId(String(s));
@@ -220,6 +221,7 @@ export async function syncPaperForItem(
         paperId: await nextPaperId(ctx.classToken, item.subject),
         source: "HW",
         extra: false,
+        trackerLinked: true,
         marksOnly: !enabled,
         sectionId: ctx.sectionId,
         classId: ctx.classId,
@@ -263,6 +265,12 @@ async function removePaper(paper: IMasteryPaper, item: IHomeworkItem | null): Pr
   await HomeworkItem.updateOne({ paperId: paper._id }, { $unset: { paperId: "" } });
 }
 
+/** deleteAssignmentItem (a DRAFT, no records): an AL-4 AS paper goes with it, its ledger rows withdrawn (AC-B11). */
+export async function removePaperOfAsItem(asItemId: Types.ObjectId | string): Promise<void> {
+  const paper = await MasteryPaper.findOne({ "links.asItemId": oid(asItemId), trackerLinked: true });
+  if (paper) await removePaper(paper, null);
+}
+
 /** deleteHomeworkItem / voidHomeworkItem: a declared item's paper goes with it (nothing was given; AC-B11). */
 export async function removePaperOfItem(itemId: Types.ObjectId | string): Promise<void> {
   const paper = await MasteryPaper.findOne({ "links.hwItemId": oid(itemId), extra: { $ne: true } });
@@ -284,15 +292,15 @@ export async function lockPaper(paper: IMasteryPaper, printRequestId?: Types.Obj
 }
 
 /**
- * issueHomeworkItem hook: an item with a linked paper locks it and writes its rows. Returns true when the item's own
- * HOMEWORK_ITEM rows must be skipped (the paper carries them: no double counting).
+ * issueHomeworkItem hook: an item with a linked paper locks it and writes its rows. Returns the qids the PAPER carries
+ * (the item's own HOMEWORK_ITEM rows are skipped for those: no double counting), or null when there is no paper.
  */
-export async function onHomeworkIssued(item: Pick<IHomeworkItem, "paperId">): Promise<boolean> {
-  if (!item.paperId) return false;
+export async function onHomeworkIssued(item: Pick<IHomeworkItem, "paperId">): Promise<Set<string> | null> {
+  if (!item.paperId) return null;
   const paper = await MasteryPaper.findById(item.paperId);
-  if (!paper) return false;
+  if (!paper) return null;
   await lockPaper(paper);
-  return true;
+  return new Set(paper.items.flatMap((i) => (i.qid ? [i.qid] : [])));
 }
 
 /** A MASTERY_PAPER print was cancelled before printing: unlock + withdraw, unless it was issued meanwhile or another print is live. */
@@ -304,6 +312,8 @@ export async function onPrintCancelled(paperId: Types.ObjectId | string, printRe
     if (live) return;
     const item = paper.links?.hwItemId ? await HomeworkItem.findById(paper.links.hwItemId).select("status").lean() : null;
     if (item?.status === "issued") return; // the children have it — the issue keeps the lock and the rows
+    // An AS item exists only once it was delivered: the children have the packet, so the lock and the rows stay.
+    if (paper.links?.asItemId && (await AssignmentItem.exists({ _id: paper.links.asItemId }))) return;
     await MasteryPaper.updateOne({ _id: paper._id }, { $unset: { lockedAt: "", printRequestId: "" } });
     await withdrawUses("MASTERY_PAPER", paper._id);
   } catch (err) {
@@ -316,9 +326,12 @@ export async function onPrintCancelled(paperId: Types.ObjectId | string, printRe
 // ---------------------------------------------------------------------------
 
 export async function voidConfirmedPaper(paperId: string, auth: Auth, reason = "বাতিল"): Promise<{ excluded: number }> {
-  const paper = await MasteryPaper.findOne({ paperId });
-  if (!paper) throw new MasteryWorkError("এই কাজটি পাওয়া যায়নি।");
-  if (paper.extra || paper.source === "CT" || paper.source === "RUBRIC") throw new MasteryWorkError("এই কাজটি এখান থেকে বাতিল করা যায় না।");
+  // The 2027 void: switch on, an AL-4 tracker paper (HW / AS only), through the row scope.
+  if (!(await isLoop2027On())) throw new MasteryWorkError("এই সুবিধা এখনো চালু হয়নি।");
+  const paper = await loadPaperFor(paperId, auth);
+  if (paper.extra || (paper.source !== "HW" && paper.source !== "AS") || !isTrackerLinked(paper)) {
+    throw new MasteryWorkError("এই কাজটি এখান থেকে বাতিল করা যায় না।");
+  }
   if (paper.entryState !== "CONFIRMED") throw new MasteryWorkError("নিশ্চিত না করা কাজ মুছে ফেলুন — বাতিলের দরকার নেই।");
   const now = new Date();
   const by = oid(auth.userId);
@@ -332,8 +345,9 @@ export async function voidConfirmedPaper(paperId: string, auth: Auth, reason = "
   await reapplyExclusions(paper.sectionId, { paperId: paper._id });
   await withdrawUses("MASTERY_PAPER", paper._id, { at: now });
   // The child's total on the tracker is the paper's — it goes too (the record keeps its state).
-  if (paper.links?.hwItemId) await HomeworkStudentRecord.updateMany({ hwItemId: paper.links.hwItemId }, { $unset: { earnedMarks: "", availableMarks: "" } });
-  if (paper.links?.asItemId) await AssignmentStudentRecord.updateMany({ asItemId: paper.links.asItemId }, { $unset: { marks: "", availableMarks: "" } });
+  // Only what THIS paper's write-back wrote (provenance `marksPaperId`) — a teacher's own marks stay.
+  if (paper.links?.hwItemId) await HomeworkStudentRecord.updateMany({ hwItemId: paper.links.hwItemId, marksPaperId: paper._id }, { $unset: { earnedMarks: "", availableMarks: "", marksPaperId: "" } });
+  if (paper.links?.asItemId) await AssignmentStudentRecord.updateMany({ asItemId: paper.links.asItemId, marksPaperId: paper._id }, { $unset: { marks: "", availableMarks: "", marksPaperId: "" } });
   void writeAudit({
     eventKind: "MASTERY_PAPER_DELETED",
     actorId: auth.userId, actorRole: auth.role, targetKind: "MasteryPaper", targetId: paper._id,
@@ -425,7 +439,11 @@ export async function writeBackTrackers(paper: IMasteryPaper, studentIds: string
     const Model = paper.links?.hwItemId ? HomeworkStudentRecord : AssignmentStudentRecord;
     const idFilter = { _id: { $in: own.map((x) => x._id) } };
     if (status !== "PRESENT") {
-      await (Model as typeof HomeworkStudentRecord).updateMany(idFilter, { $unset: paper.links?.hwItemId ? { earnedMarks: "", availableMarks: "" } : { marks: "", availableMarks: "" } });
+      // Clear only what this paper wrote (provenance), never a teacher's own figure.
+      await (Model as typeof HomeworkStudentRecord).updateMany(
+        { ...idFilter, marksPaperId: paper._id },
+        { $unset: paper.links?.hwItemId ? { earnedMarks: "", availableMarks: "", marksPaperId: "" } : { marks: "", availableMarks: "", marksPaperId: "" } },
+      );
       continue;
     }
     const earnedBy = new Map<number, number | undefined>((r?.items ?? []).map((i) => [i.itemNo, i.marks ?? undefined]));
@@ -437,10 +455,12 @@ export async function writeBackTrackers(paper: IMasteryPaper, studentIds: string
         const h = d as InstanceType<typeof HomeworkStudentRecord>;
         h.earnedMarks = earned;
         h.availableMarks = available;
+        h.marksPaperId = paper._id as Types.ObjectId;
       } else {
         const a = d as InstanceType<typeof AssignmentStudentRecord>;
         a.marks = earned;
         a.availableMarks = available;
+        a.marksPaperId = paper._id as Types.ObjectId;
       }
       if (result) d.result = result;
       if (d.state === "SUBMITTED") {

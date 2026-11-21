@@ -126,7 +126,7 @@ export async function assertMayWork(auth: Auth, sectionId: Types.ObjectId, subje
   if (teacherId && String(teacherId) === String(auth.userId)) return;
   // AL-4 / AC-S1 (switch on): today's substitute for the absent subject teacher reaches the শাখা × subject for the
   // day — pick, enter marks, finalise — the same rule the mark reminders use (§7). Off → exactly the 2026 rule.
-  if (await isLoop2027On()) {
+  if (dhakaDayKey(on) === dhakaDayKey(new Date()) && (await isLoop2027On())) {
     const { isTodaySubstituteFor } = await import("./HomeworkPaperService");
     if (await isTodaySubstituteFor(String(auth.userId), sectionId, subject)) return;
   }
@@ -306,9 +306,6 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     hwItemId = hw._id as Types.ObjectId;
   }
 
-  // AL-4 (switch on): a HW sheet linked to its tracker row is a TRACKER paper — it gets `HomeworkItem.paperId`, and its
-  // ledger rows are written when it goes to print / is issued (not here). Off → the 2026 write-at-create below.
-  const deferLedger = input.source === "HW" && Boolean(hwItemId) && (await isLoop2027On());
   const paper = await MasteryPaper.create({
     paperId: await nextPaperId(ctx.classToken, input.subject),
     source: input.source,
@@ -334,11 +331,8 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   });
   // AL-3 (§3.2): a CT sheet linked to its class test is given on the exam date; a hand-made HW sheet on its date.
   // (A CT sheet with no test, a rubric: nothing was given yet.) Written regardless of the release switch.
-  if (deferLedger && hwItemId) {
-    await HomeworkItem.updateOne({ _id: hwItemId, paperId: { $exists: false } }, { $set: { paperId: paper._id } });
-    const issued = await HomeworkItem.exists({ _id: hwItemId, status: "issued" });
-    if (issued) await (await import("./HomeworkPaperService")).lockPaper(paper); // already with the children
-  } else if (paper.source === "HW") await recordUsesSafe(usesOfPaper(paper, "HW", { givenOn: dhakaDayKey(paper.date) }));
+  // (AL-4: a hand-made paper stays a 2026 paper — only the declare path sets `trackerLinked`.)
+  if (paper.source === "HW") await recordUsesSafe(usesOfPaper(paper, "HW", { givenOn: dhakaDayKey(paper.date) }));
   else if (paper.source === "CT" && test) await recordUsesSafe(usesOfPaper(paper, "CT", { givenOn: dhakaDayKey(paper.date) }));
   void writeAudit({
     eventKind: "MASTERY_PAPER_CREATED",
