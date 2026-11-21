@@ -5,6 +5,7 @@
  */
 import { randomUUID } from "crypto";
 import mongoose from "mongoose";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { meteredGeminiFetch } from "../../platform/ai/meteredFetch";
 import { aiRouteFor } from "../../platform/services/AiSettingService";
 import { AiCapError, alertIfBudget, assertWithinCaps } from "../../platform/services/AiUsageService";
@@ -90,6 +91,8 @@ export interface TelegramDeps {
 // Real implementations
 // ---------------------------------------------------------------------------
 async function tgCall<T>(method: string, body: unknown): Promise<T> {
+  // AL-1: dev database — nothing goes out; surfaces as a Telegram HTTP failure the callers already catch.
+  if (!outgoingAllowed("telegram")) throw new TelegramHttpError("telegram", 503);
   const res = await fetch(`https://api.telegram.org/bot${env.botToken()}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -119,6 +122,7 @@ const realTelegram: TelegramApi = {
   async downloadFile(fileId, mimeHint) {
     const f = await tgCall<{ file_path?: string }>("getFile", { file_id: fileId });
     if (!f.file_path) throw new TelegramHttpError("telegram", 404);
+    if (!outgoingAllowed("telegram")) throw new TelegramHttpError("telegram", 503);
     const res = await fetch(`https://api.telegram.org/file/bot${env.botToken()}/${f.file_path}`, { signal: AbortSignal.timeout(30_000) });
     if (!res.ok) throw new TelegramHttpError("telegram", res.status);
     const ext = f.file_path.split(".").pop()?.toLowerCase() ?? "";
@@ -175,6 +179,7 @@ const realGemini: GeminiBot = {
 const ASSET_BRANCH = "bug-assets";
 
 async function gh<T>(method: string, path: string, body?: unknown, okStatuses: number[] = []): Promise<{ status: number; json: T | null }> {
+  if (!outgoingAllowed("github")) throw new TelegramHttpError("github", 503);
   const res = await fetch(`https://api.github.com/repos/${env.githubRepo()}${path}`, {
     method,
     headers: {

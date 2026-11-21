@@ -14,6 +14,7 @@
  *      Principal's study of the model — the input is already de-identified by the caller.
  */
 import { randomUUID } from "crypto";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import { aiRouteFor, providerKey } from "../services/AiSettingService";
 import { alertIfBudget, assertWithinCaps, recordAiUsage, type AiUsageRowInput, type CapContext } from "../services/AiUsageService";
 import { recordAiExchange, type AiExchangeInput } from "../services/AiExchangeService";
@@ -122,6 +123,8 @@ export async function aiSend(
 ): Promise<AiSendOutcome> {
   const routed = await (deps.route ?? aiRouteFor)(feature);
   if (!routed.enabled) throw new AiFeatureOffError(feature);
+  // AL-1: dev database — nothing goes out. Takes the same path as a switched-off feature.
+  if (!outgoingAllowed("ai")) throw new AiFeatureOffError(feature);
   let route = routed;
   if (ctx.modelOverride) {
     const to = providerOfModel(ctx.modelOverride);

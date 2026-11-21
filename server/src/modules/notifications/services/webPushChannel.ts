@@ -23,6 +23,7 @@ import type { INotification } from "../models/Notification";
 import { registerChannel, type NotificationChannel } from "./NotificationService";
 import { WebPushSubscription } from "../models/WebPushSubscription";
 import { PushDevice } from "../../attendance/models/PushDevice";
+import { outgoingAllowed } from "../../../lib/outgoing";
 
 /** The phone platform a browser subscription runs on, from its recorded user agent;
  *  null for a desktop browser or an unknown agent (those always receive). */
@@ -44,6 +45,7 @@ export function webPushPublicKey(): string | null {
 export const webPushChannel: NotificationChannel = {
   name: "web-push",
   async deliver(row: INotification): Promise<void> {
+    if (!outgoingAllowed("webpush")) return; // AL-1: dev database — nothing goes out
     const owner = row.recipientUserId
       ? { userId: row.recipientUserId }
       : { guardianId: row.recipientGuardianId };

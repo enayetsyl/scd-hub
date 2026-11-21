@@ -11,6 +11,7 @@
  * try/caught, and nothing is written when the database is not connected (DB-free tests).
  */
 import { randomUUID } from "crypto";
+import { outgoingAllowed } from "../../../lib/outgoing";
 import mongoose from "mongoose";
 import { recordAiUsage } from "../services/AiUsageService";
 import { costUsd } from "./aiPrices";
@@ -41,6 +42,9 @@ export async function meteredGeminiFetch(
   ctx: MeterContext = {},
   fetchImpl: typeof fetch = fetch,
 ): Promise<Response> {
+  // AL-1: dev database — nothing goes out. Answer like a provider that is down (503): every legacy
+  // caller already turns a non-OK reply into its own "AI unavailable" outcome. No usage row is written.
+  if (!outgoingAllowed("ai")) return new Response(JSON.stringify({ error: "outgoing blocked" }), { status: 503, headers: { "Content-Type": "application/json" } });
   const at = new Date();
   const started = Date.now();
   let res: Response;

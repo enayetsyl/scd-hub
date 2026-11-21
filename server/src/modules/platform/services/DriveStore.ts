@@ -38,6 +38,8 @@ export class DriveUnavailableError extends Error {
   }
 }
 
+import { outgoingAllowed } from "../../../lib/outgoing";
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
@@ -205,6 +207,8 @@ export async function driveQuota(): Promise<DriveQuota> {
 /** Stream a file into its private folder; returns the Drive file id
  *  (SERVER-INTERNAL — never expose it to a client). */
 export async function uploadToDrive(input: DriveUploadInput): Promise<string> {
+  // AL-1: dev database — nothing goes out; same outcome as no Drive credential.
+  if (!outgoingAllowed("drive")) throw new DriveUnavailableError("Drive upload blocked (dev database)");
   const folderId = await ensureYearSubfolder(input.year, input.subfolder ?? "hw");
   const boundary = `scdhub-${Math.abs(Date.now() ^ input.data.length)}`;
   const meta = JSON.stringify({
@@ -291,6 +295,7 @@ export async function listDriveFolder(year: string, subfolder: string): Promise<
  *  the backup retention sweep (its backups) and a deleted class book (its page images,
  *  D-#870) — never on content uploaded by people. */
 export async function deleteFromDrive(driveFileId: string): Promise<void> {
+  if (!outgoingAllowed("drive")) throw new DriveUnavailableError("Drive delete blocked (dev database)");
   await driveFetch(`${DRIVE_FILES_URL}/${encodeURIComponent(driveFileId)}`, { method: "DELETE" });
 }
 
