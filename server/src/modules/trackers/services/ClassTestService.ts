@@ -44,6 +44,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import { PrintRequest } from "../../printing/models/PrintRequest";
+import { withdrawForClassTest } from "../../assessment/services/QuestionUseService";
 import { ScriptBundle } from "../../archive/models/ScriptBundle";
 import { resolveSubjectTeacher } from "../subjectTeacher";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
@@ -619,6 +620,7 @@ export async function cancelRequest(id: string, actorId: string): Promise<ClassT
     { classTestId: doc._id, status: "REQUESTED" },
     { $set: { status: "CANCELLED", cancelledBy: new Types.ObjectId(actorId), cancelledAt: new Date() } },
   );
+  await withdrawForClassTest(doc._id); // AL-3: the test never sat
 
   return classTestShape(doc as unknown as IClassTest);
 }
@@ -670,6 +672,7 @@ export async function retireClassTest(id: string, reason: string, actorId: strin
     targetKind: "ClassTest",
     meta: { ctId: doc.ctId, reason: trimmed, priorStatus, via: "retireClassTest" },
   });
+  await withdrawForClassTest(doc._id); // AL-3: the test never sat
   return classTestShape(doc as unknown as IClassTest);
 }
 

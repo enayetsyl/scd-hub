@@ -1,45 +1,47 @@
 /**
- * QuestionUsageService — where has this question already been used? (QU-1, D-#608; re-pointed at the
- * QuestionUse ledger by AL-3, D-#1667)
+ * QuestionUsageService — where has this question already been used? (QU-1, D-#608; extended by AL-3, D-#1667)
  *
  * A teacher picking questions for a set had no way to know one was already in three other
  * sets, so the same question could land in this week's homework and last week's class test
- * with nobody noticing. QU-1 first read `AssessmentSet.basketItems[]`; the ledger (`QuestionUse`) now
- * holds every use — homework, assignment, class test, extra homework, re-test — so the bank badge shows
- * homework and assignment uses too. Same output as before plus a `kind` field; gate unchanged
- * (`question_sets:view`).
+ * with nobody noticing. QU-1 reads `AssessmentSet.basketItems[]` — EVERY set that holds the qid, drafts
+ * included, exactly as before — and AL-3 ADDS the ledger's non-set uses (`QuestionUse` rows whose source is a
+ * mastery paper or a tracker homework item: homework, assignment, extra homework, re-test, and CT from mastery CT
+ * sheets). Ledger rows whose source is an AssessmentSet are NOT added: the set is already counted from its basket,
+ * so nothing is counted twice and the badge is right the moment this deploys, before any backfill.
+ * Same output as before plus a `kind` field; gate unchanged (`question_sets:view`).
  *
  * **Keyed on the QID, never the artifactId.** A re-import creates a new artifact row for the same
  * question, so a set assembled last term points at the OLD row; querying by artifactId the history
  * would come back empty exactly when it matters most. Same reasoning that anchors review rounds on
- * the qid (QR-1).
+ * the qid (QR-1). A withdrawn ledger use (paper deleted / issue undone) never counts.
  *
  * Two entry points on purpose, each sized for its caller:
  *   • `questionUsageCounts` / `questionUsageByKind` — numbers per qid, for a 40-row bank page. No joins, no names.
  *   • `questionUsage` — the rows for ONE question, for the preview.
- * A withdrawn use (a paper deleted / an issue undone before results) is not a use and never counts.
  */
 import { Types } from "mongoose";
-import { QuestionUse } from "../models/QuestionUse";
 import { AssessmentSet } from "../models/AssessmentSet";
+import { QuestionUse } from "../models/QuestionUse";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 
 /** One use of a question, described the way a teacher recognises it. */
 export interface QuestionUseDTO {
-  /** The source the question was given from (the set, paper or homework item id). */
+  /** The set / paper / homework item the question was given from. */
   setId: string;
-  /** Free text and OPTIONAL on the set — the client falls back to the set type / kind. */
+  /** Free text and OPTIONAL on the model — the client falls back to the set type / kind. */
   setName: string | null;
-  /** The set's own type (HW / AS / CT) when the source is a set, else the use kind. */
   setType: string;
-  /** HW | AS | CT | EXTRA_HW | RETEST — the ledger kind (AL-3). */
+  /** HW | AS | CT | EXTRA_HW | RETEST (AL-3). For a set: its own type. */
   kind: string;
   status: string;
   classLevel: number | null;
   className: string | null;
   sectionName: string | null;
-  /** The day it was given (CT: the exam date), as an ISO instant at 00:00Z of that day. */
+  /**
+   * The date that tells a teacher whether reuse is a problem: for a set, when the work was DUE if it
+   * had a due date, else assembled, else created; for a ledger use, the day it was given.
+   */
   usedOn: string | null;
 }
 
@@ -52,20 +54,53 @@ export interface QuestionUseKindCounts {
 
 const KIND_BUCKET: Record<string, "hw" | "as" | "ct" | undefined> = { HW: "hw", EXTRA_HW: "hw", AS: "as", CT: "ct" };
 
-/** Per-kind counts of USES (distinct sources) for each qid. Batched — one query for a whole page. */
-export async function questionUsageByKind(qids: readonly string[]): Promise<Map<string, QuestionUseKindCounts>> {
-  const wanted = [...new Set(qids.filter((q) => typeof q === "string" && q !== ""))];
-  if (wanted.length === 0) return new Map();
+const wantedOf = (qids: readonly string[]): string[] => [...new Set(qids.filter((q) => typeof q === "string" && q !== ""))];
 
-  const rows = (await QuestionUse.aggregate([
-    { $match: { qid: { $in: wanted }, withdrawnAt: null } },
-    // A source counts once per question even if it reached several শাখা or lists the item twice.
+/** The ledger's non-set uses per (qid, kind): distinct sources. */
+async function ledgerKindCounts(wanted: string[]): Promise<{ _id: { qid: string; kind: string }; n: number }[]> {
+  return (await QuestionUse.aggregate([
+    { $match: { qid: { $in: wanted }, withdrawnAt: null, sourceType: { $ne: "ASSESSMENT_SET" } } },
     { $group: { _id: { qid: "$qid", kind: "$kind", sourceType: "$sourceType", sourceId: "$sourceId" } } },
     { $group: { _id: { qid: "$_id.qid", kind: "$_id.kind" }, n: { $sum: 1 } } },
   ])) as unknown as { _id: { qid: string; kind: string }; n: number }[];
+}
+
+/** How many sets each qid appears in (drafts included) plus its non-set ledger uses. Batched — one pass per page. */
+export async function questionUsageCounts(qids: readonly string[]): Promise<Map<string, number>> {
+  const wanted = wantedOf(qids);
+  if (wanted.length === 0) return new Map();
+
+  const rows = (await AssessmentSet.aggregate([
+    { $match: { "basketItems.qid": { $in: wanted } } },
+    { $unwind: "$basketItems" },
+    // Re-match AFTER the unwind: the first $match keeps whole SETS, and a set containing one
+    // wanted question also carries every other question it holds.
+    { $match: { "basketItems.qid": { $in: wanted } } },
+    // A set could in principle list the same qid twice; count SETS, not rows.
+    { $group: { _id: { qid: "$basketItems.qid", setId: "$_id" } } },
+    { $group: { _id: "$_id.qid", n: { $sum: 1 } } },
+  ])) as unknown as { _id: string; n: number }[];
+
+  const out = new Map(rows.map((r) => [r._id, r.n]));
+  for (const r of await ledgerKindCounts(wanted)) out.set(r._id.qid, (out.get(r._id.qid) ?? 0) + r.n);
+  return out;
+}
+
+/** The same uses split into homework (incl. extra) / assignment / class test — the bank badge (AL-3). */
+export async function questionUsageByKind(qids: readonly string[]): Promise<Map<string, QuestionUseKindCounts>> {
+  const wanted = wantedOf(qids);
+  if (wanted.length === 0) return new Map();
+
+  const sets = (await AssessmentSet.aggregate([
+    { $match: { "basketItems.qid": { $in: wanted } } },
+    { $unwind: "$basketItems" },
+    { $match: { "basketItems.qid": { $in: wanted } } },
+    { $group: { _id: { qid: "$basketItems.qid", setId: "$_id", setType: "$setType" } } },
+    { $group: { _id: { qid: "$_id.qid", kind: "$_id.setType" }, n: { $sum: 1 } } },
+  ])) as unknown as { _id: { qid: string; kind: string }; n: number }[];
 
   const out = new Map<string, QuestionUseKindCounts>();
-  for (const r of rows) {
+  for (const r of [...sets, ...(await ledgerKindCounts(wanted))]) {
     const c = out.get(r._id.qid) ?? { total: 0, hw: 0, as: 0, ct: 0 };
     c.total += r.n;
     const b = KIND_BUCKET[r._id.kind];
@@ -75,62 +110,76 @@ export async function questionUsageByKind(qids: readonly string[]): Promise<Map<
   return out;
 }
 
-/** How many uses each qid has. An unused question is ABSENT, not zero. */
-export async function questionUsageCounts(qids: readonly string[]): Promise<Map<string, number>> {
-  const by = await questionUsageByKind(qids);
-  return new Map([...by].map(([q, c]) => [q, c.total]));
-}
-
-/** Every use of one question, newest first. */
+/** Every set the question appears in plus its non-set ledger uses, newest first. */
 export async function questionUsage(qid: string): Promise<QuestionUseDTO[]> {
   if (typeof qid !== "string" || qid.trim() === "") return [];
+  const id = qid.trim();
 
-  const rows = (await QuestionUse.find({ qid: qid.trim(), withdrawnAt: null })
-    .select({ kind: 1, sourceType: 1, sourceId: 1, sectionId: 1, givenOn: 1 })
+  const sets = (await AssessmentSet.find({ "basketItems.qid": id })
+    .select({ name: 1, setType: 1, status: 1, classId: 1, sectionId: 1, dueDate: 1, assembledAt: 1, createdAt: 1 })
     .lean()) as unknown as {
-    kind: string;
-    sourceType: string;
-    sourceId: Types.ObjectId;
-    sectionId: Types.ObjectId;
-    givenOn: string;
+    _id: Types.ObjectId;
+    name?: string;
+    setType: string;
+    status: string;
+    classId?: Types.ObjectId;
+    sectionId?: Types.ObjectId;
+    dueDate?: Date;
+    assembledAt?: Date;
+    createdAt?: Date;
   }[];
-  if (rows.length === 0) return [];
+  const uses = (await QuestionUse.find({ qid: id, withdrawnAt: null, sourceType: { $ne: "ASSESSMENT_SET" } })
+    .select({ kind: 1, sourceType: 1, sourceId: 1, sectionId: 1, givenOn: 1 })
+    .lean()) as unknown as { kind: string; sourceType: string; sourceId: Types.ObjectId; sectionId: Types.ObjectId; givenOn: string }[];
+  if (sets.length === 0 && uses.length === 0) return [];
 
   // Batched lookups, never one per row.
-  const setIds = [...new Set(rows.filter((r) => r.sourceType === "ASSESSMENT_SET").map((r) => String(r.sourceId)))];
-  const sectionIds = [...new Set(rows.map((r) => String(r.sectionId)))];
-  const [sets, sections] = await Promise.all([
-    setIds.length ? AssessmentSet.find({ _id: { $in: setIds } }).select({ name: 1, setType: 1, status: 1 }).lean() : Promise.resolve([]),
-    Section.find({ _id: { $in: sectionIds } }).select({ nameBn: 1, classId: 1 }).lean(),
-  ]);
-  const classIds = [...new Set(sections.map((s) => String(s.classId)))];
-  const classes = await Class.find({ _id: { $in: classIds } }).select({ nameBn: 1, level: 1 }).lean();
-  const setById = new Map(sets.map((s) => [String(s._id), s]));
+  const sectionIds = [...new Set([...sets.map((s) => s.sectionId?.toString()), ...uses.map((u) => String(u.sectionId))].filter(Boolean))];
+  const sections = await Section.find({ _id: { $in: sectionIds } }).select({ nameBn: 1, classId: 1 }).lean();
   const sectionById = new Map(sections.map((s) => [String(s._id), s]));
+  const classIds = [...new Set([...sets.map((s) => s.classId?.toString()), ...sections.map((s) => String(s.classId))].filter(Boolean))];
+  const classes = await Class.find({ _id: { $in: classIds } }).select({ nameBn: 1, level: 1 }).lean();
   const classById = new Map(classes.map((c) => [String(c._id), c]));
 
-  // One line per (source, শাখা): a group-anchored test writes one row per member শাখা, a paper one per question.
-  const seen = new Set<string>();
-  const out: QuestionUseDTO[] = [];
-  for (const r of rows) {
-    const key = `${r.sourceType}|${r.sourceId}|${r.sectionId}|${r.kind}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const set = setById.get(String(r.sourceId));
-    const sec = sectionById.get(String(r.sectionId));
-    const cls = sec ? classById.get(String(sec.classId)) : undefined;
-    out.push({
-      setId: String(r.sourceId),
-      setName: set?.name && set.name.trim() !== "" ? set.name : null,
-      setType: set?.setType ?? r.kind,
-      kind: r.kind,
-      status: set?.status ?? "given",
+  const fromSets: QuestionUseDTO[] = sets.map((s) => {
+    const sec = s.sectionId ? sectionById.get(s.sectionId.toString()) : undefined;
+    const cls = classById.get((s.classId ?? sec?.classId)?.toString() ?? "");
+    const when = s.dueDate ?? s.assembledAt ?? s.createdAt ?? null;
+    return {
+      setId: s._id.toString(),
+      setName: s.name && s.name.trim() !== "" ? s.name : null,
+      setType: s.setType,
+      kind: s.setType,
+      status: s.status,
       classLevel: typeof cls?.level === "number" ? cls.level : null,
       className: cls?.nameBn ?? null,
       sectionName: sec?.nameBn ?? null,
-      usedOn: r.givenOn ? new Date(`${r.givenOn}T00:00:00.000Z`).toISOString() : null,
+      usedOn: when ? new Date(when).toISOString() : null,
+    };
+  });
+
+  // One line per (source, শাখা, kind): a paper may carry the question once per শাখা it reached.
+  const seen = new Set<string>();
+  const fromLedger: QuestionUseDTO[] = [];
+  for (const u of uses) {
+    const key = `${u.sourceType}|${u.sourceId}|${u.sectionId}|${u.kind}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const sec = sectionById.get(String(u.sectionId));
+    const cls = sec ? classById.get(String(sec.classId)) : undefined;
+    fromLedger.push({
+      setId: String(u.sourceId),
+      setName: null,
+      setType: u.kind,
+      kind: u.kind,
+      status: "given",
+      classLevel: typeof cls?.level === "number" ? cls.level : null,
+      className: cls?.nameBn ?? null,
+      sectionName: sec?.nameBn ?? null,
+      usedOn: u.givenOn ? new Date(`${u.givenOn}T00:00:00.000Z`).toISOString() : null,
     });
   }
-  // Newest first: the most recent use is the one that decides whether to reuse.
-  return out.sort((a, b) => (b.usedOn ?? "").localeCompare(a.usedOn ?? ""));
+  // Newest first: the most recent use is the one that decides whether to reuse. A use with no date
+  // sorts last rather than being dropped — it is still a use.
+  return [...fromSets, ...fromLedger].sort((a, b) => (b.usedOn ?? "").localeCompare(a.usedOn ?? ""));
 }

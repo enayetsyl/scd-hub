@@ -17,7 +17,7 @@ import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT
 import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
-import { assertSetCtAllowed, writeSetUses } from "../../assessment/services/QuestionUseService";
+import { assertSetCtAllowed, CtBlockError, withdrawForCancelledPrint, writeSetUses } from "../../assessment/services/QuestionUseService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -159,7 +159,9 @@ async function assertSourceResolves(input: CreatePrintRequestInput): Promise<voi
       try {
         await assertSetCtAllowed(input.setId!, input.classTestId);
       } catch (err) {
-        throw new PrintRequestError(err instanceof Error ? err.message : "Class-test question blocked");
+        // Only a real R19 block stops the print; an internal failure is logged and the print is allowed.
+        if (err instanceof CtBlockError) throw new PrintRequestError(err.message);
+        console.error("[question-use] class-test check failed (print allowed):", err);
       }
       break;
     }
@@ -522,6 +524,8 @@ export async function cancelPrintRequest(
     await recordPlaceMistake({ kind: "PRINT_CANCELLED", tier: 2, refKey: doc._id.toString(), ownerId: doc.requestedBy, correctedBy: actorId, at: new Date(), line: `প্রিন্টের অনুরোধ অফিস বাতিল করেছে${opts.reason ? `: "${opts.reason}"` : ""}` });
   }
   await mirrorToClassTest(doc, "CANCELLED", actorId);
+  // AL-3: a cancelled SET print means its questions did not go to the children.
+  if (doc.sourceType === "SET" && doc.setId) await withdrawForCancelledPrint(doc.setId, doc._id);
   publishRealtime("print_queue", { op: "cancelled", id: doc._id.toString() });
   return doc;
 }

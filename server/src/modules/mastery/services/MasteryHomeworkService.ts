@@ -76,6 +76,11 @@ async function sectionSeen(sectionId: Types.ObjectId, subject: MasterySubject): 
  * R21 (§3.2): how many more bank questions homework may take on one objective — the homework share
  * (`pct` % of the gold pool, rounded down) minus what the শাখা already used as homework this year, capped at `want`.
  */
+/** PR-J: qids on any child's open extra sheet — never offered, not even as the R23 repeat. */
+async function openExtraQidsOf(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Set<string>> {
+  return new Set([...(await openExtraSeen(sectionId, subject)).values()].flatMap((s) => [...s]));
+}
+
 export function homeworkShareLeft(poolQids: string[], led: Pick<SectionAvoid, "homeworkYear">, pct: number, want: number): number {
   const cap = Math.floor((poolQids.length * pct) / 100 + 1e-9);
   const used = poolQids.filter((q) => led.homeworkYear.has(q)).length;
@@ -183,6 +188,7 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
     // R21 (switch on): homework may take a bank question only while the homework-used count on this objective
     // stays within `homeworkBankSharePct` of its gold pool; the rest is kept for assignments and class tests.
     const pool = bank.filter((q) => q.loCodes.includes(code));
+    const openQids = loopOn ? await openExtraQidsOf(ctx.sectionId, subject) : new Set<string>();
     const take = loopOn ? homeworkShareLeft(pool.map((q) => q.qid), led, sharePct, perObjective) : perObjective;
     // PR-G: each question comes with its own type — a typed one only as that type.
     const picked: { q: BankQuestion; qt: string; repeat: boolean }[] = [];
@@ -198,7 +204,7 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
       const want = (take === 0 ? perObjective : take) - picked.length;
       const taken = new Set([...picked.map((p) => p.q.qid), ...out.items.map((i) => i.qid ?? "")]);
       const cands = pool
-        .filter((q) => led.lastOn.has(q.qid) && !led.windowQids.has(q.qid) && !taken.has(q.qid))
+        .filter((q) => led.lastOn.has(q.qid) && !led.windowQids.has(q.qid) && !taken.has(q.qid) && !openQids.has(q.qid))
         .sort((a, b) => led.lastOn.get(a.qid)!.localeCompare(led.lastOn.get(b.qid)!) || a.qid.localeCompare(b.qid));
       const rank = new Map(cands.map((q, i) => [q.qid, i]));
       const left = new Set<string>();
@@ -268,6 +274,8 @@ interface ExtraContext {
   seenBy: Map<string, Set<string>>;
   /** AL-3: window ∪ homework-this-year uses, per child (whole-শাখা rows included). */
   ledger: SectionAvoid;
+  /** The release switch: OFF → the ledger only softens the proposal; create adds no new refusal (§3.6). */
+  loopOn: boolean;
   bank: (BankQuestion & { textBn: string | null })[];
   exposure: Map<string, number>;
   marks: Map<string, number>;
@@ -313,13 +321,17 @@ async function extraContext(sectionId: string, subject: MasterySubject): Promise
       studentsByQid.set(q, (studentsByQid.get(q) ?? new Set()).add(sid));
     }
   }
-  const ledger = await avoidFor({
-    sectionId: ctx.sectionId, academicYearId: ctx.academicYearId, classToken: ctx.classToken, subject,
-    studentIds: roster.map((s) => String(s._id)),
-  });
+  const [ledger, loopOn] = await Promise.all([
+    avoidFor({
+      sectionId: ctx.sectionId, academicYearId: ctx.academicYearId, classToken: ctx.classToken, subject,
+      studentIds: roster.map((s) => String(s._id)),
+    }),
+    isLoop2027On(),
+  ]);
   return {
     ctx,
     ledger,
+    loopOn,
     maxQuestions: policy.resolved.extraHomeworkMaxQuestions,
     includeImproving: policy.resolved.extraHomeworkIncludeImproving,
     states,
@@ -411,7 +423,9 @@ export async function createExtraHomework(
     seenStudents.add(sh.studentId);
     const who = personName(onRoster.get(sh.studentId)!);
     if (sh.items.length > x.maxQuestions) throw new MasteryWorkError(`${who}: সর্বোচ্চ ${bn(x.maxQuestions)}টি প্রশ্ন দেওয়া যায়।`);
-    const seen = new Set([...(x.seenBy.get(sh.studentId) ?? []), ...x.ledger.forChild(sh.studentId)]);
+    // Switch OFF: only the child's evidence / open sheets refuse a pick, as in 2026 (a manual pick that was only in
+    // the শাখা's tracker homework stays allowed). Switch ON: the ledger refuses too.
+    const seen = new Set([...(x.seenBy.get(sh.studentId) ?? []), ...(x.loopOn ? x.ledger.forChild(sh.studentId) : [])]);
     const nos: number[] = [];
     for (const it of sh.items) {
       const o = x.outcomes.get(it.loCode);

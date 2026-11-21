@@ -41,7 +41,7 @@ import { reapplyExclusions } from "../exclusions";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { heldRefusal } from "../examHold";
-import { assertCtAddable, recordUsesSafe, usesOfPaper, withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
+import { assertCtAddable, CtBlockError, recordUsesSafe, usesOfPaper, withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import {
   classTestMismatches,
@@ -276,7 +276,8 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     try {
       await assertCtAddable({ sectionId: ctx.sectionId, qids: items.flatMap((i) => (i.qid ? [i.qid] : [])), classToken: ctx.classToken, subject: input.subject });
     } catch (err) {
-      throw new MasteryWorkError(err instanceof Error ? err.message : "প্রশ্নটি ক্লাস টেস্টে দেওয়া যাবে না।");
+      if (err instanceof CtBlockError) throw new MasteryWorkError(err.message);
+      throw err;
     }
   }
 

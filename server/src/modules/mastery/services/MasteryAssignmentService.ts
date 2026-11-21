@@ -55,7 +55,7 @@ import { objectiveGrain } from "./MasteryGuardianService";
 import type { MasteryLevelLabels } from "@scd/shared";
 
 import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
-import { avoidFor, recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
+import { avoidFor, isLoop2027On, recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 const oid = (s: string) => new Types.ObjectId(s);
@@ -362,9 +362,13 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     sectionId: ctx.sectionId, academicYearId: ctx.academicYearId, classToken: ctx.classToken, subject: input.subject,
     studentIds: roster.map((st) => String(st._id)),
   });
+  // Switch OFF: the ledger only widens the SOFT "seen" set, so Part A's fallback (a seen question when no unseen one
+  // exists) still works exactly as in 2026. Switch ON: the hard rules of §4.3 (hardAvoid, no fallback).
+  const loopOn = await isLoop2027On();
   const partA = buildPartA(
-    sectionWeak, policy.resolved.sectionTriggerPct, new Set([...studentsByQid.keys(), ...openExtraQids]), bctx,
-    new Set([...openExtraQids, ...ledger.forSection]),
+    sectionWeak, policy.resolved.sectionTriggerPct,
+    new Set([...studentsByQid.keys(), ...openExtraQids, ...(loopOn ? [] : ledger.forSection)]), bctx,
+    new Set([...openExtraQids, ...(loopOn ? ledger.forSection : [])]),
   );
   const partAQids = new Set(partA.map((q) => q.qid));
 

@@ -103,7 +103,7 @@ export async function backfillQuestionUse(opts: { apply?: boolean } = {}): Promi
   }
 
   // 4. Every mastery paper.
-  for await (const p of MasteryPaper.find({ source: { $in: ["HW", "CT", "AS", "RETEST"] } }).cursor()) {
+  for await (const p of MasteryPaper.find({ source: { $in: ["HW", "CT", "AS", "RETEST"] } }).lean().cursor()) {
     const kind = p.source === "HW" ? (p.extra ? "EXTRA_HW" : "HW") : p.source === "AS" ? "AS" : p.source === "CT" ? "CT" : "RETEST";
     // An AS / re-test is given when it is SENT (its row day is the creation day, not the due date); HW / CT / extra: their date.
     const given = p.source === "AS" || p.source === "RETEST" ? p.createdAt : p.date;

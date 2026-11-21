@@ -120,7 +120,8 @@ function rowOf(u: UseInput) {
 
 /**
  * Write the given rows, idempotently (upsert on `useKey`). A row that was withdrawn and is given again comes
- * back (withdrawnAt cleared, givenOn refreshed). Returns how many rows were touched.
+ * back (withdrawnAt cleared, givenOn refreshed). A repeat write of a LIVE row (a reprint) changes nothing: the first
+ * given day wins. Returns how many rows were touched.
  */
 export async function recordUses(uses: UseInput[], opts: { onlyNew?: boolean } = {}): Promise<number> {
   const clean = uses.filter((u) => typeof u.qid === "string" && u.qid.trim() !== "");
@@ -129,7 +130,19 @@ export async function recordUses(uses: UseInput[], opts: { onlyNew?: boolean } =
     const r = rowOf(u);
     const { useKey, ...rest } = r;
     // onlyNew (the backfill): an existing row — including one withdrawn on purpose — is left exactly as it is.
-    const update = opts.onlyNew ? { $setOnInsert: { ...rest, withdrawnAt: null } } : { $set: { ...rest, withdrawnAt: null } };
+    const { givenOn, ...others } = rest;
+    const update = opts.onlyNew
+      ? { $setOnInsert: { ...rest, withdrawnAt: null } }
+      : [
+          {
+            $set: {
+              ...Object.fromEntries(Object.entries(others).map(([k, v]) => [k, { $literal: v }])),
+              // First given day wins; a row that was withdrawn and is given again takes the new day.
+              givenOn: { $cond: [{ $ne: [{ $ifNull: ["$withdrawnAt", null] }, null] }, { $literal: givenOn }, { $ifNull: ["$givenOn", { $literal: givenOn }] }] },
+              withdrawnAt: null,
+            },
+          },
+        ];
     return { updateOne: { filter: { useKey }, update, upsert: true } };
   });
   await QuestionUse.bulkWrite(ops, { ordered: false });
@@ -140,9 +153,12 @@ export async function recordUses(uses: UseInput[], opts: { onlyNew?: boolean } =
 export async function withdrawUses(
   sourceType: QuestionUseSourceType,
   sourceId: string | Types.ObjectId,
-  opts: { studentIds?: (string | Types.ObjectId)[]; at?: Date } = {},
+  opts: { studentIds?: (string | Types.ObjectId)[]; at?: Date; qids?: string[]; givenOn?: string } = {},
 ): Promise<number> {
   const filter: Record<string, unknown> = { sourceType, sourceId: oid(sourceId), withdrawnAt: null };
+  // A top-up revert names the exact rows of the spawned resubmission (its qids, on the day it was issued).
+  if (opts.qids) filter.qid = { $in: opts.qids };
+  if (opts.givenOn) filter.givenOn = opts.givenOn;
   if (opts.studentIds) filter.studentIds = [...new Set(opts.studentIds.map(String))].sort().map(oid);
   const res = await QuestionUse.updateMany(filter, { $set: { withdrawnAt: opts.at ?? new Date() } });
   return res.modifiedCount ?? 0;
@@ -395,6 +411,14 @@ export function ctBlockMessage(weeks: number, qids: string[]): string {
   return `এই প্রশ্ন গত ${bnNum(weeks)} সপ্তাহে বাড়ির কাজ / অ্যাসাইনমেন্টে ছিল (${list})`;
 }
 
+/** The R19 refusal — the only error a caller should show as a block (anything else is an internal failure). */
+export class CtBlockError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CtBlockError";
+  }
+}
+
 /**
  * The qids among `qids` that a class test of this শাখা may NOT take: given as HW / EXTRA_HW / AS to the শাখা or
  * to any child on its roster within the window. Empty when the release switch is off (§3.6).
@@ -405,18 +429,21 @@ export async function ctBlockedQids(q: {
   classToken?: string | null;
   subject?: string;
   today?: string;
+  /** Only these children (a group-anchored test: the group's members in this শাখা), instead of the whole roster. */
+  studentIds?: string[];
 }): Promise<{ blocked: string[]; weeks: number }> {
   // Switch first (§3.6): while it is off nothing else is read.
   if (q.qids.length === 0 || !(await isLoop2027On())) return { blocked: [], weeks: 4 };
   const weeks = await noRepeatWeeks(q.classToken, q.subject);
-  const roster = await Student.find({ sectionId: oid(q.sectionId), active: true }).select("_id").lean(); // bounded: one roster
+  const kids = q.studentIds ?? (await Student.find({ sectionId: oid(q.sectionId), active: true }).select("_id").lean()).map((s) => String(s._id)); // bounded: one roster
   const rows = await usedInWindow({
     sectionIds: [q.sectionId],
-    studentIds: roster.map((s) => String(s._id)),
+    studentIds: kids,
     sinceDay: windowStartKey(q.today ?? todayKey(), weeks * 7),
     kinds: CT_BLOCKING_KINDS,
   });
-  const used = qidsOf(rows);
+  // A named child list (a group-anchored test): only whole-শাখা rows and rows that reached THOSE children count.
+  const used = q.studentIds ? new Set(q.studentIds.flatMap((s) => [...qidsOf(rows, s)])) : qidsOf(rows);
   return { blocked: [...new Set(q.qids)].filter((x) => used.has(x)), weeks };
 }
 
@@ -427,9 +454,10 @@ export async function assertCtAddable(q: {
   classToken?: string | null;
   subject?: string;
   today?: string;
+  studentIds?: string[];
 }): Promise<void> {
   const { blocked, weeks } = await ctBlockedQids(q);
-  if (blocked.length > 0) throw new Error(ctBlockMessage(weeks, blocked));
+  if (blocked.length > 0) throw new CtBlockError(ctBlockMessage(weeks, blocked));
 }
 
 /** Section → { academicYearId, classToken } for rows written from a section id alone. */
@@ -460,7 +488,7 @@ export async function recordUsesSafe(uses: UseInput[]): Promise<void> {
 export async function withdrawUsesSafe(
   sourceType: QuestionUseSourceType,
   sourceId: string | Types.ObjectId,
-  opts: { studentIds?: (string | Types.ObjectId)[] } = {},
+  opts: { studentIds?: (string | Types.ObjectId)[]; qids?: string[]; givenOn?: string } = {},
 ): Promise<void> {
   try {
     await withdrawUses(sourceType, sourceId, opts);
@@ -569,11 +597,44 @@ export async function usesOfSet(
 
 /** R19 re-check at finalise / print for a CT set (only while the release switch is on). Throws the refusal. */
 export async function assertSetCtAllowed(setId: string | Types.ObjectId, classTestId?: string | null): Promise<void> {
+  // The switch first (§3.6): while it is off no other ledger or set query runs.
+  if (!(await isLoop2027On())) return;
   const set = await AssessmentSet.findById(setId).select("setType").lean();
   if (!set || set.setType !== "CT") return;
   const plan = await planOfSet(setId, classTestId);
   if (!plan) return;
   for (const t of plan.targets) {
-    await assertCtAddable({ sectionId: t.sectionId, qids: plan.qids.map((q) => q.qid), classToken: t.classToken, subject: plan.subject });
+    await assertCtAddable({ sectionId: t.sectionId, qids: plan.qids.map((q) => q.qid), classToken: t.classToken, subject: plan.subject, studentIds: t.studentIds.length > 0 ? t.studentIds : undefined });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Withdraw on cancel (AC-B11 echo for the set / class-test sources)
+// ---------------------------------------------------------------------------
+
+/**
+ * A SET print request was cancelled: its set's rows are withdrawn — unless another live print request still
+ * carries the same set (then the questions did go to the children).
+ */
+export async function withdrawForCancelledPrint(setId: string | Types.ObjectId, printRequestId: string | Types.ObjectId): Promise<void> {
+  try {
+    const { PrintRequest } = await import("../../printing/models/PrintRequest");
+    const live = await PrintRequest.exists({ setId: oid(setId), _id: { $ne: oid(printRequestId) }, status: { $ne: "CANCELLED" } });
+    if (!live) await withdrawUses("ASSESSMENT_SET", setId);
+  } catch (err) {
+    console.error("[question-use] withdraw on print cancel failed:", err);
+  }
+}
+
+/** A class test was cancelled / retired: the questions of its set and of its linked CT sheet never sat. */
+export async function withdrawForClassTest(testId: string | Types.ObjectId): Promise<void> {
+  try {
+    const test = await ClassTest.findById(testId).select("setId").lean();
+    if (test?.setId) await withdrawUses("ASSESSMENT_SET", test.setId);
+    const { MasteryPaper } = await import("../../mastery/models/MasteryPaper");
+    const paper = await MasteryPaper.findOne({ "links.classTestId": oid(testId) }).select("_id").lean();
+    if (paper) await withdrawUses("MASTERY_PAPER", paper._id);
+  } catch (err) {
+    console.error("[question-use] withdraw on class-test cancel failed:", err);
   }
 }

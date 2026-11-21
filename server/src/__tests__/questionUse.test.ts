@@ -60,6 +60,10 @@ import {
   usedInWindow,
   usesOfPaper,
   windowStartKey,
+  withdrawForCancelledPrint,
+  withdrawForClassTest,
+  assertSetCtAllowed,
+  CtBlockError,
   withdrawUses,
   writeSetUses,
   type UseInput,
@@ -577,6 +581,162 @@ describe("AC-U3: a group-anchored class test", () => {
 // ---------------------------------------------------------------------------
 // Backfill
 // ---------------------------------------------------------------------------
+
+
+// ---------------------------------------------------------------------------
+// Review fixes: the switch OFF changes nothing; reprint; member-only group check; withdraw on cancel
+// ---------------------------------------------------------------------------
+
+describe("release switch OFF: the builders behave as in 2026", () => {
+  let gHw = "";
+  beforeAll(async () => {
+    await setLoop(false);
+    await QuestionUse.deleteMany({ sectionId: new Types.ObjectId(secG), qid: { $regex: "^QP-MATH-C3-U07-Q94" } });
+    // Evidence for the শাখা: two zero items on A (teacher-written, so no ledger row) → g1 is WEAK.
+    const hw = await createPaper({
+      sectionId: secG, subject: "MATH", source: "HW", date: day(200),
+      items: [
+        { origin: "TEACHER", textBn: "১ + ১", loCode: A, questionTypeCode: "QT-SHORT" },
+        { origin: "TEACHER", textBn: "২ + ২", loCode: A, questionTypeCode: "QT-SHORT" },
+      ],
+    }, TEACHER);
+    gHw = hw.paperId;
+    await saveResults(gHw, [{ studentId: g1, items: [{ itemNo: 1, marks: 0 }, { itemNo: 2, marks: 0 }] }], TEACHER);
+    await confirmPaper(gHw, TEACHER);
+    // The WHOLE objective pool is in the ledger for this শাখা (tracker homework, recent).
+    for (let n = 1; n <= 12; n++) await put(Q(n), "HW", 3, { sectionId: secG });
+  });
+
+  it("Part A still returns an item through its fallback (the ledger only softens the seen set)", async () => {
+    const layout = {
+      totalMarks: 2, minutes: 10, partAOn: true, partAMarks: 2, partALoCodes: [], partBMarks: 0,
+      mixWeak: 60, mixImproving: 25, mixRevision: 15, questionTypeCodes: [] as string[],
+    };
+    const off = await buildAssignment({ sectionId: secG, subject: "MATH", dueDate: day(-9), layout, rememberLayout: false }, TEACHER);
+    expect(off.partA).toHaveLength(1);
+    // Switch ON: the hard rule of 4.3 — a homework question of the year is never in an assignment.
+    await setLoop(true);
+    try {
+      const on = await buildAssignment({ sectionId: secG, subject: "MATH", dueDate: day(-9), layout, rememberLayout: false }, TEACHER);
+      expect(on.partA).toHaveLength(0);
+    } finally {
+      await setLoop(false);
+    }
+  });
+
+  it("the class-homework draft still returns an item (the book line) although every bank question is in the ledger", async () => {
+    await MasteryOutcome.updateOne({ code: A }, { $set: { bookRef: { version: null, chapter: 7, lesson: null, exercises: ["7/অনুশীলনী/1"] } } });
+    const d = await homeworkDraft(secG, "MATH", day(0), TEACHER);
+    expect(d.items.map((i) => [i.origin, i.fromBook])).toEqual([["TEACHER", true]]);
+  });
+
+  it("extra homework accepts a manual pick that was only in the শাখা's tracker homework; ON it refuses", async () => {
+    const pick = { artifactId: gold.get(Q(5))!, loCode: A };
+    await expect(createExtraHomework({ sectionId: secG, subject: "MATH", date: day(1), sheets: [{ studentId: g1, items: [pick] }] }, TEACHER)).resolves.toMatchObject({ extra: true });
+    await setLoop(true);
+    try {
+      await expect(createExtraHomework({ sectionId: secG, subject: "MATH", date: day(2), sheets: [{ studentId: g1, items: [{ artifactId: gold.get(Q(6))!, loCode: A }] }] }, TEACHER))
+        .rejects.toThrow(/আগেই দেখেছে/);
+    } finally {
+      await setLoop(false);
+    }
+  });
+
+  it("switch ON: the R23 repeat never offers a question on a child's open extra sheet", async () => {
+    // Open extra sheet (made while OFF above) holds Q5 for g1. Rebuild the share: six old homework questions, Q5 the oldest.
+    await QuestionUse.deleteMany({ sectionId: new Types.ObjectId(secG), qid: { $regex: "^QP-MATH-C3-U07-Q94" }, kind: { $ne: "EXTRA_HW" } });
+    for (const [n, ago] of [[5, 90], [2, 80], [1, 70], [3, 70], [4, 70], [6, 70]] as const) await put(Q(n), "HW", ago, { sectionId: secG });
+    await setLoop(true);
+    try {
+      const d = await homeworkDraft(secG, "MATH", day(0), TEACHER);
+      expect(d.items).toHaveLength(1);
+      expect(d.items[0]).toMatchObject({ repeat: true });
+      expect(d.items[0].qid).not.toBe(Q(5)); // the oldest, but it is on g1's open sheet
+      expect(d.items[0].qid).toBe(Q(2));
+    } finally {
+      await setLoop(false);
+    }
+  });
+});
+
+describe("repeat writes and withdraw on cancel", () => {
+  it("a reprint changes nothing: the first given day wins; a withdrawn row given again takes the new day", async () => {
+    const sourceId = new Types.ObjectId();
+    const row = (givenOn: string) => ({
+      qid: "QP-REPRINT", kind: "CT" as const, sourceType: "ASSESSMENT_SET" as const, sourceId, itemNo: 1,
+      academicYearId: yearId, sectionId: secB, classToken: "C3", subject: "MATH", givenOn,
+    });
+    await recordUses([row(day(10))]);
+    await recordUses([row(day(1))]);
+    expect((await QuestionUse.findOne({ qid: "QP-REPRINT" }).lean())!.givenOn).toBe(day(10));
+    expect(await QuestionUse.countDocuments({ qid: "QP-REPRINT" })).toBe(1);
+    await withdrawUses("ASSESSMENT_SET", sourceId);
+    await recordUses([row(day(1))]);
+    const again = await QuestionUse.findOne({ qid: "QP-REPRINT" }).lean();
+    expect(again!.givenOn).toBe(day(1));
+    expect(again!.withdrawnAt).toBeNull();
+  });
+
+  it("a cancelled print request withdraws its set's rows — unless another live request still carries the set", async () => {
+    const setId = new Types.ObjectId();
+    await recordUses([{ qid: "QP-PRINT-C", kind: "HW", sourceType: "ASSESSMENT_SET", sourceId: setId, itemNo: 1, academicYearId: yearId, sectionId: secB, classToken: "C3", subject: "MATH", givenOn: day(1) }]);
+    const { PrintRequest } = await import("../modules/printing/models/PrintRequest");
+    const a = new Types.ObjectId();
+    const b = new Types.ObjectId();
+    await PrintRequest.collection.insertMany([{ _id: a, setId, status: "CANCELLED" }, { _id: b, setId, status: "REQUESTED" }]);
+    await withdrawForCancelledPrint(setId, a);
+    expect((await QuestionUse.findOne({ qid: "QP-PRINT-C" }).lean())!.withdrawnAt).toBeNull();
+    await PrintRequest.collection.updateOne({ _id: b }, { $set: { status: "CANCELLED" } });
+    await withdrawForCancelledPrint(setId, b);
+    expect((await QuestionUse.findOne({ qid: "QP-PRINT-C" }).lean())!.withdrawnAt).toBeInstanceOf(Date);
+  });
+
+  it("a cancelled class test withdraws its set's rows and its CT sheet's rows", async () => {
+    const setId = new Types.ObjectId();
+    const test = await ClassTest.collection.insertOne({ _id: new Types.ObjectId(), ctId: "CT-QU-X", sectionId: new Types.ObjectId(secB), subject: "MATH", setId, status: "CANCELLED" });
+    await recordUses([{ qid: "QP-CT-CANCEL", kind: "CT", sourceType: "ASSESSMENT_SET", sourceId: setId, itemNo: 1, academicYearId: yearId, sectionId: secB, classToken: "C3", subject: "MATH", givenOn: day(1) }]);
+    await withdrawForClassTest(test.insertedId);
+    expect((await QuestionUse.findOne({ qid: "QP-CT-CANCEL" }).lean())!.withdrawnAt).toBeInstanceOf(Date);
+  });
+
+  it("a reverted top-up withdraws only the spawned resubmission's rows, not the child's other top-up rows on the item", async () => {
+    const itemId = new Types.ObjectId();
+    const base = { kind: "HW" as const, sourceType: "HOMEWORK_ITEM" as const, sourceId: itemId, academicYearId: yearId, sectionId: secB, classToken: "C3", subject: "MATH", studentIds: [sids[0]] };
+    await recordUses([{ ...base, qid: "QP-TOP-1", givenOn: day(5) }, { ...base, qid: "QP-TOP-2", givenOn: day(2) }]);
+    await withdrawUses("HOMEWORK_ITEM", itemId, { studentIds: [sids[0]], qids: ["QP-TOP-2"], givenOn: day(2) });
+    expect((await QuestionUse.findOne({ qid: "QP-TOP-1" }).lean())!.withdrawnAt).toBeNull();
+    expect((await QuestionUse.findOne({ qid: "QP-TOP-2" }).lean())!.withdrawnAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("group-anchored check tests only the group's member children", () => {
+  it("a use by a NON-member child of the member শাখা does not block; a member's does", async () => {
+    const [grp] = await SubjectGroup.create([{ track: "quran", level: "Najera", gender: "mixed", code: "QU-Q-1", nameBn: "নাজেরা" }]);
+    await SubjectGroupMembership.create([{ groupId: grp._id, studentId: new Types.ObjectId(sids[2]), track: "quran" }]);
+    await put(Q(19), "EXTRA_HW", 3, { studentIds: [sids[1]] }); // not a member
+    await put(Q(20), "EXTRA_HW", 3, { studentIds: [sids[2]] }); // a member
+    const mk = async (qid: string, ctId: string) => {
+      const set = await AssessmentSet.create({
+        setType: "CT", sectionId: new Types.ObjectId(secB), classId, status: "assembled",
+        basketItems: [{ artifactId: new Types.ObjectId(gold.get(qid)), qid, marks: 2 }], createdBy: new Types.ObjectId(), assembledAt: new Date(),
+      });
+      const t = await ClassTest.collection.insertOne({ _id: new Types.ObjectId(), ctId, subjectGroupId: grp._id, subject: "QURAN", setId: set._id, status: "REQUESTED", examDate: new Date(`${day(-7)}T00:00:00.000Z`) });
+      return { set, testId: String(t.insertedId) };
+    };
+    await setLoop(true);
+    try {
+      const ok = await mk(Q(19), "CT-QU-M1");
+      await expect(assertSetCtAllowed(ok.set._id, ok.testId)).resolves.toBeUndefined();
+      const bad = await mk(Q(20), "CT-QU-M2");
+      await expect(assertSetCtAllowed(bad.set._id, bad.testId)).rejects.toBeInstanceOf(CtBlockError);
+    } finally {
+      await setLoop(false);
+    }
+    // Switch OFF: nothing is read, nothing refused.
+    const off = await mk(Q(20), "CT-QU-M3");
+    await expect(assertSetCtAllowed(off.set._id, off.testId)).resolves.toBeUndefined();
+  });
+});
 
 describe("backfill", () => {
   it("dry run writes nothing; --apply rebuilds the ledger from the sources; a second run adds nothing; a withdrawn row stays withdrawn", async () => {
