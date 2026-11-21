@@ -16,7 +16,7 @@
  * route is tinted with `primaryContainer`.
  */
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView } from "react-native";
 import { DrawerContentScrollView, type DrawerContentComponentProps } from "@react-navigation/drawer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "urql";
@@ -1052,6 +1052,28 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     );
   };
 
+  // Blank sidebar after a tap (owner report, web, 21 Nov 2026): tapping a row makes every group except the
+  // active one fall back to collapsed (D-#1652), so the list suddenly gets much shorter — but the scroll view
+  // keeps its old offset, now past the end of the shorter list, and the whole panel (title included) shows
+  // empty until a reload or reopening. Whenever the content shrinks below the current offset, pull the
+  // offset back to the last valid position.
+  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollY = React.useRef(0);
+  const viewH = React.useRef(0);
+  const onDrawerScroll = React.useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = e.nativeEvent.contentOffset.y;
+  }, []);
+  const onDrawerLayout = React.useCallback((e: LayoutChangeEvent) => {
+    viewH.current = e.nativeEvent.layout.height;
+  }, []);
+  const onDrawerContentSize = React.useCallback((_w: number, h: number) => {
+    const maxY = Math.max(0, h - viewH.current);
+    if (scrollY.current > maxY) {
+      scrollY.current = maxY;
+      scrollRef.current?.scrollTo({ y: maxY, animated: false });
+    }
+  }, []);
+
   // D-#636: `paddingTop: 0` killed the safe-area inset DrawerContentScrollView
   // applies by default, so on a phone the "SCD Hub" title rendered UNDER the status
   // bar — the clock and the battery icon sat on top of the words (owner screenshot,
@@ -1059,7 +1081,15 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // where `insets.top` is 0 anyway, so paying the real inset fixes the phone without
   // reopening that gap.
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: insets.top }}>
+    <DrawerContentScrollView
+      {...props}
+      ref={scrollRef}
+      onScroll={onDrawerScroll}
+      scrollEventThrottle={64}
+      onLayout={onDrawerLayout}
+      onContentSizeChange={onDrawerContentSize}
+      contentContainerStyle={{ paddingTop: insets.top }}
+    >
       <View
         style={{
           paddingVertical: space(4),
