@@ -65,8 +65,19 @@ export interface EmitResult {
   dedupeKey: string;
 }
 
+/**
+ * DEV-SCRIPT-ONLY mute (AL-2, docs/prd-academic-loop-2027.md section 9.3): while on, `emit()` writes no
+ * row and runs no channel, so the fake-2027 generator leaves no Notification behind. Only the dev
+ * generator calls this; the server never turns it on.
+ */
+let devMute = false;
+export function setDevNotificationMute(on: boolean): void {
+  devMute = on;
+}
+
 export async function emit(input: EmitInput): Promise<EmitResult> {
   assertExactlyOneRecipient("emit()", input.recipientUserId, input.recipientGuardianId);
+  if (devMute) return { created: false, dedupeKey: input.dedupeKey };
   if (!(NOTIFICATION_KINDS as readonly string[]).includes(input.kind)) {
     throw new Error(`emit(): unknown notification kind: ${input.kind}`);
   }
