@@ -480,7 +480,10 @@ export type AuditEventKind =
   | "SAFEGUARDING_REFERRAL_RAISED" // a safeguarding referral raised — referralId, studentId, source, signs; never text (D-#1564)
   | "SAFEGUARDING_REFERRAL_SEEN" // the receiver marked a safeguarding referral seen (D-#1564)
   | "REVIEW_PROGRAM_WRITE" // review supervision: a program/batch/task created, adopted, moved, cancelled, added or re-dated; meta = what + who
-  | "REVIEW_SELF_SERVE"; // a reviewer took their own next chunk ("আরও কাজ দিন") or the Principal changed the ladder/settings; meta = what + chapters
+  | "REVIEW_SELF_SERVE" // a reviewer took their own next chunk ("আরও কাজ দিন") or the Principal changed the ladder/settings; meta = what + chapters
+  | "TELEGRAM_LINKED" // an account linked a Telegram chat (TB-1, D-#1666); never the chat content
+  | "TELEGRAM_UNLINKED" // an account unlinked Telegram (app button or /stop)
+  | "TELEGRAM_TICKET_FILED"; // a bug report became a GitHub issue — issue number only
 
 export interface IAudit extends Document {
   _id: Types.ObjectId;

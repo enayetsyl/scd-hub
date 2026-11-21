@@ -61,6 +61,8 @@ const OPEN_FIELDS: Record<string, string> = {
   academicPauses: "school calendar", academicPausesInRange: "school calendar", academicPauseKinds: "fixed list",
   // Review voice clips (D-#1658): row-scoped in the service — own reviewer (drafts), plan author, matching manager.
   reviewVoiceNotes: "row-scoped in the service",
+  // Telegram bot link (TB-1, D-#1666): the caller's own link state / one-time deep link / unlink (SELF; role rules in the service).
+  myTelegramLink: "own Telegram link", createTelegramLink: "own Telegram link", unlinkTelegram: "own Telegram link",
   // Sign-in and the caller's own session / profile / access (SELF; a guardian uses them too).
   staffLogin: "sign-in", guardianLogin: "sign-in", refreshSession: "own session", endImpersonation: "end own View-as",
   me: "own profile", myPermissions: "own access", myTemplates: "own templates", myScopes: "own scope grants",
