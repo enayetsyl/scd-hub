@@ -19,7 +19,8 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import { QUESTIONS_QUERY, ADD_QUESTION_TO_SET, type QuestionListItem } from "../../graphql/operations";
 import type { QuestionsStackParamList, TabParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Badge, Button, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
+import { friendlyError } from "../../lib/errors";
 import { QueryGate } from "../../components/QueryGate";
 import { SearchField } from "../../components/SearchField";
 import { FilterBar, type FilterChip } from "../../components/FilterBar";
@@ -79,6 +80,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   const addToSetId = route.params?.addToSetId;
   const [, addToSetMut] = useMutation(ADD_QUESTION_TO_SET);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [addError, setAddError] = useState<string | null>(null);
 
   // Clear the add-mode param when leaving the screen so a later drawer visit to
   // Questions opens the normal basket mode (route params otherwise persist, incl. in
@@ -93,7 +95,13 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   async function onAddToSet(artifactId: string): Promise<void> {
     if (!addToSetId || addedIds.has(artifactId)) return;
     const res = await addToSetMut({ setId: addToSetId, artifactId });
-    if (!res.error) setAddedIds((prev) => new Set(prev).add(artifactId));
+    if (res.error) {
+      // AL-3 (R19): the server's class-test refusal (last N weeks as homework / assignment) is shown, not swallowed.
+      setAddError(friendlyError(res.error));
+      return;
+    }
+    setAddError(null);
+    setAddedIds((prev) => new Set(prev).add(artifactId));
   }
 
   // One query per (filters, search, cursor) triple. `pause` until the persisted
@@ -206,10 +214,21 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
     pause: usageQids.length === 0,
   });
   const usageByQid = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of usageQ.data?.questionUsageCounts ?? []) m.set(r.qid, r.count);
+    const m = new Map<string, { count: number; hw: number; as: number; ct: number }>();
+    for (const r of usageQ.data?.questionUsageCounts ?? []) m.set(r.qid, { count: r.count, hw: r.hwCount, as: r.asCount, ct: r.ctCount });
     return m;
   }, [usageQ.data]);
+  /** AL-3: the badge shows the homework / assignment / class-test counts; any other use (re-test) keeps the total. */
+  function usageBadge(qid: string | null | undefined): string | null {
+    const u = usageByQid.get(qid ?? "");
+    if (!u || u.count <= 0) return null;
+    const parts = [
+      u.hw > 0 ? `${STR.quUseHw} ${bnNum(u.hw)}` : null,
+      u.as > 0 ? `${STR.quUseAs} ${bnNum(u.as)}` : null,
+      u.ct > 0 ? `${STR.quUseCt} ${bnNum(u.ct)}` : null,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(" · ") : `${bnNum(u.count)} ${STR.quUsedIn}`;
+  }
 
   function renderCardBody(q: QuestionListItem): React.ReactElement {
     const text = questionText(q.payloadJson);
@@ -230,9 +249,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
           {q.retired ? <Badge text={STR.qeRetired} tone="danger" /> : null}
           {/* Already in a set (QU-1) — the count is the warning; the WHERE is on the
               preview, because a date and a section are what decide whether reuse matters. */}
-          {(usageByQid.get(q.qid ?? "") ?? 0) > 0 ? (
-            <Badge text={`${bnNum(usageByQid.get(q.qid ?? "") ?? 0)} ${STR.quUsedIn}`} tone="info" />
-          ) : null}
+          {usageBadge(q.qid) ? <Badge text={usageBadge(q.qid)!} tone="info" /> : null}
         </View>
         {/* Grapheme-safe clamp (F15): numberOfLines, NEVER a substring — a
             code-unit slice can cut a Bangla conjunct mid-cluster. */}
@@ -300,6 +317,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
             <Muted>{STR.addingToSet}</Muted>
           </Card>
         ) : null}
+        {addError ? <Notice tone="danger" message={addError} /> : null}
         <SearchField value={qb.search} onSearch={qb.setSearch} />
         {mayHold && !addToSetId ? (
           <Button title={holdOpen ? STR.qExamHide : STR.qExamOpenBulk} variant="secondary" onPress={() => setHoldOpen(!holdOpen)} />

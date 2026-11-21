@@ -33,6 +33,7 @@ import { importCatalogue, savePolicy, setEnablement } from "../modules/mastery/s
 import { confirmPaper, createPaper, saveResults } from "../modules/mastery/services/MasteryWorkService";
 import { createExtraHomework, extraHomeworkPreview, homeworkDraft } from "../modules/mastery/services/MasteryHomeworkService";
 import { MasteryPaper } from "../modules/mastery/models/MasteryPaper";
+import { QuestionUse } from "../modules/assessment/models/QuestionUse";
 import { MasteryResult } from "../modules/mastery/models/MasteryResult";
 import { MasteryAssignment } from "../modules/mastery/models/MasteryAssignment";
 import { MasteryAssignmentSheet } from "../modules/mastery/models/MasteryAssignmentSheet";
@@ -142,6 +143,8 @@ afterEach(async () => {
   await MasteryEvidence.deleteMany({ paperId: { $in: ids } });
   await MasteryResult.deleteMany({ paperId: { $in: ids } });
   await MasteryPaper.deleteMany({ _id: { $in: ids } });
+  // AL-3: the fixture voids its papers raw, so the ledger rows they wrote go with them (as deletePaper withdraws them).
+  await QuestionUse.deleteMany({ sourceId: { $in: ids } });
   await MasteryAction.deleteMany({ kind: "EXTRA_HOMEWORK" });
   await MasteryAssignment.deleteMany({});
   await MasteryAssignmentSheet.deleteMany({});

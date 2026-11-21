@@ -27,6 +27,7 @@ import { isSameDhakaDay } from "../../../lib/dhakaDay";
 import { writeAudit } from "../../platform/services/AuditService";
 import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
 import { recordWorkRevert } from "./WorkMistakeService";
+import { withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
 
 export interface HwRevertInput {
   recordId: string;
@@ -81,6 +82,10 @@ export async function revertHomeworkRecord(input: HwRevertInput): Promise<HwReve
           }
           deletedResubmissionId = spawn._id.toString();
           await HomeworkStudentRecord.deleteOne({ _id: spawn._id });
+          // AL-3: the top-up the spawn carried was never worked — its per-child ledger rows are withdrawn.
+          if ((spawn.topupQids ?? []).length > 0) {
+            await withdrawUsesSafe("HOMEWORK_ITEM", rec.hwItemId, { studentIds: [rec.studentId] });
+          }
         }
         break;
       }

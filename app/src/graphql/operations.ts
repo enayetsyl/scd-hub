@@ -10189,6 +10189,8 @@ export interface QuestionUseT {
   setId: string;
   setName: string | null;
   setType: string;
+  /** HW | AS | CT | EXTRA_HW | RETEST — the use-history kind (AL-3). */
+  kind: string;
   status: string;
   classLevel: number | null;
   className: string | null;
@@ -10198,11 +10200,11 @@ export interface QuestionUseT {
 
 /** Badge counts for a whole bank page — one query, not one per row. */
 export const QUESTION_USAGE_COUNTS = gql<
-  { questionUsageCounts: { qid: string; count: number }[] },
+  { questionUsageCounts: { qid: string; count: number; hwCount: number; asCount: number; ctCount: number }[] },
   { qids: string[] }
 >`
   query QuestionUsageCounts($qids: [String!]!) {
-    questionUsageCounts(qids: $qids) { qid count }
+    questionUsageCounts(qids: $qids) { qid count hwCount asCount ctCount }
   }
 `;
 
@@ -10210,7 +10212,7 @@ export const QUESTION_USAGE_COUNTS = gql<
 export const QUESTION_USAGE = gql<{ questionUsage: QuestionUseT[] }, { qid: string }>`
   query QuestionUsage($qid: String!) {
     questionUsage(qid: $qid) {
-      setId setName setType status classLevel className sectionName usedOn
+      setId setName setType kind status classLevel className sectionName usedOn
     }
   }
 `;

@@ -46,6 +46,7 @@ import { heldRefusal } from "../examHold";
 import { pickTyped, typeFor, typeOfQuestion, type BankQuestion, type BuilderLayout, type OutcomeInfo } from "../assignmentBuilder";
 import { isTaggedRow } from "../rollup";
 import { notifyExtraHomework } from "../notify";
+import { avoidFor, isLoop2027On, recordUsesSafe, usesOfPaper, type SectionAvoid } from "../../assessment/services/QuestionUseService";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -71,6 +72,16 @@ async function sectionSeen(sectionId: Types.ObjectId, subject: MasterySubject): 
   return by;
 }
 
+/**
+ * R21 (§3.2): how many more bank questions homework may take on one objective — the homework share
+ * (`pct` % of the gold pool, rounded down) minus what the শাখা already used as homework this year, capped at `want`.
+ */
+export function homeworkShareLeft(poolQids: string[], led: Pick<SectionAvoid, "homeworkYear">, pct: number, want: number): number {
+  const cap = Math.floor((poolQids.length * pct) / 100 + 1e-9);
+  const used = poolQids.filter((q) => led.homeworkYear.has(q)).length;
+  return Math.max(0, Math.min(want, cap - used));
+}
+
 // ---------------------------------------------------------------------------
 // 5.1 — the class homework drafted from the lesson taught
 // ---------------------------------------------------------------------------
@@ -85,6 +96,8 @@ export interface DraftItem {
   marks: number;
   /** A TEACHER item naming the book's exercises (no bank question for the code). */
   fromBook: boolean;
+  /** R23 (AL-3): the least-recently-used question the শাখা had before, re-offered ("আবার"). */
+  repeat: boolean;
 }
 
 export interface HomeworkDraft {
@@ -142,18 +155,22 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
   const questionCodes = codes.filter((c) => byCode.get(c)?.assess === "QUESTION");
   if (questionCodes.length === 0 && out.rubricCodes.length === 0) return { ...out, reason: "NO_CODES_ON_PLAN" };
 
-  const [policy, marks, bank, seen, outcomes] = await Promise.all([
+  const [policy, marks, bank, seen, outcomes, led, loopOn] = await Promise.all([
     getPolicy(ctx.classToken, subject),
     marksTable(ctx.classToken, subject),
     goldBank(questionCodes),
     sectionSeen(ctx.sectionId, subject),
     MasteryOutcome.find({ code: { $in: questionCodes } }).select("code chapterNumber questionTypeCodes bookRef").lean(),
+    // AL-3 (§4.3 / §4.7): unused first — never a question the শাখা had in the window or as homework this year.
+    avoidFor({ sectionId: ctx.sectionId, academicYearId: ctx.academicYearId, classToken: ctx.classToken, subject, today: dateKey }),
+    isLoop2027On(),
   ]);
   const perObjective = policy.resolved.homeworkDraftQuestionsPerObjective;
   const maxItems = policy.resolved.homeworkDraftMaxItems;
   const exposure = new Map([...seen].map(([q, s]) => [q, s.size]));
-  // Never a question any student of the section has seen.
-  const avoid = new Set(seen.keys());
+  // Never a question any student of the section has seen, nor one the ledger holds for the শাখা.
+  const avoid = new Set([...seen.keys(), ...led.forSection]);
+  const sharePct = policy.resolved.homeworkBankSharePct;
   const info = new Map(outcomes.map((o) => [o.code, o]));
 
   for (const code of questionCodes) {
@@ -163,19 +180,41 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
     }
     const o = info.get(code)!;
     const lo: OutcomeInfo = { code, chapterNumber: o.chapterNumber ?? null, questionTypeCodes: o.questionTypeCodes ?? [] };
+    // R21 (switch on): homework may take a bank question only while the homework-used count on this objective
+    // stays within `homeworkBankSharePct` of its gold pool; the rest is kept for assignments and class tests.
+    const pool = bank.filter((q) => q.loCodes.includes(code));
+    const take = loopOn ? homeworkShareLeft(pool.map((q) => q.qid), led, sharePct, perObjective) : perObjective;
     // PR-G: each question comes with its own type — a typed one only as that type.
-    const picked: { q: BankQuestion; qt: string }[] = [];
-    while (picked.length < perObjective && out.items.length + picked.length < maxItems) {
+    const picked: { q: BankQuestion; qt: string; repeat: boolean }[] = [];
+    while (picked.length < take && out.items.length + picked.length < maxItems) {
       const p = pickTyped(lo, avoid, { bank, exposure, marksOf: marks, layout: OPEN_LAYOUT });
       if (!p) break;
       avoid.add(p.q.qid);
-      picked.push(p);
+      picked.push({ ...p, repeat: false });
+    }
+    // R23 (switch on): no unused question left (or the share is used up) — the least-recently-used one the
+    // শাখা had before, outside the no-repeat window, marked "আবার". Else the book exercise below.
+    if (loopOn && (take === 0 || picked.length < take)) {
+      const want = (take === 0 ? perObjective : take) - picked.length;
+      const taken = new Set([...picked.map((p) => p.q.qid), ...out.items.map((i) => i.qid ?? "")]);
+      const cands = pool
+        .filter((q) => led.lastOn.has(q.qid) && !led.windowQids.has(q.qid) && !taken.has(q.qid))
+        .sort((a, b) => led.lastOn.get(a.qid)!.localeCompare(led.lastOn.get(b.qid)!) || a.qid.localeCompare(b.qid));
+      const rank = new Map(cands.map((q, i) => [q.qid, i]));
+      const left = new Set<string>();
+      for (let k = 0; k < want && out.items.length + picked.length < maxItems; k++) {
+        const p = pickTyped(lo, left, { bank: cands, exposure: rank, marksOf: marks, layout: OPEN_LAYOUT });
+        if (!p) break;
+        cands.splice(cands.findIndex((c) => c.qid === p.q.qid), 1);
+        cands.forEach((c, i) => rank.set(c.qid, i));
+        picked.push({ ...p, repeat: true });
+      }
     }
     if (picked.length > 0) {
-      for (const { q, qt } of picked) {
+      for (const { q, qt, repeat } of picked) {
         out.items.push({
           origin: "BANK", artifactId: q.artifactId, qid: q.qid, textBn: q.textBn ?? null, loCode: code,
-          questionTypeCode: qt, marks: marks.get(qt)!, fromBook: false,
+          questionTypeCode: qt, marks: marks.get(qt)!, fromBook: false, repeat,
         });
       }
       continue;
@@ -187,7 +226,7 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
       out.items.push({
         origin: "TEACHER", artifactId: null, qid: null,
         textBn: `বইয়ের অনুশীলনী: ${exercises.join("; ")}`,
-        loCode: code, questionTypeCode: type, marks: marks.get(type)!, fromBook: true,
+        loCode: code, questionTypeCode: type, marks: marks.get(type)!, fromBook: true, repeat: false,
       });
     } else out.gaps.push(code);
   }
@@ -227,6 +266,8 @@ interface ExtraContext {
   states: Map<string, Map<string, { state: string; lastEvidenceAt: Date | null }>>;
   /** studentId → qids that child has seen (any code). */
   seenBy: Map<string, Set<string>>;
+  /** AL-3: window ∪ homework-this-year uses, per child (whole-শাখা rows included). */
+  ledger: SectionAvoid;
   bank: (BankQuestion & { textBn: string | null })[];
   exposure: Map<string, number>;
   marks: Map<string, number>;
@@ -272,8 +313,13 @@ async function extraContext(sectionId: string, subject: MasterySubject): Promise
       studentsByQid.set(q, (studentsByQid.get(q) ?? new Set()).add(sid));
     }
   }
+  const ledger = await avoidFor({
+    sectionId: ctx.sectionId, academicYearId: ctx.academicYearId, classToken: ctx.classToken, subject,
+    studentIds: roster.map((s) => String(s._id)),
+  });
   return {
     ctx,
+    ledger,
     maxQuestions: policy.resolved.extraHomeworkMaxQuestions,
     includeImproving: policy.resolved.extraHomeworkIncludeImproving,
     states,
@@ -295,7 +341,7 @@ function proposeFor(x: ExtraContext, studentId: string): Omit<ExtraStudent, "nam
     .filter(([, s]) => eligible(s.state, x.includeImproving))
     .sort((a, b) => (a[1].lastEvidenceAt?.getTime() ?? 0) - (b[1].lastEvidenceAt?.getTime() ?? 0) || a[0].localeCompare(b[0]));
   if (mine.length === 0) return { items: [], cause: "NOT_WEAK" };
-  const avoid = new Set(x.seenBy.get(studentId) ?? []);
+  const avoid = new Set([...(x.seenBy.get(studentId) ?? []), ...x.ledger.forChild(studentId)]);
   const items: ExtraItem[] = [];
   let progressed = true;
   while (items.length < x.maxQuestions && progressed) {
@@ -365,7 +411,7 @@ export async function createExtraHomework(
     seenStudents.add(sh.studentId);
     const who = personName(onRoster.get(sh.studentId)!);
     if (sh.items.length > x.maxQuestions) throw new MasteryWorkError(`${who}: সর্বোচ্চ ${bn(x.maxQuestions)}টি প্রশ্ন দেওয়া যায়।`);
-    const seen = x.seenBy.get(sh.studentId) ?? new Set<string>();
+    const seen = new Set([...(x.seenBy.get(sh.studentId) ?? []), ...x.ledger.forChild(sh.studentId)]);
     const nos: number[] = [];
     for (const it of sh.items) {
       const o = x.outcomes.get(it.loCode);
@@ -425,6 +471,9 @@ export async function createExtraHomework(
     if ((err as { code?: number }).code === 11000) throw new MasteryWorkError("এই দিনের বাড়তি বাড়ির কাজ আগেই তৈরি হয়েছে।");
     throw err;
   });
+
+  // AL-3: the sheet went to these children — per-child EXTRA_HW ledger rows, written at create.
+  await recordUsesSafe(usesOfPaper(paper, "EXTRA_HW"));
 
   // The record (PR-D, D-#1324): one closed EXTRA_HOMEWORK row per child, so the child's record shows
   // it. Closed at once (it is a hand-out, not a plan to approve); kept off the leader dashboard.

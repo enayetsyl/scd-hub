@@ -35,7 +35,7 @@ import {
   STR,
   subjectLabel,
   classLevelLabel,
-  setTypeLabel,
+  useKindLabel,
   difficultyLabel,
   paperRoleLabel,
   curationTagLabel,
@@ -319,15 +319,15 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
         <Card>
           <Muted style={{ fontWeight: "700" }}>{STR.quUsedInTitle}</Muted>
           {uses.map((u) => (
-            <View key={u.setId} style={{ paddingVertical: space(1) }}>
+            <View key={`${u.setId}-${u.sectionName ?? ""}-${u.kind}`} style={{ paddingVertical: space(1) }}>
               <Body>
                 {/* Name first when there is one — that is what a teacher recognises — and
                     the set TYPE when there is not, since `name` is optional on the model. */}
-                {u.setName ?? setTypeLabel(u.setType)}
+                {u.setName ?? useKindLabel(u.kind)}
               </Body>
               <Muted>
                 {[
-                  u.setName ? setTypeLabel(u.setType) : null,
+                  u.setName ? useKindLabel(u.kind) : null,
                   u.classLevel != null ? classLevelLabel(u.classLevel) : u.className,
                   u.sectionName,
                   u.usedOn ? u.usedOn.slice(0, 10) : null,

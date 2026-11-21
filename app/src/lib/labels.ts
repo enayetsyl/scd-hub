@@ -746,6 +746,15 @@ export const reviewRoundStatusLabel = (v?: string | null): string => {
     : v || DASH;
 };
 
+/** The use-history kind (AL-3): HW / AS / CT / EXTRA_HW / RETEST. */
+export const useKindLabel = (v?: string | null): string =>
+  v === "HW" ? STR.quUseHw
+    : v === "AS" ? STR.quUseAs
+    : v === "CT" ? STR.quUseCt
+    : v === "EXTRA_HW" ? STR.quUseExtraHw
+    : v === "RETEST" ? STR.quUseRetest
+    : v || DASH;
+
 export const setTypeLabel = (v?: string | null): string =>
   (v && pick(SET_TYPE_LABELS_BN, SET_TYPE_LABELS_EN)[v as SetType]) || v || DASH;
 
@@ -1978,6 +1987,11 @@ const STR_BN = {
   qbTopicTag: "টপিক ট্যাগ",
   quUsedIn: "সেটে ব্যবহৃত",
   quUsedInTitle: "কোথায় ব্যবহার হয়েছে",
+  quUseHw: "বাড়ির কাজ",
+  quUseAs: "অ্যাসাইনমেন্ট",
+  quUseCt: "ক্লাস টেস্ট",
+  quUseExtraHw: "বাড়তি বাড়ির কাজ",
+  quUseRetest: "রি-টেস্ট",
   quNeverUsed: "এখনো কোনো সেটে ব্যবহার হয়নি।",
   qbChapter: "অধ্যায়",
   qbCategory: "প্রশ্নের ধরন-শ্রেণি",
@@ -11167,6 +11181,11 @@ const STR_EN: StrTable = {
   qbTopicTag: "Topic tag",
   quUsedIn: "in sets",
   quUsedInTitle: "Where it has been used",
+  quUseHw: "Homework",
+  quUseAs: "Assignment",
+  quUseCt: "Class test",
+  quUseExtraHw: "Extra homework",
+  quUseRetest: "Re-test",
   quNeverUsed: "Not used in any set yet.",
   qbChapter: "Chapter",
   qbCategory: "Question category",

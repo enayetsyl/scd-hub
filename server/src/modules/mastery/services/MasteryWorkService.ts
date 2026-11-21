@@ -41,6 +41,8 @@ import { reapplyExclusions } from "../exclusions";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { heldRefusal } from "../examHold";
+import { assertCtAddable, recordUsesSafe, usesOfPaper, withdrawUsesSafe } from "../../assessment/services/QuestionUseService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 import {
   classTestMismatches,
   ctOutcomeOf,
@@ -268,6 +270,16 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     }
   }
 
+  // R19 (AL-3, switch on): a class-test sheet takes no question the শাখा or a roster child had as homework /
+  // extra homework / assignment in the no-repeat window. Off → no-op (§3.6).
+  if (input.source === "CT") {
+    try {
+      await assertCtAddable({ sectionId: ctx.sectionId, qids: items.flatMap((i) => (i.qid ? [i.qid] : [])), classToken: ctx.classToken, subject: input.subject });
+    } catch (err) {
+      throw new MasteryWorkError(err instanceof Error ? err.message : "প্রশ্নটি ক্লাস টেস্টে দেওয়া যাবে না।");
+    }
+  }
+
   let hwItemId: Types.ObjectId | undefined;
   if (input.hwItemId) {
     const hw = Types.ObjectId.isValid(input.hwItemId)
@@ -298,6 +310,10 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     if ((err as { code?: number }).code === 11000 && test) throw new MasteryWorkError(ONE_SHEET_PER_TEST);
     throw err;
   });
+  // AL-3 (§3.2): a CT sheet linked to its class test is given on the exam date; a hand-made HW sheet on its date.
+  // (A CT sheet with no test, a rubric: nothing was given yet.) Written regardless of the release switch.
+  if (paper.source === "HW") await recordUsesSafe(usesOfPaper(paper, "HW", { givenOn: dhakaDayKey(paper.date) }));
+  else if (paper.source === "CT" && test) await recordUsesSafe(usesOfPaper(paper, "CT", { givenOn: dhakaDayKey(paper.date) }));
   void writeAudit({
     eventKind: "MASTERY_PAPER_CREATED",
     actorId: auth.userId,
@@ -340,6 +356,8 @@ export async function deletePaper(paperId: string, auth: Auth): Promise<boolean>
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("নিশ্চিত করা কাজ মুছে ফেলা যায় না।");
   if (await MasteryResult.exists({ paperId: paper._id })) throw new MasteryWorkError("নম্বর তোলা শুরু হয়েছে — মুছে ফেলা যায় না।");
   await MasteryPaper.deleteOne({ _id: paper._id, entryState: "OPEN" });
+  // AL-3 / AC-B11: the questions were never worked — withdrawn, and offered again.
+  await withdrawUsesSafe("MASTERY_PAPER", paper._id);
   // PR-D: a deleted extra homework takes its per-child record rows with it (nothing was given).
   if (paper.extra) await MasteryAction.deleteMany({ kind: "EXTRA_HOMEWORK", "plan.note": { $regex: `^${paper.paperId}:` } });
   void writeAudit({

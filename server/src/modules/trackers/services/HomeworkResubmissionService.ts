@@ -27,6 +27,8 @@ import { resolveHomeworkDueDateByItem } from "../homeworkDueDate";
 import { listDailyItems } from "./HomeworkService";
 import { emitHwResubmitIssued } from "../../notifications/services/emitters";
 import { heldRefusal } from "../../mastery/examHold";
+import { recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 export interface TopupInput {
   /** Pool question ids selected (never authored) for the top-up (§5.1). */
@@ -187,6 +189,23 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
     // it. Best-effort inside the emitter: a notification problem must never
     // fail the teacher's check.
     const item = await HomeworkItem.findById(rec.hwItemId).lean();
+    // AL-3: a top-up question went to this one child — a per-child ledger row (HW).
+    if (item && created.topupQids.length > 0) {
+      await recordUsesSafe(
+        created.topupQids.map((qid) => ({
+          qid,
+          kind: "HW" as const,
+          sourceType: "HOMEWORK_ITEM" as const,
+          sourceId: item._id,
+          academicYearId: item.academicYearId,
+          sectionId: item.sectionId,
+          classToken: classTokenOfLevel(item.classLevel),
+          subject: item.subject,
+          studentIds: [rec.studentId],
+          givenOn: dhakaDayKey(at),
+        })),
+      );
+    }
     await emitHwResubmitIssued({
       recordId: created._id,
       hwItemId: rec.hwItemId,

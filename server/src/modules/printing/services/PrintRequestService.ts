@@ -17,6 +17,7 @@ import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT
 import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
+import { assertSetCtAllowed, writeSetUses } from "../../assessment/services/QuestionUseService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -154,6 +155,12 @@ async function assertSourceResolves(input: CreatePrintRequestInput): Promise<voi
       if (set.status !== "assembled") {
         throw new PrintRequestError("Only an ASSEMBLED set can be sent for printing");
       }
+      // R19 (AL-3, switch on): re-check a class-test set at print — a question may have been given as homework since.
+      try {
+        await assertSetCtAllowed(input.setId!, input.classTestId);
+      } catch (err) {
+        throw new PrintRequestError(err instanceof Error ? err.message : "Class-test question blocked");
+      }
       break;
     }
     case "CONTENT_ARTIFACT": {
@@ -254,6 +261,16 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     requestedBy: new Types.ObjectId(input.requestedBy),
     requestedAt: new Date(),
   });
+
+  // AL-3 (§3.2, AC-U3): the set's questions go to the children — ledger rows at print (CT: the exam date when a
+  // class test names the set; a group-anchored test writes one row per member শাখা). Never blocks the request.
+  if (source === "SET") {
+    try {
+      await writeSetUses(input.setId!, { classTestId: input.classTestId });
+    } catch (err) {
+      console.error("[question-use] set print write failed:", err);
+    }
+  }
 
   await writeAudit({
     eventKind: "PRINT_REQUEST_CREATED",
