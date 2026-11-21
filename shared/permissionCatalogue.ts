@@ -95,6 +95,11 @@ export const FEATURE_CATALOGUE = {
       resubmit: { en: "Ask to redo", bn: "আবার জমা দিতে বলা", desc: "CHECKED → RESUBMIT plus a new record", teacher: true, office: false, flags: [] },
       return: { en: "Return checked assignment", bn: "অ্যাসাইনমেন্ট ফেরত দেওয়া", desc: "Return pass", teacher: true, office: false, flags: [] },
       confirm_week: { en: "Confirm the assignment week", bn: "সপ্তাহের অ্যাসাইনমেন্ট চূড়ান্ত করা", desc: "Reconcile against 360 min, trim (trim) minutes, confirm", teacher: true, office: true, flags: [], designation: "class_teacher", waiver: "assignment:settings" },
+      // 2027 academic loop (docs/prd-academic-loop-2027.md §4 + §6, D-#1668), declared ahead of AL-7 / AL-8.
+      suggest: { en: "Get an assignment suggestion", bn: "অ্যাসাইনমেন্টের প্রস্তাব নেওয়া", desc: "Open the automatic weekly draft; ask for a suggestion or rebuild it; swap, add or remove questions inside the rules (own শাখা × subject, or today's substitute)", teacher: true, office: true, flags: [] },
+      accept_swap: { en: "Accept a subject swap", bn: "বিষয় বদলের প্রস্তাব গ্রহণ", desc: "Accept or ignore the week's subject-swap card", teacher: true, office: true, flags: [], designation: "class_teacher" },
+      finalise_on_leave: { en: "Finalise for a teacher on leave", bn: "ছুটিতে থাকা শিক্ষকের অ্যাসাইনমেন্ট চূড়ান্ত করা", desc: "Finalise the system's draft when the subject teacher is on approved leave that Wednesday/Thursday (the day's substitute can already)", teacher: false, office: true, flags: [] },
+      comment: { en: "Comment on an assignment", bn: "অ্যাসাইনমেন্টে মন্তব্য", desc: "View any draft or finalised week and comment; the subject teacher is told", teacher: false, office: true, flags: [] },
       undo: { en: "Undo my own step", bn: "নিজের ধাপ ফিরিয়ে নেওয়া", desc: "Undo own same-day step", teacher: true, office: false, flags: [] },
       undo_any: { en: "Undo anyone's step", bn: "যেকোনো ধাপ ফিরিয়ে নেওয়া", desc: "Admin revert, any actor, any day", teacher: false, office: true, flags: [] },
       remind: { en: "Guardian chase ladder", bn: "অভিভাবককে রিমাইন্ডার", desc: "Chase list, ladder step, outcome, history, bulk sweep", teacher: false, office: true, flags: [] },
@@ -120,6 +125,9 @@ export const FEATURE_CATALOGUE = {
     actions: {
       view: { en: "See homework check cases", bn: "হোমওয়ার্ক যাচাইয়ের কেস দেখা", desc: "The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it", teacher: false, office: true, flags: [] },
       record: { en: "Record the outcome", bn: "যাচাইয়ের ফলাফল লেখা", desc: "Close a case with what the Office found (guardian did it / child did it / unclear) and a note; recalculate now", teacher: false, office: true, flags: [] },
+      // 2027 academic loop (docs/prd-academic-loop-2027.md §3.4 + §6, D-#1676), declared ahead of AL-12.
+      view_all: { en: "All homework check cases", bn: "সব যাচাইয়ের কেস দেখা", desc: "Every case school-wide", teacher: false, office: true, flags: [] },
+      settings: { en: "Homework check settings", bn: "হোমওয়ার্ক যাচাইয়ের সেটিং", desc: "The gap in points that opens a case and the cases in a term that make a child recurring", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md).
@@ -177,6 +185,8 @@ export const FEATURE_CATALOGUE = {
     actions: {
       view: { en: "See lesson-plan progress", bn: "পাঠ পরিকল্পনার অগ্রগতি দেখা", desc: "A শাখা × subject's sessions taught (the routine gives it to you, or you are its class teacher), a student's lessons and presence (LP-2/LP-3, D-#826)", teacher: true, office: true, flags: [] },
       view_all: { en: "Any শাখা + the overview", bn: "সব শাখার অগ্রগতি ও সারসংক্ষেপ", desc: "The school-wide overview (progress, pace, lag behind the parallel শাখা), any শাখা's tracker and any student's lessons", teacher: false, office: true, flags: [] },
+      // 2027 academic loop (docs/prd-academic-loop-2027.md §3.3 + §6, D-#1675), declared ahead of AL-11.
+      set_targets: { en: "Set term target dates", bn: "মেয়াদের লক্ষ্য তারিখ ঠিক করা", desc: "Save or clear the half-yearly and annual end session and date per class × subject", teacher: false, office: true, flags: [] },
     },
   },
   saturday_revision: {
@@ -1276,6 +1286,8 @@ export const FEATURE_CATALOGUE = {
       daily_system: { en: "Daily report — system", bn: "দৈনিক প্রতিবেদন — সিস্টেম", desc: "Backups and the reminder clock", teacher: false, office: false, flags: [] },
       daily_share: { en: "Share the daily report", bn: "দৈনিক প্রতিবেদন শেয়ার করা", desc: "Give or remove parts of the daily report for one person, with an optional end date", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
       daily_settings: { en: "Daily report settings", bn: "দৈনিক প্রতিবেদনের সেটিংস", desc: "Send time and which parts count in the headline", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      // 2027 academic loop (docs/prd-academic-loop-2027.md §6, D-#1678), declared ahead of AL-13.
+      loop_health: { en: "Loop health", bn: "শিক্ষাচক্রের অবস্থা", desc: "The academic-loop health page and the 2027 readiness list", teacher: false, office: true, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;

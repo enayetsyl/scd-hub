@@ -300,6 +300,49 @@ describe("policy", () => {
     await savePolicy("C3", "MATH", { improvingAtPct: 55 }, actor);
     await expect(savePolicy(null, null, { weakBelowPct: 60 }, actor)).rejects.toThrow(/C3:MATH/);
   });
+
+  // 2027 academic loop keys (docs/prd-academic-loop-2027.md §3.5, AL-0).
+  it("the 2027 loop keys ship with the rulings' defaults and the release switch OFF", async () => {
+    const p = resolvePolicy(null, null);
+    expect(p.academicLoop2027On).toBe(false);
+    expect([p.assignmentNoRepeatWeeks, p.weeklyAssignmentHoursCap, p.perDayHours, p.minutesPerMark]).toEqual([4, 6, 3, 1.8]);
+    expect([p.homeworkBankSharePct, p.integrityGapPoints, p.masteredNeedsInSchool]).toEqual([50, 20, true]);
+    expect(validatePolicy(resolvePolicy({ perDayHours: 7 }, null))).toMatch(/এক দিনের/);
+    expect(validatePolicy(resolvePolicy({ subjectsPerWeekMin: 4 }, null))).toMatch(/সর্বনিম্ন/);
+    expect(validatePolicy(resolvePolicy({ asMarkDeadlineDow: 7 }, null))).toMatch(/সপ্তাহের দিন/);
+    expect(validatePolicy(resolvePolicy({ minutesPerMark: 0 }, null))).toMatch(/মিনিট/);
+  });
+
+  it("a school-wide key is refused on a class × subject override", async () => {
+    await expect(savePolicy("C2", "ENG", { minutesPerMark: 2 }, actor)).rejects.toThrow(/minutesPerMark/);
+    await expect(savePolicy("C2", "ENG", { academicLoop2027On: true }, actor)).rejects.toThrow(/academicLoop2027On/);
+    // a non-school loop key may be overridden
+    const ov = await savePolicy("C2", "ENG", { assignmentNoRepeatWeeks: 5 }, actor);
+    expect(ov.resolved.assignmentNoRepeatWeeks).toBe(5);
+    // and an override row that holds a school key anyway (a direct write) is ignored on read
+    expect(resolvePolicy({ perDayHours: 2.5 }, { perDayHours: 1, academicLoop2027On: true } as never).perDayHours).toBe(2.5);
+    expect(resolvePolicy(null, { academicLoop2027On: true } as never).academicLoop2027On).toBe(false);
+  });
+
+  it("a SCHOOL save keeps stored loop keys it was not sent (the old screen never resets the switch); {} still resets older keys", async () => {
+    await savePolicy(null, null, { academicLoop2027On: true, weeklyAssignmentHoursCap: 5 }, actor);
+    const after = await savePolicy(null, null, { sectionTriggerPct: 55 }, actor);
+    expect(after.resolved.academicLoop2027On).toBe(true);
+    expect(after.resolved.weeklyAssignmentHoursCap).toBe(5);
+    expect(after.resolved.sectionTriggerPct).toBe(55);
+    const reset = await savePolicy(null, null, {}, actor);
+    expect(reset.resolved.sectionTriggerPct).toBe(50);
+    expect(reset.resolved.academicLoop2027On).toBe(true);
+    const off = await savePolicy(null, null, { academicLoop2027On: false }, actor);
+    expect(off.resolved.academicLoop2027On).toBe(false);
+  });
+
+  it("the integrity keys cannot change through the mastery policy save", async () => {
+    await expect(savePolicy(null, null, { integrityGapPoints: 25 }, actor)).rejects.toThrow(/হোমওয়ার্ক যাচাই/);
+    // sending the current value (a full form) is fine
+    const ok = await savePolicy(null, null, { integrityGapPoints: 20, sectionTriggerPct: 50 }, actor);
+    expect(ok.resolved.integrityGapPoints).toBe(20);
+  });
 });
 
 describe("the switch (D-#775)", () => {

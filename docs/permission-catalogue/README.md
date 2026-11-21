@@ -239,6 +239,10 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `assignment:resubmit` | Ask to redo | আবার জমা দিতে বলা | CHECKED → RESUBMIT plus a new record | on | — | | tracker:write + check_assignment |
 | `assignment:return` | Return checked assignment | অ্যাসাইনমেন্ট ফেরত দেওয়া | Return pass | on | — | | tracker:write + check_assignment |
 | `assignment:confirm_week` | Confirm the assignment week | সপ্তাহের অ্যাসাইনমেন্ট চূড়ান্ত করা | Reconcile against 360 min, trim (কমানো) minutes, confirm | on | on | DESIGNATION:class_teacher (waived by `assignment:settings`), F-8 | assertCanConfirmAssignmentWeek (roster:manage OR class teacher) |
+| `assignment:suggest` | Get an assignment suggestion | অ্যাসাইনমেন্টের প্রস্তাব নেওয়া | Open the automatic weekly draft; ask / rebuild; swap, add, remove inside the rules (2027 loop, D-#1668) | on | on | row rule: own শাখা × subject or today's substitute | declared ahead (AL-7) |
+| `assignment:accept_swap` | Accept a subject swap | বিষয় বদলের প্রস্তাব গ্রহণ | Accept or ignore the week's swap card (R29) | on | on | DESIGNATION:class_teacher (Teacher) | declared ahead (AL-7) |
+| `assignment:finalise_on_leave` | Finalise for a teacher on leave | ছুটিতে থাকা শিক্ষকের অ্যাসাইনমেন্ট চূড়ান্ত করা | Finalise the system's draft when the subject teacher is on approved leave that Wed/Thu (R28) | — | on | | declared ahead (AL-7) |
+| `assignment:comment` | Comment on an assignment | অ্যাসাইনমেন্টে মন্তব্য | View any draft/finalised week and comment; notifies the subject teacher | — | on | | declared ahead (AL-8) |
 | `assignment:undo` | Undo my own step | নিজের ধাপ ফিরিয়ে নেওয়া | Undo own same-day step | on | — | | authenticated + assertCanWriteAny |
 | `assignment:undo_any` | Undo anyone's step | যেকোনো ধাপ ফিরিয়ে নেওয়া | Admin revert, any actor, any day | — | on | F-7 | isAdminStaff `admin` flag |
 | `assignment:remind` | Guardian chase ladder | অভিভাবককে রিমাইন্ডার | Chase list, ladder step, outcome, history, bulk sweep | — | on | | message:dispatch + assertFollowUpAdmin (isAdminStaff) |
@@ -250,6 +254,8 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 |---|---|---|---|---|---|---|---|
 | `homework_integrity:view` | See homework check cases | হোমওয়ার্ক যাচাইয়ের কেস দেখা | The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it (GH-3, D-#1522) | — | on | | new |
 | `homework_integrity:record` | Record the outcome | যাচাইয়ের ফলাফল লেখা | Close a case with what the Office found and a note; recalculate now (GH-3, D-#1522) | — | on | | new |
+| `homework_integrity:view_all` | All homework check cases | সব যাচাইয়ের কেস দেখা | Every case school-wide (2027 loop, D-#1676) | — | on | | declared ahead (AL-12) |
+| `homework_integrity:settings` | Homework check settings | হোমওয়ার্ক যাচাইয়ের সেটিং | Edit the gap points and the recurring-case count | — | — | LOCKED | declared ahead (AL-12) |
 
 #### `assignment_gift` — সাপ্তাহিক উপহার
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -298,6 +304,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 |---|---|---|---|---|---|---|---|
 | `lesson_progress:view` | See lesson-plan progress | পাঠ পরিকল্পনার অগ্রগতি দেখা | A শাখা × subject's sessions taught (routine holder or class teacher), a student's lessons and presence | on | on | | routine:read (expansion, like class_note) |
 | `lesson_progress:view_all` | Any শাখা + the overview | সব শাখার অগ্রগতি ও সারসংক্ষেপ | School-wide overview, any শাখা's tracker, any student's lessons | — | on | | routine:manage (expansion, like class_note) |
+| `lesson_progress:set_targets` | Set term target dates | মেয়াদের লক্ষ্য তারিখ ঠিক করা | Save/clear half-yearly + annual end session and date per class × subject (2027 loop, D-#1675) | — | on | | declared ahead (AL-11) |
 
 #### `saturday_revision` — শনিবারের রিভিশন
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -989,6 +996,7 @@ D-#861 (owner 2026-10-26: "all reports seen from one place, all report permissio
 | `reports:daily_system` | Daily report — system | দৈনিক প্রতিবেদন — সিস্টেম | Backups and the reminder clock (D-#1051; Principal only by default, shared per person) | — | — | | (new) |
 | `reports:daily_share` | Share the daily report | দৈনিক প্রতিবেদন শেয়ার করা | Give/remove parts for one person with an optional end date (D-#1054) | — | — | PRINCIPAL-DEFAULT | (new) |
 | `reports:daily_settings` | Daily report settings | দৈনিক প্রতিবেদনের সেটিংস | Send time, headline parts, Principal notification (D-#1052) | — | — | PRINCIPAL-DEFAULT | (new) |
+| `reports:loop_health` | Loop health | শিক্ষাচক্রের অবস্থা | The academic-loop health page and the 2027 readiness list (D-#1678) | — | on | | declared ahead (AL-13) |
 
 ### Admin & access
 
