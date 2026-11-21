@@ -711,7 +711,7 @@ function AvatarMenu(): React.ReactElement {
             {/* Row shows the language it switches TO (matches the old toggle's intent). */}
             <MenuRow icon="🌐" label={lang === "bn" ? "English" : "বাংলা"} onPress={toggle} />
             {/* TB-1 (D-#1666): link Telegram to report problems by screenshot + voice. Staff only for now. */}
-            {role !== "GUARDIAN" ? (
+            {user?.role !== "GUARDIAN" ? (
               <MenuRow
                 icon="✈️"
                 label={STR.tgMenu}

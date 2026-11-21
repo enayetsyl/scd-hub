@@ -16,6 +16,7 @@ import { AppTabs, LoginScreen } from "./AppTabs";
 import NotificationCenterScreen from "../screens/notifications/NotificationCenterScreen";
 import NotificationDetailScreen from "../screens/notifications/NotificationDetailScreen";
 import ReportProblemScreen from "../screens/common/ReportProblemScreen";
+import TelegramLinkScreen from "../screens/common/TelegramLinkScreen";
 import ViewAsScreen from "../screens/admin/ViewAsScreen";
 
 const RootStack = createNativeStackNavigator();
