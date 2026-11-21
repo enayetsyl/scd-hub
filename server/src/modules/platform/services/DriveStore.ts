@@ -38,7 +38,19 @@ export class DriveUnavailableError extends Error {
   }
 }
 
+import { randomUUID } from "crypto";
+import { promises as fsp } from "fs";
+import os from "os";
+import path from "path";
 import { outgoingAllowed } from "../../../lib/outgoing";
+
+// AL-1: on a blocked (dev) database files stay LOCAL. Ids are `local:<uuid>`; bytes + a small
+// meta file live in DEV_LOCAL_FILES_DIR (default <tmp>/scdhub-dev-files). Callers treat the id as opaque.
+const LOCAL_PREFIX = "local:";
+const LOCAL_ID_RE = /^local:[0-9a-f-]{36}$/;
+const localDir = () => process.env.DEV_LOCAL_FILES_DIR || path.join(os.tmpdir(), "scdhub-dev-files");
+export const isLocalDriveId = (id: string) => LOCAL_ID_RE.test(id);
+const localPath = (id: string, ext: "bin" | "json") => path.join(localDir(), `${id.slice(LOCAL_PREFIX.length)}.${ext}`);
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
@@ -207,8 +219,17 @@ export async function driveQuota(): Promise<DriveQuota> {
 /** Stream a file into its private folder; returns the Drive file id
  *  (SERVER-INTERNAL — never expose it to a client). */
 export async function uploadToDrive(input: DriveUploadInput): Promise<string> {
-  // AL-1: dev database — nothing goes out; same outcome as no Drive credential.
-  if (!outgoingAllowed("drive")) throw new DriveUnavailableError("Drive upload blocked (dev database)");
+  // AL-1: dev database — nothing goes out; the file stays on local disk.
+  if (!outgoingAllowed("drive")) {
+    const id = `${LOCAL_PREFIX}${randomUUID()}`;
+    await fsp.mkdir(localDir(), { recursive: true });
+    await fsp.writeFile(localPath(id, "bin"), input.data);
+    await fsp.writeFile(
+      localPath(id, "json"),
+      JSON.stringify({ name: input.name, mime: input.mime, year: input.year, subfolder: input.subfolder ?? "hw", createdTime: new Date().toISOString(), sizeBytes: input.data.length }),
+    );
+    return id;
+  }
   const folderId = await ensureYearSubfolder(input.year, input.subfolder ?? "hw");
   const boundary = `scdhub-${Math.abs(Date.now() ^ input.data.length)}`;
   const meta = JSON.stringify({
@@ -277,6 +298,19 @@ export async function listFolderByName(name: string): Promise<DriveFileRef[] | n
 
 /** Files in one year/subfolder, newest first. */
 export async function listDriveFolder(year: string, subfolder: string): Promise<DriveFileRef[]> {
+  if (!outgoingAllowed("drive")) {
+    // AL-1: dev database — list what stayed local.
+    let names: string[] = [];
+    try { names = await fsp.readdir(localDir()); } catch { return []; }
+    const out: DriveFileRef[] = [];
+    for (const n of names.filter((x) => x.endsWith(".json"))) {
+      try {
+        const m = JSON.parse(await fsp.readFile(path.join(localDir(), n), "utf8")) as { name: string; year: string; subfolder: string; createdTime: string; sizeBytes: number };
+        if (m.year === year && m.subfolder === subfolder) out.push({ id: `${LOCAL_PREFIX}${n.slice(0, -5)}`, name: m.name, createdTime: m.createdTime, sizeBytes: m.sizeBytes });
+      } catch { /* skip an unreadable meta file */ }
+    }
+    return out.sort((a, b) => b.createdTime.localeCompare(a.createdTime));
+  }
   const folderId = await ensureYearSubfolder(year, subfolder);
   const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
   const url = `${DRIVE_FILES_URL}?q=${q}&fields=files(id,name,createdTime,size)&orderBy=createdTime desc&pageSize=100`;
@@ -295,11 +329,26 @@ export async function listDriveFolder(year: string, subfolder: string): Promise<
  *  the backup retention sweep (its backups) and a deleted class book (its page images,
  *  D-#870) — never on content uploaded by people. */
 export async function deleteFromDrive(driveFileId: string): Promise<void> {
+  if (driveFileId.startsWith(LOCAL_PREFIX)) {
+    if (!isLocalDriveId(driveFileId)) throw new DriveUnavailableError("bad local file id");
+    await fsp.rm(localPath(driveFileId, "bin"), { force: true });
+    await fsp.rm(localPath(driveFileId, "json"), { force: true });
+    return;
+  }
   if (!outgoingAllowed("drive")) throw new DriveUnavailableError("Drive delete blocked (dev database)");
   await driveFetch(`${DRIVE_FILES_URL}/${encodeURIComponent(driveFileId)}`, { method: "DELETE" });
 }
 
 export async function downloadFromDrive(driveFileId: string): Promise<Buffer> {
+  if (driveFileId.startsWith(LOCAL_PREFIX)) {
+    if (!isLocalDriveId(driveFileId)) throw new DriveUnavailableError("bad local file id");
+    try {
+      return await fsp.readFile(localPath(driveFileId, "bin"));
+    } catch {
+      throw new DriveUnavailableError("local dev file not found");
+    }
+  }
+  // A Drive READ is allowed on a blocked database when credentials exist (driveFetch throws without them).
   const res = await driveFetch(
     `${DRIVE_FILES_URL}/${encodeURIComponent(driveFileId)}?alt=media`,
     { method: "GET" },

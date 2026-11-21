@@ -24,6 +24,7 @@ import { DeepseekProvider } from "./deepseekProvider";
 import { GeminiProvider } from "./geminiProvider";
 import { providerOfModel, WORKSPACE_MODELS } from "./models";
 import {
+  AiFeatureOffError,
   AiProviderError,
   type AiErrorKind,
   type AiProvider,
@@ -32,12 +33,7 @@ import {
   type AiSendResult,
 } from "./provider";
 
-export class AiFeatureOffError extends Error {
-  constructor(readonly feature: string) {
-    super("এই এআই সুবিধাটি এখন বন্ধ আছে");
-    this.name = "AiFeatureOffError";
-  }
-}
+export { AiFeatureOffError };
 
 export interface AiAttempt {
   provider: AiProviderName;

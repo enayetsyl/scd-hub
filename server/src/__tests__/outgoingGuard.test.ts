@@ -9,7 +9,12 @@ import { sendExpoPush } from "../modules/platform/services/ExpoPush";
 import { meteredGeminiFetch } from "../modules/platform/ai/meteredFetch";
 import { aiSend, AiFeatureOffError } from "../modules/platform/ai/aiRouter";
 import type { AiRoute } from "../modules/platform/services/AiSettingService";
-import { uploadToDrive, DriveUnavailableError } from "../modules/platform/services/DriveStore";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { DeepseekProvider } from "../modules/platform/ai/deepseekProvider";
+import { GeminiProvider } from "../modules/platform/ai/geminiProvider";
+import { uploadToDrive, downloadFromDrive, deleteFromDrive, listDriveFolder, DriveUnavailableError } from "../modules/platform/services/DriveStore";
 import { webPushChannel } from "../modules/notifications/services/webPushChannel";
 import { emit, registerChannel } from "../modules/notifications/services/NotificationService";
 import { Notification } from "../modules/notifications/models/Notification";
@@ -111,11 +116,44 @@ describe("seams on a _dev database", () => {
     expect(f).not.toHaveBeenCalled();
   });
 
-  it("Drive upload behaves like no credential", async () => {
+  it("Drive upload keeps the file local: same id downloads, lists and deletes; no fetch", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "al1-"));
+    const savedDir = process.env.DEV_LOCAL_FILES_DIR;
+    process.env.DEV_LOCAL_FILES_DIR = dir;
+    try {
+      const f = jest.fn();
+      (global as unknown as { fetch: unknown }).fetch = f;
+      const id = await uploadToDrive({ year: "2026", name: "a.txt", mime: "text/plain", data: Buffer.from("hello"), subfolder: "hw" });
+      expect(id.startsWith("local:")).toBe(true);
+      expect((await downloadFromDrive(id)).toString()).toBe("hello");
+      expect((await listDriveFolder("2026", "hw")).map((x) => x.id)).toEqual([id]);
+      await deleteFromDrive(id);
+      await expect(downloadFromDrive(id)).rejects.toBeInstanceOf(DriveUnavailableError);
+      await expect(downloadFromDrive("local:../../etc/passwd")).rejects.toBeInstanceOf(DriveUnavailableError);
+      expect(f).not.toHaveBeenCalled();
+    } finally {
+      if (savedDir === undefined) delete process.env.DEV_LOCAL_FILES_DIR; else process.env.DEV_LOCAL_FILES_DIR = savedDir;
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a provider send() throws AiFeatureOffError and never calls fetch", async () => {
     const f = jest.fn();
-    (global as unknown as { fetch: unknown }).fetch = f;
-    await expect(uploadToDrive({ year: "2026", name: "a", mime: "text/plain", data: Buffer.from("x") })).rejects.toBeInstanceOf(DriveUnavailableError);
+    const input = { stablePrefix: "s", variablePart: "v" } as unknown as AiSendInput;
+    await expect(new DeepseekProvider("k", f as never).send(input, "m")).rejects.toBeInstanceOf(AiFeatureOffError);
+    await expect(new GeminiProvider("k", f as never).send(input, "m")).rejects.toBeInstanceOf(AiFeatureOffError);
     expect(f).not.toHaveBeenCalled();
+  });
+});
+
+describe("database name parsing", () => {
+  it("srv URI with query string", () => {
+    process.env.MONGODB_URI = "mongodb+srv://h/scdhub_dev?retryWrites=true";
+    expect(currentDbName()).toBe("scdhub_dev");
+  });
+  it("multi-host URI", () => {
+    process.env.MONGODB_URI = "mongodb://u:p@a:27017,b:27017,c:27017/scdhub?replicaSet=rs0";
+    expect(currentDbName()).toBe("scdhub");
   });
 });
 

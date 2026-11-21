@@ -34,6 +34,7 @@ import {
   type AiReasoning,
   type AiSendInput,
   type AiSendResult,
+  AiFeatureOffError,
 } from "./provider";
 
 export { ANTHROPIC_MODELS };
@@ -157,6 +158,8 @@ export class AnthropicProvider implements AiProvider {
   ) {}
 
   async send(input: AiSendInput, model: string): Promise<AiSendResult> {
+    // AL-1: every direct provider call is covered, not only the router.
+    if (!outgoingAllowed("ai")) throw new AiFeatureOffError(this.name);
     const started = Date.now();
     const body = claudeBody(input, model);
     const msg = await withDeadline(input.timeoutMs ?? DEFAULT_TIMEOUT_MS, this.name, async (signal) => {
