@@ -2149,7 +2149,8 @@ export const PRINT_PURPOSE_LABELS_EN: Record<PrintPurpose, string> = {
  *  (the `StudentAttendanceDay` XOR pattern). No PDF snapshot is taken: an
  *  assembled `AssessmentSet` is LOCKED, so `SET` is already immutable in content;
  *  an `UPLOAD` is self-snapshotting; a `LINK` is external by nature (D-#281). */
-export const PRINT_SOURCES = ["SET", "CONTENT_ARTIFACT", "UPLOAD", "LINK"] as const;
+/** MASTERY_PAPER (2027 academic loop AL-4, D-#1669/#1672): a homework / assignment paper sent with "প্রিন্টে পাঠান". */
+export const PRINT_SOURCES = ["SET", "CONTENT_ARTIFACT", "UPLOAD", "LINK", "MASTERY_PAPER"] as const;
 export type PrintSource = (typeof PRINT_SOURCES)[number];
 
 export const PRINT_SOURCE_LABELS_BN: Record<PrintSource, string> = {
@@ -2157,12 +2158,14 @@ export const PRINT_SOURCE_LABELS_BN: Record<PrintSource, string> = {
   CONTENT_ARTIFACT: "পাঠ/অধ্যায় পরিকল্পনা",
   UPLOAD: "আপলোড করা ফাইল",
   LINK: "লিংক",
+  MASTERY_PAPER: "বাড়ির কাজ / অ্যাসাইনমেন্টের শিট",
 };
 export const PRINT_SOURCE_LABELS_EN: Record<PrintSource, string> = {
   SET: "Question set",
   CONTENT_ARTIFACT: "Chapter / session plan",
   UPLOAD: "Uploaded file",
   LINK: "Link",
+  MASTERY_PAPER: "Homework / assignment sheet",
 };
 
 /** How the job is printed (live-testing requirement): both are MANDATORY on a request —
