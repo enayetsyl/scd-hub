@@ -24,6 +24,10 @@ const val = (flag: string): string | undefined => {
 const vals = (flag: string): string[] => argv.flatMap((a, i) => (a === flag ? [argv[i + 1]] : []));
 
 async function main(): Promise<void> {
+  const ri = argv.indexOf("--remove");
+  if (ri >= 0 && (!argv[ri + 1] || argv[ri + 1].startsWith("--"))) {
+    throw new Error("--remove needs a run id (e.g. --remove fake-20261201-1030); refusing to generate");
+  }
   await connectDb();
   console.log(`databaseName: ${mongoose.connection.db?.databaseName ?? "(unknown)"}`);
   try {

@@ -107,7 +107,7 @@ export function resolveCollections(refs: ModelRef[]): ResolvedCollections {
   return { found, skipped };
 }
 
-/** The `--nsInclude` argument list for a database: `<db>.<collection>` per entry. */
+/** The `--nsInclude` argument list for a database: `--nsInclude=<db>.<collection>` per entry (bare tokens, no quotes, no spaces). */
 export function nsIncludeFlags(dbName: string, refs: ModelRef[]): string[] {
-  return resolveCollections(refs).found.map((f) => `--nsInclude "${dbName}.${f.collection}"`);
+  return resolveCollections(refs).found.map((f) => `--nsInclude=${dbName}.${f.collection}`);
 }

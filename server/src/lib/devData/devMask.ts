@@ -15,6 +15,7 @@
  */
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 import { assertDevTarget, DevGuardError, type GuardInput } from "./guards";
 import { WIPE_MODELS, resolveCollections } from "./collections";
 
@@ -41,6 +42,8 @@ export interface MaskReport {
   skippedFutureModels: string[];
   masteryTestUsersRemoved: number;
   masked: Record<string, number>;
+  /** Documents the RAW gate changed (a real phone / email found in a field the schema pass does not know). */
+  rawMasked: Record<string, number>;
   /** Values (phone / email / address / nid / bank / pay / password) still real after `--apply`; must be 0. */
   residue: Record<string, number>;
   residueTotal: number;
@@ -48,50 +51,111 @@ export interface MaskReport {
 
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
+/** Real value shapes the RAW gate hunts for in every string of every document (any depth, any field). */
+const RAW_PHONE_RE = /(?:\+?88)?01[3-9]\d{8}/g;
+const RAW_EMAIL_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
+
+const stripCc = (p: string): string => p.replace(/^\+?88(?=01)/, "");
+
+/**
+ * Deterministic fake values: the fake for a real value is derived from a hash of that value, so a second run
+ * (even after a first run that died midway) gives the same fake for the same real value in every collection
+ * and the User.phone <-> StaffProfile.phone login join keeps agreeing. Only a clash between two values of the
+ * SAME run is resolved (by probing, in sorted order of the real values).
+ */
 class Masker {
   private phoneMap = new Map<string, string>();
   private emailMap = new Map<string, string>();
-  private usedPhones = new Set<string>();
-  private usedEmails = new Set<string>();
-  private nextPhone = 1;
-  private nextEmail = 1;
+  private phoneTaken = new Set<string>();
+  private emailTaken = new Set<string>();
+  constructor(private readonly key: string) {}
 
-  /** Reserve values already in the fake shape so a new number never collides with one. */
-  reserve(value: string): void {
-    if (FAKE_PHONE_RE.test(value)) this.usedPhones.add(value);
-    if (FAKE_EMAIL_RE.test(value)) this.usedEmails.add(value);
+  private digest(kind: string, value: string): number {
+    const h = createHash("sha256").update(`${this.key}|${kind}|${value}`).digest();
+    return h.readUInt32BE(0);
   }
 
   phone(orig: string): string {
-    if (FAKE_PHONE_RE.test(orig)) return orig;
-    const hit = this.phoneMap.get(orig);
+    const norm = stripCc(orig);
+    if (FAKE_PHONE_RE.test(norm)) return norm;
+    const hit = this.phoneMap.get(norm);
     if (hit) return hit;
-    let v: string;
-    do v = `01000${String(this.nextPhone++).padStart(6, "0")}`;
-    while (this.usedPhones.has(v));
-    this.usedPhones.add(v);
-    this.phoneMap.set(orig, v);
+    let n = this.digest("phone", norm) % 1_000_000;
+    let v = `01000${String(n).padStart(6, "0")}`;
+    while (this.phoneTaken.has(v)) {
+      n = (n + 1) % 1_000_000;
+      v = `01000${String(n).padStart(6, "0")}`;
+    }
+    this.phoneTaken.add(v);
+    this.phoneMap.set(norm, v);
     return v;
   }
 
   email(orig: string): string {
-    const key = orig.toLowerCase();
+    const key = orig.trim().toLowerCase();
     if (FAKE_EMAIL_RE.test(key)) return key;
     const hit = this.emailMap.get(key);
     if (hit) return hit;
-    let v: string;
-    do v = `user-${this.nextEmail++}@dev.invalid`;
-    while (this.usedEmails.has(v));
-    this.usedEmails.add(v);
+    let n = this.digest("email", key) % 10_000_000_000;
+    let v = `user-${n}@dev.invalid`;
+    while (this.emailTaken.has(v)) {
+      n = (n + 1) % 10_000_000_000;
+      v = `user-${n}@dev.invalid`;
+    }
+    this.emailTaken.add(v);
     this.emailMap.set(key, v);
     return v;
   }
 }
 
+/** Rewrite every string in `v` (recursively): real emails and BD phones become fakes. Returns [new value, changed?]. */
+function rawClean(v: unknown, mk: Masker): [unknown, boolean] {
+  if (typeof v === "string") {
+    let out = v.replace(RAW_EMAIL_RE, (m) => (FAKE_EMAIL_RE.test(m.toLowerCase()) ? m : mk.email(m)));
+    out = out.replace(RAW_PHONE_RE, (m) => mk.phone(m));
+    return [out, out !== v];
+  }
+  if (Array.isArray(v)) {
+    let ch = false;
+    const arr = v.map((x) => {
+      const [nv, c] = rawClean(x, mk);
+      if (c) ch = true;
+      return nv;
+    });
+    return [ch ? arr : v, ch];
+  }
+  if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) {
+    let ch = false;
+    const o: RawDoc = {};
+    for (const [k, x] of Object.entries(v as RawDoc)) {
+      const [nv, c] = rawClean(x, mk);
+      if (c) ch = true;
+      o[k] = nv;
+    }
+    return [ch ? o : v, ch];
+  }
+  return [v, false];
+}
+
+/** Count strings in `v` that still hold a real (non-fake) phone or email. */
+function rawLeft(v: unknown): number {
+  if (typeof v === "string") {
+    const e = (v.match(RAW_EMAIL_RE) ?? []).filter((m) => !FAKE_EMAIL_RE.test(m.toLowerCase())).length;
+    return e + (v.match(RAW_PHONE_RE) ?? []).length;
+  }
+  if (Array.isArray(v)) return v.reduce<number>((a, x) => a + rawLeft(x), 0);
+  if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) {
+    return Object.values(v as RawDoc).reduce<number>((a, x) => a + rawLeft(x), 0);
+  }
+  return 0;
+}
+
 const col = (model: string) => mongoose.model(model).collection;
 
 /** Fields cleared (read from the models: Student.address; StaffProfile NID / addresses / bank / pay). */
-const STUDENT_CLEAR = ["address"] as const;
+const STUDENT_CLEAR = ["address", "dob", "biometricId"] as const;
+/** Cleared on every identity collection when present (a date of birth / biometric id is never needed on dev). */
+const EVERYWHERE_CLEAR = ["dob", "biometricId"] as const;
 const STAFF_CLEAR = [
   "nid",
   "presentAddress",
@@ -108,6 +172,8 @@ const STAFF_CLEAR = [
   "fatherName",
   "motherName",
   "spouseName",
+  "dob",
+  "biometricId",
 ] as const;
 
 const byId = (docs: RawDoc[]): RawDoc[] => docs.sort((a, b) => String(a._id).localeCompare(String(b._id)));
@@ -141,6 +207,7 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
     skippedFutureModels: wipeSet.skipped,
     masteryTestUsersRemoved: 0,
     masked: {},
+    rawMasked: {},
     residue: {},
     residueTotal: 0,
   };
@@ -165,12 +232,19 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
     staff.find({}).toArray(),
     students.find({}).toArray(),
   ])) as unknown as RawDoc[][];
-  const mk = new Masker();
-  for (const d of [...uDocs, ...gDocs, ...sDocs, ...stDocs]) {
-    mk.reserve(str(d.phone));
-    mk.reserve(str(d.whatsapp));
-    mk.reserve(str(d.email).toLowerCase());
-    mk.reserve(str(d.identifier));
+  const mk = new Masker(password ?? "dev-mask");
+  // Assign fakes up front, in sorted order of the real values, so a clash inside one run is resolved the same way every time.
+  {
+    const phones = new Set<string>();
+    const emails = new Set<string>();
+    for (const d of [...uDocs, ...gDocs, ...sDocs, ...stDocs]) {
+      for (const k of ["phone", "whatsapp"]) if (str(d[k])) phones.add(stripCc(str(d[k])));
+      if (str(d.email)) emails.add(str(d.email).toLowerCase());
+      if (str(d.identifierKind) === "phone" && str(d.identifier)) phones.add(stripCc(str(d.identifier)));
+      if (str(d.identifierKind) === "email" && str(d.identifier)) emails.add(str(d.identifier).toLowerCase());
+    }
+    for (const p of [...phones].sort()) mk.phone(p);
+    for (const e of [...emails].sort()) mk.email(e);
   }
 
   const hash = opts.apply ? await bcrypt.hash(password as string, opts.bcryptRounds ?? 10) : "";
@@ -187,7 +261,10 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
       if (str(d.phone)) $set.phone = mk.phone(str(d.phone));
       if (str(d.email)) $set.email = mk.email(str(d.email));
       if (d.passwordHash !== undefined && d.passwordHash !== null) $set.passwordHash = hash;
-      if (Object.keys($set).length) ops.push({ updateOne: { filter: { _id: d._id }, update: { $set } } });
+      const $unset: RawDoc = {};
+      for (const f of EVERYWHERE_CLEAR) if (d[f] !== undefined) $unset[f] = "";
+      const update = updateOf($set, $unset);
+      if (Object.keys(update).length) ops.push({ updateOne: { filter: { _id: d._id }, update } });
     }
     add("User", ops);
   }
@@ -202,7 +279,10 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
       if (kind === "phone" && ident) $set.identifier = mk.phone(ident);
       else if (kind === "email" && ident) $set.identifier = mk.email(ident);
       if (d.passwordHash !== undefined && d.passwordHash !== null) $set.passwordHash = hash;
-      if (Object.keys($set).length) ops.push({ updateOne: { filter: { _id: d._id }, update: { $set } } });
+      const $unset: RawDoc = {};
+      for (const f of EVERYWHERE_CLEAR) if (d[f] !== undefined) $unset[f] = "";
+      const update = updateOf($set, $unset);
+      if (Object.keys(update).length) ops.push({ updateOne: { filter: { _id: d._id }, update } });
     }
     add("Guardian", ops);
   }
@@ -237,6 +317,27 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
     for (const p of plan) await writeBatches(p.model, p.ops);
   }
 
+  // --- 2b. RAW gate: do not trust the schema. Scan every string of every identity document, at any depth,
+  // in any field (including legacy fields no longer in the model) and mask real phones / emails in place.
+  const RAW_MODELS = ["User", "Guardian", "StaffProfile", "Student"] as const;
+  const rawLeftBefore: Record<string, number> = {};
+  for (const m of RAW_MODELS) {
+    const docs = (await col(m).find({}).toArray()) as unknown as RawDoc[];
+    const ops: Ops = [];
+    for (const d of byId(docs)) {
+      const $set: RawDoc = {};
+      for (const [k, v] of Object.entries(d)) {
+        if (k === "_id" || k === "passwordHash") continue;
+        const [nv, changed] = rawClean(v, mk);
+        if (changed) $set[k] = nv;
+      }
+      if (Object.keys($set).length) ops.push({ updateOne: { filter: { _id: d._id }, update: { $set } } });
+    }
+    rawLeftBefore[m] = ops.length;
+    report.rawMasked[m] = ops.length;
+    if (opts.apply) await writeBatches(m, ops);
+  }
+
   // --- 3. residue count (values that do NOT match the fake patterns) ---------
   if (opts.apply) {
     const nonFake = (field: string, re: RegExp): RawDoc => ({ [field]: { $exists: true, $nin: [null, ""], $not: re } });
@@ -261,6 +362,17 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
       ["students.phone", () => students.countDocuments(nonFake("phone", FAKE_PHONE_RE))],
       ...STUDENT_CLEAR.map((f): [string, () => Promise<number>] => [`students.${f}`, () => students.countDocuments(present(f))]),
     ];
+    const rawDocs = async (m: string): Promise<number> => {
+      let n = 0;
+      for (const d of (await col(m).find({}).toArray()) as unknown as RawDoc[]) {
+        for (const [k, v] of Object.entries(d)) if (k !== "_id" && k !== "passwordHash") n += rawLeft(v);
+      }
+      return n;
+    };
+    for (const m of RAW_MODELS) checks.push([`raw.${m}`, () => rawDocs(m)]);
+    for (const [m, c] of [["users", users], ["guardians", guardians]] as const) {
+      for (const f of EVERYWHERE_CLEAR) checks.push([`${m}.${f}`, () => c.countDocuments(present(f))]);
+    }
     for (const [label, fn] of checks) {
       const n = await fn();
       report.residue[label] = n;

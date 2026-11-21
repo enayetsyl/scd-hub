@@ -36,21 +36,33 @@ npx tsx server/scripts/dev-copy-collections.ts --wipe
 states/assignments/sheets/actions, integrity cases, `QuestionUse`, notifications, audits, print requests; the old
 `@mastery.test` users are removed by the mask script.) Models a later slice has not built yet are listed as "skipped".
 
-## 4. Dump prod, read-only
-The `--nsInclude` list is GENERATED from the models (step 5 of section 9.2):
+## 4. Dump prod, read-only (to a path OUTSIDE the repo)
+The unmasked dump holds real personal data: it must never sit inside the checkout. The `--nsInclude=<db>.<coll>` tokens are
+GENERATED from the models (bare, no quotes), read into a bash array so nothing is re-split or re-quoted:
 ```
-INCLUDES=$(npx tsx server/scripts/dev-copy-collections.ts <prod-db>)
-mongodump --uri "$PROD_URI" $INCLUDES --out ./dev-copy-dump
+DUMP="$HOME/tmp-devcopy-$(date +%Y%m%d)"; umask 077; mkdir -m 700 "$DUMP"
+mapfile -t INC < <(npx tsx server/scripts/dev-copy-collections.ts <prod-db>)
+printf '%s\n' "${INC[@]}" | head -3   # eyeball: --nsInclude=<prod-db>.users ...  (no quotes)
+mongodump --uri "$PROD_URI" "${INC[@]}" --out "$DUMP"
 ```
 `mongodump` only reads. Never copied: push devices / web-push subscriptions, notifications, audits, AI settings/keys/usage,
 HR/payroll/finance, files, login throttles, sessions, chat.
 
-## 5. Restore into dev
+## 5. Restore into dev, check counts, delete the dump
+`mongorestore` matches `--nsInclude` against the SOURCE (prod) names, then renames with `--nsFrom/--nsTo`:
 ```
-INCLUDES_DEV=$(npx tsx server/scripts/dev-copy-collections.ts <dev-db>)
-mongorestore --uri "$DEV_URI" --drop $INCLUDES_DEV --nsFrom "<prod-db>.*" --nsTo "<dev-db>.*" ./dev-copy-dump
+mongorestore --uri "$DEV_URI" --drop --nsInclude="<prod-db>.*" --nsFrom="<prod-db>.*" --nsTo="<dev-db>.*" "$DUMP"
 ```
 `--drop` only drops the collections it restores. Run it ONLY after step 2 printed "target ok".
+Count check (dump count vs dev count per collection, with MONGODB_URI pointing at dev); every row must say `ok`:
+```
+npx tsx server/scripts/dev-copy-collections.ts --verify-restore "$DUMP" <prod-db>
+```
+Then delete the unmasked dump straight away and prove it is gone (before the mask even runs):
+```
+rm -rf "$DUMP"; test ! -e "$DUMP" && echo "no dump left"
+```
+If the count check fails, delete the dump anyway and start over from step 4.
 
 ## 6. Mask, before the API starts
 ```
@@ -60,7 +72,10 @@ npx tsx server/scripts/dev-mask.ts --apply
 ```
 It refuses unless the DB name ends in `_dev`, outgoing is closed and `MONGODB_URI` differs from `PROD_MONGODB_URI`.
 It must end with `residue 0` and exit 0; otherwise do NOT start the API (re-run it, or drop the dev DB and start over).
-Names stay (the owner wants the real roster).
+Names stay (the owner wants the real roster). Fakes are derived from a hash of the real value (the same real value gets the
+same fake in every collection, even after a half-failed run), so re-running with the same `DEV_TEST_PASSWORD` is safe. A RAW gate
+scans every string of users / guardians / staffprofiles / students for real phones and emails, even in fields the schema no
+longer knows, and masks them; `dob` and `biometricId` are cleared.
 
 ## 7. Start the dev API and check it
 ```
@@ -70,6 +85,8 @@ curl -s https://<dev-host>/readyz         # shows "outgoing OFF" and which keys 
 Log in once with one fake login (a masked phone `01000xxxxxx` + the shared test password).
 
 ## 8. Fake 2027 activity (after the year-change rehearsal, or scenario 0 on 2026 first)
+STOP the dev API first (`pm2 stop <dev-api-process>`) and start it again after the last command below: the generator tags its
+rows by a createdAt window, and a running API would let testers' rows fall inside it.
 ```
 npx tsx server/scripts/dev-fake-2027.ts                       # dry run: prints the manifest
 npx tsx server/scripts/dev-fake-2027.ts --apply --allow-2026  # scenario 0 on the 2026 year (before the rehearsal)
@@ -78,6 +95,7 @@ npx tsx server/scripts/dev-fake-2027.ts --remove <runId> --apply
 ```
 A re-run first removes every earlier run. Re-copying prod (steps 1-7) wipes the rehearsed year: re-run the rehearsal.
 The generator turns `classNoteQuestionOn` on if it is off (config, not run data; `--remove` leaves it on).
+Then: `pm2 start <dev-api-process>`.
 
 ## 9. Never
 Never run `server/scripts/seed.ts` on dev or prod (it deletes identity rows). Never take a help-guide picture or doc from

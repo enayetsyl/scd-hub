@@ -109,7 +109,7 @@ describe("collection lists", () => {
     expect(copy).toEqual(expect.arrayContaining(["users", "staffprofiles", "guardians", "students", "routineslots", "contentartifacts"]));
     // never copied
     expect(copy).not.toEqual(expect.arrayContaining(["notifications"]));
-    expect(nsIncludeFlags("scdhub_dev", COPY_MODELS)[0]).toMatch(/^--nsInclude "scdhub_dev\.[a-z]+"$/);
+    expect(nsIncludeFlags("scdhub_dev", COPY_MODELS)[0]).toMatch(/^--nsInclude=scdhub_dev\.[a-z]+$/);
   });
 });
 
@@ -204,5 +204,46 @@ describe("runMask", () => {
     const after = (await User.collection.find({}).sort({ _id: 1 }).toArray()).map((u) => `${u.phone}|${u.email}`);
     expect(r.residueTotal).toBe(0);
     expect(after).toEqual(before);
+  });
+
+  it("RAW gate: a real phone / email in a legacy field the schema does not know (any depth) is masked; dob / biometricId cleared", async () => {
+    await seed();
+    await Student.collection.updateOne(
+      { schoolId: "S-101" },
+      { $set: { oldFatherPhone: "01955555555", dob: new Date("2015-01-01"), biometricId: "B1", legacy: { notes: ["call +8801966666666 or mom@home.example"], deep: { x: { y: "01977777777" } } } } },
+    );
+    await StaffProfile.collection.updateOne({ schoolId: "ST-2" }, { $set: { dob: new Date("1990-01-01"), biometricId: "B2", oldEmail: "T2@Old.Example" } });
+    await User.collection.updateOne({ name: "Office" }, { $set: { biometricId: "B3" } });
+    const r = await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    expect(r.residueTotal).toBe(0);
+    expect(r.rawMasked.Student).toBeGreaterThan(0);
+    const s2 = (await Student.collection.findOne({ schoolId: "S-101" })) as Record<string, unknown>;
+    const dump = JSON.stringify(s2);
+    expect(dump).not.toMatch(/01955555555|01966666666|01977777777|mom@home\.example/);
+    expect(s2.oldFatherPhone).toMatch(FAKE_PHONE_RE);
+    expect(s2.dob).toBeUndefined();
+    expect(s2.biometricId).toBeUndefined();
+    const st2 = (await StaffProfile.collection.findOne({ schoolId: "ST-2" })) as Record<string, unknown>;
+    expect(st2.dob).toBeUndefined();
+    expect(st2.biometricId).toBeUndefined();
+    expect(st2.oldEmail).toMatch(FAKE_EMAIL_RE);
+    expect(((await User.collection.findOne({ name: "Office" })) as Record<string, unknown>).biometricId).toBeUndefined();
+  });
+
+  it("a half-failed first run does not break the staff login join: User.phone === StaffProfile.phone / email after a second run", async () => {
+    await seed();
+    await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    // simulate a first run that died after the Users were written: the staff rows are real again
+    await StaffProfile.collection.updateOne({ schoolId: "ST-1" }, { $set: { phone: "01711111111", email: "t1@school.example", whatsapp: "01733333333" } });
+    await StaffProfile.collection.updateOne({ schoolId: "ST-2" }, { $set: { phone: "01722222222" } });
+    const r = await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    expect(r.residueTotal).toBe(0);
+    const users = await User.collection.find({}).toArray();
+    const staff = await StaffProfile.collection.find({}).toArray();
+    for (const sp of staff) {
+      const u = users.find((x) => x.name === sp.name) as Record<string, unknown>;
+      expect(sp.phone).toBe(u.phone);
+      if (sp.email) expect(sp.email).toBe(u.email);
+    }
   });
 });
