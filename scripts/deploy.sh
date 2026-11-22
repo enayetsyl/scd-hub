@@ -37,7 +37,9 @@ build() {
   # sizes it from RAM, so the 24 GB VM gets ~4 GB but an 8 GB host gets ~2 GB, and the build
   # died there with "JavaScript heap out of memory" (rebuild drill, 2026-10-23, D-#819).
   # Pinning the 4 GB the VM already uses keeps a rebuild on a smaller VM from failing here.
-  export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096"
+  # 22 Nov 2026: the server build itself outgrew 4 GB (two dev deploys died at the cap, exit 134), so the
+  # pin is 6 GB. The VM has 24 GB; the rebuild drill container (8 GB cap) still fits one 6 GB build.
+  export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=6144"
   # patches/: the root postinstall runs patch-package, so a patch change needs a reinstall
   if stale "$DEPS_MARK" package.json package-lock.json '*/package.json' patches || [ ! -d node_modules ]; then
     npm install --no-audit --no-fund
