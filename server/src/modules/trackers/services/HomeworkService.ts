@@ -38,8 +38,9 @@ import {
 } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { dateKeyOf } from "../../attendance/dates";
-import { recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
+import { isLoop2027On, recordUsesSafe, classTokenOfLevel } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { manualCheckRefusal } from "../../mastery/paperLink";
 import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay } from "../calendar";
@@ -113,6 +114,10 @@ export interface DeclareHomeworkItemInput {
   description: string;
   /** StoredFile ids (≤5, HW_BINDABLE_FILE_KINDS) picked in the declare form. */
   attachmentIds?: string[];
+  /** AL-4 (switch on): free lines (R22) and teacher-written marked items beside the picked bank questions. Ignored
+   *  while the release switch is off — the 2026 declare is unchanged. */
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
+  teacherItems?: { textBn: string; marks: number }[];
   actorId: string;
 }
 
@@ -128,7 +133,15 @@ export interface HomeworkItemResult {
   revItem: boolean;
   status: string;
   attachmentIds: string[];
+  /** AL-4: the HW paper carrying this homework's per-question marks (null: none). */
+  paperId: string | null;
+  freeLines: { kind: string; textBn: string; estMinutes: number }[];
 }
+
+const resultExtras = (d: { paperId?: Types.ObjectId | null; freeLines?: { kind: string; textBn: string; estMinutes: number }[] | null }) => ({
+  paperId: d.paperId ? d.paperId.toString() : null,
+  freeLines: (d.freeLines ?? []).map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })),
+});
 
 export const HW_MAX_ATTACHMENTS = 5;
 
@@ -322,6 +335,23 @@ export async function declareHomeworkItem(
     return translateDuplicateId("hwId")(err);
   });
 
+  // AL-4 (switch on): picked qids / teacher items → the HW paper; free lines (R22); the 1.8 min/mark time (R26). A
+  // refusal (a held or unknown question, a section with no mastery class) undoes the declaration — never half a declare.
+  // Off (or nothing picked): this block does nothing and the 2026 declare is byte-for-byte unchanged.
+  if ((input.selectedQids?.length ?? 0) > 0 || (input.teacherItems?.length ?? 0) > 0 || (input.freeLines?.length ?? 0) > 0) {
+    try {
+      await (await import("../../mastery/services/HomeworkPaperService")).syncPaperForItem(doc, {
+        teacherItems: input.teacherItems,
+        freeLines: input.freeLines,
+        actorId: input.actorId,
+        touchedItems: true,
+      });
+    } catch (err) {
+      await HomeworkItem.deleteOne({ _id: doc._id });
+      throw err;
+    }
+  }
+
   // D-#299: a real declaration supersedes a "no homework today" marker for the
   // same (SECTION, subject, day) — the teacher changed their mind. Per section, not
   // per class: a split class (C4 Boys / Girls) declares independently.
@@ -343,6 +373,7 @@ export async function declareHomeworkItem(
     revItem: doc.revItem,
     status: doc.status,
     attachmentIds: (doc.attachmentIds ?? []).map((id) => id.toString()),
+    ...resultExtras(doc),
   };
 }
 
@@ -417,6 +448,9 @@ export interface UpdateHomeworkItemInput {
   revItem?: boolean;
   /** [] clears all attachments. */
   attachmentIds?: string[];
+  /** AL-4 (switch on): replace the free lines / the teacher-written marked items. Ignored while the switch is off. */
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
+  teacherItems?: { textBn: string; marks: number }[];
   actorId: string;
 }
 
@@ -489,6 +523,10 @@ export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promis
   if (input.attachmentIds !== undefined) {
     item.attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
   }
+  // AL-4 (switch on): a paper-linked declared item's time and count follow its paper and free lines — change the questions.
+  if (item.paperId && ((input.timeDecl !== undefined && input.timeDecl !== item.timeDecl) || (input.qCount !== undefined && input.qCount !== item.qCount))) {
+    if (await isLoop2027On()) throw new Error("প্রশ্নভিত্তিক শিটের সময় প্রশ্ন বদলে কমান");
+  }
   if (input.timeDecl !== undefined) {
     if (!Number.isInteger(input.timeDecl) || input.timeDecl < 0) {
       throw new Error("TIME_DECL must be a non-negative integer (minutes)");
@@ -514,9 +552,29 @@ export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promis
       item.poolRef = input.poolRef;
     }
   }
+  const prevQids = [...(item.selectedQids ?? [])];
   if (input.selectedQids !== undefined) item.selectedQids = input.selectedQids;
   if (input.revItem !== undefined) item.revItem = input.revItem;
 
+  // AL-4 (switch on): the picked questions / teacher items / free lines changed → the paper follows (refused once the
+  // paper is locked: printed or issued — §3.1 guard 4). Off: the switch read inside returns at once; nothing changes.
+  const touchesPaper =
+    (input.selectedQids !== undefined && !sameFrozenValue(input.selectedQids, prevQids)) || input.teacherItems !== undefined;
+  if (item.status !== "declared" && (input.freeLines !== undefined || input.teacherItems !== undefined)) {
+    const keep = JSON.stringify((item.freeLines ?? []).map((l) => [l.kind, l.textBn, l.estMinutes]));
+    const sent = JSON.stringify((input.freeLines ?? []).map((l) => [l.kind, (l.textBn ?? "").trim(), l.estMinutes]));
+    if (input.teacherItems !== undefined || keep !== sent) {
+      throw new Error("Item is already issued — the homework lines are frozen (only description, topics and attachments stay editable)");
+    }
+  }
+  if (touchesPaper || input.freeLines !== undefined) {
+    await (await import("../../mastery/services/HomeworkPaperService")).syncPaperForItem(item, {
+      teacherItems: input.teacherItems,
+      freeLines: input.freeLines,
+      actorId: input.actorId,
+      touchedItems: touchesPaper,
+    });
+  }
   await item.save();
 
   return {
@@ -531,6 +589,7 @@ export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promis
     revItem: item.revItem,
     status: item.status,
     attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
+    ...resultExtras(item),
   };
 }
 
@@ -544,6 +603,8 @@ export async function deleteHomeworkItem(itemId: string): Promise<{ itemId: stri
     throw new Error("Item is already issued — issued homework cannot be deleted");
   }
   await assertDayUnreconciled(item.classId.toString(), item.dateGiven as unknown as Date, item.sectionId?.toString());
+  // AL-4 (AC-B11): a declared item's paper goes with it, its ledger rows withdrawn (refused while a print request is live).
+  if (item.paperId) await (await import("../../mastery/services/HomeworkPaperService")).removePaperOfItem(item._id);
   await HomeworkItem.deleteOne({ _id: item._id });
   // AL-3: a declared item has written no ledger row yet (rows are written at issue, and an issued item cannot be deleted).
   return { itemId: item._id.toString(), hwId: item.hwId };
@@ -792,10 +853,21 @@ export async function issueHomeworkItem(
   item.issuedAt = now;
   await item.save();
 
+  // AL-4: an item with a linked paper locks it now (if the print did not already) and the PAPER writes the ledger rows —
+  // the item's own rows are skipped so a question is never counted twice.
+  let paperCarries: Set<string> | null = null;
+  if (item.paperId) {
+    try {
+      paperCarries = await (await import("../../mastery/services/HomeworkPaperService")).onHomeworkIssued(item);
+    } catch (err) {
+      console.error("[homework-paper] lock at issue failed:", err);
+    }
+  }
   // AL-3 (D-#1667): the picked bank questions went to the children — one ledger row each, whole শাখা.
   // Written regardless of the release switch (§3.6); a failure is logged, never undoes the issue.
+  // (A qid the item names that is NOT on its paper — a hand-made paper — still gets its own row.)
   await recordUsesSafe(
-    [...new Set(item.selectedQids ?? [])].map((qid) => ({
+    [...new Set(item.selectedQids ?? [])].filter((qid) => !paperCarries?.has(qid)).map((qid) => ({
       qid,
       kind: "HW" as const,
       sourceType: "HOMEWORK_ITEM" as const,
@@ -869,6 +941,9 @@ export async function transitionRecord(
   const at = input.at ?? new Date();
 
   if (to === "CHECKED") {
+    // AL-4 (§3.1 guard 3, switch on): the linked sheet owns the result.
+    const sheetRefusal = await manualCheckRefusal("HOMEWORK", record.hwItemId);
+    if (sheetRefusal) throw new Error(sheetRefusal);
     if (!input.result || !(HW_RESULTS as readonly string[]).includes(input.result)) {
       throw new Error("A RESULT (CORRECT/PARTIAL/WRONG) is required when checking (→ CHECKED)");
     }

@@ -17,7 +17,7 @@ import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT
 import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
-import { assertSetCtAllowed, CtBlockError, withdrawForCancelledPrint, writeSetUses } from "../../assessment/services/QuestionUseService";
+import { assertSetCtAllowed, CtBlockError, isLoop2027On, withdrawForCancelledPrint, writeSetUses } from "../../assessment/services/QuestionUseService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -52,6 +52,8 @@ export interface CreatePrintRequestInput {
   contentArtifactId?: string | null;
   fileIds?: string[] | null;
   linkUrl?: string | null;
+  /** AL-4: the class homework / assignment paper ("প্রিন্টে পাঠান"), for sourceType MASTERY_PAPER. */
+  masteryPaperId?: string | null;
   /** Mandatory on a teacher's request; defaulted on the internal (trusted) path. */
   colour?: string | null;
   sides?: string | null;
@@ -136,6 +138,11 @@ export function validateSource(input: CreatePrintRequestInput): void {
       if (!input.linkUrl) throw new PrintRequestError("A LINK request needs a linkUrl");
       if (!isPrintableUrl(input.linkUrl)) throw new PrintRequestError("linkUrl must be an http(s) URL");
       break;
+    case "MASTERY_PAPER":
+      if (!input.masteryPaperId || !Types.ObjectId.isValid(input.masteryPaperId)) {
+        throw new PrintRequestError("A MASTERY_PAPER request needs a masteryPaperId");
+      }
+      break;
   }
 }
 
@@ -187,7 +194,36 @@ async function assertSourceResolves(input: CreatePrintRequestInput): Promise<voi
     }
     case "LINK":
       break; // an external link cannot be verified — validated syntactically above
+    case "MASTERY_PAPER":
+      break; // resolved (and the tagging defaulted from the paper) by `resolveMasteryPaperSource` below
   }
+}
+
+/**
+ * AL-4 (§3.1, AC-B3): a class homework / assignment paper sent to print. Switch on only; the paper must exist, be a
+ * tracker paper (HW or AS, never an extra-homework sheet), not yet confirmed. The purpose follows the paper (HOMEWORK /
+ * ASSIGNMENT); the class, শাখা and subject default from it, and the copies follow the class's present count.
+ * Returns the paper so the caller can lock it once the request exists.
+ */
+async function resolveMasteryPaperSource(input: CreatePrintRequestInput): Promise<void> {
+  if (!(await isLoop2027On())) {
+    throw new PrintRequestError("এই সুবিধা এখনো চালু হয়নি — প্রশ্নভিত্তিক শিট এখনো প্রিন্টে পাঠানো যায় না।");
+  }
+  const { MasteryPaper } = await import("../../mastery/models/MasteryPaper");
+  const paper = await MasteryPaper.findById(input.masteryPaperId).lean();
+  if (!paper) throw new PrintRequestError("প্রশ্নভিত্তিক শিটটি পাওয়া যায়নি।");
+  if (paper.extra || (paper.source !== "HW" && paper.source !== "AS")) {
+    throw new PrintRequestError("শুধু বাড়ির কাজ বা অ্যাসাইনমেন্টের শিট প্রিন্টে পাঠানো যায়।");
+  }
+  if (paper.entryState === "CONFIRMED") throw new PrintRequestError("নম্বর নিশ্চিত হয়ে যাওয়া শিট আর প্রিন্টে পাঠানো যায় না।");
+  if (paper.items.length === 0) throw new PrintRequestError("শিটে কোনো প্রশ্ন নেই।");
+  const want = paper.source === "HW" ? "HOMEWORK" : "ASSIGNMENT";
+  if (input.purpose !== want) throw new PrintRequestError(`এই শিটের প্রিন্টের উদ্দেশ্য "${want}" হতে হবে।`);
+  input.classId = input.classId || String(paper.classId);
+  input.sectionId = input.sectionId || String(paper.sectionId);
+  input.subject = input.subject || paper.subject;
+  if (!input.copiesMode) input.copiesMode = "CLASS_PRESENT";
+  if (input.copiesMode === "CLASS_PRESENT") input.copiesClassId = input.copiesClassId || String(paper.classId);
 }
 
 export async function createPrintRequest(input: CreatePrintRequestInput): Promise<IPrintRequest> {
@@ -196,6 +232,10 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     throw new PrintRequestError("Invalid purpose");
   }
   validateSource(input);
+  if (input.sourceType === "MASTERY_PAPER") {
+    input = { ...input };
+    await resolveMasteryPaperSource(input);
+  }
   if (!input.trusted) await assertSourceResolves(input);
   if (input.purpose === "ASSIGNMENT") {
     await assertAssignmentTagging(input.classId, input.sectionId, input.subject);
@@ -248,6 +288,7 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
       : {}),
     ...(source === "UPLOAD" ? { fileIds: input.fileIds!.map((id) => new Types.ObjectId(id)) } : {}),
     ...(source === "LINK" ? { linkUrl: input.linkUrl! } : {}),
+    ...(source === "MASTERY_PAPER" ? { masteryPaperId: new Types.ObjectId(input.masteryPaperId!) } : {}),
     colour,
     sides,
     copies,
@@ -271,6 +312,17 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
       await writeSetUses(input.setId!, { classTestId: input.classTestId });
     } catch (err) {
       console.error("[question-use] set print write failed:", err);
+    }
+  }
+
+  // AL-4 (§3.1 guard 4, §3.2): the paper went to the children's side — its items lock, its ledger rows are written now.
+  if (source === "MASTERY_PAPER") {
+    try {
+      const { MasteryPaper } = await import("../../mastery/models/MasteryPaper");
+      const paper = await MasteryPaper.findById(input.masteryPaperId);
+      if (paper) await (await import("../../mastery/services/HomeworkPaperService")).lockPaper(paper, doc._id);
+    } catch (err) {
+      console.error("[homework-paper] lock at print failed:", err);
     }
   }
 
@@ -526,6 +578,10 @@ export async function cancelPrintRequest(
   await mirrorToClassTest(doc, "CANCELLED", actorId);
   // AL-3: a cancelled SET print means its questions did not go to the children.
   if (doc.sourceType === "SET" && doc.setId) await withdrawForCancelledPrint(doc.setId, doc._id);
+  // AL-4: a cancelled paper print unlocks the items and withdraws the rows — unless the homework was issued meanwhile.
+  if (doc.sourceType === "MASTERY_PAPER" && doc.masteryPaperId) {
+    await (await import("../../mastery/services/HomeworkPaperService")).onPrintCancelled(doc.masteryPaperId, doc._id);
+  }
   publishRealtime("print_queue", { op: "cancelled", id: doc._id.toString() });
   return doc;
 }
@@ -837,6 +893,9 @@ export function historyKey(doc: IPrintRequest): string {
     case "LINK":
       src = `link:${doc.linkUrl ?? ""}`;
       break;
+    case "MASTERY_PAPER":
+      src = `paper:${doc.masteryPaperId?.toString() ?? ""}`;
+      break;
     default:
       src = `${doc.sourceType}:${doc._id.toString()}`; // unknown source → never grouped
   }
@@ -1015,7 +1074,7 @@ async function groupPrintHistory(docs: IPrintRequest[]): Promise<PrintHistoryRow
 /** What the grouping reads off a job. The paged scan projects to these, so reading the
  *  whole printed history stays light; only a page's `latest` jobs are loaded in full. */
 const HISTORY_GROUP_FIELDS =
-  "sourceType setId contentArtifactId fileIds linkUrl classId copiesClassId sectionId subject purpose printedAt requestedAt requestedBy";
+  "sourceType setId contentArtifactId fileIds linkUrl masteryPaperId classId copiesClassId sectionId subject purpose printedAt requestedAt requestedBy";
 
 export interface PrintHistoryPageFilter extends Omit<PrintHistoryFilter, "limit"> {
   /** The Office's teacher chip: documents this person printed AT LEAST ONCE. Row-level,
@@ -1400,6 +1459,7 @@ export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRe
     ...(source === "CONTENT_ARTIFACT" ? { contentArtifactId: original.contentArtifactId } : {}),
     ...(source === "UPLOAD" ? { fileIds: original.fileIds } : {}),
     ...(source === "LINK" ? { linkUrl: original.linkUrl } : {}),
+    ...(source === "MASTERY_PAPER" ? { masteryPaperId: original.masteryPaperId } : {}),
     colour: original.colour,
     sides: original.sides,
     copies,
@@ -1446,7 +1506,7 @@ export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRe
 /** Existence-only source check for a reprint (the ownership/status rules that apply to a
  *  FRESH request were already satisfied when the original was printed). */
 async function assertReprintSourceExists(
-  original: Pick<IPrintRequest, "sourceType" | "setId" | "contentArtifactId" | "fileIds">,
+  original: Pick<IPrintRequest, "sourceType" | "setId" | "contentArtifactId" | "fileIds" | "masteryPaperId">,
 ): Promise<void> {
   switch (original.sourceType as PrintSource) {
     case "SET": {
@@ -1469,6 +1529,13 @@ async function assertReprintSourceExists(
     }
     case "LINK":
       break; // external by nature; nothing to verify
+    case "MASTERY_PAPER": {
+      const { MasteryPaper } = await import("../../mastery/models/MasteryPaper");
+      if (!(await MasteryPaper.exists({ _id: original.masteryPaperId }))) {
+        throw new PrintRequestError("প্রশ্নভিত্তিক শিটটি আর নেই — নতুন অনুরোধ করুন");
+      }
+      break;
+    }
   }
 }
 

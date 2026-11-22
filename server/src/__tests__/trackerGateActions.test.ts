@@ -128,6 +128,8 @@ const EXPECTED: Record<string, string[]> = {
   transitionHomeworkRecord: ["submit_homework"],
   markHomeworkRecordsDue: ["submit_homework"],
   checkHomeworkRecord: ["check_homework"],
+  // AL-4 (D-#1669): the free-line "হয়নি" ticks are part of checking the homework.
+  saveHomeworkFreeLineTicks: ["check_homework"],
   recordHomeworkOutcome: ["check_homework"],
   attachHomeworkAnswerFile: ["check_homework"],
   // --- homework: undo ---

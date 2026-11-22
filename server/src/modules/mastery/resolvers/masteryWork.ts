@@ -78,6 +78,8 @@ PaperRef.implement({
     hwItemId: t.string({ nullable: true, resolve: (p) => p.hwItemId }),
     classTestId: t.string({ nullable: true, description: "PR-C: the class test whose totals this sheet writes.", resolve: (p) => p.classTestId }),
     extra: t.boolean({ description: "PR-D: an extra homework for weak children (per-child items).", resolve: (p) => p.extra }),
+    marksOnly: t.boolean({ description: "AL-4 (R20): marks per question, no outcomes — confirming writes no evidence.", resolve: (p) => p.marksOnly }),
+    locked: t.boolean({ description: "AL-4: the items are locked — the sheet went to print or was issued.", resolve: (p) => p.locked }),
     entryState: t.exposeString("entryState"),
     totalMarks: t.exposeFloat("totalMarks"),
     items: t.field({ type: [PaperItemRef], resolve: (p) => p.items }),
@@ -122,16 +124,26 @@ RosterRowRef.implement({
     studentId: t.exposeString("studentId"),
     name: t.exposeString("name"),
     rollNumber: t.string({ nullable: true, resolve: (r) => r.rollNumber }),
+    schoolId: t.string({ nullable: true, description: "AL-4: the student ID — the grid's order and label (no roll numbers, D-#1463).", resolve: (r) => r.schoolId }),
+    earnedMarks: t.float({ nullable: true, description: "AL-4: the child's cached total from the last confirm / correction.", resolve: (r) => r.earnedMarks }),
+    availableMarks: t.float({ nullable: true, resolve: (r) => r.availableMarks }),
+    freeLinesNotDone: t.intList({ description: "AL-4 (R22): the free lines (0-based) the child did not do.", resolve: (r) => r.freeLinesNotDone }),
     defaultStatus: t.exposeString("defaultStatus"),
     itemNos: t.intList({ nullable: true, description: "AS sheets: the items this student was given; null ⇒ every item.", resolve: (r) => r.itemNos }),
     result: t.field({ type: ResultRef, nullable: true, resolve: (r) => r.result }),
   }),
 });
 
+const PaperFreeLineRef = builder.objectRef<PaperDetail["freeLines"][number]>("MasteryPaperFreeLine");
+PaperFreeLineRef.implement({
+  fields: (t) => ({ kind: t.exposeString("kind"), textBn: t.exposeString("textBn"), estMinutes: t.exposeInt("estMinutes") }),
+});
+
 const PaperDetailRef = builder.objectRef<PaperDetail>("MasteryPaperDetail");
 PaperDetailRef.implement({
   fields: (t) => ({
     paper: t.field({ type: PaperRef, resolve: (d) => d.paper }),
+    freeLines: t.field({ type: [PaperFreeLineRef], description: "AL-4 (R22): the linked homework's free lines.", resolve: (d) => d.freeLines }),
     roster: t.field({ type: [RosterRowRef], resolve: (d) => d.roster }),
     classTest: t.field({ type: LinkedTestRef, nullable: true, resolve: (d) => d.classTest }),
     classTestMismatches: t.field({ type: [MismatchRef], resolve: (d) => d.classTestMismatches }),
@@ -362,6 +374,16 @@ builder.mutationFields((t) => ({
     authScopes: { hasPermission: "mastery:create" },
     args: { paperId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => deletePaper(args.paperId, authOf(ctx)),
+  }),
+
+  voidMasteryPaper: t.field({
+    type: "Int",
+    description:
+      "AL-4 (AC-B11): void a CONFIRMED homework / assignment paper — its evidence is excluded (reason \"বাতিল\"), its " +
+      "ledger rows withdrawn, the tracker totals cleared. Returns how many items were excluded.",
+    authScopes: { hasPermission: "mastery:delete" },
+    args: { paperId: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => (await (await import("../services/HomeworkPaperService")).voidConfirmedPaper(args.paperId, authOf(ctx))).excluded,
   }),
 
   saveMasteryResults: t.field({

@@ -175,7 +175,7 @@ describe("guards and year rule", () => {
   });
   it("dry run prints the manifest and writes nothing", async () => {
     const lines: string[] = [];
-    const r = await runFake({ apply: false, allow2026: true, now: NOW, guard, log: (l) => lines.push(l) });
+    const r = await runFake({ apply: false, allow2026: true, scenarioIds: [0], now: NOW, guard, log: (l) => lines.push(l) });
     expect(r.applied).toBe(false);
     expect(r.manifest).toMatchObject({ runId: "fake-20261202-1030", dateMode: "2026-fallback", fromDateKey: "2026-10-04", toDateKey: "2026-11-26", sections: 2 });
     expect(r.manifest?.collections).toEqual(expect.arrayContaining(["classnotes", "lessondeliveries", "studentattendancedays", "notifications", "audits"]));
@@ -197,7 +197,7 @@ describe("scenario 0 + remove + re-run", () => {
     control = (await ClassNote.findOne({}))!._id as Types.ObjectId;
     expect(await Notification.countDocuments({})).toBe(1);
 
-    const r = await runFake({ apply: true, allow2026: true, now: NOW, guard, seed: 42 });
+    const r = await runFake({ apply: true, allow2026: true, scenarioIds: [0], now: NOW, guard, seed: 42 });
     const runId = "fake-20261202-1030";
     expect(r.manifest?.runId).toBe(runId);
     const c = r.counts["0"];
@@ -258,7 +258,7 @@ describe("scenario 0 + remove + re-run", () => {
   it("a re-run removes the previous run first and leaves exactly one manifest", async () => {
     const before = await ClassNote.countDocuments({ devFakeRun: "fake-20261202-1030" });
     expect(before).toBeGreaterThan(0);
-    const r = await runFake({ apply: true, allow2026: true, now: new Date(NOW.getTime() + 60_000), guard, seed: 42 });
+    const r = await runFake({ apply: true, allow2026: true, scenarioIds: [0], now: new Date(NOW.getTime() + 60_000), guard, seed: 42 });
     expect(r.removedRuns).toEqual(["fake-20261202-1030"]);
     expect(await ClassNote.countDocuments({ devFakeRun: "fake-20261202-1030" })).toBe(0);
     expect(await DevFakeRun.countDocuments({})).toBe(1);

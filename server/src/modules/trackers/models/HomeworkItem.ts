@@ -17,11 +17,19 @@
  * 120-min reconciliation/confirm.
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
-import type { HwSubject } from "@scd/shared";
+import { HW_SUBJECTS, HOMEWORK_FREE_LINE_KINDS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
+import type { HomeworkFreeLineKind, HwSubject } from "@scd/shared";
 
 export const HOMEWORK_ITEM_STATUSES = ["declared", "issued"] as const;
 export type HomeworkItemStatus = (typeof HOMEWORK_ITEM_STATUSES)[number];
+
+/** A homework line that is not a bank question and carries no marks (AL-4, R22, D-#1669): tracked done / not done
+ *  per child; its minutes are the teacher's own estimate. */
+export interface IHomeworkFreeLine {
+  kind: HomeworkFreeLineKind;
+  textBn: string;
+  estMinutes: number;
+}
 
 export interface IHomeworkItem extends Document {
   _id: Types.ObjectId;
@@ -64,6 +72,11 @@ export interface IHomeworkItem extends Document {
    *  kind) — the class-note pattern. `questionFileId` stays as the legacy single
    *  post-declare slot; readers surface both. */
   attachmentIds?: Types.ObjectId[];
+  /** AL-4 (D-#1669, switch on): the HW `MasteryPaper` that carries this homework's per-question marks. Set at declare
+   *  (both ways: `paper.links.hwItemId`); absent for a 2026 item, a free-lines-only homework, or a switch-off declare. */
+  paperId?: Types.ObjectId;
+  /** AL-4 (R22): free lines beside / instead of bank questions (no marks, no evidence). */
+  freeLines?: IHomeworkFreeLine[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,6 +110,18 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     issuedAt: { type: Date },
     questionFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
     attachmentIds: { type: [Schema.Types.ObjectId], ref: "StoredFile", default: undefined },
+    paperId: { type: Schema.Types.ObjectId, ref: "MasteryPaper" },
+    freeLines: {
+      type: [
+        {
+          _id: false,
+          kind: { type: String, enum: HOMEWORK_FREE_LINE_KINDS, required: true },
+          textBn: { type: String, required: true, trim: true },
+          estMinutes: { type: Number, required: true, min: 0 },
+        },
+      ],
+      default: undefined,
+    },
   },
   { timestamps: true },
 );

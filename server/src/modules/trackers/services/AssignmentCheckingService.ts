@@ -23,6 +23,7 @@ import { dateOnlyISO } from "../assignmentCalendar";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { assertTransition } from "../lifecycle";
 import { nextSchoolDay } from "../calendar";
+import { manualCheckRefusal } from "../../mastery/paperLink";
 
 export interface CheckAssignmentInput {
   recordId: string;
@@ -53,6 +54,11 @@ export async function checkAssignmentRecord(
     throw new Error("RESULT must be one of CORRECT / PARTIAL / WRONG");
   }
   assertTransition(rec.state, "CHECKED"); // throws unless SUBMITTED
+
+  // AL-4 (§3.1 guard 3, switch on): a record whose assignment has a linked question sheet takes no hand-typed result /
+  // marks — the sheet's confirm / correction writes them. No linked paper / switch off: checks as today.
+  const sheetRefusal = await manualCheckRefusal("ASSIGNMENT", rec.asItemId);
+  if (sheetRefusal) throw new Error(sheetRefusal);
 
   const item = await AssignmentItem.findById(rec.asItemId).lean();
   if (!item) throw new Error("AssignmentItem not found");
