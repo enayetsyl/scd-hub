@@ -7218,6 +7218,11 @@ export interface NotificationRefsT {
   examId: string | null;
   classId: string | null;
   subject: string | null;
+  /** D-#1679 — assignment week reminder → AssignmentReconcile. */
+  academicYearId: string | null;
+  weekNumber: number | null;
+  month: number | null;
+  weekOfMonth: number | null;
   /** SP-4 (D-#738) — deep-links to the improvement action. */
   improvementActionId: string | null;
   /** M-6 (D-#812) — deep-links staff to the mastery action. */
@@ -7251,7 +7256,7 @@ const NOTIFICATION_FIELDS = `
     audienceKey periodNumber tier hour observationId
     workClaimId workClaimTracker
     classTestId ctId taskId
-    syllabusId examId classId subject
+    syllabusId examId classId subject academicYearId weekNumber month weekOfMonth
     improvementActionId masteryActionId masteryReviewId examPaperId
     screenTarget bookId bookDraftId
   }

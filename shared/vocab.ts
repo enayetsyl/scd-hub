@@ -1689,6 +1689,9 @@ export const NOTIFICATION_KINDS = [
   "BOOK_ERRATUM",
   "BOOK_RELEASED",
   "BOOK_EDIT_READY",
+  // D-#1679 (owner 22 Nov 2026): a section's assignment WEEK has delivered items still DRAFT a day after
+  // delivery (auto-issue waits for every subject) — the class teacher is reminded daily to confirm it.
+  "AS_WEEK_PENDING_REMINDER",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1789,6 +1792,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   BOOK_ERRATUM: "বইয়ের ভুল-সংশোধনী",
   BOOK_RELEASED: "বইয়ের নতুন সংস্করণ",
   BOOK_EDIT_READY: "এআই সংশোধনের খসড়া তৈরি",
+  AS_WEEK_PENDING_REMINDER: "অ্যাসাইনমেন্ট সপ্তাহ নিশ্চিত করা বাকি",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1887,6 +1891,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BOOK_ERRATUM: "Book errata",
   BOOK_RELEASED: "New book version",
   BOOK_EDIT_READY: "AI edit draft ready",
+  AS_WEEK_PENDING_REMINDER: "Assignment week not confirmed",
 };
 
 /**
