@@ -34,6 +34,9 @@ export const COPY_MODELS: ModelRef[] = [
   m("MasteryPolicy"), m("MasteryEnablement"), m("MasteryCatalogueReview"), m("MasterySequence"),
   m("MasteryExclusion"),
   m("LessonProgressConfig"),
+  // the prepared 2027 year change (prod ran Prepare on 21 Nov 2026): without its run row the copied 2027
+  // classes / enrolments are orphans and the dev rehearsal cannot cut over
+  m("YearChangeRun"),
 ];
 
 /** Section 9.2 step 3: old dev operational + mastery-seed data, emptied before the copy / by the mask script. */
