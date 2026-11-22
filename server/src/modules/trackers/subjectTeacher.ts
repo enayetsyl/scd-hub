@@ -145,6 +145,39 @@ export async function teachesSectionSubject(
   return teachesOnRoutine(teacherId, "section", sectionId, subject);
 }
 
+/**
+ * Did the routine name this teacher on this section × subject ON A GIVEN DAY (`YYYY-MM-DD`, Dhaka)?
+ * Used only to let a class test's OWN teacher finish an exam they gave after the subject was handed to
+ * somebody else (owner report 22 Nov 2026: Nursery Maths moved Sajeda → Tahmina from 19 Nov; Sajeda's
+ * Test #4, sat 18 Nov and sent back for a fix, became unopenable). The handover closes the old slots and
+ * removes the old teacher's grants, so neither the grant nor "any live slot" can answer — the slot window
+ * covering the exam day can. Never authority for anything after that day.
+ */
+export async function taughtSectionSubjectOn(
+  teacherId: string,
+  sectionId: string,
+  subject: string,
+  dayKey: string,
+): Promise<boolean> {
+  const dayStart = new Date(`${dayKey}T00:00:00+06:00`);
+  const dayEnd = new Date(`${dayKey}T23:59:59.999+06:00`);
+  if (Number.isNaN(dayStart.getTime())) return false;
+  const slots = (await RoutineSlot.find({
+    groupType: "section",
+    groupId: sectionId,
+    subject,
+    teacherId,
+    active: true,
+    isBreak: false,
+    effectiveFrom: { $lte: dayEnd },
+    $or: [{ effectiveTo: null }, { effectiveTo: { $exists: false } }, { effectiveTo: { $gte: dayStart } }],
+  })
+    .select("_id")
+    .limit(1)
+    .lean()) as unknown as Array<{ _id: unknown }>;
+  return slots.length > 0;
+}
+
 async function teachesOnRoutine(
   teacherId: string,
   groupType: "section" | "subjectgroup",
