@@ -222,6 +222,7 @@ import PublishQuestionsScreen from "../screens/review/PublishQuestionsScreen";
 import QuestionReviewThreadScreen from "../screens/review/QuestionReviewThreadScreen";
 import QuestionReviewProgressScreen from "../screens/review/QuestionReviewProgressScreen";
 import ReviewSupervisionScreen from "../screens/review/ReviewSupervisionScreen";
+import ReviewStatsScreen from "../screens/review/ReviewStatsScreen";
 import ReviewSupervisionReviewerScreen from "../screens/review/ReviewSupervisionReviewerScreen";
 import QuestionReviewerRoundsScreen from "../screens/review/QuestionReviewerRoundsScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
@@ -1082,6 +1083,7 @@ function ReviewNavigator(): React.ReactElement {
       <ReviewStack.Screen name="ReviewSupervision" component={ReviewSupervisionScreen} options={{ title: STR.rspHeader }} />
       {/* Reviewer hub (H-1) - after ReviewHome, same initial-route rule. */}
       <ReviewStack.Screen name="ReviewHub" component={ReviewHubScreen} options={{ title: STR.rhTitle }} />
+      <ReviewStack.Screen name="ReviewStats" component={ReviewStatsScreen} options={{ title: STR.rvsTitle }} />
       <ReviewStack.Screen name="ReviewChapter" component={ReviewChapterScreen} options={{ title: STR.rpChapterHeader }} />
       <ReviewStack.Screen name="ReviewSelfServe" component={ReviewSelfServeScreen} options={{ title: STR.rssHeader }} />
       <ReviewStack.Screen name="ReviewSupervisionReviewer" component={ReviewSupervisionReviewerScreen} options={{ title: STR.rspReviewerHeader }} />

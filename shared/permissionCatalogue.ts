@@ -369,6 +369,16 @@ export const FEATURE_CATALOGUE = {
       manage: { en: "Manage the review program", bn: "পর্যালোচনা কাজ সরানো ও যোগ করা", desc: "Create a program, adopt open rounds into tasks, move/cancel/add a task, change a due date", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
+  // Review daily statistics (owner 22 Nov 2026, D-#1680): per-day counts of first review verdicts.
+  review_stats: {
+    group: "content_and_books",
+    en: "Review statistics",
+    bn: "পর্যালোচনার হিসাব",
+    actions: {
+      view_own: { en: "My review statistics", bn: "আমার পর্যালোচনার হিসাব", desc: "My own chapter plans, session plans and questions reviewed each day, with the change from the day before; the 8:30 pm notice", teacher: true, office: false, flags: [] },
+      view_all: { en: "Everyone's review statistics", bn: "সবার পর্যালোচনার হিসাব", desc: "The same day-by-day numbers for the whole team or for any one reviewer", teacher: false, office: true, flags: [] },
+    },
+  },
   scholarship_practice: {
     group: "assessment_and_exams",
     en: "Scholarship practice",

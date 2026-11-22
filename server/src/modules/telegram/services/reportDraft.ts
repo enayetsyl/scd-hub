@@ -131,6 +131,10 @@ export async function draftReport(input: DraftInput): Promise<DraftResult> {
       sawBadJson = true;
     } catch (err) {
       if (err instanceof TelegramHttpError && RETRY_STATUSES.has(err.status)) continue;
+      // A timeout (AbortSignal.timeout → TimeoutError/AbortError) or a dropped connection ("fetch failed") means this
+      // model is not answering now — try the next one instead of failing the reporter (prod 21 Nov 2026).
+      const name = (err as { name?: string } | null)?.name;
+      if (name === "TimeoutError" || name === "AbortError" || (err instanceof TypeError && /fetch failed/i.test(err.message))) continue;
       throw err;
     }
   }

@@ -158,6 +158,8 @@ export type ReviewStackParamList = {
   /** The Principal's "আরও কাজ দিন" settings + ladders. */
   ReviewSelfServe: { programId: string };
   ReviewSupervision: undefined;
+  /** Review daily statistics: today vs yesterday, the day-by-day list, a reviewer picker for view_all. */
+  ReviewStats: undefined;
   ReviewSupervisionReviewer: { programId: string; batch: number; reviewerId: string; reviewerName: string | null };
 };
 

@@ -148,9 +148,12 @@ const realGemini: GeminiBot = {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: parts.map((p) => ("text" in p ? { text: p.text } : { inline_data: { mime_type: p.mime, data: p.data } })) }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+          // No thinkingConfig: the current "-latest" models refuse `thinkingBudget: 0` with 400 INVALID_ARGUMENT
+          // (seen on prod 21 Nov 2026, every draft failed). Default thinking is fine for a short JSON report.
+          generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json" },
         }),
-        signal: AbortSignal.timeout(90_000),
+        // A hanging model must not hold the reporter for 90 s: give up after 45 s and try the fallback model.
+        signal: AbortSignal.timeout(45_000),
       },
       { refType: "telegram_report", refId: refId ?? null },
     );

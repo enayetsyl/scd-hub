@@ -216,5 +216,7 @@ import "./modules/review-program/resolvers/reviewProgram";
 import "./modules/review-program/resolvers/reviewHub";
 // The reviewer's ordered path + "আরও কাজ দিন" (.claude/plans/review-next-chunk.md): myReviewPath, requestMoreReview.
 import "./modules/review-program/resolvers/reviewPath";
+// Review daily statistics (.claude/plans/review-daily-stats.md): myReviewStats, reviewStats.
+import "./modules/review-program/resolvers/reviewStats";
 // Telegram bot TB-1 (D-#1666): myTelegramLink, createTelegramLink, unlinkTelegram.
 import "./modules/telegram/resolvers/telegram";

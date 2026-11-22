@@ -1700,6 +1700,12 @@ export const NOTIFICATION_KINDS = [
   "GUARDIAN_WEEKLY_SUMMARY",
   "INTEGRITY_CASE",
   "LESSON_BEHIND",
+  // D-#1679 (owner 22 Nov 2026): a section's assignment WEEK has delivered items still DRAFT a day after
+  // delivery (auto-issue waits for every subject) — the class teacher is reminded daily to confirm it.
+  "AS_WEEK_PENDING_REMINDER",
+  // Owner 22 Nov 2026: each reviewer's own daily review statistics (chapter plans / session plans / questions
+  // reviewed today vs yesterday) at 20:30 Dhaka; tap → the review statistics screen.
+  "REVIEW_DAILY_STATS",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1806,6 +1812,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   GUARDIAN_WEEKLY_SUMMARY: "এই সপ্তাহের পড়াশোনা",
   INTEGRITY_CASE: "হোমওয়ার্ক যাচাইয়ের নতুন কেস",
   LESSON_BEHIND: "সিলেবাস লক্ষ্যের পেছনে",
+  AS_WEEK_PENDING_REMINDER: "অ্যাসাইনমেন্ট সপ্তাহ নিশ্চিত করা বাকি",
+  REVIEW_DAILY_STATS: "আজকের পর্যালোচনার হিসাব",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1910,6 +1918,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   GUARDIAN_WEEKLY_SUMMARY: "This week's learning",
   INTEGRITY_CASE: "New homework check case",
   LESSON_BEHIND: "Behind the syllabus target",
+  AS_WEEK_PENDING_REMINDER: "Assignment week not confirmed",
+  REVIEW_DAILY_STATS: "Today's review statistics",
 };
 
 /**

@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `exam_results`, `exam_custody`, `mastery`, `book_production`, `book_lifecycle` (owner rows: see README; `book_lifecycle` gates: docs/prd-book-lifecycle.md §7.4). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `exam_results`, `exam_custody`, `mastery`, `book_production`, `book_lifecycle`, `review_stats` (owner rows: see README; `book_lifecycle` gates: docs/prd-book-lifecycle.md §7.4). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations
@@ -470,3 +470,12 @@ App gates: `ExamsTab` on any `exam_results:*` or `exam_custody:*`; drawer leaf �
 | server/src/modules/guardian-help/resolvers/questionHints.ts | importQuestionHints | `question_hint:import` (Principal; dry run or apply) |
 | server/src/modules/guardian-help/resolvers/questionHints.ts | childAssignedQuestions | `guardian:read_child` (non-catalogue guardian plane) + `assertGuardianOfStudent`; question text only, no answer field |
 | server/src/modules/guardian-help/resolvers/questionHints.ts | openQuestionHint | `guardian:read_child` + `assertGuardianOfStudent`; the qid must be assigned to that child; step N only after step N-1 |
+
+## (h) `review_stats` — review daily statistics (owner 22 Nov 2026, D-#1680, .claude/plans/review-daily-stats.md)
+Counts a reviewer's FIRST verdict per plan/question by Dhaka day (audit `REVIEW_SUBMITTED`, `meta.resubmit !== true`).
+| where | gate |
+|---|---|
+| server/src/modules/review-program/resolvers/reviewStats.ts `myReviewStats`, `myReviewStatsSummary` | `review_stats:view_own` (always the caller's own numbers) |
+| `reviewStats`, `reviewStatsSummary`, `reviewStatsReviewers` | `review_stats:view_all` (reviewerId null = whole team) |
+| scheduler family `review daily stats` (20:30 Dhaka, every day) | recipients = holders of `review_stats:view_own` with a first verdict in the last 7 days or an open round |
+| app/src/screens/review/ReviewStatsScreen.tsx, ReviewHub entry row | either action; the reviewer picker needs `review_stats:view_all` |
