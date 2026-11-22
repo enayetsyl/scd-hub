@@ -37,7 +37,7 @@ import { Class } from "../foundation/models/Class";
 import { SubjectGroup } from "../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership";
 import { Subject } from "../foundation/models/Subject";
-import { teachesSectionSubject, teachesSubjectGroup } from "./subjectTeacher";
+import { taughtSectionSubjectOn, teachesSectionSubject, teachesSubjectGroup } from "./subjectTeacher";
 import { enrolmentsInUse, sectionRosterIdsOn } from "../foundation/services/EnrolmentService";
 import { dhakaDayKey } from "../../lib/dhakaDay";
 import type { DelegatedAction } from "@scd/shared";
@@ -128,6 +128,12 @@ async function isEmptiedSection(sectionId: string): Promise<boolean> {
  * so an exam sat before the split, whose marks were not yet in, became unopenable for
  * the very teacher who has to enter them ("Something went wrong" on Science Test #4).
  * Narrow on purpose: only the exam's teacher, only when nobody sits in that section.
+ *
+ * Also (owner report 2026-11-22): the exam's own teacher passes when the routine named them on this
+ * section × subject ON THE EXAM DAY, even though the subject has since been handed to another teacher
+ * (Nursery Maths, Sajeda → Tahmina from 19 Nov; her Test #4 of 18 Nov was sent back and could not be
+ * fixed). The handover ends the old slots and removes the old teacher's grants; the slot that covered
+ * the exam day proves it was their exam. Still only the exam's teacher, and only for that exam.
  */
 async function withEmptiedSectionOwner(
   ctx: AppContext,
@@ -142,12 +148,19 @@ async function withEmptiedSectionOwner(
       test.sectionId &&
       test.teacherId &&
       ctx.auth?.userId === test.teacherId &&
-      (await isEmptiedSection(test.sectionId))
+      ((await isEmptiedSection(test.sectionId)) || (await taughtOnExamDay(test.teacherId, test)))
     ) {
       return;
     }
     throw err;
   }
+}
+
+/** The routine named `teacherId` on the exam's section × subject on the exam day (handover case). */
+async function taughtOnExamDay(teacherId: string, test: AnchoredTest): Promise<boolean> {
+  const key = examKeyOf(test.examDate);
+  if (!test.sectionId || !key) return false;
+  return taughtSectionSubjectOn(teacherId, test.sectionId, test.subject, key);
 }
 
 /** Staff READ scope on the exam's unit. Principal/Office are unscoped, as before —
