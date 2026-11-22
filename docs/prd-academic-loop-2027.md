@@ -418,8 +418,9 @@ Today `diagnosis.ts` replays `EvidenceLike` rows that carry no source, although 
   layout keys `assignmentPartAMarks : assignmentPartBMarks` (default 5 : 10 → one third common) or the teacher's
   remembered layout. The subject's **counted minutes** = (Part A marks + the **median** child's Part B marks) ×
   `minutesPerMark`.
-- **Day split:** subjects are placed largest first on the lighter day; a subject that does not fit whole **spans both
-  days** (`doOnDay = BOTH`, `minutesByDay`) — the sheet prints "শুক্রবার: প্রশ্ন ১–৬ · শনিবার: প্রশ্ন ৭–১২".
+- **Day split:** subjects are placed largest first, filling Friday first, then Saturday (as AC-C9; corrected 22 Nov
+  2026 — the earlier "on the lighter day" wording contradicted AC-C9); a subject that does not fit whole in what is left
+  of Friday **spans both days** (`doOnDay = BOTH`, `minutesByDay`) — the sheet prints "শুক্রবার: প্রশ্ন ১–৬ · শনিবার: প্রশ্ন ৭–১২".
   Each day's counted minutes ≤ `perDayHours` × 60.
 - **Common part:** (100 − `suggestRevisionPct`) % from recent chapters, the rest from older chapters; inside a chapter,
   objectives ranked by the শাখা's WEAK + IMPROVING count, then least evidence.

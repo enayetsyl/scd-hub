@@ -23,6 +23,7 @@ import { MasteryPaper, type IMasteryPaper, type IMasteryPaperItem } from "../mod
 import { MasteryResult } from "../models/MasteryResult";
 import { MasteryOutcome } from "../models/MasteryOutcome";
 import { MasteryExclusion } from "../models/MasteryExclusion";
+import { MasteryAssignment } from "../models/MasteryAssignment";
 import { MasteryEvidence } from "../models/MasteryEvidence";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { HomeworkItem, type IHomeworkItem, type IHomeworkFreeLine } from "../../trackers/models/HomeworkItem";
@@ -112,14 +113,18 @@ function normalizeTeacherItems(input: TeacherItemInput[] | null | undefined): Te
 // Declare / edit → the paper
 // ---------------------------------------------------------------------------
 
-async function pickedItems(
-  item: IHomeworkItem,
+/**
+ * The bank questions of a paper as paper items (the part of a pick that is not the homework draft's exclusions): each
+ * must be a gold, current question of this subject and not a later class's, not held for the exam papers; marks come
+ * from the question; `enabled` (a locked tree for the class × subject) decides whether it carries outcome codes.
+ * Shared by the homework declare (above) and the AL-6 weekly-assignment paper.
+ */
+export async function bankItemsOf(
+  item: { subject: string; classLevel: number },
   qids: string[],
-  teacher: TeacherItemInput[],
   enabled: boolean,
   ctx: Awaited<ReturnType<typeof sectionContext>>,
-  onSheet: ReadonlySet<string>,
-): Promise<IMasteryPaperItem[]> {
+): Promise<{ built: Omit<IMasteryPaperItem, "itemNo">[]; objectiveOf: Map<string, string> }> {
   const classToken = ctx.classToken;
   const built: Omit<IMasteryPaperItem, "itemNo">[] = [];
   const objectiveOf = new Map<string, string>();
@@ -169,6 +174,18 @@ async function pickedItems(
       ...(stim ? { stimulusRef: stim } : {}),
     });
   }
+  return { built, objectiveOf };
+}
+
+async function pickedItems(
+  item: IHomeworkItem,
+  qids: string[],
+  teacher: TeacherItemInput[],
+  enabled: boolean,
+  ctx: Awaited<ReturnType<typeof sectionContext>>,
+  onSheet: ReadonlySet<string>,
+): Promise<IMasteryPaperItem[]> {
+  const { built, objectiveOf } = await bankItemsOf(item, qids, enabled, ctx);
   // The draft's own exclusions apply to a hand pick too (§4.3, §4.7, R21, R23): only what this save ADDS is checked.
   await assertPicksAllowed(ctx, item.subject as MasterySubject, dhakaDayKey(item.dateGiven), qids.filter((q) => !onSheet.has(q)), objectiveOf);
   for (const t of teacher) {
@@ -278,10 +295,23 @@ async function removePaper(paper: IMasteryPaper, item: IHomeworkItem | null): Pr
   await HomeworkItem.updateOne({ paperId: paper._id }, { $unset: { paperId: "" } });
 }
 
+/** Remove one paper by id (the untailored AS paper a tailored one replaces, AL-6): refuses worked / printed ones. */
+export async function removePaperById(paperId: Types.ObjectId | string): Promise<void> {
+  const paper = await MasteryPaper.findById(paperId);
+  if (paper) await removePaper(paper, null);
+}
+
 /** deleteAssignmentItem (a DRAFT, no records): an AL-4 AS paper goes with it, its ledger rows withdrawn (AC-B11). */
 export async function removePaperOfAsItem(asItemId: Types.ObjectId | string): Promise<void> {
   const paper = await MasteryPaper.findOne({ "links.asItemId": oid(asItemId), trackerLinked: true });
-  if (paper) await removePaper(paper, null);
+  if (!paper) return;
+  if (paper.links?.assignmentId) {
+    // AL-6: a TAILORED week's paper belongs to the assignment (the sheets were sent) — only its tracker link goes.
+    await MasteryPaper.updateOne({ _id: paper._id }, { $unset: { "links.asItemId": "", trackerLinked: "" } });
+    await MasteryAssignment.updateOne({ _id: paper.links.assignmentId }, { $unset: { asItemId: "" } });
+    return;
+  }
+  await removePaper(paper, null);
 }
 
 /** deleteHomeworkItem / voidHomeworkItem: a declared item's paper goes with it (nothing was given; AC-B11). */
@@ -301,7 +331,9 @@ export async function lockPaper(paper: IMasteryPaper, printRequestId?: Types.Obj
   if (printRequestId && !paper.printRequestId) set.printRequestId = oid(printRequestId);
   if (Object.keys(set).length > 0) await MasteryPaper.updateOne({ _id: paper._id }, { $set: set });
   const kind = paper.source === "AS" ? "AS" : "HW";
-  await recordUsesSafe(usesOfPaper(paper, kind, { givenOn: dhakaDayKey(paper.date), wholeIfAll: kind === "AS" }));
+  // An AS paper is "given" the day it is locked (print / issue), not on its due date (AL-6); the ledger write is
+  // idempotent on (source, item, qid), so the tailored paper's finalise write (AL-3) and this one never double count.
+  await recordUsesSafe(usesOfPaper(paper, kind, { givenOn: dhakaDayKey(kind === "AS" ? new Date() : paper.date), wholeIfAll: kind === "AS" }));
 }
 
 /**

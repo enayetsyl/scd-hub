@@ -138,6 +138,7 @@ StateRef.implement({
     reworkCount: t.exposeInt("reworkCount"),
     reasons: t.exposeStringList("reasons"),
     nextRevisionAt: t.string({ nullable: true, resolve: (s) => s.nextRevisionAt }),
+    inSchoolPending: t.exposeBoolean("inSchoolPending", { description: "AL-6: IMPROVING because the good work was at home only — show \"ক্লাসে যাচাই বাকি\"." }),
     level: t.exposeString("level"),
     parentCode: t.string({ nullable: true, resolve: (s) => s.parentCode }),
     domainCode: t.string({ nullable: true, resolve: (s) => s.domainCode }),

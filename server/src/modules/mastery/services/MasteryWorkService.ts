@@ -192,8 +192,15 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   await assertEnabled(ctx, input.subject);
   await assertMayWork(auth, ctx.sectionId, input.subject, date);
 
-  if (!["HW", "CT", "RUBRIC"].includes(input.source)) {
+  if (!["HW", "CT", "RUBRIC", "CW"].includes(input.source)) {
     throw new MasteryWorkError("অ্যাসাইনমেন্টের কাজ সাপ্তাহিক অ্যাসাইনমেন্ট পাঠালে তৈরি হয়।");
+  }
+  if (input.source === "CW") {
+    // AL-6 (§3.8): the in-class work sheet exists only with the 2027 release switch on; it was done in class, so
+    // it is dated today or earlier, and it is never a tracker item (no hwItemId, no classTestId).
+    if (!(await isLoop2027On())) throw new MasteryWorkError("এই সুবিধা এখনো চালু হয়নি।");
+    if (input.hwItemId || input.classTestId) throw new MasteryWorkError("ক্লাসের কাজ বাড়ির কাজ বা ক্লাস টেস্টের সাথে যুক্ত হয় না।");
+    if (dhakaDayKey(date) > dhakaDayKey(new Date())) throw new MasteryWorkError("ক্লাসের কাজের তারিখ আজকের পরে হতে পারে না।");
   }
   const isRubric = input.source === "RUBRIC";
   const rubricCodes = [...new Set(input.rubricLoCodes ?? [])];
@@ -561,6 +568,12 @@ async function trackerDefaults(paper: IMasteryPaper): Promise<Map<string, "PRESE
   // NOT_SUBMITTED, ABSENT_REDELIVER → ABSENT. A GIVEN / DUE record is refused at confirm, so it reads as not handed in
   // here — the 2026 map below counted GIVEN as PRESENT (the hole). Off → the 2026 map, unchanged.
   const strict = isTrackerLinked(paper) && (await isLoop2027On());
+  // AL-6: an in-class work sheet defaults a child the register shows absent that day to ABSENT — no in-school evidence.
+  if (paper.source === "CW" && (await isLoop2027On())) {
+    const { absentOnRegister } = await import("../../trackers/services/deliveryAttendanceCheck");
+    const roster = await Student.find({ sectionId: paper.sectionId, active: true }).select("_id").lean(); // bounded: one section
+    for (const id of await absentOnRegister(roster.map((s) => String(s._id)), dhakaDayKey(paper.date))) out.set(id, "ABSENT");
+  }
   for (const r of recs) {
     const s = r.state as string;
     if (strict) {
@@ -1036,13 +1049,15 @@ export interface ClassTestSheetLink {
   entryState: string | null;
   sectionId: string | null;
   classLevel: number | null;
+  /** AL-6 (AC-F1): a mastery-ON class test of a শাখা with no linked question sheet (switch on) — the screen warns, it never blocks. */
+  noSheetWarning: boolean;
 }
 
 /** The class-test screens' read: is mastery on here, and which sheet (if any) owns this test's totals. */
 export async function classTestSheetLink(classTestId: string): Promise<ClassTestSheetLink> {
-  const none: ClassTestSheetLink = { enabled: false, paperId: null, entryState: null, sectionId: null, classLevel: null };
+  const none: ClassTestSheetLink = { enabled: false, paperId: null, entryState: null, sectionId: null, classLevel: null, noSheetWarning: false };
   if (!Types.ObjectId.isValid(classTestId)) return none;
-  const test = await ClassTest.findById(classTestId).select("sectionId subjectGroupId subject").lean();
+  const test = await ClassTest.findById(classTestId).select("sectionId subjectGroupId subject status").lean();
   if (!test || !test.sectionId || test.subjectGroupId) return none;
   const ctx = await sectionContext(String(test.sectionId)).catch(() => null);
   if (!ctx) return none;
@@ -1055,5 +1070,7 @@ export async function classTestSheetLink(classTestId: string): Promise<ClassTest
     entryState: paper?.entryState ?? null,
     sectionId: String(ctx.sectionId),
     classLevel: (cls?.level as number | undefined) ?? null,
+    // The warning is for a live test (not cancelled) the sheet could still be linked to; only with the release switch on.
+    noSheetWarning: enabled && !paper && (test.status === "REQUESTED" || test.status === "PRINTED") && (await isLoop2027On()),
   };
 }

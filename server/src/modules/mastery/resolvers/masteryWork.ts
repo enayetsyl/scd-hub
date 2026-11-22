@@ -193,6 +193,9 @@ CtSheetLinkRef.implement({
     entryState: t.string({ nullable: true, resolve: (l) => l.entryState }),
     sectionId: t.string({ nullable: true, resolve: (l) => l.sectionId }),
     classLevel: t.int({ nullable: true, resolve: (l) => l.classLevel }),
+    noSheetWarning: t.exposeBoolean("noSheetWarning", {
+      description: "AL-6: mastery is on for this test's class × subject but no question sheet is linked (release switch on) — a warning, never a block.",
+    }),
   }),
 });
 

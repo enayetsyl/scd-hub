@@ -445,6 +445,7 @@ interface DeliverResultShape {
   estMinutes: number;
   presentCount: number;
   absentCount: number;
+  paperWarning?: string;
 }
 const DeliverResultRef = builder.objectRef<DeliverResultShape>("DeliverAssignmentResult");
 DeliverResultRef.implement({
@@ -459,6 +460,11 @@ DeliverResultRef.implement({
     estMinutes: t.exposeInt("estMinutes"),
     presentCount: t.exposeInt("presentCount"),
     absentCount: t.exposeInt("absentCount"),
+    paperWarning: t.string({
+      nullable: true,
+      description: "AL-6: set when the item was delivered but its question sheet could not be made — show it (Bangla, 'প্রশ্নভিত্তিক শিট তৈরি হয়নি: …').",
+      resolve: (r) => r.paperWarning ?? null,
+    }),
   }),
 });
 
@@ -1259,6 +1265,25 @@ builder.mutationField("updateAssignmentItem", (t) =>
         actorId: ctx.auth.userId as string,
         isAdmin: callerHasPermission(ctx.auth, "assignment:edit_all"), // PM 2H: was isAdminStaff
       });
+    },
+  }),
+);
+
+builder.mutationField("resyncAssignmentPaper", (t) =>
+  t.field({
+    type: "Boolean",
+    description:
+      "AL-6: rebuild a delivered, not-yet-locked assignment's question sheet (AS paper) from its question set — after the set's " +
+      "questions changed. A locked / worked / confirmed sheet is refused in Bangla. Same gate as editing the item. Returns true when the sheet changed.",
+    authScopes: { hasPermission: "assignment:declare" },
+    args: { itemId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWriteOnItem(ctx, args.itemId, { allowRecordSections: true });
+      const { isLoop2027On } = await import("../../assessment/services/QuestionUseService");
+      if (!(await isLoop2027On())) throw new Error("এই সুবিধা এখনো চালু হয়নি।");
+      const { resyncAssignmentPaper } = await import("../../mastery/services/AssignmentPaperService");
+      return (await resyncAssignmentPaper(args.itemId, ctx.auth.userId as string)).changed;
     },
   }),
 );

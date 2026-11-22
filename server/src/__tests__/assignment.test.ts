@@ -85,6 +85,9 @@ jest.mock("../modules/platform/models/StoredFile", () => ({
   },
 }));
 
+// AL-6: the weekly ceiling / second-assignment rules read the 2027 release switch; this DB-free suite is the 2026 flow (OFF).
+jest.mock("../modules/assessment/services/QuestionUseService", () => ({ isLoop2027On: () => Promise.resolve(false) }));
+
 import {
   generateAsId,
   deliverAssignmentItem,

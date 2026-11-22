@@ -168,6 +168,7 @@ export async function addQuestionToSet(
       marks,
     });
     await set.save();
+    await resyncAssignmentsOfSet(set, actorId);
   }
 
   // De-identified corpus event — NO identity fields (ADR-005)
@@ -397,6 +398,23 @@ export async function renameSet(setId: string, name: string): Promise<void> {
   await set.save();
 }
 
+/**
+ * AL-6 (release switch on): an AS set's basket changed — the delivered, not-yet-locked assignment items that use it get
+ * their question sheet rebuilt. A failure is reported (Sentry), never thrown: the set edit stands; the teacher can use
+ * `resyncAssignmentPaper` on the item. Off → nothing.
+ */
+async function resyncAssignmentsOfSet(set: { _id: Types.ObjectId; setType: string }, actorId: string): Promise<void> {
+  if (set.setType !== "AS") return;
+  try {
+    const { isLoop2027On } = await import("./QuestionUseService");
+    if (!(await isLoop2027On())) return;
+    const r = await (await import("../../mastery/services/AssignmentPaperService")).resyncItemsOfSet(set._id, actorId);
+    for (const f of r.failed) await (await import("../../../lib/reportError")).reportSilentFailure("assessmentSet.resyncAssignmentPaper", new Error(f.reason), { itemId: f.itemId });
+  } catch (err) {
+    await (await import("../../../lib/reportError")).reportSilentFailure("assessmentSet.resyncAssignmentPaper", err, { setId: String(set._id) });
+  }
+}
+
 export interface RemoveQuestionResult {
   setId: string;
   itemCount: number;
@@ -417,6 +435,7 @@ export async function removeQuestionFromSet(
   if (idx >= 0) {
     set.basketItems.splice(idx, 1);
     await set.save();
+    await resyncAssignmentsOfSet(set, String(set.createdBy));
   }
   return { setId: set._id.toString(), itemCount: set.basketItems.length };
 }

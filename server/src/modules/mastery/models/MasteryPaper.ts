@@ -12,8 +12,10 @@ import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS } from "@scd/shared";
 import type { MasteryClassToken, MasterySubject } from "@scd/shared";
 
 /** AS = the weekly tailored assignment (M-4), RETEST = an action's re-test (M-5): both created
- *  only by their flow, never by hand, and both carry per-student item lists. */
-export const MASTERY_PAPER_SOURCES = ["HW", "CT", "RUBRIC", "AS", "RETEST"] as const;
+ *  only by their flow, never by hand, and both carry per-student item lists. CW = "ক্লাসের কাজ" (AL-6, §3.8): work
+ *  done and marked IN CLASS — the same sheet, entry and evidence as a homework, never printed for home, never a
+ *  tracker item; its evidence counts as in-school. */
+export const MASTERY_PAPER_SOURCES = ["HW", "CT", "RUBRIC", "AS", "RETEST", "CW"] as const;
 export type MasteryPaperSource = (typeof MASTERY_PAPER_SOURCES)[number];
 export const MASTERY_ITEM_ORIGINS = ["BANK", "TEACHER", "TEACHER_AI"] as const;
 export type MasteryItemOrigin = (typeof MASTERY_ITEM_ORIGINS)[number];
