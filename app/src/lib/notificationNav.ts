@@ -196,6 +196,22 @@ export function notificationTarget(
                 : undefined,
           }
         : { tab: "ReportsTab", screen: "HwWeeklyUnsubmitted" };
+    // D-#1679: the class teacher's daily "confirm this week" reminder → that section-week's reconcile page.
+    case "AS_WEEK_PENDING_REMINDER":
+      return refs?.academicYearId && refs?.sectionId && refs?.classId && refs?.weekNumber
+        ? {
+            tab: "AssignmentTab",
+            screen: "AssignmentReconcile",
+            params: {
+              academicYearId: refs.academicYearId,
+              sectionId: refs.sectionId,
+              classId: refs.classId,
+              weekNumber: refs.weekNumber,
+              // The same "নভেম্বর · সপ্তাহ ৩" label the Assignments home shows, not the internal index.
+              ...(refs.month != null && refs.weekOfMonth != null ? { month: refs.month, weekOfMonth: refs.weekOfMonth } : {}),
+            },
+          }
+        : { tab: "AssignmentTab", screen: "AssignmentHome" };
     case "ASSIGNMENT_CHASE":
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
