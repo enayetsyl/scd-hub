@@ -287,6 +287,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReviewTab", labelKey: "tabReview", icon: "📝", perms: REVIEW_HOME_PERMS },
       // RS-4: the daily supervision view of the teacher review program (Principal; the deputy by grant).
       { route: "ReviewTab", labelKey: "rspNav", icon: "📈", screen: "ReviewSupervision", perms: ["review_program:supervise"] },
+      // Daily review statistics (owner 22 Nov 2026): a reviewer's own numbers; Office/Principal see everyone's.
+      { route: "ReviewTab", labelKey: "rvsNav", icon: "📊", screen: "ReviewStats", perms: ["review_stats:view_own", "review_stats:view_all"] },
       // Mastery tracker (M-0, docs/prd-mastery.md): catalogue, import, review, tags, policy & switch.
       { route: "MasteryTab", labelKey: "msCatalogueNav", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
       { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
