@@ -173,6 +173,7 @@ export default function ReviewHubScreen(): React.ReactElement {
   const { can } = useAuth();
   const toast = useToast();
   const canPath = can("plan_review:review") || can("question_review:review");
+  const canStats = can("review_stats:view_own") || can("review_stats:view_all");
 
   const [q, refetch] = useQuery({ query: MY_REVIEW_HUB, requestPolicy: "cache-and-network" });
   const [pathQ, refetchPath] = useQuery({ query: MY_REVIEW_PATH, requestPolicy: "cache-and-network", pause: !canPath });
@@ -280,6 +281,16 @@ export default function ReviewHubScreen(): React.ReactElement {
             <Button title={STR.rpMore} onPress={() => void onMore()} loading={moreRes.fetching} disabled={!more.canRequest} variant="secondary" />
             <Muted style={{ marginTop: space(1) }}>{reason ?? STR.rpMoreHint}</Muted>
             {moreMsg ? <Notice message={moreMsg.text} tone={moreMsg.tone} /> : null}
+          </View>
+        ) : null}
+
+        {/* Daily review statistics (owner 22 Nov 2026): own numbers, or everyone's for Office/Principal. */}
+        {canStats ? (
+          <View style={{ marginBottom: space(3) }}>
+            <Card onPress={() => nav.dispatch(StackActions.push("ReviewStats"))}>
+              <Body style={{ fontWeight: "700" }}>{STR.rvsNav} ›</Body>
+              <Muted style={{ marginTop: space(1) }}>{STR.rvsSubtitle}</Muted>
+            </Card>
           </View>
         ) : null}
 

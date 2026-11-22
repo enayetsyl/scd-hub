@@ -55,9 +55,11 @@ jest.mock("../modules/routine/models/SubjectGroup", () => ({ SubjectGroup: { fin
 jest.mock("../modules/routine/models/SubjectGroupMembership", () => ({
   SubjectGroupMembership: { find: () => leanChain([]) },
 }));
+const mockTaughtOn = jest.fn(async (..._a: unknown[]) => false);
 jest.mock("../modules/trackers/subjectTeacher", () => ({
   teachesSubjectGroup: jest.fn(async () => false),
   teachesSectionSubject: jest.fn(async () => false),
+  taughtSectionSubjectOn: (...a: unknown[]) => mockTaughtOn(...a),
 }));
 // SCIENCE has a `Subject` row, so a refused read never takes the routine-only path.
 jest.mock("../modules/foundation/models/Subject", () => ({
@@ -103,6 +105,7 @@ beforeEach(() => {
   // The teacher's grant on the old section is gone — every scope check refuses.
   mockAssertCanRead.mockRejectedValue(new ForbiddenError());
   mockAssertCanWrite.mockRejectedValue(new ForbiddenError());
+  mockTaughtOn.mockImplementation(async () => false);
 });
 
 describe("roster of an exam whose section was emptied", () => {
@@ -224,6 +227,36 @@ describe("access to an exam whose section was emptied", () => {
     mockAssertCanRead.mockResolvedValue(undefined);
     await expect(assertAnchorRead(ctxOf(OTHER), EXAM)).resolves.toBeUndefined();
     expect(mockStudentCount).not.toHaveBeenCalled();
+  });
+});
+
+// Owner report 2026-11-22: Nursery Maths moved Sajeda → Tahmina from 19 Nov; Sajeda's Test #4 (sat 18 Nov,
+// sent back for a fix) refused her ("You don't have write permission"). The section still has its children.
+describe("access to an exam whose subject was handed to another teacher after it was sat", () => {
+  const SAT = { ...EXAM, examDate: "2026-11-18T00:00:00.000Z" };
+  beforeEach(() => mockStudentCount.mockImplementation(async () => 21)); // a populated section
+
+  test("the exam's own teacher, on the routine that exam day, may read and write it", async () => {
+    mockTaughtOn.mockImplementation(async () => true);
+    await expect(assertAnchorRead(ctxOf(TAMANY), SAT)).resolves.toBeUndefined();
+    await expect(assertAnchorWrite(ctxOf(TAMANY), SAT, subjectId, "enter_classtest_result")).resolves.toBeUndefined();
+    // Asked about exactly this exam's section × subject on the exam's Dhaka day.
+    expect(mockTaughtOn).toHaveBeenCalledWith(TAMANY, SECTION, "SCIENCE", "2026-11-18");
+  });
+
+  test("the exam's teacher NOT on the routine that day is refused", async () => {
+    await expect(assertAnchorWrite(ctxOf(TAMANY), SAT, subjectId)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  test("another teacher is refused even if the routine had them that day", async () => {
+    mockTaughtOn.mockImplementation(async () => true);
+    await expect(assertAnchorRead(ctxOf(OTHER), SAT)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(assertAnchorWrite(ctxOf(OTHER), SAT, subjectId)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  test("an exam with no date gets no fallback", async () => {
+    mockTaughtOn.mockImplementation(async () => true);
+    await expect(assertAnchorWrite(ctxOf(TAMANY), EXAM, subjectId)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
 
