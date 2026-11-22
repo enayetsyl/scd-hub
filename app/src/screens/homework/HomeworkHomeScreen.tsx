@@ -266,6 +266,9 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                                   poolRef: it.poolRef ?? null,
                                   revItem: it.revItem,
                                   attachmentIds: it.attachmentIds ?? [],
+                                  paperId: it.paperId ?? null,
+                                  paperCode: it.paperCode ?? null,
+                                  freeLines: it.freeLines ?? [],
                                 },
                               })
                             }

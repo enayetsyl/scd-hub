@@ -399,6 +399,8 @@ const PAPER_FIELDS = `
   hwItemId
   classTestId
   extra
+  marksOnly
+  locked
   entryState
   totalMarks
   rubricLoCodes
@@ -433,10 +435,15 @@ export const MASTERY_PAPER_QUERY = gql`
       paper { ${PAPER_FIELDS} }
       classTest { classTestId ctId totalMarks examDate status }
       classTestMismatches { studentId name sheetStatus sheetMarks classTestStatus classTestMarks }
+      freeLines { kind textBn estMinutes }
       roster {
         studentId
         name
         rollNumber
+        schoolId
+        earnedMarks
+        availableMarks
+        freeLinesNotDone
         defaultStatus
         itemNos
         result {
@@ -611,6 +618,10 @@ export type MasteryPaperRow = {
   classTestId?: string | null;
   /** PR-D: an extra homework for weak children (per-child items). */
   extra?: boolean;
+  /** AL-4 (R20): marks per question, no outcomes — confirming writes no evidence. */
+  marksOnly?: boolean;
+  /** AL-4: the items are locked (the sheet went to print or was issued). */
+  locked?: boolean;
   entryState: string;
   totalMarks: number;
   rubricLoCodes: string[];
@@ -640,6 +651,13 @@ export type MasteryRosterEntry = {
   studentId: string;
   name: string;
   rollNumber: string | null;
+  /** AL-4: the student ID — the grid's order and label (no roll numbers, D-#1463). */
+  schoolId?: string | null;
+  /** AL-4: the child's cached total from the last confirm / correction. */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
+  /** AL-4 (R22): the homework's free lines (0-based) the child did not do. */
+  freeLinesNotDone?: number[];
   defaultStatus: string;
   /** AS sheets (M-4): the items this student was given; null ⇒ every item. */
   itemNos: number[] | null;
@@ -1730,6 +1748,8 @@ export interface MasteryHomeworkDraftItem {
   questionTypeCode: string;
   marks: number;
   fromBook: boolean;
+  /** R23 (AL-3): re-offered because no unused question was left ("আবার"). */
+  repeat?: boolean;
 }
 
 export interface MasteryHomeworkDraft {
@@ -1745,7 +1765,7 @@ export const MASTERY_HOMEWORK_DRAFT_QUERY = gql`
   query MasteryHomeworkDraft($sectionId: String!, $subject: String!, $dateKey: String!) {
     masteryHomeworkDraft(sectionId: $sectionId, subject: $subject, dateKey: $dateKey) {
       reason
-      items { origin artifactId qid textBn loCode questionTypeCode marks fromBook }
+      items { origin artifactId qid textBn loCode questionTypeCode marks fromBook repeat }
       rubricCodes
       gaps
       leftOut
@@ -1787,6 +1807,56 @@ export const MASTERY_SECTION_SWITCH_QUERY = gql`
     masterySectionSwitch(sectionId: $sectionId, subject: $subject) {
       enabled
       classLevel
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// AL-5 — the 2027 homework screens (docs/prd-academic-loop-2027.md §5 B)
+// ---------------------------------------------------------------------------
+
+/** The school's release switch (§3.6) and the rate behind the running minutes (R26). While the switch is off the
+ *  homework screens look exactly as they did in 2026. mastery:view; a caller without it reads as "off". */
+export const MASTERY_LOOP_POLICY_QUERY = gql`
+  query MasteryLoopPolicy {
+    masteryPolicy {
+      resolved { academicLoop2027On minutesPerMark }
+    }
+  }
+`;
+
+export type MasteryLoopPolicy = { academicLoop2027On: boolean; minutesPerMark: number };
+
+/** The free-line done / not-done grid of one homework (R22): which children have a record, and the lines not done. */
+export const HOMEWORK_FREE_LINE_GRID_QUERY = gql`
+  query HomeworkFreeLineGrid($hwItemId: String!) {
+    homeworkFreeLineGrid(hwItemId: $hwItemId) {
+      hwItemId
+      hwId
+      freeLines { kind textBn estMinutes }
+      rows { recordId studentId name schoolId state notDone }
+    }
+  }
+`;
+
+export type HomeworkFreeLineGridRow = { recordId: string; studentId: string; name: string; schoolId: string | null; state: string; notDone: number[] };
+
+export const SAVE_HOMEWORK_FREE_LINE_TICKS = gql`
+  mutation SaveHomeworkFreeLineTicks($hwItemId: String!, $rows: [HomeworkFreeLineTickInput!]!) {
+    saveHomeworkFreeLineTicks(hwItemId: $hwItemId, rows: $rows)
+  }
+`;
+
+/** AL-5: the questions the picker may swap in or add — the homework draft's own exclusions already applied
+ *  (window, seen, homework share), unused first, an older repeat last. Empty while the release switch is off. */
+export const MASTERY_HOMEWORK_CANDIDATES_QUERY = gql`
+  query MasteryHomeworkCandidates($sectionId: String!, $subject: String!, $dateKey: String!, $loCodes: [String!]!) {
+    masteryHomeworkCandidates(sectionId: $sectionId, subject: $subject, dateKey: $dateKey, loCodes: $loCodes) {
+      qid
+      textBn
+      loCode
+      marks
+      repeat
     }
   }
 `;

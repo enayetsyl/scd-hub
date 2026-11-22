@@ -24,6 +24,7 @@ import { sectionContext, type Auth } from "../services/MasteryWorkService";
 import { Class } from "../../foundation/models/Class";
 import { isMasteryEnabled } from "../services/MasteryCatalogueService";
 import { PaperRef } from "./masteryWork";
+import { homeworkCandidatesFor, type HomeworkCandidate } from "../services/HomeworkPickRules";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -54,6 +55,18 @@ DraftRef.implement({
     gaps: t.exposeStringList("gaps"),
     leftOut: t.exposeStringList("leftOut"),
     hwItemId: t.string({ nullable: true, resolve: (d) => d.hwItemId }),
+  }),
+});
+
+const CandidateRef = builder.objectRef<HomeworkCandidate>("MasteryHomeworkCandidate");
+CandidateRef.implement({
+  description: "AL-5: a gold bank question the picker may swap in or add — already filtered by the draft's exclusions.",
+  fields: (t) => ({
+    qid: t.exposeString("qid"),
+    textBn: t.string({ nullable: true, resolve: (c) => c.textBn }),
+    loCode: t.exposeString("loCode"),
+    marks: t.exposeFloat("marks"),
+    repeat: t.exposeBoolean("repeat", { description: "R23: given to the শাখা before, longer ago than the no-repeat window — shown 'আবার', ranked last." }),
   }),
 });
 
@@ -113,6 +126,21 @@ builder.queryFields((t) => ({
       dateKey: t.arg.string({ required: true }),
     },
     resolve: async (_r, args, ctx) => homeworkDraft(args.sectionId, args.subject as MasterySubject, args.dateKey, authOf(ctx)),
+  }),
+
+  masteryHomeworkCandidates: t.field({
+    type: [CandidateRef],
+    description:
+      "AL-5: the questions the picker may swap in or add on these objectives — the homework draft's own exclusions (window, " +
+      "seen, homework share R21), unused first, an older repeat last (R23). Empty while the release switch is off.",
+    authScopes: { hasPermission: "mastery:create" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      dateKey: t.arg.string({ required: true }),
+      loCodes: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => homeworkCandidatesFor(args.sectionId, args.subject as MasterySubject, args.dateKey, [...args.loCodes], authOf(ctx)),
   }),
 
   masteryExtraHomeworkPreview: t.field({

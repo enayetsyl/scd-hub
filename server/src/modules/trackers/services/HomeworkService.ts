@@ -1114,6 +1114,9 @@ export interface OpenRecordDTO {
   dueDate: string | null;
   /** The recorded RESULT (CORRECT/PARTIAL/WRONG) once checked — null before then. */
   result: string | null;
+  /** AL-5: a linked homework's total (½ marks) — the view-only fold shows "৭/১০ · ৭০%" instead of a result word (R35). */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   /** D-#338: stamps on the record — আনডু is only offered when > 1 (entry stamp never pops). */
   stampCount: number;
   /** D-#338: `at` of the newest stamp (ISO) — the client's same-Dhaka-day undo hint. */
@@ -1309,6 +1312,8 @@ async function enrichOpenRecords(recs: HwRecordLean[]): Promise<OpenRecordDTO[]>
         answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
         dueDate: r.dueDate ? new Date(r.dueDate as unknown as Date).toISOString() : null,
         result: r.result ?? null,
+        earnedMarks: r.earnedMarks ?? null,
+        availableMarks: r.availableMarks ?? null,
         stampCount: r.stateDates.length,
         lastStateAt: new Date(r.stateDates[r.stateDates.length - 1]!.at as unknown as Date).toISOString(),
         resubOf: r.resubOf ? r.resubOf.toString() : null,

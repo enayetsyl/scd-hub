@@ -71,6 +71,8 @@ import {
 import { namesOrCount } from "../../lib/nameList";
 import { attachToExisting } from "../../lib/attachRows";
 import { useAuth } from "../../auth/AuthContext";
+import { MASTERY_LOOP_POLICY_QUERY } from "../../graphql/mastery";
+import { marksLine } from "../../lib/marksDisplay";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
@@ -483,6 +485,19 @@ function ItemCard({
   // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
   const { can } = useAuth();
   const canRevertPrior = can("homework:undo_any"); // PM: was role P/O (the server's admin flag)
+  // AL-5: an item with an HW paper takes its marks on the question sheet's grid (AC-B10 refuses the per-child tick).
+  // Only while the release switch is ON (§3.6); switched off, the 2026 rows are exactly as before.
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY });
+  const loopOn = loopQ.data?.masteryPolicy?.resolved?.academicLoop2027On === true;
+  const paperCode = loopOn ? (tally?.paperCode ?? null) : null;
+  const freeOnly = loopOn && !paperCode && (tally?.freeLineCount ?? 0) > 0;
+  // The grid reads the sheet (mastery:view; the Mastery stack is only mounted for those who hold it) and writes
+  // marks (mastery:enter_results) or the free-line ticks (homework:check).
+  const canGrid = can("mastery:view") && (can("mastery:enter_results") || can("homework:check"));
+  const canFreeTicks = can("homework:check");
+  const nav = navigation as unknown as { navigate: (name: string, params?: object) => void };
+  const openGrid = (): void => nav.navigate("MasteryTab", { screen: "HomeworkMarksGrid", params: { paperId: paperCode }, initial: false });
+  const openFreeGrid = (): void => nav.navigate("HomeworkMarksGrid", { hwItemId: group.hwItemId });
   const { confirmAction } = useConfirm();
   const { askMistakeReason } = useMistakeReason();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -652,7 +667,8 @@ function ItemCard({
                     the marking result is the substance. */}
                 <Muted>
                   {lifecycleStateLabel(r.state)}
-                  {r.result ? ` · ${hwResultLabel(r.result)}` : ""}
+                  {/* R35: a homework with a sheet shows its marks, never the result word. */}
+                  {marksLine(r.earnedMarks, r.availableMarks, bnNum) ? ` · ${marksLine(r.earnedMarks, r.availableMarks, bnNum)}` : r.result ? ` · ${hwResultLabel(r.result)}` : ""}
                 </Muted>
                 {/* Owner report (prod, 2026-09-13): returning the LAST student empties
                     the card of open rows, so it drops straight into the completed fold —
@@ -741,9 +757,28 @@ function ItemCard({
       ) : null}
 
       {/* ② যাচাই */}
-      {checkRows.length > 0 ? (
+      {paperCode ? (
         <View style={{ marginTop: space(3) }}>
           <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>── {STR.hwPassCheck} ──</Muted>
+          {canGrid ? (
+            <>
+              <Muted style={{ marginBottom: space(2) }}>{STR.al5CheckBySheet}</Muted>
+              {/* Never disabled by the tally: the server refuses only children still GIVEN / DUE, in Bangla, on confirm. */}
+              <Button title={STR.al5GridOpen} variant="secondary" onPress={openGrid} />
+            </>
+          ) : (
+            <Muted>{STR.al5CheckBySheetWho}</Muted>
+          )}
+        </View>
+      ) : checkRows.length > 0 || (freeOnly && canFreeTicks) ? (
+        <View style={{ marginTop: space(3) }}>
+          <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>── {STR.hwPassCheck} ──</Muted>
+          {freeOnly && canFreeTicks ? (
+            <View style={{ marginBottom: space(2) }}>
+              <Muted style={{ marginBottom: space(1) }}>{STR.al5GridFreeOnly}</Muted>
+              <Button title={STR.al5GridFreeTitle} variant="secondary" onPress={openFreeGrid} />
+            </View>
+          ) : null}
           {checkRows.map((r) => (
             <CheckRow key={r.id} record={r} base={base} onDone={onDone} onNotify={onNotify} />
           ))}

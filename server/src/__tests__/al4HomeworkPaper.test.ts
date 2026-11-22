@@ -23,6 +23,12 @@ jest.mock("../modules/trackers/subjectTeacher", () => ({
   resolveSubjectTeacher: (...a: unknown[]) => mockTeacher(...a),
 }));
 
+// AL-5 added a save-time pick guard (window / share, see al5Screens.test.ts). These AL-4 cases reuse the same few
+// questions on many dates to test other rules, so the guard is stubbed here.
+jest.mock("../modules/mastery/services/HomeworkPickRules", () => ({
+  assertPicksAllowed: async () => undefined,
+}));
+
 import { AcademicYear } from "../modules/foundation/models/AcademicYear";
 import { Class } from "../modules/foundation/models/Class";
 import { Section } from "../modules/foundation/models/Section";

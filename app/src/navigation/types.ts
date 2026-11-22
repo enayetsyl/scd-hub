@@ -15,6 +15,11 @@ export type HwEditItemParam = {
   poolRef: string | null;
   revItem: boolean;
   attachmentIds: string[];
+  /** AL-5: the item's HW paper and its free lines (the picker's edit-mode load). */
+  /** The paper's Mongo id (the print request) and its code (every mastery read / write). */
+  paperId?: string | null;
+  paperCode?: string | null;
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
 };
 
 /** Staff landing dashboard (UX-4, D-#265) — registered FIRST so staff land here. */
@@ -171,6 +176,8 @@ export type HomeworkStackParamList = {
   HomeworkReconcile: { date?: string } | undefined;
   /** RP-2 (D-#355): the roster-pass workspace replacing Records + Checking. */
   HomeworkWorkspace: undefined;
+  /** AL-5: a homework with only free lines — the "হয়নি" ticks (no sheet, no marks). */
+  HomeworkMarksGrid: { hwItemId: string };
   HomeworkRollups: undefined;
   SectionPicker: undefined;
 };
@@ -703,6 +710,9 @@ export type MasteryStackParamList = {
   /** PR-D: extra homework for weak children of one শাখা × subject. */
   MasteryExtraHomework: { sectionId: string; subject: string };
   MasteryEntry: { paperId: string };
+  /** AL-5: the tick-wrong grid for the whole শাখা (one homework sheet). */
+  /** `paperId` is the paper CODE ("MP-…"). A homework with only free lines has no paper: it opens by `hwItemId`. */
+  HomeworkMarksGrid: { paperId?: string; hwItemId?: string };
   /** M-3: diagnosis views + quality report (all param-requiring — never register one first). */
   MasteryHeatmap: { sectionId: string; subject: string };
   MasteryStudent: { studentId: string; subject: string };

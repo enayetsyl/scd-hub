@@ -58,7 +58,7 @@ const OPEN_LAYOUT: BuilderLayout = {
 export const EXTRA_HOMEWORK_TITLE_BN = "বাড়তি বাড়ির কাজ";
 
 /** Who has seen what in this section: qid → students (all live rows, any class's codes). */
-async function sectionSeen(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Map<string, Set<string>>> {
+export async function sectionSeen(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Map<string, Set<string>>> {
   const rows = await liveSectionRows(sectionId, subject, undefined, { includeEarlierClasses: true });
   const by = new Map<string, Set<string>>();
   for (const r of rows) {
@@ -77,7 +77,7 @@ async function sectionSeen(sectionId: Types.ObjectId, subject: MasterySubject): 
  * (`pct` % of the gold pool, rounded down) minus what the শাখা already used as homework this year, capped at `want`.
  */
 /** PR-J: qids on any child's open extra sheet — never offered, not even as the R23 repeat. */
-async function openExtraQidsOf(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Set<string>> {
+export async function openExtraQidsOf(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Set<string>> {
   return new Set([...(await openExtraSeen(sectionId, subject)).values()].flatMap((s) => [...s]));
 }
 

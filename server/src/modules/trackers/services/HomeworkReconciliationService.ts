@@ -45,6 +45,7 @@ import {
 import { isWeekend } from "../calendar";
 import { isLoop2027On } from "../../assessment/services/QuestionUseService";
 import { isPausedOn } from "../../academic-pause/services/AcademicPauseService";
+import { paperCodesOf } from "../paperCodes";
 
 // ---------------------------------------------------------------------------
 // tallyDay (handoff §4.2 — live DAY_TOTAL vs ceiling)
@@ -72,6 +73,11 @@ export interface DayItemView {
    *  Principal) — another subject teacher looking at the same day must not be able
    *  to rewrite or delete work they did not set (owner report 2026-08-04). */
   declaredBy: string;
+  /** AL-5: the item's HW paper (MasteryPaper Mongo id) and free lines — the edit form's picker loads from them. */
+  paperId?: string | null;
+  /** AL-5: that paper's code ("MP-…") for the mastery reads and writes. */
+  paperCode?: string | null;
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
 }
 
 export interface DayTallyResult {
@@ -105,6 +111,8 @@ function toItemView(d: LeanItem): DayItemView {
     poolRef: d.poolRef ?? null,
     attachmentIds: (d.attachmentIds ?? []).map((id) => id.toString()),
     declaredBy: d.declaredBy ? d.declaredBy.toString() : "",
+    paperId: d.paperId ? d.paperId.toString() : null,
+    freeLines: (d.freeLines ?? []).map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })),
   };
 }
 
@@ -134,7 +142,8 @@ export async function tallyDay(classIdGiven: string, date: Date, sectionId?: str
   }
   const docs = await listDailyItems(classId, date, sectionId);
   const labelByCode = await topicLabelByCode(docs.flatMap((d) => d.topTags ?? []));
-  const items = docs.map((d) => ({ ...toItemView(d), topicLabelBn: joinTopicLabels(d.topTags ?? [], labelByCode) }));
+  const codes = await paperCodesOf(docs.map((d) => d.paperId));
+  const items = docs.map((d) => ({ ...toItemView(d), paperCode: d.paperId ? codes.get(String(d.paperId)) ?? null : null, topicLabelBn: joinTopicLabels(d.topTags ?? [], labelByCode) }));
   const dayTotal = items.reduce((sum, it) => sum + it.timeDecl, 0);
   const overBy = Math.max(0, dayTotal - HW_DAILY_CEILING_MIN);
   const withinCeiling = dayTotal <= HW_DAILY_CEILING_MIN;

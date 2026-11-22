@@ -23,6 +23,7 @@ import { HW_DAILY_CEILING_MIN, CLASS_TOKEN_PATTERN } from "@scd/shared";
 import type { LifecycleState } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
+import { paperCodesOf } from "../paperCodes";
 import { HomeworkReconciliation } from "../models/HomeworkReconciliation";
 import { isTerminalState } from "../lifecycle";
 import { homeworkRecordOwners, ownerOf, type HwItemOwnerLite } from "../recordOwner";
@@ -521,6 +522,12 @@ export interface HomeworkItemTally {
   pendingSubmission: number;
   /** Current ABSENT_REDELIVER — absent at issue, awaiting a redeliver. */
   absent: number;
+  /** AL-5: the item's HW paper (MasteryPaper Mongo id) when it has one — the card's way into the marks grid. */
+  paperId?: string | null;
+  /** AL-5: that paper's code ("MP-…") — what the mastery reads and writes take. */
+  paperCode?: string | null;
+  /** AL-5: how many free lines (R22) the item has — a free-lines-only homework has no paper but still has ticks. */
+  freeLineCount?: number;
 }
 
 const PENDING_SUBMISSION_STATES = new Set(["GIVEN", "DUE", "CHASE"]);
@@ -560,6 +567,25 @@ export async function homeworkItemTallies(
     if (stamped.has("RETURNED")) t.returned += 1;
     if (PENDING_SUBMISSION_STATES.has(r.state)) t.pendingSubmission += 1;
     if (r.state === "ABSENT_REDELIVER") t.absent += 1;
+  }
+  // AL-5: read-only — which of these items carry an HW paper (one bounded query over the section's items).
+  if (byItem.size > 0) {
+    const withPaper = await HomeworkItem.find({
+      _id: { $in: [...byItem.keys()] },
+      $or: [{ paperId: { $exists: true, $ne: null } }, { "freeLines.0": { $exists: true } }],
+    })
+      .select("paperId freeLines")
+      .lean();
+    const codes = await paperCodesOf(withPaper.map((h) => h.paperId));
+    for (const h of withPaper) {
+      const t = byItem.get(h._id.toString());
+      if (!t) continue;
+      t.freeLineCount = (h.freeLines ?? []).length;
+      if (h.paperId) {
+        t.paperId = h.paperId.toString();
+        t.paperCode = codes.get(h.paperId.toString()) ?? null;
+      }
+    }
   }
   return [...byItem.values()];
 }

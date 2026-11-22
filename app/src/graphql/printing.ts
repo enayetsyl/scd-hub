@@ -106,6 +106,8 @@ export interface CreatePrintRequestVars {
   contentArtifactId?: string | null;
   fileIds?: string[] | null;
   linkUrl?: string | null;
+  /** AL-5: a class homework paper (sourceType MASTERY_PAPER) — "প্রিন্টে পাঠান"; locks its items. */
+  masteryPaperId?: string | null;
   /** Mandatory — the Office cannot start a job without these. */
   colour: string;
   sides: string;
@@ -123,14 +125,14 @@ export interface CreatePrintRequestVars {
 export const CREATE_PRINT_REQUEST = gql<{ createPrintRequest: PrintRequestT }, CreatePrintRequestVars>`
   mutation CreatePrintRequest(
     $title: String!, $purpose: String!, $sourceType: String!,
-    $setId: String, $contentArtifactId: String, $fileIds: [String!], $linkUrl: String,
+    $setId: String, $contentArtifactId: String, $fileIds: [String!], $linkUrl: String, $masteryPaperId: String,
     $colour: String!, $sides: String!, $copies: Int!, $copiesMode: String, $copiesClassId: String,
     $neededByKey: String!,
     $classId: String, $sectionId: String, $subject: String, $notes: String
   ) {
     createPrintRequest(
       title: $title, purpose: $purpose, sourceType: $sourceType,
-      setId: $setId, contentArtifactId: $contentArtifactId, fileIds: $fileIds, linkUrl: $linkUrl,
+      setId: $setId, contentArtifactId: $contentArtifactId, fileIds: $fileIds, linkUrl: $linkUrl, masteryPaperId: $masteryPaperId,
       colour: $colour, sides: $sides, copies: $copies, copiesMode: $copiesMode, copiesClassId: $copiesClassId,
       neededByKey: $neededByKey,
       classId: $classId, sectionId: $sectionId, subject: $subject, notes: $notes

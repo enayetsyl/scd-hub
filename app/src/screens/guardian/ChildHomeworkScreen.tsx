@@ -51,7 +51,8 @@ import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
-import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
+import { STR, bnNum, getActiveLang, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
+import { guardianMarksLine, marksLevelTone, marksPercent } from "../../lib/marksDisplay";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
@@ -274,7 +275,14 @@ function RecordBlock({
       {/* What CAME of the work. The chase count moved up into the status row
           (D-#686) — it describes what is happening now, not the outcome. */}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-        {r.result ? (
+        {/* AL-5 (R32, R35, AC-B6): a homework with a sheet shows marks + a level word ("৮/১০ — ভালো") — never the
+            CORRECT / PARTIAL / WRONG word, never the answer. */}
+        {guardianMarksLine(r.earnedMarks, r.availableMarks, bnNum, getActiveLang()) ? (
+          <Badge
+            text={guardianMarksLine(r.earnedMarks, r.availableMarks, bnNum, getActiveLang()) as string}
+            tone={marksLevelTone(marksPercent(r.earnedMarks, r.availableMarks) ?? 0)}
+          />
+        ) : r.result ? (
           <Badge text={hwResultLabel(r.result)} tone={r.result === "CORRECT" ? "ok" : r.result === "WRONG" ? "danger" : "warn"} />
         ) : null}
         {r.topupFlag ? (

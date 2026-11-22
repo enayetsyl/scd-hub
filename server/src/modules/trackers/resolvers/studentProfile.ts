@@ -168,6 +168,8 @@ const ItemRowRef = builder.objectRef<TrackerItemRow>("StudentProfileTrackerItem"
     result: t.string({ nullable: true, resolve: (i) => i.result }),
     marks: t.int({ nullable: true, resolve: (i) => i.marks }),
     totalMarks: t.int({ nullable: true, resolve: (i) => i.totalMarks }),
+    earnedMarks: t.float({ nullable: true, description: "AL-5: a linked homework's total (½ marks).", resolve: (i) => i.earnedMarks ?? null }),
+    availableMarks: t.float({ nullable: true, resolve: (i) => i.availableMarks ?? null }),
     feedback: t.string({ nullable: true, resolve: (i) => i.feedback }),
     description: t.string({ nullable: true, resolve: (i) => i.description }),
     chaseCount: t.exposeInt("chaseCount"),

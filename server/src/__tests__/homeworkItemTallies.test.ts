@@ -32,6 +32,7 @@ function rec(hwItemId: string, state: string, stamps: string[]) {
 beforeEach(() => {
   mockRecordFind.mockReset();
   mockItemFind.mockReset();
+  mockItemFind.mockReturnValue([]); // AL-5: the paper lookup runs for every call; no paper unless a test says so
 });
 
 describe("D-#383 — homeworkItemTallies", () => {
