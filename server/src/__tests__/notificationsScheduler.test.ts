@@ -222,6 +222,14 @@ jest.mock("../modules/review-program/services/ReviewBacklogService", () => ({
   dispatchReviewBacklog: (k: string) => mockReviewBacklog(k),
   REVIEW_BACKLOG_MINUTES: 8 * 60,
 }));
+// Review daily statistics (owner 22 Nov 2026): DB-backed recipients, stubbed like every family
+// (own tests: reviewStats.test.ts). A new family WITHOUT a stub here hangs this suite.
+const mockStatsRecipients = jest.fn((_now: Date) => Promise.resolve([] as unknown[]));
+jest.mock("../modules/review-program/services/ReviewStatsService", () => ({
+  dailyStatsRecipients: (n: Date) => mockStatsRecipients(n),
+  statsBodyBn: () => "stats-body",
+  REVIEW_STATS_MINUTES: 20 * 60 + 30,
+}));
 // VN-T1 — the voice-transcript retry sweep reads the DB; stubbed like every family.
 jest.mock("../modules/content/services/ReviewVoiceTranscriptService", () => ({
   startVoiceTranscriptSweep: () => false,
@@ -603,6 +611,44 @@ describe("assignment week pending reminder (D-#1679)", () => {
   it("nothing pending means nothing emitted", async () => {
     const s = await runSchedulerTick(at(9, 0));
     expect(s.asWeekPendingEmitted).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review daily statistics (owner 22 Nov 2026) - 20:30, every day
+// ---------------------------------------------------------------------------
+
+describe("review daily statistics", () => {
+  const rec = {
+    userId: "rev1",
+    today: { chapterPlans: 1, sessionPlans: 0, questions: 2, total: 3 },
+    yesterday: { chapterPlans: 0, sessionPlans: 0, questions: 1, total: 1 },
+  };
+
+  it("20:30 - dispatches and notifies each recipient once, with a recipient-scoped dedupe key", async () => {
+    mockStatsRecipients.mockResolvedValue([rec, { ...rec, userId: "rev2" }]);
+    const s = await runSchedulerTick(at(20, 30));
+    expect(mockStatsRecipients).toHaveBeenCalledTimes(1);
+    expect(s.reviewStatsEmitted).toBe(2);
+    const calls = mockEmit.mock.calls.map((c) => c[0]).filter((e) => e.kind === "REVIEW_DAILY_STATS");
+    expect(calls).toHaveLength(2);
+    expect(new Set(calls.map((e) => e.dedupeKey)).size).toBe(2);
+    expect(calls[0]).toEqual(expect.objectContaining({ recipientUserId: "rev1", bodyBn: "stats-body" }));
+  });
+
+  it("20:29 and 22:00 - outside the 20:30 window, not called", async () => {
+    mockStatsRecipients.mockResolvedValue([rec]);
+    await runSchedulerTick(at(20, 29));
+    resetSchedulerMemory();
+    await runSchedulerTick(at(22, 0));
+    expect(mockStatsRecipients).not.toHaveBeenCalled();
+  });
+
+  it("runs once a day: a second tick in the window does not call again", async () => {
+    mockStatsRecipients.mockResolvedValue([rec]);
+    await runSchedulerTick(at(20, 30));
+    await runSchedulerTick(at(20, 31));
+    expect(mockStatsRecipients).toHaveBeenCalledTimes(1);
   });
 });
 

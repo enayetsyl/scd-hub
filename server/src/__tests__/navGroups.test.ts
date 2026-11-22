@@ -66,6 +66,8 @@ const FROZEN_STAFF: Record<string, { l: string; p?: string[]; a?: string[]; h?: 
   "ReviewTab:ReviewHub": {"l":"rhNav"},
   "ReviewTab:": {"l":"tabReview","p":["REVIEW_HOME_PERMS"]},
   "ReviewTab:ReviewSupervision": {"l":"rspNav","p":["review_program:supervise"]},
+  // D-#1680 (22 Nov 2026): daily review statistics — a reviewer's own numbers; Office/Principal everyone's.
+  "ReviewTab:ReviewStats": {"l":"rvsNav","p":["review_stats:view_own","review_stats:view_all"]},
   "RoutineTab:": {"l":"tabRoutine"},
   "VocabTab:": {"l":"tabVocab"},
   "EnglishDriveTab:": {"l":"tabEnglishDrive"},
@@ -254,7 +256,7 @@ describe("sidebar groups (D-#1654): staff", () => {
       "SupportBookTab:BookEscalationInbox", "SupportBookTab:BookAssemble",
     ]);
     expect(keys("navGReview")).toEqual([
-      "QuestionsTab:", "SetsTab:", "ReviewTab:ReviewHub", "ReviewTab:", "ReviewTab:ReviewSupervision", "MasteryTab:MasteryHome",
+      "QuestionsTab:", "SetsTab:", "ReviewTab:ReviewHub", "ReviewTab:", "ReviewTab:ReviewSupervision", "ReviewTab:ReviewStats", "MasteryTab:MasteryHome",
       "MasteryTab:MasteryImport", "MasteryTab:MasteryReviews", "MasteryTab:MasteryTags", "MasteryTab:MasteryPolicy", "AdminTab:Import",
     ]);
     expect(keys("navGPeople")).toEqual(["ObservationTab:", "FreeMixingTab:", "HomeTab:SupportHome"]);

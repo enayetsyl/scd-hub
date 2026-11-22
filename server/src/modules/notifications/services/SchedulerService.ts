@@ -91,6 +91,7 @@ import { captureReviewSnapshots } from "../../review-program/services/ReviewProg
 import { startVoiceTranscriptSweep } from "../../content/services/ReviewVoiceTranscriptService";
 import { startTelegramNoticeSweep } from "../../telegram/services/TelegramNoticeSweep";
 import { dispatchReviewBacklog, REVIEW_BACKLOG_MINUTES } from "../../review-program/services/ReviewBacklogService";
+import { dailyStatsRecipients, statsBodyBn, REVIEW_STATS_MINUTES } from "../../review-program/services/ReviewStatsService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
   emitPendingDigest as emitImprovementPendingDigest,
@@ -220,6 +221,8 @@ export const schedulerDedupeKeys = {
    *  second recipient (Office fallback) is never swallowed by the first. */
   asWeekPendingReminder: (dateKey: string, sectionId: string, weekNumber: number, recipientId: string) =>
     `ASWPR:${dateKey}:${sectionId}:${weekNumber}:${recipientId}`,
+  /** Owner 22 Nov 2026. Day + recipient: one notice per reviewer per day, and a second reviewer is never swallowed. */
+  reviewDailyStats: (dateKey: string, recipientId: string) => `RVDS:${dateKey}:${recipientId}`,
   // ATT:{date}:{tier}:{section}:{recipient} lives in AttendanceReminderService;
   // LIBDS/LIBOD live in LibraryReminderService — one registry per emitting module.
 } as const;
@@ -276,6 +279,8 @@ export interface TickSummary {
   /** RS-3: whether the review-program daily snapshot ran this pass (once a day after 21:00). */
   reviewSnapshotRan: boolean;
   hwPendingEmitted: number;
+  /** Owner 22 Nov 2026: 20:30 daily review-statistics notices emitted this pass. */
+  reviewStatsEmitted: number;
   /** D-#1679: assignment-week "confirm it" reminders emitted this pass. */
   asWeekPendingEmitted: number;
   hwDueFlipped: number;
@@ -348,6 +353,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     healthSnapshotRan: false,
     reviewSnapshotRan: false,
     hwPendingEmitted: 0,
+    reviewStatsEmitted: 0,
     asWeekPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
@@ -820,6 +826,27 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
           });
           if (res.created) summary.asWeekPendingEmitted += 1;
         }
+      }
+    });
+  });
+
+  // --- Review daily statistics (owner 22 Nov 2026) — 20:30 Dhaka EVERY day (reviewers also work at home
+  // on off days), no school-day gate and no pause window (reviews are not paused). Each reviewer is told
+  // ONLY their own numbers; who gets one is decided in dailyStatsRecipients. Day + recipient dedupe key.
+  await family("review daily stats", async () => {
+    if (!windowOpen(nowMin, REVIEW_STATS_MINUTES)) return;
+    await runOnce(dateKey, "RVDS", async () => {
+      const recipients = await dailyStatsRecipients(now);
+      for (const r of recipients) {
+        const res = await emit({
+          recipientUserId: r.userId,
+          kind: "REVIEW_DAILY_STATS",
+          titleBn: "আজকের পর্যালোচনার হিসাব",
+          bodyBn: statsBodyBn(r.today, r.yesterday),
+          refs: { date: dateKey },
+          dedupeKey: schedulerDedupeKeys.reviewDailyStats(dateKey, r.userId),
+        });
+        if (res.created) summary.reviewStatsEmitted += 1;
       }
     });
   });
