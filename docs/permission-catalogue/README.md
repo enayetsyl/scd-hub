@@ -174,6 +174,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Content & books | `question_bank` | Question bank | প্রশ্নব্যাংক | 5 | content-questions-exams |
 | Content & books | `question_hint` | Question hints | প্রশ্নের ইঙ্গিত | 1 | content-questions-exams |
 | Content & books | `question_review` | Question review & publishing | প্রশ্ন রিভিউ | 4 | content-questions-exams |
+| Content & books | `review_stats` | Review statistics | পর্যালোচনার হিসাব | 2 | content-questions-exams |
 | Content & books | `book_production` | Book production | বই তৈরি | 10 | content-questions-exams |
 | Content & books | `book_lifecycle` | Book versions & review | বইয়ের সংস্করণ ও পর্যালোচনা | 7 | content-questions-exams |
 | Content & books | `teaching_notes` | Notes & guides | নোট ও গাইড | 5 | observation-comments-reports |
@@ -433,6 +434,12 @@ Guardians read their child's class routine (published only) and their own Quran 
 |---|---|---|---|---|---|---|---|
 | `review_program:supervise` | Watch the review program | পর্যালোচনা তদারকি দেখা | Batches, per-reviewer progress and the task list (read only) | — | — | PRINCIPAL-DEFAULT | new |
 | `review_program:manage` | Manage the review program | পর্যালোচনা কাজ সরানো ও যোগ করা | Create a program, adopt open rounds into tasks, move/cancel/add a task, change a due date | — | — | PRINCIPAL-DEFAULT | new |
+
+#### `review_stats` — পর্যালোচনার হিসাব (owner 22 Nov 2026, .claude/plans/review-daily-stats.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `review_stats:view_own` | My review statistics | আমার পর্যালোচনার হিসাব | My own chapter plans, session plans and questions reviewed each day, with the change from the day before; the 8:30 pm notice | on | — | | new |
+| `review_stats:view_all` | Everyone's review statistics | সবার পর্যালোচনার হিসাব | The same day-by-day numbers for the whole team or for any one reviewer | — | on | | new |
 
 #### `exam_results` — পরীক্ষার নম্বর ও রিপোর্ট কার্ড (EX-1..EX-9, D-#375–#382, docs/prd-exams.md)
 Creating the exam row itself stays `exam_syllabus:settings` (one exam record, SY-1). These gate the marking cycle on top of it.

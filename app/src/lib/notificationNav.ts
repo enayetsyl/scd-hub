@@ -212,6 +212,9 @@ export function notificationTarget(
             },
           }
         : { tab: "AssignmentTab", screen: "AssignmentHome" };
+    // Owner 22 Nov 2026: the 20:30 review statistics notice → the day-by-day statistics screen.
+    case "REVIEW_DAILY_STATS":
+      return { tab: "ReviewTab", screen: "ReviewStats" };
     case "ASSIGNMENT_CHASE":
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
