@@ -103,6 +103,12 @@ export interface NotificationRefs {
   examId?: string;
   classId?: string;
   subject?: string;
+  /** Assignment week pending reminder (D-#1679) — deep-link: AssignmentReconcile. */
+  academicYearId?: string;
+  weekNumber?: number;
+  /** The human week label parts ("নভেম্বর · সপ্তাহ ৩") — the reconcile header must match the Assignments home. */
+  month?: number;
+  weekOfMonth?: number;
   /** Improvement action (SP-4, D-#738) — deep-link: the action's tracking screen. */
   improvementActionId?: string;
   /** Mastery action (M-6, D-#812) — deep-link: MasteryAction for staff. */
@@ -188,6 +194,11 @@ const RefsSchema = new Schema<NotificationRefs>(
     examId: { type: String },
     classId: { type: String },
     subject: { type: String },
+    // D-#1679 — same lockstep rule: model, resolver, app query.
+    academicYearId: { type: String },
+    weekNumber: { type: Number },
+    month: { type: Number },
+    weekOfMonth: { type: Number },
     // SP-4 (D-#738) — same lockstep rule: model, resolver, app query.
     improvementActionId: { type: String },
     // M-6 (D-#812) — same lockstep rule: model, resolver, app query.

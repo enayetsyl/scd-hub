@@ -59,6 +59,11 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { sweepYear as sweepHomeworkIntegrity } from "../../homework-integrity/services/IntegrityService";
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
+import {
+  pendingAssignmentWeeks,
+  weekReminderBodyBn,
+  AS_WEEK_REMINDER_MINUTES,
+} from "../../trackers/services/AssignmentWeekReminderService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
 import { overdueCounts, recordLateClassTestMarks } from "../../trackers/services/ClassTestSummaryService";
 import {
@@ -211,6 +216,10 @@ export const schedulerDedupeKeys = {
    *  the first office user's copy swallow the Principal's, so only one of them would
    *  ever be told. Same trap as the entity-only keys elsewhere. */
   classTestOverdueDigest: (dateKey: string, recipientId: string) => `CTOD:${dateKey}:${recipientId}`,
+  /** D-#1679. Day + recipient + (section, week) in the key: one reminder per person per day, and a
+   *  second recipient (Office fallback) is never swallowed by the first. */
+  asWeekPendingReminder: (dateKey: string, sectionId: string, weekNumber: number, recipientId: string) =>
+    `ASWPR:${dateKey}:${sectionId}:${weekNumber}:${recipientId}`,
   // ATT:{date}:{tier}:{section}:{recipient} lives in AttendanceReminderService;
   // LIBDS/LIBOD live in LibraryReminderService — one registry per emitting module.
 } as const;
@@ -267,6 +276,8 @@ export interface TickSummary {
   /** RS-3: whether the review-program daily snapshot ran this pass (once a day after 21:00). */
   reviewSnapshotRan: boolean;
   hwPendingEmitted: number;
+  /** D-#1679: assignment-week "confirm it" reminders emitted this pass. */
+  asWeekPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
   /** Assignment (section × week)s confirmed+issued by the D-#839 sweep this pass. */
@@ -337,6 +348,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     healthSnapshotRan: false,
     reviewSnapshotRan: false,
     hwPendingEmitted: 0,
+    asWeekPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
     asAutoIssued: 0,
@@ -767,6 +779,49 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
         }
       }
     }
+  });
+
+  // --- Assignment week pending (D-#1679) — 09:00 once per school day: a section's assignment week
+  // still has DRAFT items a day after delivery (auto-issue waits for every subject), so the class
+  // teacher (Office when the section has none) is told which subject is missing and to confirm.
+  // Skipped inside an ASSIGNMENT_CHASE pause window. Per-day, per-recipient dedupe key.
+  await family("assignment week pending", async () => {
+    if (!windowOpen(nowMin, AS_WEEK_REMINDER_MINUTES)) return;
+    if (await isPausedNow("ASSIGNMENT_CHASE", now)) return;
+    await runOnce(dateKey, "ASWPR", async () => {
+      const weeks = await pendingAssignmentWeeks(now);
+      if (weeks.length === 0) return;
+      let officeIds: string[] | null = null;
+      for (const w of weeks) {
+        let recipients: string[];
+        if (w.classTeacherId) recipients = [w.classTeacherId];
+        else {
+          if (officeIds === null) {
+            officeIds = ((await User.find(actingAsFilter(["OFFICE"])).select("_id").lean()) as unknown as Array<{ _id: IdLike }>).map(
+              (u) => u._id.toString(),
+            );
+          }
+          recipients = officeIds;
+        }
+        for (const recipientId of recipients) {
+          const res = await emit({
+            recipientUserId: recipientId,
+            kind: "AS_WEEK_PENDING_REMINDER",
+            titleBn: "অ্যাসাইনমেন্ট সপ্তাহ নিশ্চিত করা বাকি",
+            bodyBn: weekReminderBodyBn(w),
+            refs: {
+              academicYearId: w.academicYearId,
+              sectionId: w.sectionId,
+              classId: w.classId,
+              weekNumber: w.weekNumber,
+              ...(w.month != null && w.weekOfMonth != null ? { month: w.month, weekOfMonth: w.weekOfMonth } : {}),
+            },
+            dedupeKey: schedulerDedupeKeys.asWeekPendingReminder(dateKey, w.sectionId, w.weekNumber, recipientId),
+          });
+          if (res.created) summary.asWeekPendingEmitted += 1;
+        }
+      }
+    });
   });
 
   // --- Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal.

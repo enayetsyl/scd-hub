@@ -26,6 +26,7 @@ const mockUserFind = jest.fn();
 const mockDispatchAttendance = jest.fn();
 const mockDispatchLibrary = jest.fn();
 const mockPendingHomework = jest.fn();
+const mockPendingAsWeeks = jest.fn();
 const mockSweepHomeworkDue = jest.fn();
 const mockOverdueCounts = jest.fn();
 const mockSweepHomeworkAutoChase = jest.fn();
@@ -88,6 +89,12 @@ jest.mock("../modules/classroom-observation/services/ObservationEscalationServic
 // service. Mock it so the scheduler test stays DB-free (the query is covered separately).
 jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
   pendingHomeworkSections: (d: unknown) => mockPendingHomework(d),
+}));
+// D-#1679: the assignment-week reminder reads DB-backed drafts - stubbed (own tests: assignmentWeekReminder.test.ts).
+jest.mock("../modules/trackers/services/AssignmentWeekReminderService", () => ({
+  pendingAssignmentWeeks: (d: unknown) => mockPendingAsWeeks(d),
+  weekReminderBodyBn: () => "body",
+  AS_WEEK_REMINDER_MINUTES: 9 * 60,
 }));
 // The ticker also runs the homework auto-DUE sweep (GIVEN → DUE on the due morning).
 // Mock it so the scheduler test stays DB-free (the sweep is covered in homeworkDueSweep.test.ts).
@@ -261,6 +268,7 @@ beforeEach(() => {
   mockDispatchAttendance.mockResolvedValue({});
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
+  mockPendingAsWeeks.mockResolvedValue([]);
   mockSweepHomeworkDue.mockResolvedValue(0);
   mockOverdueCounts.mockResolvedValue({ overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 });
   mockSweepHomeworkAutoChase.mockResolvedValue(0);
@@ -533,6 +541,68 @@ describe("homework pending-confirm ladder", () => {
     mockPendingHomework.mockResolvedValue([pendingSection({ classTeacherId: null })]);
     const s = await runSchedulerTick(at(13, 0));
     expect(s.hwPendingEmitted).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Assignment week pending reminder (D-#1679) - 09:00, class teacher
+// ---------------------------------------------------------------------------
+
+describe("assignment week pending reminder (D-#1679)", () => {
+  const week = (over: Record<string, unknown> = {}) => ({
+    academicYearId: "y1",
+    sectionId: "secA",
+    classId: "clsA",
+    weekNumber: 7,
+    nameBn: "ক্লাস ৩",
+    classTeacherId: "ct1",
+    draftSubjects: ["MATH"],
+    missingSubjects: ["ENGLISH"],
+    ...over,
+  });
+
+  it("09:00 - dispatches and tells the class teacher", async () => {
+    mockPendingAsWeeks.mockResolvedValue([week()]);
+    const s = await runSchedulerTick(at(9, 0));
+    expect(mockPendingAsWeeks).toHaveBeenCalledTimes(1);
+    expect(s.asWeekPendingEmitted).toBe(1);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUserId: "ct1",
+        kind: "AS_WEEK_PENDING_REMINDER",
+        refs: { academicYearId: "y1", sectionId: "secA", classId: "clsA", weekNumber: 7 },
+      }),
+    );
+  });
+
+  it("08:59 and 10:00 - outside the 09:00 window, not called", async () => {
+    mockPendingAsWeeks.mockResolvedValue([week()]);
+    await runSchedulerTick(at(8, 59));
+    resetSchedulerMemory();
+    await runSchedulerTick(at(10, 0));
+    expect(mockPendingAsWeeks).not.toHaveBeenCalled();
+  });
+
+  it("skipped inside an ASSIGNMENT_CHASE pause window", async () => {
+    mockPausedNow.mockImplementation(async (k: string) => k === "ASSIGNMENT_CHASE");
+    mockPendingAsWeeks.mockResolvedValue([week()]);
+    const s = await runSchedulerTick(at(9, 0));
+    expect(mockPendingAsWeeks).not.toHaveBeenCalled();
+    expect(s.asWeekPendingEmitted).toBe(0);
+  });
+
+  it("a section with no class teacher goes to every OFFICE user", async () => {
+    mockPendingAsWeeks.mockResolvedValue([week({ classTeacherId: null })]);
+    mockUserFind.mockResolvedValue([{ _id: oid("off1") }, { _id: oid("off2") }]);
+    const s = await runSchedulerTick(at(9, 0));
+    expect(s.asWeekPendingEmitted).toBe(2);
+    const keys = mockEmit.mock.calls.map((c) => c[0].dedupeKey);
+    expect(new Set(keys).size).toBe(2);
+  });
+
+  it("nothing pending means nothing emitted", async () => {
+    const s = await runSchedulerTick(at(9, 0));
+    expect(s.asWeekPendingEmitted).toBe(0);
   });
 });
 
