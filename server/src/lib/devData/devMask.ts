@@ -247,6 +247,33 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
     for (const e of [...emails].sort()) mk.email(e);
   }
 
+  // Guardian.identifier is unique per kind. Prod can hold the SAME number on two guardian logins in two
+  // formats ("017…" and "+88017…"); both normalise to one fake, so the second login gets its own fake
+  // (derived from the number + its _id, so a re-run gives the same value). Logins whose identifier is
+  // already a fake claim it first, so a re-run after a half-finished run never collides with them.
+  const identTaken = new Set<string>();
+  const identFor = (d: RawDoc): string | undefined => {
+    const kind = str(d.identifierKind);
+    const ident = str(d.identifier);
+    if (!ident || (kind !== "phone" && kind !== "email")) return undefined;
+    const fake = kind === "phone" ? mk.phone(ident) : mk.email(ident);
+    if (!identTaken.has(`${kind}|${fake}`)) {
+      identTaken.add(`${kind}|${fake}`);
+      return fake;
+    }
+    const alt = kind === "phone"
+      ? mk.phone(`${stripCc(ident)}#${String(d._id)}`)
+      : mk.email(`${ident.toLowerCase()}#${String(d._id)}`);
+    identTaken.add(`${kind}|${alt}`);
+    return alt;
+  };
+  const identFirst = (d: RawDoc): number => {
+    const ident = str(d.identifier);
+    return FAKE_PHONE_RE.test(stripCc(ident)) || FAKE_EMAIL_RE.test(ident.toLowerCase()) ? 0 : 1;
+  };
+  const gIdent = new Map<string, string | undefined>();
+  for (const d of byId([...gDocs]).sort((a, b) => identFirst(a) - identFirst(b))) gIdent.set(String(d._id), identFor(d));
+
   const hash = opts.apply ? await bcrypt.hash(password as string, opts.bcryptRounds ?? 10) : "";
   const plan: Array<{ model: string; ops: Ops }> = [];
   const add = (model: string, ops: Ops): void => {
@@ -274,10 +301,8 @@ export async function runMask(opts: MaskOptions): Promise<MaskReport> {
       const $set: RawDoc = {};
       if (str(d.phone)) $set.phone = mk.phone(str(d.phone));
       if (str(d.email)) $set.email = mk.email(str(d.email));
-      const kind = str(d.identifierKind);
-      const ident = str(d.identifier);
-      if (kind === "phone" && ident) $set.identifier = mk.phone(ident);
-      else if (kind === "email" && ident) $set.identifier = mk.email(ident);
+      const ident = gIdent.get(String(d._id));
+      if (ident !== undefined && ident !== str(d.identifier)) $set.identifier = ident;
       if (d.passwordHash !== undefined && d.passwordHash !== null) $set.passwordHash = hash;
       const $unset: RawDoc = {};
       for (const f of EVERYWHERE_CLEAR) if (d[f] !== undefined) $unset[f] = "";

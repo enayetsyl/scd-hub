@@ -196,6 +196,33 @@ describe("runMask", () => {
     await expect(User.collection.insertOne({ role: "TEACHER", name: "dup", phone: phones[0], passwordHash: "x" })).rejects.toThrow();
   });
 
+  it("the same number on two guardian logins in two formats (017… / +88017…) gets two distinct fakes; a re-run keeps them", async () => {
+    await seed();
+    await Guardian.collection.insertOne({ identifierKind: "phone", identifier: "+8801811111111", phone: "+8801811111111", name: "Guardian A2", loginEnabled: true, passwordHash: OLD_HASH, active: true });
+    const r = await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    expect(r.residueTotal).toBe(0);
+    const phoneIdents = (await Guardian.collection.find({ identifierKind: "phone" }).sort({ _id: 1 }).toArray()).map((g) => g.identifier);
+    expect(phoneIdents).toHaveLength(2);
+    expect(new Set(phoneIdents).size).toBe(2);
+    for (const i of phoneIdents) expect(i).toMatch(/^01000\d{6}$/);
+    await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    const again = (await Guardian.collection.find({ identifierKind: "phone" }).sort({ _id: 1 }).toArray()).map((g) => g.identifier);
+    expect(again).toEqual(phoneIdents);
+  });
+
+  it("a half-finished run (one login already fake) does not collide when the other login's number hashes onto it", async () => {
+    await seed();
+    // First run masks everything; then put one login back to a real number that maps onto the other's fake.
+    await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    const a = await Guardian.collection.findOne({ identifierKind: "phone" });
+    await Guardian.collection.insertOne({ identifierKind: "phone", identifier: "+8801811111111", phone: "+8801811111111", name: "Guardian A2", loginEnabled: true, passwordHash: OLD_HASH, active: true });
+    const r = await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
+    expect(r.residueTotal).toBe(0);
+    const idents = (await Guardian.collection.find({ identifierKind: "phone" }).toArray()).map((g) => g.identifier);
+    expect(new Set(idents).size).toBe(2);
+    expect((await Guardian.collection.findOne({ _id: a?._id }))?.identifier).toBe(a?.identifier);
+  });
+
   it("is re-runnable: a second --apply keeps the same fake values and still ends at residue 0", async () => {
     await seed();
     await runMask({ apply: true, password: PW, guard, bcryptRounds: 4 });
