@@ -349,6 +349,7 @@ import MasteryWorkHomeScreen from "../screens/mastery/MasteryWorkHomeScreen";
 import MasteryNewPaperScreen from "../screens/mastery/MasteryNewPaperScreen";
 import MasteryExtraHomeworkScreen from "../screens/mastery/MasteryExtraHomeworkScreen";
 import MasteryEntryScreen from "../screens/mastery/MasteryEntryScreen";
+import HomeworkMarksGridScreen from "../screens/mastery/HomeworkMarksGridScreen";
 import MasteryHeatmapScreen from "../screens/mastery/MasteryHeatmapScreen";
 import MasteryStudentScreen from "../screens/mastery/MasteryStudentScreen";
 import MasteryOutcomeTrailScreen from "../screens/mastery/MasteryOutcomeTrailScreen";
@@ -1007,6 +1008,7 @@ function HomeworkNavigator(): React.ReactElement {
       <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
       <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
       <HomeworkStack.Screen name="HomeworkWorkspace" component={HomeworkWorkspaceScreen} options={{ title: STR.hwWorkspaceTitle }} />
+      <HomeworkStack.Screen name="HomeworkMarksGrid" component={HomeworkMarksGridScreen} options={{ title: STR.al5GridFreeTitle }} />
       <HomeworkStack.Screen name="HomeworkRollups" component={HomeworkRollupsScreen} options={{ title: STR.hwRollupsTitle }} />
       <HomeworkStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
       <HomeworkStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
@@ -1543,6 +1545,7 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryNewPaper" component={MasteryNewPaperScreen} options={{ title: STR.msNewSheet }} />
       <MasteryStack.Screen name="MasteryExtraHomework" component={MasteryExtraHomeworkScreen} options={{ title: STR.msExtraTitle }} />
       <MasteryStack.Screen name="MasteryEntry" component={MasteryEntryScreen} options={{ title: STR.msEntry }} />
+      <MasteryStack.Screen name="HomeworkMarksGrid" component={HomeworkMarksGridScreen} options={{ title: STR.al5GridTitle }} />
       <MasteryStack.Screen name="MasteryHeatmap" component={MasteryHeatmapScreen} options={{ title: STR.msHeatmap }} />
       <MasteryStack.Screen name="MasteryStudent" component={MasteryStudentScreen} options={{ title: STR.msStudent }} />
       <MasteryStack.Screen name="MasteryOutcomeTrail" component={MasteryOutcomeTrailScreen} options={{ title: STR.msTrail }} />

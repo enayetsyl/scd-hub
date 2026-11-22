@@ -89,6 +89,7 @@ import { pageRef } from "../../../pageRef";
 import { dhakaDayStart } from "../../../lib/dhakaDay";
 import { CorrectionReasonInput, parseCorrectionReason } from "../../staff-mistakes/resolvers/correctionReasonInput";
 import { runWithCorrectionReason } from "../../staff-mistakes/services/correctionReasonContext";
+import { paperCodesOf } from "../paperCodes";
 
 /** PM reach (D-#793): the homework actions that replace the role bypasses in the scope
  *  helpers — `homework:view_all` for isAdminStaff on reads, `homework:edit_all` for the
@@ -155,6 +156,7 @@ interface HomeworkItemShape {
   attachmentIds?: string[];
   /** AL-4: the HW paper carrying the per-question marks (null: none) and the free lines (R22). */
   paperId?: string | null;
+  paperCode?: string | null;
   freeLines?: { kind: string; textBn: string; estMinutes: number }[];
 }
 
@@ -191,6 +193,7 @@ HomeworkItemRef.implement({
     questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId ?? null }),
     attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
     paperId: t.string({ nullable: true, description: "AL-4: the HW paper (MasteryPaper Mongo id) carrying the per-question marks.", resolve: (r) => r.paperId ?? null }),
+    paperCode: t.string({ nullable: true, description: "AL-5: that paper's code (MP-…) — what masteryPaper / saveMasteryResults / confirmMasteryPaper take.", resolve: (r) => r.paperCode ?? null }),
     freeLines: t.field({ type: [HomeworkFreeLineRef], resolve: (r) => r.freeLines ?? [] }),
   }),
 });
@@ -752,6 +755,7 @@ builder.queryField("homeworkItems", (t) =>
         args.sectionId, // a split class's halves keep separate homework days
       );
       const docs = allowed ? all.filter((d) => allowed.has(d.subject)) : all;
+      const codes = await paperCodesOf(docs.map((d) => d.paperId));
       return docs.map((d) => ({
         id: d._id.toString(),
         hwId: d.hwId,
@@ -766,6 +770,7 @@ builder.queryField("homeworkItems", (t) =>
         questionFileId: d.questionFileId ? d.questionFileId.toString() : null,
         attachmentIds: (d.attachmentIds ?? []).map((id) => id.toString()),
         paperId: d.paperId ? d.paperId.toString() : null,
+        paperCode: d.paperId ? codes.get(d.paperId.toString()) ?? null : null,
         freeLines: (d.freeLines ?? []).map((l) => ({ kind: l.kind, textBn: l.textBn, estMinutes: l.estMinutes })),
       }));
     },
@@ -879,6 +884,8 @@ OpenRecordRef.implement({
     answerFileId: t.string({ nullable: true, resolve: (r) => r.answerFileId }),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
     result: t.string({ nullable: true, resolve: (r) => r.result }),
+    earnedMarks: t.float({ nullable: true, description: "AL-5: a linked homework's total (½ marks).", resolve: (r) => r.earnedMarks ?? null }),
+    availableMarks: t.float({ nullable: true, resolve: (r) => r.availableMarks ?? null }),
     // D-#317: the teacher's brief "what is the homework" (null pre-D-#317).
     description: t.string({ nullable: true, resolve: (r) => r.description }),
     // D-#338: undo affordance — offered only when stampCount > 1 (entry never pops).
@@ -1016,6 +1023,9 @@ ItemTallyRef.implement({
     returned: t.exposeInt("returned"),
     pendingSubmission: t.exposeInt("pendingSubmission"),
     absent: t.exposeInt("absent"),
+    paperId: t.string({ nullable: true, description: "AL-5: the item's HW paper (MasteryPaper Mongo id), null when it has none.", resolve: (r) => r.paperId ?? null }),
+    paperCode: t.string({ nullable: true, description: "AL-5: that paper's code (MP-…) for the mastery reads and writes.", resolve: (r) => r.paperCode ?? null }),
+    freeLineCount: t.int({ description: "AL-5: the item's free lines (R22) — a free-lines-only homework has ticks but no paper.", resolve: (r) => r.freeLineCount ?? 0 }),
   }),
 });
 
@@ -1061,6 +1071,9 @@ interface DayItemShape {
   poolRef: string | null;
   attachmentIds: string[];
   declaredBy: string;
+  paperId?: string | null;
+  paperCode?: string | null;
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
 }
 
 const DayItemRef = builder.objectRef<DayItemShape>("HomeworkDayItem");
@@ -1083,6 +1096,10 @@ DayItemRef.implement({
     attachmentIds: t.stringList({ resolve: (r) => r.attachmentIds }),
     // Who declared it — the app gates Edit/Delete on this (owner report 2026-08-04).
     declaredBy: t.exposeString("declaredBy"),
+    // AL-5: the item's HW paper + free lines (read-only) — the edit form's picker and the print / grid buttons.
+    paperId: t.string({ nullable: true, resolve: (r) => r.paperId ?? null }),
+    paperCode: t.string({ nullable: true, resolve: (r) => r.paperCode ?? null }),
+    freeLines: t.field({ type: [HomeworkFreeLineRef], resolve: (r) => r.freeLines ?? [] }),
   }),
 });
 

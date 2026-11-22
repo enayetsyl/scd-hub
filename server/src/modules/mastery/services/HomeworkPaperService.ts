@@ -17,7 +17,7 @@
  * switch (`isLoop2027On`) and this file never reads it for them, except `syncPaperForItem` which is the declare gate.
  */
 import { Types } from "mongoose";
-import type { HomeworkFreeLineKind } from "@scd/shared";
+import type { HomeworkFreeLineKind, MasterySubject } from "@scd/shared";
 import { HOMEWORK_FREE_LINE_KINDS } from "@scd/shared";
 import { MasteryPaper, type IMasteryPaper, type IMasteryPaperItem } from "../models/MasteryPaper";
 import { MasteryResult } from "../models/MasteryResult";
@@ -41,6 +41,7 @@ import { isLoop2027On, recordUsesSafe, usesOfPaper, withdrawUsesSafe, withdrawUs
 import { getPolicy, isMasteryEnabled } from "./MasteryCatalogueService";
 import { loCodesOf, questionTypeCodeOf } from "../bank";
 import { heldRefusal } from "../examHold";
+import { assertPicksAllowed } from "./HomeworkPickRules";
 import { groupStimulusParts, printPlan, stimulusRefOf } from "../parts";
 import { reapplyExclusions } from "../exclusions";
 import { childTotals, isTrackerLinked, resultFromPct, roundHalf } from "../paperLink";
@@ -111,8 +112,17 @@ function normalizeTeacherItems(input: TeacherItemInput[] | null | undefined): Te
 // Declare / edit → the paper
 // ---------------------------------------------------------------------------
 
-async function pickedItems(item: IHomeworkItem, qids: string[], teacher: TeacherItemInput[], enabled: boolean, classToken: string): Promise<IMasteryPaperItem[]> {
+async function pickedItems(
+  item: IHomeworkItem,
+  qids: string[],
+  teacher: TeacherItemInput[],
+  enabled: boolean,
+  ctx: Awaited<ReturnType<typeof sectionContext>>,
+  onSheet: ReadonlySet<string>,
+): Promise<IMasteryPaperItem[]> {
+  const classToken = ctx.classToken;
   const built: Omit<IMasteryPaperItem, "itemNo">[] = [];
+  const objectiveOf = new Map<string, string>();
   const arts = qids.length
     ? await ContentArtifact.find({ docType: "question", current: true, retiredAt: null, reviewStatus: "gold", "envelopeJson.payload.qid": { $in: qids } }).lean()
     : [];
@@ -146,6 +156,7 @@ async function pickedItems(item: IHomeworkItem, qids: string[], teacher: Teacher
     }
     const marks = typeof payload.marks === "number" && payload.marks > 0 ? payload.marks : 1;
     const codes = (loOf.get(qid) ?? []).filter((c) => usable.has(c));
+    if (codes[0]) objectiveOf.set(qid, codes[0]);
     const stim = stimulusRefOf(payload);
     built.push({
       origin: "BANK",
@@ -158,6 +169,8 @@ async function pickedItems(item: IHomeworkItem, qids: string[], teacher: Teacher
       ...(stim ? { stimulusRef: stim } : {}),
     });
   }
+  // The draft's own exclusions apply to a hand pick too (§4.3, §4.7, R21, R23): only what this save ADDS is checked.
+  await assertPicksAllowed(ctx, item.subject as MasterySubject, dhakaDayKey(item.dateGiven), qids.filter((q) => !onSheet.has(q)), objectiveOf);
   for (const t of teacher) {
     built.push({ origin: "TEACHER", textBn: t.textBn, loCodes: [], chapterNumber: null, questionTypeCode: "", marks: t.marks });
   }
@@ -205,7 +218,7 @@ export async function syncPaperForItem(
     }
   } else if (opts.touchedItems || !existing) {
     const enabled = await isMasteryEnabled(ctx.academicYearId, ctx.classToken, item.subject);
-    const items = await pickedItems(item, qids, teacher, enabled, ctx.classToken);
+    const items = await pickedItems(item, qids, teacher, enabled, ctx, new Set((existing?.items ?? []).map((i) => i.qid ?? "").filter(Boolean)));
     if (existing) {
       if (sameItems(existing.items, items) && Boolean(existing.marksOnly) === !enabled) {
         /* unchanged */

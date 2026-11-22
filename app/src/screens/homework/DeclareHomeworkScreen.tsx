@@ -9,11 +9,11 @@
  * them). Issued items additionally lock TIME_DECL / Q_COUNT / pool / revision
  * (server re-gates): only description, topics and attachments stay editable.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { HW_SUBJECTS, subjectsForClassLevel } from "@scd/shared";
+import { HW_SUBJECTS, MASTERY_POLICY_DEFAULTS, subjectsForClassLevel } from "@scd/shared";
 import {
   CLASSES_QUERY,
   DECLARE_HOMEWORK_ITEM,
@@ -35,6 +35,9 @@ import {
   type UploadedFile,
   type MultiUploadResult,
 } from "../../lib/files";
+import { MASTERY_LOOP_POLICY_QUERY, MASTERY_PAPER_QUERY, type MasteryPaperRow } from "../../graphql/mastery";
+import { HomeworkQuestionPicker, SendHomeworkToPrint } from "../../components/HomeworkQuestionPicker";
+import { emptyPicker, estMinutes, pickerReducer, saveArgs } from "../../lib/homeworkPicker";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, breakAnywhere, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { UploadDropZone } from "../../components/UploadDropZone";
@@ -73,6 +76,18 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   // R-Validate (UX-1): per-field errors; the toast names the first offending field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // AL-5: the 2027 question picker. Everything below is inert while the school's release switch is off.
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY });
+  const loopOn = loopQ.data?.masteryPolicy?.resolved?.academicLoop2027On === true;
+  const policyRate = Number(loopQ.data?.masteryPolicy?.resolved?.minutesPerMark);
+  const minutesPerMark = policyRate > 0 ? policyRate : MASTERY_POLICY_DEFAULTS.minutesPerMark;
+  const [picker, dispatchPicker] = useReducer(pickerReducer, undefined, emptyPicker);
+  // The paper CODE ("MP-…") is what every mastery read takes; the Mongo id is only for the print request.
+  const editPaperId = editItem?.paperCode ?? null;
+  const editPaperMongoId = editItem?.paperId ?? null;
+  const [lockQ, refetchLock] = useQuery({ query: MASTERY_PAPER_QUERY, variables: { paperId: editPaperId ?? "" }, pause: !editPaperId || !loopOn });
+  const paperLocked = ((lockQ.data?.masteryPaper?.paper ?? null) as MasteryPaperRow | null)?.locked === true;
+  const pickerActive = loopOn && (picker.items.length > 0 || picker.freeLines.length > 0);
   const toast = useToast();
   const colors = useColors();
   /** The just-declared item — target for the optional question-file attach (GP-A). */
@@ -185,7 +200,8 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
 
   async function onSubmit(): Promise<void> {
     setFieldErrors({});
-    const q = parseInt(qCount, 10);
+    // AL-5: with picked questions / free lines the count and the minutes come from the picker (the server sets them too).
+    const q = pickerActive ? picker.items.length + picker.freeLines.length : parseInt(qCount, 10);
     const { firstErrorKey, errors } = required({
       subject: { value: subject, message: `${STR.hwSubject} — ${STR.fieldRequired}` },
       topics: { value: selectedTopics, message: `${STR.hwTopTags} — ${STR.fieldRequired}` },
@@ -203,7 +219,12 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
       return;
     }
     const tags = selectedTopics;
-    const td = timeDecl.trim() === "" ? undefined : parseInt(timeDecl, 10);
+    const td = pickerActive ? estMinutes(picker, minutesPerMark) : timeDecl.trim() === "" ? undefined : parseInt(timeDecl, 10);
+    // The picker's save arguments; sent only while the switch is on and the sheet is not locked.
+    const touchesSheet = pickerActive || Boolean(editPaperId) || (editItem?.freeLines?.length ?? 0) > 0;
+    // An edit never sends the picker before the saved sheet has loaded into it (an empty list would drop the sheet).
+    const sheetLoaded = !editPaperId || Boolean(lockQ.data?.masteryPaper);
+    const pick = loopOn && touchesSheet && sheetLoaded && !(isEdit && (issued || paperLocked)) ? saveArgs(picker) : null;
 
     // D-#336 edit mode — same form, updateHomeworkItem instead. Issued items send
     // ONLY the descriptive fields (the server rejects frozen ones with a clear
@@ -218,8 +239,9 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
         ...(issued
           ? {}
           : {
-              timeDecl: td,
-              qCount: q,
+              ...(pick && !paperLocked ? { selectedQids: pick.selectedQids, teacherItems: pick.teacherItems, freeLines: pick.freeLines } : {}),
+              // With a sheet the server sets the time and the count from it (a differing value is refused).
+              ...(pick || editPaperId || pickerActive ? {} : { timeDecl: td, qCount: q }),
               ...(poolRef.trim() ? { poolRef: poolRef.trim() } : { clearPoolRef: true }),
               revItem,
             }),
@@ -249,6 +271,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
       revItem,
       description: description.trim(),
       attachmentIds: files.length > 0 ? files.map((f) => f.fileId) : undefined,
+      ...(pick ? { selectedQids: pick.selectedQids, teacherItems: pick.teacherItems, freeLines: pick.freeLines } : {}),
     });
     setBusy(false);
     if (res.error || !res.data?.declareHomeworkItem) {
@@ -263,6 +286,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     setRevItem(false);
     setDescription("");
     setFiles([]);
+    dispatchPicker({ type: "load", items: [], freeLines: [] });
     refetchNil({ requestPolicy: "network-only" }); // a real declaration auto-clears a nil
   }
 
@@ -446,8 +470,39 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
           )}
           {fieldErrors.topics ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.topics}</Body> : null}
         </Card>
+        {/* AL-5: the question picker (switch on). Create mode drafts from the sessions taught that day; edit mode
+            loads the saved sheet and is read-only once it is issued or sent to print. */}
+        {loopOn && (isEdit || subject) ? (
+          <>
+            <HomeworkQuestionPicker
+              state={picker}
+              dispatch={dispatchPicker}
+              minutesPerMark={minutesPerMark}
+              sectionId={selection.sectionId ?? ""}
+              subject={isEdit ? (editItem?.subject ?? null) : subject}
+              classLevel={classLevel}
+              date={isEdit ? (route.params?.date ?? today()) : date}
+              loadDraft={!isEdit}
+              editPaperId={editPaperId}
+              editFreeLines={editItem?.freeLines}
+              readOnly={isEdit && (issued || paperLocked)}
+              locked={paperLocked}
+            />
+            {isEdit && editItem && editPaperMongoId && !paperLocked ? (
+              <SendHomeworkToPrint
+                paperId={editPaperMongoId}
+                hwId={editItem.hwId}
+                subject={editItem.subject}
+                classId={selection.classId ?? ""}
+                sectionId={selection.sectionId ?? ""}
+                dateGiven={route.params?.date ?? today()}
+                onSent={() => refetchLock({ requestPolicy: "network-only" })}
+              />
+            ) : null}
+          </>
+        ) : null}
         {/* D-#336: TIME_DECL/Q_COUNT freeze at issue (reconciled DAY_TOTAL contract). */}
-        {issued ? null : (
+        {issued || pickerActive ? null : (
           <>
             <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
             <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />

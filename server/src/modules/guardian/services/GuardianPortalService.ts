@@ -180,6 +180,9 @@ export interface GuardianHomeworkRecord {
   chaseCount: number;
   result: HwResult | null;
   resultLabelBn: string | null;
+  /** AL-5: a linked homework's total (½ marks) — the card shows "৮/১০ — ভালো"; null when it has no sheet. Never an answer. */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   /** What was assigned (mandatory since D-#317; null on legacy rows). */
   description: string | null;
   /** Declared question count + estimated minutes — lets the lesson history show the day's load. */
@@ -818,6 +821,8 @@ export async function childHomework(
       chaseCount: r.chaseCount,
       result: r.result ?? null,
       resultLabelBn: r.result ? HW_RESULT_LABELS_BN[r.result] ?? null : null,
+      earnedMarks: r.earnedMarks ?? null,
+      availableMarks: r.availableMarks ?? null,
       description: item.description ?? null,
       qCount: item.qCount,
       timeDecl: item.timeDecl,

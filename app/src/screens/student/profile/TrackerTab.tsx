@@ -18,6 +18,7 @@ import React, { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { TrackerItemT, TrackerPanelT } from "../../../graphql/studentProfile";
 import { Badge, Body, Button, Card, Chip, ChipRow, Loader, Muted, Notice } from "../../../components/ui";
+import { marksLine } from "../../../lib/marksDisplay";
 import { STR, bnNum, hwResultLabel, hwSubjectLabel, isoDateLabel, lifecycleStateLabel } from "../../../lib/labels";
 import { space, useColors } from "../../../theme";
 import { DataTable, SectionTitle, StatTile, TileRow, ToneText, pctText, toneForCount, toneForPct, withN } from "./parts";
@@ -53,9 +54,8 @@ function ItemRow({ it, isAssignment }: { it: TrackerItemT; isAssignment: boolean
     ? it.marks != null && it.totalMarks
       ? `${bnNum(it.marks)}/${bnNum(it.totalMarks)}`
       : null
-    : it.result
-      ? hwResultLabel(it.result)
-      : null;
+    : // AL-5 (AC-B12, R35): a homework with a sheet shows its marks "৭/১০ · ৭০%" — never the CORRECT / PARTIAL / WRONG word.
+      (marksLine(it.earnedMarks, it.availableMarks, bnNum) ?? (it.result ? hwResultLabel(it.result) : null));
   return (
     <Pressable
       onPress={() => setOpen((o) => !o)}

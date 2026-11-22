@@ -2863,6 +2863,10 @@ export interface HwDayItemT {
   topTags?: string[];
   poolRef?: string | null;
   attachmentIds?: string[];
+  /** AL-5: the item's HW paper and free lines (the edit form's picker; null / empty when none). */
+  paperId?: string | null;
+  paperCode?: string | null;
+  freeLines?: { kind: string; textBn: string; estMinutes: number }[];
 }
 
 export interface HwDayTallyT {
@@ -2932,7 +2936,7 @@ export const HOMEWORK_DAY_TALLY = gql<
       overBy
       withinCeiling
       state
-      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds declaredBy }
+      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds declaredBy paperId paperCode freeLines { kind textBn estMinutes } }
       bandWarnings
     }
   }
@@ -3086,6 +3090,9 @@ export interface HwOpenRecordT {
   answerFileId: string | null;
   dueDate: string | null;
   result: string | null;
+  /** AL-5: a linked homework's total (½ marks); null when it has no sheet. */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   /** D-#338: stamps on the record — আনডু is only offered when > 1 (entry never pops). */
   stampCount: number;
   /** D-#338: ISO `at` of the newest stamp — same-Dhaka-day undo hint. */
@@ -3095,7 +3102,7 @@ export interface HwOpenRecordT {
 }
 
 const HW_OPEN_RECORD_FIELDS = `
-  id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result stampCount lastStateAt resubOf
+  id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result earnedMarks availableMarks stampCount lastStateAt resubOf
 `;
 
 /** D-#761: `skipFinishedItems` leaves out finished items (all returned, none today) —
@@ -3152,6 +3159,12 @@ export interface HwItemTallyT {
   returned: number;
   pendingSubmission: number;
   absent: number;
+  /** AL-5: the item's HW paper (MasteryPaper Mongo id) — the card's way into the marks grid; null when none. */
+  paperId?: string | null;
+  /** AL-5: that paper's code ("MP-…") — what the mastery reads and writes take (the grid's route param). */
+  paperCode?: string | null;
+  /** AL-5: the item's free lines — a free-lines-only homework has no paper but still has "হয়নি" ticks. */
+  freeLineCount?: number;
 }
 
 export const HOMEWORK_ITEM_TALLIES = gql<
@@ -3160,7 +3173,7 @@ export const HOMEWORK_ITEM_TALLIES = gql<
 >`
   query HomeworkItemTallies($sectionId: String!, $classId: String!) {
     homeworkItemTallies(sectionId: $sectionId, classId: $classId) {
-      hwItemId total submitted checked returned pendingSubmission absent
+      hwItemId total submitted checked returned pendingSubmission absent paperId paperCode freeLineCount
     }
   }
 `;
@@ -3193,6 +3206,17 @@ export interface HwItemT {
   questionFileId: string | null;
   /** Declare-form multi-attachments (≤5) — empty when none. */
   attachmentIds: string[];
+  /** AL-4: the HW paper carrying the per-question marks, and the free lines (R22). */
+  paperId?: string | null;
+  paperCode?: string | null;
+  freeLines?: HwFreeLineT[];
+}
+
+/** AL-4 (R22): a homework line with no marks — tracked done / not done per child. */
+export interface HwFreeLineT {
+  kind: string;
+  textBn: string;
+  estMinutes: number;
 }
 
 export const HOMEWORK_ITEMS = gql<
@@ -3201,7 +3225,8 @@ export const HOMEWORK_ITEMS = gql<
 >`
   query HomeworkItems($sectionId: String!, $classId: String!, $dateGiven: String) {
     homeworkItems(sectionId: $sectionId, classId: $classId, dateGiven: $dateGiven) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds paperId paperCode
+      freeLines { kind textBn estMinutes }
     }
   }
 `;
@@ -3227,6 +3252,12 @@ export const HOMEWORK_TOPICS_QUERY = gql<
   }
 `;
 
+/** AL-5: a teacher's own marked homework item (text + marks). */
+export interface HwTeacherItemInput {
+  textBn: string;
+  marks: number;
+}
+
 export const DECLARE_HOMEWORK_ITEM = gql<
   { declareHomeworkItem: HwItemT },
   {
@@ -3243,19 +3274,25 @@ export const DECLARE_HOMEWORK_ITEM = gql<
     revItem?: boolean | null;
     description: string;
     attachmentIds?: string[] | null;
+    /** AL-5 (switch on): picked bank questions, the teacher's own marked items, and free lines. */
+    selectedQids?: string[] | null;
+    teacherItems?: HwTeacherItemInput[] | null;
+    freeLines?: HwFreeLineT[] | null;
   }
 >`
   mutation DeclareHomeworkItem(
     $academicYearId: String!, $classId: String!, $classLevel: Int!, $sectionId: String!,
     $subject: String!, $dateGiven: String!, $topTags: [String!]!, $timeDecl: Int,
-    $qCount: Int!, $poolRef: String, $revItem: Boolean, $description: String!, $attachmentIds: [String!]
+    $qCount: Int!, $poolRef: String, $revItem: Boolean, $description: String!, $attachmentIds: [String!],
+    $selectedQids: [String!], $teacherItems: [HomeworkTeacherItemInput!], $freeLines: [HomeworkFreeLineInput!]
   ) {
     declareHomeworkItem(
       academicYearId: $academicYearId, classId: $classId, classLevel: $classLevel, sectionId: $sectionId,
       subject: $subject, dateGiven: $dateGiven, topTags: $topTags, timeDecl: $timeDecl,
-      qCount: $qCount, poolRef: $poolRef, revItem: $revItem, description: $description, attachmentIds: $attachmentIds
+      qCount: $qCount, poolRef: $poolRef, revItem: $revItem, description: $description, attachmentIds: $attachmentIds,
+      selectedQids: $selectedQids, teacherItems: $teacherItems, freeLines: $freeLines
     ) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds paperId
     }
   }
 `;
@@ -3285,17 +3322,23 @@ export const UPDATE_HOMEWORK_ITEM = gql<
     clearPoolRef?: boolean | null;
     revItem?: boolean | null;
     attachmentIds?: string[] | null;
+    /** AL-5 (switch on): replace the picked questions / own items / free lines. */
+    selectedQids?: string[] | null;
+    teacherItems?: HwTeacherItemInput[] | null;
+    freeLines?: HwFreeLineT[] | null;
   }
 >`
   mutation UpdateHomeworkItem(
     $itemId: String!, $description: String, $topTags: [String!], $timeDecl: Int,
-    $qCount: Int, $poolRef: String, $clearPoolRef: Boolean, $revItem: Boolean, $attachmentIds: [String!]
+    $qCount: Int, $poolRef: String, $clearPoolRef: Boolean, $revItem: Boolean, $attachmentIds: [String!],
+    $selectedQids: [String!], $teacherItems: [HomeworkTeacherItemInput!], $freeLines: [HomeworkFreeLineInput!]
   ) {
     updateHomeworkItem(
       itemId: $itemId, description: $description, topTags: $topTags, timeDecl: $timeDecl,
-      qCount: $qCount, poolRef: $poolRef, clearPoolRef: $clearPoolRef, revItem: $revItem, attachmentIds: $attachmentIds
+      qCount: $qCount, poolRef: $poolRef, clearPoolRef: $clearPoolRef, revItem: $revItem, attachmentIds: $attachmentIds,
+      selectedQids: $selectedQids, teacherItems: $teacherItems, freeLines: $freeLines
     ) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds paperId
     }
   }
 `;
@@ -4730,6 +4773,9 @@ export interface GuardianHwRecordT {
   chaseCount: number;
   result: string | null;
   resultLabelBn: string | null;
+  /** AL-5: a linked homework's total (½ marks) — "৮/১০ — ভালো"; null when it has no sheet. */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   description: string | null;
   qCount: number;
   timeDecl: number;
@@ -4772,7 +4818,7 @@ export const CHILD_HOMEWORK_QUERY = gql<
     childHomework(studentId: $studentId, from: $from, to: $to) {
       recordId hwId subject subjectLabelBn dateGiven itemDateGiven redelivered state stateLabelBn
       givenAt dueDate submittedAt checkedAt returnedAt
-      chaseCount result resultLabelBn description qCount timeDecl resubOf
+      chaseCount result resultLabelBn earnedMarks availableMarks description qCount timeDecl resubOf
       topupFlag topupQCount topupTimeMin
       questionFileId answerFileId attachmentIds
       canClaim claimHoldBn

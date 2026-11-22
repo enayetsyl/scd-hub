@@ -217,6 +217,10 @@ async function resolveMasteryPaperSource(input: CreatePrintRequestInput): Promis
   }
   if (paper.entryState === "CONFIRMED") throw new PrintRequestError("নম্বর নিশ্চিত হয়ে যাওয়া শিট আর প্রিন্টে পাঠানো যায় না।");
   if (paper.items.length === 0) throw new PrintRequestError("শিটে কোনো প্রশ্ন নেই।");
+  // A second tap (or a second device) must not file a second live request for the same sheet.
+  if (await PrintRequest.exists({ masteryPaperId: paper._id, status: "REQUESTED" })) {
+    throw new PrintRequestError("এই শিটের প্রিন্টের অনুরোধ আগেই পাঠানো হয়েছে — ছাপার অপেক্ষায় আছে। আরেকটি পাঠাতে হলে আগেরটি বাতিল করুন।");
+  }
   const want = paper.source === "HW" ? "HOMEWORK" : "ASSIGNMENT";
   if (input.purpose !== want) throw new PrintRequestError(`এই শিটের প্রিন্টের উদ্দেশ্য "${want}" হতে হবে।`);
   input.classId = input.classId || String(paper.classId);

@@ -110,6 +110,9 @@ export interface TrackerItemRow {
   result: HwResult | null;
   marks: number | null;
   totalMarks: number | null;
+  /** AL-5: a linked homework's per-question total (½ marks, so a float); null when it has none. */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   feedback: string | null;
   description: string | null;
   chaseCount: number;
@@ -160,6 +163,8 @@ export interface TallyRecord {
   result: HwResult | null;
   marks: number | null;
   totalMarks: number | null;
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   feedback: string | null;
   description: string | null;
   chaseCount: number;
@@ -291,6 +296,8 @@ export function tallyRecords(
       result: live.result,
       marks: live.marks,
       totalMarks: live.totalMarks,
+      earnedMarks: live.earnedMarks ?? null,
+      availableMarks: live.availableMarks ?? null,
       feedback: live.feedback,
       description: original.description,
       chaseCount: chaseTotal,
@@ -341,7 +348,7 @@ export async function studentHomeworkPanel(
   if (opts.subjects && subjectFilter.length === 0) return empty;
 
   const records = (await HomeworkStudentRecord.find({ studentId: new Types.ObjectId(studentId) })
-    .select("hwItemId hwId state stateDates dueDate chaseCount result resubOf createdAt")
+    .select("hwItemId hwId state stateDates dueDate chaseCount result resubOf createdAt earnedMarks availableMarks")
     .lean()) as unknown as Array<{
     _id: Types.ObjectId;
     hwItemId: Types.ObjectId;
@@ -353,6 +360,8 @@ export async function studentHomeworkPanel(
     result?: HwResult;
     resubOf?: Types.ObjectId;
     createdAt: Date;
+    earnedMarks?: number;
+    availableMarks?: number;
   }>;
   if (records.length === 0) return empty;
 
@@ -383,6 +392,9 @@ export async function studentHomeworkPanel(
       result: r.result ?? null,
       marks: null, // homework carries no marks — outcome is the CORRECT/PARTIAL/WRONG scale
       totalMarks: null,
+      // AL-5: a linked homework's per-question total (a cache written at confirm); never feeds the marks counters above.
+      earnedMarks: r.earnedMarks ?? null,
+      availableMarks: r.availableMarks ?? null,
       feedback: null,
       description: item.description ?? null,
       chaseCount: r.chaseCount ?? 0,

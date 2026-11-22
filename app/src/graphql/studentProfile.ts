@@ -112,6 +112,9 @@ export interface TrackerItemT {
   result: string | null;
   marks: number | null;
   totalMarks: number | null;
+  /** AL-5: a linked homework's total (½ marks) — shown "৭/১০ · ৭০%"; null when the homework has no sheet. */
+  earnedMarks?: number | null;
+  availableMarks?: number | null;
   feedback: string | null;
   description: string | null;
   chaseCount: number;
@@ -142,7 +145,7 @@ const PANEL_FIELDS = `
   totals { ${COUNTER_FIELDS} }
   bySubject { subject counters { ${COUNTER_FIELDS} } }
   items {
-    recordId refId subject dateGiven dueDate state result marks totalMarks
+    recordId refId subject dateGiven dueDate state result marks totalMarks earnedMarks availableMarks
     feedback description chaseCount isResubmission resubmissions overdue
   }
 `;

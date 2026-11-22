@@ -200,6 +200,8 @@ const GuardianHomeworkRecordRef = builder
       chaseCount: t.exposeInt("chaseCount"),
       result: t.string({ nullable: true, resolve: (r) => r.result }),
       resultLabelBn: t.string({ nullable: true, resolve: (r) => r.resultLabelBn }),
+      earnedMarks: t.float({ nullable: true, description: "AL-5: a linked homework's total (½ marks).", resolve: (r) => r.earnedMarks ?? null }),
+      availableMarks: t.float({ nullable: true, resolve: (r) => r.availableMarks ?? null }),
       description: t.string({ nullable: true, resolve: (r) => r.description }),
       qCount: t.exposeInt("qCount"),
       timeDecl: t.exposeInt("timeDecl"),
