@@ -113,6 +113,8 @@ export interface NotificationRefs {
   improvementActionId?: string;
   /** Mastery action (M-6, D-#812) — deep-link: MasteryAction for staff. */
   masteryActionId?: string;
+  /** Weekly-assignment draft / swap card (AL-7, D-#1668) — deep-link: the week review screen (AL-8). */
+  masteryAssignmentId?: string;
   /** Objective-list review round (OT-2, prd-objective-tree §7) — deep-link: MasteryReview. */
   masteryReviewId?: string;
   /** Exam paper review (D-#1032, prd-exam-paper-bank §5.4) — deep-link: ExamPaperDraft;
@@ -203,6 +205,7 @@ const RefsSchema = new Schema<NotificationRefs>(
     improvementActionId: { type: String },
     // M-6 (D-#812) — same lockstep rule: model, resolver, app query.
     masteryActionId: { type: String },
+    masteryAssignmentId: { type: String },
     // OT-2 — same lockstep rule: model, resolver, app query.
     masteryReviewId: { type: String },
     // D-#1032 — same lockstep rule: model, resolver, app query.

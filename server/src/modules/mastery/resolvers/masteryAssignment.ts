@@ -19,6 +19,7 @@ import {
   assignmentFor,
   buildAssignment,
   deleteAssignment,
+  editPartA,
   editSheet,
   sendAssignment,
   sheetDetail,
@@ -29,8 +30,22 @@ import {
   type SheetDetail,
   type SheetOp,
   type SheetSummary,
+  type SuggestionView,
   type TrackerOption,
+  type PartAEdit,
 } from "../services/MasteryAssignmentService";
+import {
+  acceptAssignmentSwap,
+  assignmentLoad,
+  assignmentSuggestionWeek,
+  suggestAssignment,
+  type AssignmentLoadView,
+  type ChildLoadRow,
+  type SuggestResult,
+  type SuggestResultItem,
+  type SuggestionSubjectView,
+  type SuggestionWeekView,
+} from "../services/AssignmentSuggestionService";
 import type { Auth } from "../services/MasteryWorkService";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
@@ -67,6 +82,8 @@ QuestionRef.implement({
     questionTypeCode: t.exposeString("questionTypeCode"),
     marks: t.exposeFloat("marks"),
     band: t.exposeString("band"),
+    reasonBn: t.string({ nullable: true, description: "AL-7: why the engine picked it (\"দুর্বল: …\", \"ক্লাস মিস: …\").", resolve: (q) => q.reasonBn }),
+    repeat: t.boolean({ description: "AL-7: a question the শাখা had before, outside the window — shown \"আবার\".", resolve: (q) => q.repeat }),
   }),
 });
 
@@ -97,6 +114,22 @@ SheetSummaryRef.implement({
   }),
 });
 
+const SuggestionRef = builder.objectRef<SuggestionView>("MasteryAssignmentSuggestion");
+SuggestionRef.implement({
+  description: "AL-7: the engine's audit of a draft — who built it and from what.",
+  fields: (t) => ({
+    builtBy: t.exposeString("builtBy"),
+    at: t.exposeString("at"),
+    noLessonMarks: t.exposeBoolean("noLessonMarks"),
+    chapters: t.exposeIntList("chapters"),
+    excludedHw: t.exposeInt("excludedHw"),
+    excludedWindow: t.exposeInt("excludedWindow"),
+    excludedSeen: t.exposeInt("excludedSeen"),
+    edited: t.exposeBoolean("edited"),
+    needsReviewCount: t.exposeInt("needsReviewCount"),
+  }),
+});
+
 const AssignmentRef = builder.objectRef<AssignmentView>("MasteryAssignment");
 AssignmentRef.implement({
   description: "A section × subject's weekly tailored assignment (D-#809). Part A for all, Part B per student.",
@@ -115,6 +148,7 @@ AssignmentRef.implement({
     countedMinutes: t.int({ nullable: true, description: "AL-6b: counted minutes at finalise (release switch on).", resolve: (a) => (a.countedMinutes === null ? null : Math.round(a.countedMinutes)) }),
     dayLabel: t.string({ nullable: true, description: "AL-6b: the Bangla day label — শুক্রবার / শনিবার / split by question numbers + the own part.", resolve: (a) => a.dayLabel }),
     dayLabelEn: t.string({ nullable: true, description: "AL-6b: the same label in English.", resolve: (a) => a.dayLabelEn }),
+    suggestion: t.field({ type: SuggestionRef, nullable: true, description: "AL-7: set on a draft the suggestion engine built.", resolve: (a) => a.suggestion }),
     partA: t.field({ type: [QuestionRef], resolve: (a) => a.partA }),
     sheets: t.field({ type: [SheetSummaryRef], resolve: (a) => a.sheets }),
   }),
@@ -182,7 +216,136 @@ const LayoutInputType = builder.inputType("MasteryAssignmentLayoutInput", {
   }),
 });
 
+const ChapterChoiceRef = builder.objectRef<SuggestionSubjectView["chapterChoices"][number]>("AssignmentChapterChoice");
+ChapterChoiceRef.implement({ fields: (t) => ({ chapterNumber: t.exposeInt("chapterNumber"), objectives: t.exposeInt("objectives") }) });
+
+const SuggestionSubjectRef = builder.objectRef<SuggestionSubjectView>("AssignmentSuggestionSubject");
+SuggestionSubjectRef.implement({
+  description: "AL-7: one subject of the শাখা's week — its draft state (NONE | DRAFT | SENT | MANUAL = নিজে তৈরি করুন | NIL | DELIVERED).",
+  fields: (t) => ({
+    subject: t.exposeString("subject"),
+    subjectBn: t.exposeString("subjectBn"),
+    teacherId: t.string({ nullable: true, resolve: (s) => s.teacherId }),
+    teacherName: t.string({ nullable: true, resolve: (s) => s.teacherName }),
+    state: t.exposeString("state"),
+    assignmentId: t.string({ nullable: true, resolve: (s) => s.assignmentId }),
+    builtBy: t.string({ nullable: true, resolve: (s) => s.builtBy }),
+    edited: t.exposeBoolean("edited"),
+    needsReviewCount: t.exposeInt("needsReviewCount"),
+    minutes: t.int({ nullable: true, resolve: (s) => s.minutes }),
+    doOnDay: t.string({ nullable: true, resolve: (s) => s.doOnDay }),
+    noLessonMarks: t.exposeBoolean("noLessonMarks"),
+    chapterChoices: t.field({ type: [ChapterChoiceRef], resolve: (s) => s.chapterChoices }),
+    inRotation: t.exposeBoolean("inRotation"),
+  }),
+});
+
+type SwapCardShape = NonNullable<SuggestionWeekView["swapCard"]>;
+const SwapCardRef = builder.objectRef<SwapCardShape>("AssignmentSwapCard");
+SwapCardRef.implement({
+  description: "AL-7 (§4.5): \"এই সপ্তাহে X-এর বদলে Y?\" — accepted by the class teacher or the Office; expires at delivery.",
+  fields: (t) => ({
+    dropSubject: t.exposeString("dropSubject"),
+    dropSubjectBn: t.exposeString("dropSubjectBn"),
+    addSubject: t.exposeString("addSubject"),
+    addSubjectBn: t.exposeString("addSubjectBn"),
+    addWeakPct: t.exposeInt("addWeakPct"),
+    addWeakRows: t.exposeInt("addWeakRows"),
+    dropWeakRows: t.exposeInt("dropWeakRows"),
+  }),
+});
+
+const DayPlanRef = builder.objectRef<SuggestionWeekView["dayPlan"]>("AssignmentDayPlan");
+DayPlanRef.implement({ fields: (t) => ({ FRI: t.exposeInt("FRI"), SAT: t.exposeInt("SAT"), overBy: t.exposeInt("overBy"), dayCap: t.exposeInt("dayCap") }) });
+
+const SuggestionWeekRef = builder.objectRef<SuggestionWeekView>("AssignmentSuggestionWeek");
+SuggestionWeekRef.implement({
+  description: "AL-7: a শাখা's week — rotation subjects, each draft's state, the swap card, the planned Friday / Saturday minutes.",
+  fields: (t) => ({
+    week: t.exposeString("week"),
+    dueDate: t.exposeString("dueDate"),
+    deliveryDate: t.string({ nullable: true, resolve: (w) => w.deliveryDate }),
+    weekNumber: t.int({ nullable: true, resolve: (w) => w.weekNumber }),
+    hasWeek: t.exposeBoolean("hasWeek"),
+    suspended: t.exposeBoolean("suspended"),
+    subjects: t.field({ type: [SuggestionSubjectRef], resolve: (w) => w.subjects }),
+    swapCard: t.field({ type: SwapCardRef, nullable: true, resolve: (w) => w.swapCard }),
+    canAcceptSwap: t.exposeBoolean("canAcceptSwap"),
+    dayPlan: t.field({ type: DayPlanRef, resolve: (w) => w.dayPlan }),
+  }),
+});
+
+const SuggestItemRef = builder.objectRef<SuggestResultItem>("AssignmentSuggestionItem");
+SuggestItemRef.implement({
+  fields: (t) => ({
+    subject: t.exposeString("subject"),
+    state: t.exposeString("state"),
+    assignment: t.field({ type: AssignmentRef, nullable: true, resolve: (i) => i.assignment }),
+    noLessonMarks: t.exposeBoolean("noLessonMarks"),
+    needsReviewCount: t.exposeInt("needsReviewCount"),
+  }),
+});
+
+const SuggestResultRef = builder.objectRef<SuggestResult>("AssignmentSuggestionResult");
+SuggestResultRef.implement({
+  fields: (t) => ({
+    items: t.field({ type: [SuggestItemRef], resolve: (r) => r.items }),
+    manualSubjects: t.exposeStringList("manualSubjects"),
+  }),
+});
+
+const ChildLoadSubjectRef = builder.objectRef<ChildLoadRow["subjects"][number]>("AssignmentChildLoadSubject");
+ChildLoadSubjectRef.implement({ fields: (t) => ({ subject: t.exposeString("subject"), fri: t.exposeInt("fri"), sat: t.exposeInt("sat") }) });
+
+const ChildLoadRef = builder.objectRef<ChildLoadRow>("AssignmentChildLoad");
+ChildLoadRef.implement({
+  description: "AL-7 (AC-C10): one child's minutes on Friday and Saturday across the week's subjects plus weekend extra homework.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
+    schoolId: t.string({ nullable: true, resolve: (c) => c.schoolId }),
+    fri: t.int({ resolve: (c) => c.FRI }),
+    sat: t.int({ resolve: (c) => c.SAT }),
+    extraFri: t.int({ resolve: (c) => Math.round(c.extra.FRI) }),
+    extraSat: t.int({ resolve: (c) => Math.round(c.extra.SAT) }),
+    overFri: t.boolean({ resolve: (c) => c.over.FRI }),
+    overSat: t.boolean({ resolve: (c) => c.over.SAT }),
+    warn: t.exposeBoolean("warn"),
+    subjects: t.field({ type: [ChildLoadSubjectRef], resolve: (c) => c.subjects }),
+  }),
+});
+
+const ThursdayRef = builder.objectRef<AssignmentLoadView["thursdayHomework"][number]>("AssignmentThursdayHomework");
+ThursdayRef.implement({ fields: (t) => ({ subject: t.exposeString("subject"), minutes: t.exposeInt("minutes"), description: t.string({ nullable: true, resolve: (h) => h.description }) }) });
+
+const LoadRef = builder.objectRef<AssignmentLoadView>("AssignmentLoad");
+LoadRef.implement({
+  description: "AL-7 (AC-C10): the per-child weekly load. The Thursday class homework is LISTED but not counted (R27).",
+  fields: (t) => ({
+    week: t.exposeString("week"),
+    dayCap: t.exposeInt("dayCap"),
+    children: t.field({ type: [ChildLoadRef], resolve: (l) => l.children }),
+    thursdayHomework: t.field({ type: [ThursdayRef], resolve: (l) => l.thursdayHomework }),
+  }),
+});
+
 builder.queryFields((t) => ({
+  assignmentSuggestionWeek: t.field({
+    type: SuggestionWeekRef,
+    description: "AL-7: a শাখা's weekly-assignment week — rotation subjects, drafts, swap card, day plan. Every subject teacher of the week, the class teacher and the Office read it.",
+    authScopes: { hasPermission: "assignment:suggest" },
+    args: { sectionId: t.arg.string({ required: true }), dueDate: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => assignmentSuggestionWeek(args.sectionId, args.dueDate, authOf(ctx)),
+  }),
+
+  assignmentLoad: t.field({
+    type: LoadRef,
+    description: "AL-7 (AC-C10): each child's Friday / Saturday minutes across the week's subjects plus weekend extra homework; > perDayHours is a warning.",
+    authScopes: { hasPermission: "assignment:suggest" },
+    args: { sectionId: t.arg.string({ required: true }), dueDate: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => assignmentLoad(args.sectionId, args.dueDate, authOf(ctx)),
+  }),
+
   masteryAssignment: t.field({
     type: AssignmentForRef,
     description: "The section × subject's weekly assignment for the due date's ISO week (or none) and the layout a new one starts from.",
@@ -243,10 +406,55 @@ builder.mutationFields((t) => ({
       ),
   }),
 
+  suggestAssignment: t.field({
+    type: SuggestResultRef,
+    description:
+      "AL-7 (§4.1): \"প্রস্তাব দিন\" — build the week's DRAFT from the engine for one subject (or every rotation subject the caller may work). " +
+      "An existing DRAFT is kept unless rebuild = true (after the confirm dialog); a finalised assignment is never touched.",
+    authScopes: { hasPermission: "assignment:suggest" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      dueDate: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: false }),
+      rebuild: t.arg.boolean({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => suggestAssignment({ sectionId: args.sectionId, dueYmd: args.dueDate, subject: args.subject, rebuild: Boolean(args.rebuild) }, authOf(ctx)),
+  }),
+
+  acceptAssignmentSwap: t.field({
+    type: SuggestItemRef,
+    description:
+      "AL-7 (R29): accept the swap card — the dropped subject's DRAFT is deleted (confirmEdited when its teacher already edited it), the new subject's " +
+      "draft is built, both teachers are told. The শাখা's class teacher or the Office; a finalised subject cannot be swapped.",
+    authScopes: { hasPermission: "assignment:accept_swap" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      dueDate: t.arg.string({ required: true }),
+      dropSubject: t.arg.string({ required: true }),
+      addSubject: t.arg.string({ required: true }),
+      confirmEdited: t.arg.boolean({ required: false }),
+    },
+    resolve: async (_r, args, ctx) =>
+      acceptAssignmentSwap({ sectionId: args.sectionId, dueYmd: args.dueDate, dropSubject: args.dropSubject, addSubject: args.addSubject, confirmEdited: Boolean(args.confirmEdited) }, authOf(ctx)),
+  }),
+
+  editMasteryAssignmentPartA: t.field({
+    type: AssignmentRef,
+    description: "AL-7 (§4.6): the common part of an engine draft — SWAP (another unseen question, same objective), REMOVE, ADD_BANK (re-checked against §4.3: a homework question or an in-window repeat is refused).",
+    authScopes: { hasAnyPermission: ["assignment:suggest", "mastery:create"] },
+    args: {
+      assignmentId: t.arg.string({ required: true }),
+      op: t.arg.string({ required: true }),
+      index: t.arg.int({ required: false }),
+      qid: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => editPartA(args.assignmentId, { op: args.op as PartAEdit["op"], index: args.index, qid: args.qid }, authOf(ctx)),
+  }),
+
   editMasteryAssignmentSheet: t.field({
     type: SheetDetailRef,
-    description: "One student's Part B: SWAP (next unseen gold question, same outcome), REMOVE, ADD_OWN (outcome + type + text), APPROVE.",
-    authScopes: { hasPermission: "mastery:create" },
+    description: "One student's Part B: SWAP (next unseen gold question, same outcome), REMOVE, ADD_OWN (outcome + type + text), ADD_BANK (a bank question by qid, AL-7), APPROVE.",
+    authScopes: { hasAnyPermission: ["mastery:create", "assignment:finalise_on_leave"] },
     args: {
       assignmentId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -255,12 +463,13 @@ builder.mutationFields((t) => ({
       loCode: t.arg.string({ required: false }),
       questionTypeCode: t.arg.string({ required: false }),
       textBn: t.arg.string({ required: false }),
+      qid: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) =>
       editSheet(
         args.assignmentId,
         args.studentId,
-        { op: args.op as SheetOp, index: args.index, loCode: args.loCode, questionTypeCode: args.questionTypeCode, textBn: args.textBn },
+        { op: args.op as SheetOp, index: args.index, loCode: args.loCode, questionTypeCode: args.questionTypeCode, textBn: args.textBn, qid: args.qid },
         authOf(ctx),
       ),
   }),
@@ -268,15 +477,17 @@ builder.mutationFields((t) => ({
   approveMasteryAssignmentSheets: t.field({
     type: AssignmentRef,
     description: "Approve every sheet the builder filled without a gap (NEEDS_REVIEW sheets stay for the teacher).",
-    authScopes: { hasPermission: "mastery:create" },
+    authScopes: { hasAnyPermission: ["mastery:create", "assignment:finalise_on_leave"] },
     args: { assignmentId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => approveAllSheets(args.assignmentId, authOf(ctx)),
   }),
 
   sendMasteryAssignment: t.field({
     type: AssignmentRef,
-    description: "Send: writes one AS work sheet (Part A + every Part B) with each student's own item list. Every sheet must be approved.",
-    authScopes: { hasPermission: "mastery:create" },
+    description:
+      "Send: writes one AS work sheet (Part A + every Part B) with each student's own item list. Every sheet must be approved. " +
+      "AL-7 (R28): with the switch on, the Office (assignment:finalise_on_leave) may finalise while the subject teacher is on approved leave that Wednesday / Thursday.",
+    authScopes: { hasAnyPermission: ["mastery:create", "assignment:finalise_on_leave"] },
     args: { assignmentId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => sendAssignment(args.assignmentId, authOf(ctx)),
   }),

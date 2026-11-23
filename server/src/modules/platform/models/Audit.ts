@@ -349,6 +349,7 @@ export type AuditEventKind =
   | "MASTERY_EXCLUSION_REVOKED"  // that exclusion undone; the evidence counts again
   | "MASTERY_ASSIGNMENT_BUILT"   // a weekly tailored assignment built / rebuilt from the teacher's layout (M-4)
   | "MASTERY_ASSIGNMENT_SENT"    // sent: one AS work sheet written with each student's own items (D-#809)
+  | "AS_SUGGESTION_EDIT"          // AL-7: a teacher swapped / removed / added a question on an engine draft (before / after qid, who; PRD 4.6)
   | "MASTERY_ACTION_PROPOSED"    // a section crossed the trigger on an outcome; one PROPOSED action opened (M-5, D-#811)
   | "MASTERY_ACTION_DECIDED"     // an approver planned an extra class / re-teach, or rejected the proposal
   | "MASTERY_EXTRA_CLASS_HELD"   // the teacher recorded the class and who came

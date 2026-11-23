@@ -304,6 +304,82 @@ export async function deliverAssignmentItem(
 }
 
 // ---------------------------------------------------------------------------
+// System delivery of a TAILORED weekly assignment (AL-7, docs/prd-academic-loop-2027.md §4.6)
+// ---------------------------------------------------------------------------
+
+export interface SystemDeliveryInput {
+  academicYearId: string;
+  weekNumber: number;
+  /** The rotation entry whose class / cycle / schedule ids the item takes: the subject's own cell, or — for a swapped-in
+   *  subject (§4.5) — the DROPPED subject's cell (the rotation table is unchanged). */
+  entryId: string;
+  /** The item's subject: the assignment's own (the swapped-in subject differs from the entry's). */
+  subject: HwSubject;
+  /** The subject teacher: the entry's teacher, or the routine slot holder for a swapped-in subject. */
+  teacherId: string;
+  roster: DeliveryRosterEntry[];
+  estMinutes: number;
+  doOnDay?: "FRI" | "SAT" | "BOTH";
+  minutesByDay?: { FRI: number; SAT: number };
+  description: string;
+  actorId: string;
+  at?: Date;
+}
+
+/**
+ * The SYSTEM delivery of a SENT tailored assignment's tracker item (release switch ON, Class 1–5; the caller checks). It is
+ * the twin of `deliverAssignmentItem` for a week the subject teacher already finalised: the item is DRAFT with the counted
+ * minutes and the Friday / Saturday split, the roster comes from the delivery-day attendance, and the D-#839 sweep then
+ * issues the week as usual.
+ *
+ * NO attachment is required here — a lead-approved exception to D-#713 ("an assignment is handed out WITH its sheet"): for a
+ * tailored week the AS paper (the per-child printed sheet) IS the sheet. Returns null when the cell already has an item.
+ */
+export async function deliverSystemAssignmentItem(input: SystemDeliveryInput): Promise<IAssignmentItem | null> {
+  const schedule = await AssignmentSchedule.findOne({ academicYearId: input.academicYearId });
+  if (!schedule) throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");
+  const entry = schedule.entries.id(input.entryId);
+  if (!entry) throw new Error("Schedule entry not found in this year's rotation");
+  const resolved = await resolveScheduleWeek(schedule, input.weekNumber);
+  if (resolved.suspended || !resolved.deliveryDate || !resolved.dueDate) throw new Error(`Week ${input.weekNumber} is suspended — no assignment is expected`);
+  const existing = await AssignmentItem.findOne({ academicYearId: input.academicYearId, weekNumber: input.weekNumber, sectionId: entry.sectionId, subject: input.subject }).lean();
+  if (existing) return null;
+  const at = input.at ?? new Date();
+  const item = await createWithYearId({
+    idField: "asId",
+    seqModel: AssignmentSequence,
+    academicYearId: input.academicYearId,
+    key: { classLevel: entry.classLevel, subject: input.subject },
+    firstId: await generateAsId(input.academicYearId, entry.classLevel, input.subject),
+    makeId: () => generateAsId(input.academicYearId, entry.classLevel, input.subject),
+    create: (id) =>
+      AssignmentItem.create({
+        asId: id,
+        academicYearId: input.academicYearId,
+        scheduleEntryId: entry._id,
+        weekNumber: input.weekNumber,
+        cycleWeek: entry.cycleWeek,
+        classId: entry.classId,
+        classLevel: entry.classLevel,
+        sectionId: entry.sectionId,
+        subject: input.subject,
+        teacherId: input.teacherId,
+        deliveryDate: resolved.deliveryDate,
+        dueDate: resolved.dueDate,
+        description: input.description,
+        estMinutes: input.estMinutes,
+        status: "DRAFT",
+        ...(input.doOnDay ? { doOnDay: input.doOnDay } : {}),
+        ...(input.minutesByDay ? { minutesByDay: input.minutesByDay } : {}),
+        draftRoster: input.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
+        deliveredBy: input.actorId,
+        deliveredAt: at,
+      }),
+  });
+  return item;
+}
+
+// ---------------------------------------------------------------------------
 // Edit / delete a delivered assignment (D-#353 policy — the D-#336 homework twin)
 // ---------------------------------------------------------------------------
 

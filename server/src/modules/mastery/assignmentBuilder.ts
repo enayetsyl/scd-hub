@@ -38,6 +38,8 @@ export interface BankQuestion {
   stimulusRef?: string | null;
   /** PR-G: the school question type the question carries (`lesson_ref` = QT-…), or null. */
   qtCode?: string | null;
+  /** AL-7: `tags.difficulty` (easy | medium | hard) — the easy items for a missed objective. */
+  difficulty?: string | null;
 }
 
 export interface OutcomeInfo {
