@@ -183,6 +183,9 @@ const dedupeKeys = {
    *  RECIPIENT, so a second run that week sends nothing and a second Principal login is never swallowed by the first. */
   lessonBehind: (weekKey: string, sectionId: string, subject: string, recipientId: string) =>
     `LPB:${weekKey}:${sectionId}:${subject}:${recipientId}`,
+  /** AL-12 (R16/R18, D-#1676): a NEW homework-honesty case → each class teacher of the child's শাখা + each Principal.
+   *  The CASE and the RECIPIENT, so a recompute of the same case sends nothing and a second login is never swallowed. */
+  integrityCase: (caseId: string, recipientId: string) => `INTC:${caseId}:${recipientId}`,
   /** Per syllabus + guardian (D-#644). Per-GUARDIAN, not per-syllabus: an
    *  entity-only key would swallow the re-emit to a guardian who was linked to the
    *  class after the first publish (the recorded dedupe-scope trap). NOT versioned —
@@ -1371,6 +1374,41 @@ export async function emitLessonBehind(ev: LessonBehindEvent): Promise<number> {
         bodyBn: ev.messageBn,
         refs: { date: ev.weekKey, sectionId: ev.sectionId.toString(), subject: ev.subject },
         dedupeKey: dedupeKeys.lessonBehind(ev.weekKey, ev.sectionId.toString(), ev.subject, r.toString()),
+      });
+      if (res.created) written++;
+    }
+  });
+  return written;
+}
+
+// ---------------------------------------------------------------------------
+// AL-12 (R16, D-#1676) — INTEGRITY_CASE: a new outside-help case → the class teacher(s) of the শাখা + the Principal.
+// The notice names the child + subject and opens the case; it carries no mark detail. Returns how many NEW notices
+// were written (a recompute of the same case writes none).
+// ---------------------------------------------------------------------------
+
+export interface IntegrityCaseEvent {
+  recipientUserIds: IdLike[];
+  caseId: IdLike;
+  studentId: IdLike;
+  sectionId: IdLike;
+  subject: string;
+  titleBn: string;
+  messageBn: string;
+}
+
+export async function emitIntegrityCase(ev: IntegrityCaseEvent): Promise<number> {
+  let written = 0;
+  await bestEffort("homework integrity case", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("INTEGRITY_CASE")) return;
+    for (const r of ev.recipientUserIds) {
+      const res = await emit({
+        recipientUserId: r.toString(),
+        kind: "INTEGRITY_CASE",
+        titleBn: ev.titleBn,
+        bodyBn: ev.messageBn,
+        refs: { studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString(), subject: ev.subject },
+        dedupeKey: dedupeKeys.integrityCase(ev.caseId.toString(), r.toString()),
       });
       if (res.created) written++;
     }

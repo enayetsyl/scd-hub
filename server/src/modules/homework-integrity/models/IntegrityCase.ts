@@ -46,6 +46,22 @@ export interface IIntegrityCase extends Document {
   closedBy?: Types.ObjectId;
   closedAt?: Date;
   history: { at: Date; hwPct: number; ctPct: number }[];
+  /** AL-12 (D-#1676): the class teacher of the child's section and the subject teacher there, at open time. */
+  investigatorIds?: Types.ObjectId[];
+  /** AL-12: the nightly backfill looked and found nobody to name (it does not look again; the live row rule still applies). */
+  investigatorsCheckedAt?: Date;
+  /** AL-12: investigators' notes, oldest first. */
+  notes?: IntegrityNote[];
+  /** AL-12 (R32): the term tag after the outcome (GUARDIAN_DID / UNCLEAR); CHILD_DID never tags. */
+  tagActive?: boolean;
+  /** AL-12: the tag lasts until this instant (the end of the term in which the outcome was recorded). */
+  tagUntil?: Date;
+}
+
+export interface IntegrityNote {
+  by: Types.ObjectId;
+  at: Date;
+  text: string;
 }
 
 const ItemSchema = new Schema<IntegrityItem>(
@@ -56,6 +72,15 @@ const ItemSchema = new Schema<IntegrityItem>(
     earned: { type: Number, required: true },
     available: { type: Number, required: true },
     date: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
+const NoteSchema = new Schema<IntegrityNote>(
+  {
+    by: { type: Schema.Types.ObjectId, required: true },
+    at: { type: Date, required: true, default: () => new Date() },
+    text: { type: String, required: true, trim: true, maxlength: 1000 },
   },
   { _id: false },
 );
@@ -83,12 +108,20 @@ const IntegrityCaseSchema = new Schema<IIntegrityCase>({
     type: [new Schema({ at: Date, hwPct: Number, ctPct: Number }, { _id: false })],
     default: [],
   },
+  investigatorIds: { type: [Schema.Types.ObjectId], default: [] },
+  investigatorsCheckedAt: { type: Date },
+  notes: { type: [NoteSchema], default: [] },
+  tagActive: { type: Boolean, default: false },
+  tagUntil: { type: Date },
 });
 
 // At most one OPEN case per child x objective.
 IntegrityCaseSchema.index({ studentId: 1, loCode: 1 }, { unique: true, partialFilterExpression: { status: "OPEN" } });
 // The Office queue.
 IntegrityCaseSchema.index({ status: 1, sectionId: 1, subject: 1, gap: -1 });
+// The investigator's queue (AL-12) and the tag reads.
+IntegrityCaseSchema.index({ investigatorIds: 1, status: 1 });
+IntegrityCaseSchema.index({ studentId: 1, tagActive: 1, tagUntil: 1 });
 // Recurring count per child.
 IntegrityCaseSchema.index({ studentId: 1, academicYearId: 1, openedAt: 1 });
 

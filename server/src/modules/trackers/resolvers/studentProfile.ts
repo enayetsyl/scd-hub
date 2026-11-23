@@ -53,6 +53,7 @@ import {
   type StudentProfileComments,
   type StudentProfileHeader,
 } from "../services/StudentProfileContextService";
+import { tagsForStudent, OUTSIDE_HELP_MARK_BN, type StaffTag } from "../../homework-integrity/services/IntegrityTagService";
 import { studentProfile as classTestStudentProfileFor } from "../services/ClassTestSummaryService";
 import {
   assertReportRead,
@@ -458,6 +459,37 @@ const CommentsRef = builder.objectRef<StudentProfileComments>("StudentProfileCom
     sinceMeetingDate: t.string({ nullable: true, resolve: (c) => c.timeline.sinceMeetingDate }),
   }),
 });
+
+/** AL-12 (AC-H4): a live outside-help tag on the child's profile (staff). A subject teacher sees only their own subjects. */
+const OutsideHelpTagRef = builder.objectRef<StaffTag & { markBn: string }>("StudentProfileOutsideHelpTag").implement({
+  description: "A live term tag after an outside-help outcome (guardian did it / unclear) - staff only; a note, never a mark change.",
+  fields: (t) => ({
+    caseId: t.exposeString("caseId"),
+    subject: t.exposeString("subject"),
+    loCode: t.exposeString("loCode"),
+    loLabelBn: t.exposeString("loLabelBn"),
+    outcome: t.exposeString("outcome"),
+    tagUntil: t.exposeString("tagUntil"),
+    recurring: t.exposeBoolean("recurring", { description: "The বারবার badge: the policy's count of cases in this term." }),
+    markBn: t.exposeString("markBn"),
+  }),
+});
+
+builder.queryField("studentProfileOutsideHelp", (t) =>
+  t.field({
+    type: [OutsideHelpTagRef],
+    description:
+      "The live outside-help term tags on the child (AL-12): outcome GUARDIAN_DID or UNCLEAR, until the end of the term. Same " +
+      "gate as the profile; a subject teacher is narrowed to their own subjects. Runs regardless of the 2027 release switch.",
+    authScopes: { hasPermission: "student_profile:view" },
+    args: { studentId: t.arg.string(panelArgs.studentId) },
+    resolve: async (_root, args, ctx) => {
+      const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
+      const tags = await tagsForStudent(args.studentId);
+      return tags.filter((x) => subjects === null || subjects.includes(x.subject)).map((x) => ({ ...x, markBn: OUTSIDE_HELP_MARK_BN }));
+    },
+  }),
+);
 
 builder.queryField("studentProfileHeader", (t) =>
   t.field({

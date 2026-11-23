@@ -289,6 +289,22 @@ describe("buildBriefMarkdown — the printed brief", () => {
   });
   const opts = { subjects: true, details: false, printedByName: "অফিস", printedAt: new Date("2026-11-01T04:00:00Z") };
 
+  it("AL-12 (AC-H4/H5): a live outside-help tag prints a staff section with the unclear + recurring marks; no tag prints nothing", () => {
+    const none = buildBriefMarkdown([brief()], opts);
+    expect(none).not.toContain("বাইরের সাহায্য");
+    const md = buildBriefMarkdown(
+      [brief({ outsideHelp: [
+        { subject: "MATH", loLabelBn: "ভাগের ধারণা", outcome: "GUARDIAN_DID", recurring: true },
+        { subject: "ENG", loLabelBn: "Reading", outcome: "UNCLEAR", recurring: false },
+      ] })],
+      opts,
+    );
+    expect(md).toContain("## বাড়ির কাজে বাইরের সাহায্য (এই মেয়াদ)");
+    expect(md).toContain("ভাগের ধারণা: বাড়ির কাজে বাইরের সাহায্য সন্দেহ · বারবার");
+    expect(md).toContain("Reading: বাড়ির কাজে বাইরের সাহায্য সন্দেহ (অস্পষ্ট)");
+    expect(md).not.toContain("নিজে করতে দিন"); // the guardian's sentence is the portal's, never the staff brief
+  });
+
   it("prints the child, the numbers, both comment layers and who printed it", () => {
     const md = buildBriefMarkdown([brief()], opts);
     expect(md).toContain("# শিক্ষার্থী ক");

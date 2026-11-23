@@ -16,7 +16,8 @@
  */
 import React, { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import type { TrackerItemT, TrackerPanelT } from "../../../graphql/studentProfile";
+import type { ProfileOutsideHelpT, TrackerItemT, TrackerPanelT } from "../../../graphql/studentProfile";
+import { OutsideHelpCard } from "./OutsideHelpCard";
 import { Badge, Body, Button, Card, Chip, ChipRow, Loader, Muted, Notice } from "../../../components/ui";
 import { marksLine } from "../../../lib/marksDisplay";
 import { STR, bnNum, hwResultLabel, hwSubjectLabel, isoDateLabel, lifecycleStateLabel } from "../../../lib/labels";
@@ -114,6 +115,7 @@ export function TrackerTab({
   error,
   narrowed,
   rangeControl,
+  outsideHelp,
 }: {
   kind: "homework" | "assignment";
   panel: TrackerPanelT | null;
@@ -121,6 +123,8 @@ export function TrackerTab({
   error: string | null;
   narrowed: boolean;
   rangeControl: React.ReactNode;
+  /** AL-12: the live outside-help term tags on the child (staff). */
+  outsideHelp?: readonly ProfileOutsideHelpT[] | null;
 }): React.ReactElement {
   const isAssignment = kind === "assignment";
   const [subject, setSubject] = useState<string | null>(null);
@@ -311,6 +315,7 @@ export function TrackerTab({
     <View style={{ gap: space(3) }}>
       {rangeControl}
       {narrowed ? <Muted>{STR.spMySubjectsNote}</Muted> : null}
+      <OutsideHelpCard tags={outsideHelp} />
       {body}
     </View>
   );

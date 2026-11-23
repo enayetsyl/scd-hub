@@ -16,6 +16,7 @@
  * `buildBriefMarkdown` is PURE (the StudentProfileSheetService pattern) and feeds the
  * existing pdfkit + NotoSansBengali renderer. Identity plane; no corpus path (ADR-005).
  */
+import { tagsForStudent, OUTSIDE_HELP_MARK_BN } from "../../homework-integrity/services/IntegrityTagService";
 import { Types } from "mongoose";
 import { ROUTINE_SUBJECT_LABELS_BN } from "@scd/shared";
 import { ParentMeeting, type IParentMeeting } from "../models/ParentMeeting";
@@ -379,6 +380,15 @@ export interface BriefSubjectNote {
   skipReason: string | null;
 }
 
+/** AL-12 (AC-H4): a live outside-help term tag on the child, for the printed brief (staff). */
+export interface BriefOutsideHelp {
+  subject: string;
+  loLabelBn: string;
+  /** GUARDIAN_DID | UNCLEAR */
+  outcome: string;
+  recurring: boolean;
+}
+
 export interface MeetingBrief {
   meetingId: string;
   instanceLabel: string;
@@ -398,6 +408,8 @@ export interface MeetingBrief {
   numbers: BriefNumbers;
   /** The section's best beside each number (D-#866); null when it could not be computed. */
   classBest: BriefClassBest | null;
+  /** AL-12: the child's live outside-help tags at the time of printing (empty = none). */
+  outsideHelp?: BriefOutsideHelp[];
 }
 
 async function namesOf(ids: Array<Types.ObjectId | string | null | undefined>): Promise<Map<string, string>> {
@@ -434,10 +446,12 @@ export async function meetingBrief(meetingId: string, studentId: string, now = n
     summary?.authorUserId,
     ...notes.map((n) => n.writtenBy ?? n.teacherId),
   ]);
-  const [numbers, classBest] = await Promise.all([
+  const [numbers, classBest, tags] = await Promise.all([
     childNumbers(studentId, window.fromKey, window.toKey, null, now),
     // A comparator must never sink the brief itself — no section best is better than no brief.
     sectionClassBest(str(student.sectionId), window.fromKey, window.toKey, now).catch(() => null),
+    // Same posture: a tag read that fails must never sink the brief.
+    tagsForStudent(studentId, now).catch(() => []),
   ]);
 
   return {
@@ -472,6 +486,7 @@ export async function meetingBrief(meetingId: string, studentId: string, now = n
       .sort((a, b) => a.subject.localeCompare(b.subject)),
     numbers,
     classBest,
+    outsideHelp: tags.map((x) => ({ subject: x.subject, loLabelBn: x.loLabelBn, outcome: x.outcome, recurring: x.recurring })),
   };
 }
 
@@ -530,6 +545,15 @@ function oneChild(b: MeetingBrief, opts: BriefPrintOptions): string[] {
   out.push(`## শ্রেণি শিক্ষকের সারাংশ${b.summary?.authorName ? ` · ${b.summary.authorName}` : ""}`);
   if (b.summary) out.push(`**ভালো দিক:** ${b.summary.strengths || "—"}`, "", `**চিন্তার বিষয়:** ${b.summary.concerns || "—"}`, "");
   else out.push("এখনো লেখা হয়নি।", "");
+
+  // AL-12 (AC-H4/H5): the term tag after an outside-help outcome. A staff note; it never changes a mark.
+  if (b.outsideHelp && b.outsideHelp.length > 0) {
+    out.push("## বাড়ির কাজে বাইরের সাহায্য (এই মেয়াদ)");
+    for (const h of b.outsideHelp) {
+      out.push(`- ${subjectBn(h.subject)} — ${cell(h.loLabelBn)}: ${OUTSIDE_HELP_MARK_BN}${h.outcome === "UNCLEAR" ? " (অস্পষ্ট)" : ""}${h.recurring ? " · বারবার" : ""}`);
+    }
+    out.push("");
+  }
 
   if (opts.subjects) {
     out.push("## বিষয় শিক্ষকদের মন্তব্য");

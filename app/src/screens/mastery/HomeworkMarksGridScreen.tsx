@@ -29,6 +29,7 @@ import {
   type MasteryPaperRow,
   type MasteryRosterEntry,
 } from "../../graphql/mastery";
+import { SECTION_OUTSIDE_HELP_TAGS, type OutsideHelpTagT } from "../../graphql/homeworkIntegrity";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, Notice, H2 } from "../../components/ui";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { STR, bnNum, getActiveLang, hwSubjectLabel, masteryClassLabel, masterySourceLabel } from "../../lib/labels";
@@ -79,6 +80,17 @@ export default function HomeworkMarksGridScreen({ route }: Props): React.ReactEl
   // the answer is unknown and nobody is greyed on that account (the server still refuses a save for them).
   const [gridQ, refetchGrid] = useQuery({ query: HOMEWORK_FREE_LINE_GRID_QUERY, variables: { hwItemId: hwItemId ?? "" }, pause: !hwItemId });
   const gridRows = (gridQ.data?.homeworkFreeLineGrid?.rows ?? null) as HomeworkFreeLineGridRow[] | null;
+  // AL-12 (AC-H4): HW / AS marks on an objective carrying a live outside-help term tag show "বাড়ির কাজে বাইরের সাহায্য সন্দেহ".
+  // A note only - no mark changes. A failed read hides the note, never the grid.
+  const tagSource = paper && (paper.source === "HW" || paper.source === "AS");
+  const [tagQ] = useQuery({
+    query: SECTION_OUTSIDE_HELP_TAGS,
+    variables: { sectionId: paper?.sectionId ?? "", subject: paper?.subject ?? "" },
+    pause: !tagSource,
+  });
+  const tagRows = (tagQ.data?.sectionOutsideHelpTags ?? []) as OutsideHelpTagT[];
+  /** `studentId|loCode` of each tagged objective, and the students with any tag on this paper's objectives. */
+  const taggedPairs = useMemo(() => new Set(tagRows.map((t) => `${t.studentId}|${t.loCode}`)), [tagRows]);
   const roster = useMemo(
     () =>
       freeMode
@@ -288,6 +300,9 @@ export default function HomeworkMarksGridScreen({ route }: Props): React.ReactEl
                         {s.schoolId ? `${bnNum(s.schoolId)} · ` : ""}
                         {s.name}
                       </Body>
+                      {items.some((it) => it.loCodes.some((lc) => taggedPairs.has(`${s.studentId}|${lc}`))) ? (
+                        <Body style={{ fontSize: 12, color: colors.textSecondary }}>{STR.hiOutsideHelpMark}</Body>
+                      ) : null}
                       {greyed ? (
                         <Body style={{ fontSize: 12, color: colors.textSecondary }}>
                           {!hasRecord ? STR.al5GridNoRecord : status === "ABSENT" ? STR.msStatusAbsent : status === "NOT_SUBMITTED" ? STR.msStatusNotSubmitted : STR.msStatusVoid}
@@ -314,6 +329,7 @@ export default function HomeworkMarksGridScreen({ route }: Props): React.ReactEl
                           style={{ width: ITEM_W - 6, minHeight: 36, marginHorizontal: 3, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: cellBg(st), borderWidth: 1, borderColor: st === "FULL" ? colors.border : "transparent" }}
                         >
                           {given ? <Body style={{ fontSize: 10, color: colors.textSecondary }}>{ownNo.get(it.itemNo)}</Body> : null}
+                          {it.loCodes.some((lc) => taggedPairs.has(`${s.studentId}|${lc}`)) ? <Body style={{ fontSize: 10, color: colors.textSecondary }}>⚑</Body> : null}
                           <Body style={{ color: colors.textPrimary, fontWeight: st === "FULL" ? "400" : "700" }}>{cellLabel(earned, it.marks, bnNum)}</Body>
                         </Pressable>
                       );

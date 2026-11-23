@@ -162,6 +162,24 @@ export const STUDENT_PROFILE_HOMEWORK_QUERY = gql<{ studentProfileHomework: Trac
   }
 `;
 
+/** AL-12 (AC-H4): a live outside-help term tag on the child (staff). */
+export interface ProfileOutsideHelpT {
+  caseId: string;
+  subject: string;
+  loCode: string;
+  loLabelBn: string;
+  outcome: string;
+  tagUntil: string;
+  recurring: boolean;
+  markBn: string;
+}
+
+export const STUDENT_PROFILE_OUTSIDE_HELP_QUERY = gql<{ studentProfileOutsideHelp: ProfileOutsideHelpT[] }, { studentId: string }>`
+  query StudentProfileOutsideHelp($studentId: String!) {
+    studentProfileOutsideHelp(studentId: $studentId) { caseId subject loCode loLabelBn outcome tagUntil recurring markBn }
+  }
+`;
+
 export const STUDENT_PROFILE_ASSIGNMENT_QUERY = gql<{ studentProfileAssignment: TrackerPanelT }, PanelVars>`
   query StudentProfileAssignment($studentId: String!, $fromKey: String!, $toKey: String!) {
     studentProfileAssignment(studentId: $studentId, fromKey: $fromKey, toKey: $toKey) { ${PANEL_FIELDS} }

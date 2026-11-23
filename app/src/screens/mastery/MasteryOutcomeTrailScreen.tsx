@@ -23,6 +23,8 @@ import { fill, levelFill, stateTone } from "./masteryStateUi";
 import { EarlierSteps } from "./MasteryTreeParts";
 import { LessonPresenceList } from "../../components/LessonPresenceList";
 import { ObjectiveLessonNote } from "../../components/ObjectiveLessonNote";
+import { STUDENT_OUTSIDE_HELP_TAGS, type OutsideHelpTagT } from "../../graphql/homeworkIntegrity";
+import { OutsideHelpCard } from "../student/profile/OutsideHelpCard";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryOutcomeTrail">;
 
@@ -40,6 +42,9 @@ export default function MasteryOutcomeTrailScreen({ route, navigation }: Props):
     requestPolicy: "cache-and-network",
   });
   const t = data?.masteryOutcomeTrail as MasteryTrailData | undefined;
+  // AL-12 (AC-H4): a live outside-help tag on THIS objective - a note, no mark changes.
+  const [tagQ] = useQuery({ query: STUDENT_OUTSIDE_HELP_TAGS, variables: { studentId, loCode } });
+  const helpTags = (tagQ.data?.studentOutsideHelpTags ?? []) as OutsideHelpTagT[];
 
   if (fetching && !t) {
     return (
@@ -81,6 +86,8 @@ export default function MasteryOutcomeTrailScreen({ route, navigation }: Props):
             .join(" › ")}
         </Muted>
       ) : null}
+
+      <OutsideHelpCard tags={helpTags} />
 
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>

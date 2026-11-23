@@ -57,6 +57,7 @@ import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { ChildQuestionHints } from "../../components/ChildQuestionHints";
+import { ChildHomeworkHelpNote } from "../../components/ChildHomeworkHelpNote";
 import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -657,6 +658,8 @@ export default function ChildHomeworkScreen({
           </View>
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}
+        {/* AL-12 (R32): the gentle "let the child do it alone" note, only after the outcome "the guardian did it". */}
+        {selected ? <ChildHomeworkHelpNote studentId={selected.studentId} /> : null}
 
         {/* GP-10 (owner ask): what is still OUTSTANDING, before the day-by-day log.
             A parent opens this screen to find out what the child still owes; making

@@ -30,6 +30,7 @@ import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
 import { fill } from "./masteryStateUi";
+import { SECTION_OUTSIDE_HELP_TAGS, type OutsideHelpTagT } from "../../graphql/homeworkIntegrity";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryEntry">;
 
@@ -102,6 +103,13 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
   const linkedTest = data?.masteryPaper?.classTest as { ctId: string; totalMarks: number } | null | undefined;
   const mismatches = (data?.masteryPaper?.classTestMismatches ?? []) as MasteryClassTestMismatch[];
   const roster = (data?.masteryPaper?.roster ?? []) as MasteryRosterEntry[];
+  // AL-12 (AC-H4): HW / AS marks on an objective with a live outside-help term tag carry the note. No switch gate.
+  const [tagQ] = useQuery({
+    query: SECTION_OUTSIDE_HELP_TAGS,
+    variables: { sectionId: paper?.sectionId ?? "", subject: paper?.subject ?? "" },
+    pause: !paper || !(paper.source === "HW" || paper.source === "AS"),
+  });
+  const taggedPairs = new Set(((tagQ.data?.sectionOutsideHelpTags ?? []) as OutsideHelpTagT[]).map((x) => `${x.studentId}|${x.loCode}`));
 
   useEffect(() => {
     const next: Record<string, Draft> = {};
@@ -234,6 +242,7 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
               </Body>
               {!isRubric ? <Badge text={off ? "—" : `${bnNum(earned)}/${bnNum(outOf)}`} tone={off ? "muted" : "brand"} /> : null}
             </View>
+            {paper.items.some((it) => it.loCodes.some((lc) => taggedPairs.has(`${s.studentId}|${lc}`))) ? <Muted>⚑ {STR.hiOutsideHelpMark}</Muted> : null}
             <ChipRow>
               {STATUSES.filter(([code]) => !(paper.classTestId && code === "NOT_SUBMITTED")).map(([code, label]) => (
                 <Chip key={code} label={label()} selected={status === code} onPress={() => edit(s.studentId, (x) => ({ ...x, status: code === s.defaultStatus ? null : code }))} />

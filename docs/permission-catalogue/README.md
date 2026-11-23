@@ -253,10 +253,10 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 #### `homework_integrity` — হোমওয়ার্ক যাচাই
 | permission | EN | BN | what it allows | T | O | flags | replaces |
 |---|---|---|---|---|---|---|---|
-| `homework_integrity:view` | See homework check cases | হোমওয়ার্ক যাচাইয়ের কেস দেখা | The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it (GH-3, D-#1522) | — | on | | new |
-| `homework_integrity:record` | Record the outcome | যাচাইয়ের ফলাফল লেখা | Close a case with what the Office found and a note; recalculate now (GH-3, D-#1522) | — | on | | new |
-| `homework_integrity:view_all` | All homework check cases | সব যাচাইয়ের কেস দেখা | Every case school-wide (2027 loop, D-#1676) | — | on | | declared ahead (AL-12) |
-| `homework_integrity:settings` | Homework check settings | হোমওয়ার্ক যাচাইয়ের সেটিং | Edit the gap points and the recurring-case count | — | — | LOCKED | declared ahead (AL-12) |
+| `homework_integrity:view` | See homework check cases | হোমওয়ার্ক যাচাইয়ের কেস দেখা | The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it (GH-3, D-#1522) | on (row rule: class teacher of the শাখা or that subject's teacher there, AL-12) | on | | new |
+| `homework_integrity:record` | Record the outcome | যাচাইয়ের ফলাফল লেখা | Close a case with what the Office found and a note (GH-3, D-#1522); the recalculate button is `view_all` (AL-12) | on (same row rule, AL-12) | on | | new |
+| `homework_integrity:view_all` | All homework check cases | সব যাচাইয়ের কেস দেখা | Every case school-wide (2027 loop, D-#1676) | — | on | | AL-12: row rule on the queue, the case, the note, recompute |
+| `homework_integrity:settings` | Homework check settings | হোমওয়ার্ক যাচাইয়ের সেটিং | Edit the gap points and the recurring-case count | — | — | LOCKED | AL-12: `homeworkIntegritySettings` + `saveHomeworkIntegritySettings` (Principal only) |
 
 #### `assignment_gift` — সাপ্তাহিক উপহার
 | permission | EN | BN | what it allows | T | O | flags | replaces |

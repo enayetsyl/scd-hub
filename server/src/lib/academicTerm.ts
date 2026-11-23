@@ -26,3 +26,14 @@ export async function termOfDate(
   }
   return at.getTime() < mid ? 1 : 2;
 }
+
+/**
+ * The instant the term containing `at` ends (AL-12, R32: "the tag lasts the term"): the year's midpoint for term 1,
+ * its end date for term 2. A year that cannot be found has no term end — `null`; the caller picks a fallback.
+ */
+export async function termEndOf(yearId: Types.ObjectId | string, at: Date): Promise<Date | null> {
+  const y = await AcademicYear.findById(yearId).select("startDate endDate").lean();
+  if (!y) return null;
+  const mid = (y.startDate.getTime() + y.endDate.getTime()) / 2;
+  return at.getTime() < mid ? new Date(mid) : new Date(y.endDate);
+}
