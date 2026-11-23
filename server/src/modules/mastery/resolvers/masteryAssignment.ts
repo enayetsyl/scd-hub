@@ -24,6 +24,8 @@ import {
   sendAssignment,
   sheetDetail,
   trackerOptions,
+  addCandidates,
+  type AddCandidate,
   type AssignmentView,
   type LayoutInput,
   type QuestionView,
@@ -47,6 +49,15 @@ import {
   type SuggestionWeekView,
 } from "../services/AssignmentSuggestionService";
 import type { Auth } from "../services/MasteryWorkService";
+import {
+  addAssignmentComment,
+  assignmentComments,
+  assignmentForReview,
+  assignmentOfficeWeeksPage,
+  type AssignmentCommentView,
+  type OfficeWeekRow,
+} from "../services/AssignmentCommentService";
+import { pageRef } from "../../../pageRef";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -151,6 +162,8 @@ AssignmentRef.implement({
     suggestion: t.field({ type: SuggestionRef, nullable: true, description: "AL-7: set on a draft the suggestion engine built.", resolve: (a) => a.suggestion }),
     partA: t.field({ type: [QuestionRef], resolve: (a) => a.partA }),
     sheets: t.field({ type: [SheetSummaryRef], resolve: (a) => a.sheets }),
+    mayEdit: t.boolean({ nullable: true, description: "AL-8: set by assignmentForReview — the caller may change this draft (the mutations' own rule).", resolve: (a) => a.mayEdit ?? null }),
+    mayFinalise: t.boolean({ nullable: true, description: "AL-8: set by assignmentForReview — the caller may finalise this draft (incl. the Office on a teacher's Wed/Thu leave).", resolve: (a) => a.mayFinalise ?? null }),
   }),
 });
 
@@ -188,6 +201,7 @@ SheetDetailRef.implement({
     warnings: t.field({ type: [WarningRef], resolve: (s) => s.warnings }),
     outcomeChoices: t.field({ type: [OutcomeChoiceRef], resolve: (s) => s.outcomeChoices }),
     typeChoices: t.field({ type: [TypeChoiceRef], resolve: (s) => s.typeChoices }),
+    mayEdit: t.boolean({ nullable: true, description: "AL-8: false = a read-only reader of the week.", resolve: (s) => s.mayEdit ?? null }),
   }),
 });
 
@@ -498,5 +512,96 @@ builder.mutationFields((t) => ({
     authScopes: { hasPermission: "mastery:create" },
     args: { assignmentId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => deleteAssignment(args.assignmentId, authOf(ctx)),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// AL-8: Office / Principal view of every শাখা's weekly assignments + comments (journey C6)
+// ---------------------------------------------------------------------------
+
+const OfficeWeekRowRef = builder.objectRef<OfficeWeekRow>("AssignmentOfficeWeekRow");
+OfficeWeekRowRef.implement({
+  description: "AL-8 (C6): one শাখা × subject's draft or finalised weekly assignment, for the Office / Principal.",
+  fields: (t) => ({
+    assignmentId: t.exposeString("assignmentId"),
+    sectionId: t.exposeString("sectionId"),
+    sectionLabelBn: t.exposeString("sectionLabelBn"),
+    subject: t.exposeString("subject"),
+    subjectBn: t.exposeString("subjectBn"),
+    status: t.exposeString("status"),
+    builtBy: t.string({ nullable: true, resolve: (r) => r.builtBy }),
+    edited: t.exposeBoolean("edited"),
+    needsReviewCount: t.exposeInt("needsReviewCount"),
+    minutes: t.int({ nullable: true, resolve: (r) => r.minutes }),
+    commentCount: t.exposeInt("commentCount"),
+    dueDate: t.exposeString("dueDate"),
+  }),
+});
+const AddCandidateRef = builder.objectRef<AddCandidate>("AssignmentAddCandidate");
+AddCandidateRef.implement({
+  fields: (t) => ({
+    qid: t.exposeString("qid"),
+    textBn: t.string({ nullable: true, resolve: (c) => c.textBn }),
+    loCode: t.exposeString("loCode"),
+    labelBn: t.exposeString("labelBn"),
+    questionTypeCode: t.exposeString("questionTypeCode"),
+    marks: t.exposeFloat("marks"),
+    repeat: t.exposeBoolean("repeat"),
+  }),
+});
+
+const OfficeWeekPageRef = pageRef("AssignmentOfficeWeekPage", OfficeWeekRowRef);
+
+const AssignmentCommentRef = builder.objectRef<AssignmentCommentView>("AssignmentComment");
+AssignmentCommentRef.implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    authorName: t.exposeString("authorName"),
+    textBn: t.exposeString("textBn"),
+    createdAt: t.exposeString("createdAt"),
+  }),
+});
+
+builder.queryFields((t) => ({
+  assignmentOfficeWeeksPage: t.field({
+    type: OfficeWeekPageRef,
+    description: "AL-8 (C6): every শাখা's drafts and finalised weeks for the due date's ISO week, paged. Office / Principal.",
+    authScopes: { hasPermission: "assignment:view_all" },
+    args: { dueDate: t.arg.string({ required: true }), page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: async (_r, args) => assignmentOfficeWeeksPage(args.dueDate, { page: args.page, pageSize: args.pageSize }),
+  }),
+
+  assignmentForReview: t.field({
+    type: AssignmentRef,
+    description: "AL-8: one weekly assignment by id for the review screen — the Office / Principal (any শাখা) or the subject teacher / today's substitute it is about.",
+    authScopes: { hasAnyPermission: ["assignment:comment", "assignment:view_all", "assignment:suggest", "mastery:view"] },
+    args: { assignmentId: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => assignmentForReview(args.assignmentId, authOf(ctx)),
+  }),
+
+  assignmentAddCandidates: t.field({
+    type: [AddCandidateRef],
+    description: "AL-8 (§4.3 / §4.6): the bank questions the caller may add to the draft's common part (no studentId) or one child's Part B — the exclusions applied, repeats last.",
+    authScopes: { hasAnyPermission: ["assignment:suggest", "mastery:create", "assignment:finalise_on_leave"] },
+    args: { assignmentId: t.arg.string({ required: true }), studentId: t.arg.string({ required: false }), filter: t.arg.string({ required: false }) },
+    resolve: async (_r, args, ctx) => addCandidates(args.assignmentId, args.studentId ?? null, args.filter, authOf(ctx)),
+  }),
+
+  assignmentComments: t.field({
+    type: [AssignmentCommentRef],
+    description: "AL-8: the Office / Principal comments on one assignment — read by them and by the subject teacher it is about.",
+    authScopes: { hasAnyPermission: ["assignment:comment", "assignment:view_all", "assignment:suggest"] },
+    args: { assignmentId: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => assignmentComments(args.assignmentId, authOf(ctx)),
+  }),
+}));
+
+builder.mutationFields((t) => ({
+  addAssignmentComment: t.field({
+    type: AssignmentCommentRef,
+    description: "AL-8 (§4.6): an Office / Principal comment on a draft or finalised week; notifies the subject teacher.",
+    authScopes: { hasPermission: "assignment:comment" },
+    args: { assignmentId: t.arg.string({ required: true }), text: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => addAssignmentComment(args.assignmentId, args.text, authOf(ctx)),
   }),
 }));

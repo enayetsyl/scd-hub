@@ -105,6 +105,15 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
         </View>
       ) : null}
 
+      {/* AL-8: the weekly suggestion for this শাখা (every subject teacher of the week, the class teacher, the Office),
+          and the Office / Principal's view of every শাখা. Only with the 2027 release switch on (§3.6). */}
+      {loopOn && active && (can("assignment:suggest") || can("assignment:view_all")) ? (
+        <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+          <Button title={STR.al8WeekButton} variant="secondary" onPress={() => navigation.navigate("AssignmentWeekReview", { sectionId: active })} />
+          {can("assignment:view_all") ? <Button title={STR.al8OfficeButton} variant="secondary" onPress={() => navigation.navigate("AssignmentOfficeWeeks")} /> : null}
+        </View>
+      ) : null}
+
       {canCreate && active && activeLevel !== null ? (
         <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
           <Button

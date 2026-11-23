@@ -7295,6 +7295,7 @@ export interface NotificationRefsT {
   masteryActionId: string | null;
   /** OT-2 — deep-links the reviewer / Principal to the objective-list review round. */
   masteryReviewId: string | null;
+  masteryAssignmentId: string | null;
   /** D-#1032 — the exam paper to review ("list" when one notice covers several). */
   examPaperId: string | null;
   /** D-#1072 — a school notice's page, "Tab/Screen" (the pop-up OPEN_SCREEN convention). */
@@ -7323,17 +7324,17 @@ const NOTIFICATION_FIELDS = `
     workClaimId workClaimTracker
     classTestId ctId taskId
     syllabusId examId classId subject academicYearId weekNumber month weekOfMonth
-    improvementActionId masteryActionId masteryReviewId examPaperId
+    improvementActionId masteryActionId masteryReviewId masteryAssignmentId examPaperId
     screenTarget bookId bookDraftId
   }
 `;
 
 export const MY_NOTIFICATIONS_QUERY = gql<
   { myNotifications: NotificationT[] },
-  { unreadOnly?: boolean | null; limit?: number | null }
+  { unreadOnly?: boolean | null; limit?: number | null; kinds?: string[] | null }
 >`
-  query MyNotifications($unreadOnly: Boolean, $limit: Int) {
-    myNotifications(unreadOnly: $unreadOnly, limit: $limit) {
+  query MyNotifications($unreadOnly: Boolean, $limit: Int, $kinds: [String!]) {
+    myNotifications(unreadOnly: $unreadOnly, limit: $limit, kinds: $kinds) {
       ${NOTIFICATION_FIELDS}
     }
   }

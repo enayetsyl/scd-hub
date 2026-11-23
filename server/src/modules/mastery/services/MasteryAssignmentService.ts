@@ -62,6 +62,11 @@ import { resolveStaffProfileForUser } from "../../hr/services/staffMatch";
 import { StaffLeaveApplication } from "../../hr/models/StaffLeaveApplication";
 import { SECOND_ASSIGNMENT_MESSAGE, budgetPolicy, childDayLabel, dayLabel, staffDaySplit } from "../assignmentBudget";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+// AL-8: the week-reader rule lives beside the week view (a circular import, so it is loaded lazily where used).
+async function mayReadAssignment(a: IMasteryAssignment, auth: Auth): Promise<boolean> {
+  const { canReadAssignment } = await import("./AssignmentSuggestionService");
+  return canReadAssignment(a, auth);
+}
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -227,6 +232,9 @@ export interface AssignmentView {
   suggestion: SuggestionView | null;
   partA: QuestionView[];
   sheets: SheetSummary[];
+  /** AL-8: set only by `assignmentForReview` — the caller may change / finalise this draft (the rules the mutations use). */
+  mayEdit?: boolean | null;
+  mayFinalise?: boolean | null;
 }
 
 export interface SuggestionView {
@@ -544,6 +552,8 @@ export interface SheetDetail {
   outcomeChoices: { loCode: string; labelBn: string; questionTypeCodes: string[] }[];
   /** PR-K: every active type of the class x subject marks table (with marks) - the add-own chips; the objective's list only orders them. */
   typeChoices: { code: string; labelBn: string; marks: number }[];
+  /** AL-8: the caller may edit this sheet (the same rule the edit mutation applies); false = a read-only reader. */
+  mayEdit?: boolean | null;
 }
 
 async function sheetDetailOf(a: IMasteryAssignment, sheet: IMasteryAssignmentSheet | (IMasteryAssignmentSheet & object)): Promise<SheetDetail> {
@@ -579,8 +589,84 @@ async function loadSheet(a: IMasteryAssignment, studentId: string): Promise<IMas
 }
 
 export async function sheetDetail(assignmentId: string, studentId: string, auth: Auth): Promise<SheetDetail> {
-  const { a } = await loadForFinalise(assignmentId, auth); // = the row rule, plus the Office on a teacher's leave day (switch on)
-  return sheetDetailOf(a, await loadSheet(a, studentId));
+  try {
+    const { a } = await loadForFinalise(assignmentId, auth); // = the row rule, plus the Office on a teacher's leave day (switch on)
+    return { ...(await sheetDetailOf(a, await loadSheet(a, studentId))), mayEdit: a.status === "DRAFT" };
+  } catch (err) {
+    // AL-8 (switch on): the week's readers (class teacher, the week's subject teachers, today's substitute, the Office) read a
+    // child's sheet READ-ONLY. Anyone else keeps the refusal above.
+    if (!Types.ObjectId.isValid(assignmentId) || !(await isLoop2027On())) throw err;
+    const a = await MasteryAssignment.findById(assignmentId);
+    if (!a || !(await mayReadAssignment(a, auth))) throw err;
+    return { ...(await sheetDetailOf(a, await loadSheet(a, studentId))), mayEdit: false };
+  }
+}
+
+/** AL-8: can this caller change / finalise the draft? Exactly `loadForFinalise` (the row rule, or the Office on a leave day) on a DRAFT. */
+export async function mayChangeDraft(a: IMasteryAssignment, auth: Auth): Promise<boolean> {
+  if (a.status !== "DRAFT") return false;
+  try {
+    await loadForFinalise(String(a._id), auth);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** AL-8 (§4.6): a bank question a teacher may add — it passed the §4.3 re-check; `repeat` = seen before ("আবার", listed last). */
+export interface AddCandidate {
+  qid: string;
+  textBn: string | null;
+  loCode: string;
+  labelBn: string;
+  questionTypeCode: string;
+  marks: number;
+  repeat: boolean;
+}
+
+/**
+ * AL-8: the bank questions the caller may ADD to the draft's common part (`studentId` null) or one child's Part B — the §4.3
+ * exclusions applied once for the whole bank (a homework question of the year, anything used inside the no-repeat window, a
+ * question already on the sheet, a type with no marks are left out). Questions the শাখা / child had before the window are
+ * listed LAST, flagged `repeat`. `filter` is a text / code / objective search. Same reach as the edit mutations.
+ */
+export async function addCandidates(assignmentId: string, studentId: string | null, filter: string | null | undefined, auth: Auth, limit = 40): Promise<AddCandidate[]> {
+  if (!(await isLoop2027On())) throw new MasteryWorkError(NOT_ON_MESSAGE);
+  const { a } = await loadForFinalise(assignmentId, auth);
+  assertDraft(a);
+  const outcomes = (await lockedOutcomes(a.classToken, a.subject)).filter((o) => o.assess === "QUESTION" && isTaggedRow(o));
+  const infos = new Map<string, OutcomeInfo>(outcomes.map((o) => [o.code, { code: o.code, chapterNumber: o.chapterNumber ?? null, questionTypeCodes: o.questionTypeCodes ?? [] }]));
+  const labels = new Map(outcomes.map((o) => [o.code, o.labelBn]));
+  const bank = await goldBank([...infos.keys()]);
+  const sheets = await MasteryAssignmentSheet.find({ assignmentId: a._id }).select("studentId items.qid").lean();
+  const on = new Set<string>(a.partA.map((q) => q.qid).filter((x): x is string => Boolean(x)));
+  for (const s of sheets) if (!studentId || String(s.studentId) === studentId) for (const q of s.items) if (q.qid) on.add(q.qid);
+  const sids = studentId ? [studentId] : (await rosterOf(a.sectionId)).map((s) => String(s._id));
+  const weeks = await noRepeatWeeks(a.classToken, a.subject);
+  const [hw, win, rows, marks] = await Promise.all([
+    homeworkUsedThisYear({ sectionIds: [a.sectionId], academicYearId: a.academicYearId, studentIds: sids, subject: a.subject }),
+    usedInWindow({ sectionIds: [a.sectionId], studentIds: sids, sinceDay: windowStartKey(todayKey(), weeks * 7), subject: a.subject }),
+    liveRowsWithMerges(a.sectionId, a.subject),
+    marksTable(a.classToken, a.subject),
+  ]);
+  const hwQ = qidsOf(hw, studentId ?? undefined);
+  const winQ = qidsOf(win, studentId ?? undefined);
+  const seenQ = new Set(rows.filter((r) => r.qid && (!studentId || r.studentId === studentId)).map((r) => r.qid as string));
+  const needle = (filter ?? "").trim().toLowerCase();
+  const out: AddCandidate[] = [];
+  for (const q of bank) {
+    if (on.has(q.qid) || hwQ.has(q.qid) || winQ.has(q.qid)) continue;
+    const lo = q.loCodes.find((c) => infos.has(c));
+    if (!lo) continue;
+    const info = infos.get(lo)!;
+    const qt = typeOfQuestion(q, info, { marksOf: marks, layout: OPEN_LAYOUT }, undefined);
+    if (!qt) continue;
+    const labelBn = labels.get(lo) ?? lo;
+    if (needle && ![q.qid, q.textBn ?? "", lo, labelBn].some((t) => t.toLowerCase().includes(needle))) continue;
+    out.push({ qid: q.qid, textBn: q.textBn ?? null, loCode: lo, labelBn, questionTypeCode: qt, marks: marks.get(qt)!, repeat: seenQ.has(q.qid) });
+  }
+  out.sort((x, y) => Number(x.repeat) - Number(y.repeat) || x.loCode.localeCompare(y.loCode) || x.qid.localeCompare(y.qid));
+  return out.slice(0, Math.max(1, Math.min(limit, 100)));
 }
 
 export type SheetOp = "SWAP" | "REMOVE" | "ADD_OWN" | "ADD_BANK" | "APPROVE";

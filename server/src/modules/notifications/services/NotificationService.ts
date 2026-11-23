@@ -148,6 +148,8 @@ function ownRowFilter(recipient: RecipientRef): Record<string, unknown> {
 export interface ListOptions {
   unreadOnly?: boolean;
   limit?: number;
+  /** AL-8: only these kinds (read on the server, so the newest-N cut is taken AFTER the filter). */
+  kinds?: string[];
 }
 
 export async function myNotifications(
@@ -156,6 +158,7 @@ export async function myNotifications(
 ): Promise<INotification[]> {
   const filter = ownRowFilter(recipient);
   if (opts.unreadOnly) filter.readAt = null; // matches missing readAt too
+  if (opts.kinds && opts.kinds.length > 0) filter.kind = { $in: opts.kinds };
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   return Notification.find(filter)
     .sort({ createdAt: -1 })

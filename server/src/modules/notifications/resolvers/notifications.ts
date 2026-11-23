@@ -69,6 +69,7 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     improvementActionId: t.string({ nullable: true, resolve: (r) => r.improvementActionId ?? null }),
     masteryActionId: t.string({ nullable: true, resolve: (r) => r.masteryActionId ?? null }),
     masteryReviewId: t.string({ nullable: true, resolve: (r) => r.masteryReviewId ?? null }),
+    masteryAssignmentId: t.string({ nullable: true, resolve: (r) => r.masteryAssignmentId ?? null }),
     examPaperId: t.string({ nullable: true, resolve: (r) => r.examPaperId ?? null }),
     screenTarget: t.string({ nullable: true, resolve: (r) => r.screenTarget ?? null }),
     // Book lifecycle (D-#1610): the book, and the AI edit draft for BOOK_EDIT_READY.
@@ -98,11 +99,13 @@ builder.queryField("myNotifications", (t) =>
     args: {
       unreadOnly: t.arg.boolean({ required: false }),
       limit: t.arg.int({ required: false }),
+      kinds: t.arg.stringList({ required: false }),
     },
     resolve: async (_r, args, ctx) =>
       myNotifications(recipientOf(ctx), {
         unreadOnly: args.unreadOnly ?? false,
         limit: args.limit ?? undefined,
+        kinds: args.kinds ?? undefined,
       }),
   }),
 );

@@ -106,7 +106,6 @@ const OPEN_FIELDS: Record<string, string> = {
 /** Catalogue actions declared ahead of the slice that will gate them. */
 const DECLARED_AHEAD: Record<string, string> = {
   // 2027 academic loop (docs/prd-academic-loop-2027.md §6): registered in the AL-0 contract PR, gated when built.
-  "assignment:comment": "AL-8 Office/Principal comment",
   "homework_integrity:view_all": "AL-12 outside-help reach",
   "homework_integrity:settings": "AL-12 integrity settings",
   "lesson_progress:set_targets": "AL-11 term target dates",
