@@ -17,6 +17,7 @@ import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Select, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
+import { openAppScreen } from "../../navigation/navigationRef";
 import { STR, bnNum, fullDateLabel, hwSubjectLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
@@ -46,7 +47,7 @@ export default function MarkEscalationListScreen({ navigation, route }: Props): 
 
   return (
     <Screen scroll>
-      <Muted style={{ marginBottom: space(3) }}>{STR.mesIntro}</Muted>
+      {rows.length === 0 || rows.some((r) => r.stage !== "MARKS") ? <Muted style={{ marginBottom: space(3) }}>{STR.mesIntro}</Muted> : null}
       <QueryGate
         results={dateKey ? [daysQ, listQ] : [daysQ]}
         onRetry={retry}
@@ -63,6 +64,7 @@ export default function MarkEscalationListScreen({ navigation, route }: Props): 
           }))}
           onChange={setPicked}
         />
+        {rows.some((r) => r.stage === "MARKS") ? <Muted style={{ marginBottom: space(2) }}>{STR.mesMarksNote}</Muted> : null}
         {list ? (
           <Card>
             <Body style={{ fontWeight: "700" }}>
@@ -74,8 +76,8 @@ export default function MarkEscalationListScreen({ navigation, route }: Props): 
         )}
         {rows.map((r) => (
           <Card
-            key={r.asItemId}
-            onPress={
+            key={`${r.stage ?? "RECORDS"}:${r.asItemId}`}
+            onPress={r.tracker === "HOMEWORK" ? () => void openAppScreen("HomeworkTab", "HomeworkWorkspace") : 
               // The workspace is `assignment:view` (Office is off by default) — without it
               // the row would open an empty page, so it stays a plain row.
               canOpenWork && r.classId
@@ -88,10 +90,11 @@ export default function MarkEscalationListScreen({ navigation, route }: Props): 
                 <Body style={{ fontWeight: "700" }}>{r.teacherNames.join(", ")}</Body>
                 <Muted>
                   {r.sectionLabel} · {hwSubjectLabel(r.subject)} ({r.asId})
+                  {r.stage === "MARKS" ? ` · ${r.tracker === "HOMEWORK" ? STR.msgMarksHw : STR.msgMarksAs}` : ""}
                 </Muted>
               </View>
               <Badge
-                text={r.markedNow ? STR.msgEscMarkedNow : STR.msgItemPending}
+                text={r.markedNow ? STR.msgEscMarkedNow : r.stage === "MARKS" ? STR.msgMarksPending : STR.msgItemPending}
                 tone={r.markedNow ? "ok" : "danger"}
               />
             </View>

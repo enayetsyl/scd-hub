@@ -121,6 +121,9 @@ export interface RecordMistakeInput {
   /** A reason the system itself established (D-#955: an approved leave that day) — applied
    *  whoever corrected it, and no "please explain" notice goes out. */
   autoReason?: CorrectionReason | null;
+  /** AL-9 (owner rule, D-#1020/#1150): the record is QUIET - no "please explain" notice and no warning-ladder step,
+   *  even for a person who holds `staff_mistakes:view_own`. With no reason it counts at once, like an untold person. */
+  quiet?: boolean;
 }
 
 /**
@@ -163,7 +166,7 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
     explainDueAt: explainDeadline(input.at, settings.deadline),
   });
   // D-#1020: a person who is not told cannot explain — with no reason, it counts at once.
-  const told = await isToldAboutMistakes(staffUserId);
+  const told = input.quiet ? false : await isToldAboutMistakes(staffUserId);
   if (reason) applyReason(row, reason, input.at);
   else if (!told) {
     row.status = "COUNTED";
@@ -186,7 +189,7 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
       explainDueAt: row.explainDueAt,
       detail: await describeMistakeSource(row.kind, String(row.sourceId)),
     });
-  if (row.status === "COUNTED") await afterCounted(staffUserId.toString(), input.at);
+  if (row.status === "COUNTED" && !input.quiet) await afterCounted(staffUserId.toString(), input.at);
   return row;
 }
 

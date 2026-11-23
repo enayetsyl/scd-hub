@@ -10,6 +10,7 @@
  * hand and records the outcome. This file must never import the notification service (tested).
  */
 import { Types } from "mongoose";
+import { termOfDate } from "../../../lib/academicTerm";
 import { MasteryEvidence } from "../../mastery/models/MasteryEvidence";
 import { MasteryOutcome } from "../../mastery/models/MasteryOutcome";
 import { Student } from "../../foundation/models/Student";
@@ -301,14 +302,7 @@ export async function hintStepsFor(studentId: string, qids: readonly string[]): 
 }
 
 async function halfOf(yearId: Types.ObjectId, at: Date, cache: Map<string, number>): Promise<0 | 1> {
-  const k = String(yearId);
-  let mid = cache.get(k);
-  if (mid === undefined) {
-    const y = await AcademicYear.findById(yearId).select("startDate endDate").lean();
-    mid = y ? (y.startDate.getTime() + y.endDate.getTime()) / 2 : 0;
-    cache.set(k, mid);
-  }
-  return at.getTime() < mid ? 0 : 1;
+  return (await termOfDate(yearId, at, cache, 2)) === 1 ? 0 : 1;
 }
 
 async function rowsOf(cases: readonly IIntegrityCase[]): Promise<CaseRow[]> {
