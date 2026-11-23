@@ -90,6 +90,7 @@ import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import AllClassNotesScreen from "../screens/classnotes/AllClassNotesScreen";
 import LessonProgressScreen from "../screens/lessonprogress/LessonProgressScreen";
 import LessonTrackerScreen from "../screens/lessonprogress/LessonTrackerScreen";
+import SyllabusTargetsScreen from "../screens/lessonprogress/SyllabusTargetsScreen";
 import HomeworkIntegrityScreen from "../screens/trackers/HomeworkIntegrityScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
@@ -910,6 +911,8 @@ function ClassNotesNavigator(): React.ReactElement {
       <ClassNotesStack.Screen name="AllClassNotes" component={AllClassNotesScreen} options={{ title: STR.cnAllNotesTitle }} />
       <ClassNotesStack.Screen name="LessonProgress" component={LessonProgressScreen} options={{ title: STR.lpNavTitle }} />
       <ClassNotesStack.Screen name="LessonTracker" component={LessonTrackerScreen} options={{ title: STR.lpNavTitle }} />
+      {/* AL-11 (D-#1675): the Office's term target dates. */}
+      <ClassNotesStack.Screen name="SyllabusTargets" component={SyllabusTargetsScreen} options={{ title: STR.ltNavTitle }} />
     </ClassNotesStack.Navigator>
   );
 }

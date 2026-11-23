@@ -79,6 +79,8 @@ export type ClassNotesStackParamList = {
   LessonProgress: undefined;
   /** LP-2: one শাখা × subject's sessions in book order. Never the stack's first screen (it needs params). */
   LessonTracker: { sectionId: string; subject: string; title?: string };
+  /** AL-11 (D-#1675): the Office's term target dates (lesson_progress:set_targets). */
+  SyllabusTargets: undefined;
 };
 
 export type ContentStackParamList = {

@@ -42,3 +42,25 @@ export function reasonsLine(r: LessonProgressRowT): string {
     .map(([k, n]) => `${lessonNoneReasonLabel(k)} ${bnNum(n)}`);
   return parts.length ? `${STR.lpInsteadOf}: ${parts.join(" · ")}` : "";
 }
+
+/**
+ * AL-11 (D-#1675): the on-track read of a row against its term target — "সময়মতো" / "৫ সেশন পিছিয়ে" / "লক্ষ্য দেওয়া নেই".
+ * `detail` carries the target date and where the school should be today (empty with no target).
+ */
+export function targetLine(r: LessonProgressRowT): { text: string; tone: "ok" | "gold" | "muted"; detail: string } | null {
+  // A year with no target at all shows no on-track line (the school has not started using targets); once any exists, a row
+  // without one reads "লক্ষ্য দেওয়া নেই" (AC-A3).
+  if (!r.yearHasTargets) return null;
+  if (r.targetState === "BEHIND") {
+    const weeks = r.weeksBehind != null && r.weeksBehind > 0 ? ` (${bnNum(r.weeksBehind)} ${STR.ltWeeksBehind})` : "";
+    return {
+      text: `${STR.ltBehindN.replace("{n}", bnNum(r.behindBy))}${weeks}`,
+      tone: "gold",
+      detail: `${STR.ltTarget}: ${dayMonth(r.targetDate)} · ${STR.ltExpected}: ${bnNum(r.expectedByToday)}`,
+    };
+  }
+  if (r.targetState === "ON_TRACK") {
+    return { text: STR.ltOnTrack, tone: "ok", detail: `${STR.ltTarget}: ${dayMonth(r.targetDate)} · ${STR.ltExpected}: ${bnNum(r.expectedByToday)}` };
+  }
+  return { text: STR.ltNone, tone: "muted", detail: "" };
+}

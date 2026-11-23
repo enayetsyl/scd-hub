@@ -14,7 +14,7 @@ import {
   MY_LESSON_PROGRESS_QUERY,
   type LessonProgressRowT,
 } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Badge, Chip, ChipRow, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { Pager } from "../../components/Pager";
 import LessonPlanQuestionSwitchCard from "../../components/LessonPlanQuestionSwitchCard";
 import { useAuth } from "../../auth/AuthContext";
@@ -24,12 +24,13 @@ import { friendlyError } from "../../lib/errors";
 import { usePagedRows } from "../../lib/paging";
 import { space } from "../../theme/tokens";
 import type { ClassNotesStackParamList } from "../../navigation/types";
-import { lastLine, paceLine, progressLine, reasonsLine } from "./lessonProgressUi";
+import { lastLine, paceLine, progressLine, reasonsLine, targetLine } from "./lessonProgressUi";
 
 type Nav = NativeStackNavigationProp<ClassNotesStackParamList, "LessonProgress">;
 
 function Row({ r, onOpen }: { r: LessonProgressRowT; onOpen?: () => void }): React.ReactElement {
   const reasons = reasonsLine(r);
+  const target = targetLine(r);
   return (
     <Pressable accessibilityRole="link" onPress={onOpen} disabled={!onOpen}>
       <Card>
@@ -43,6 +44,14 @@ function Row({ r, onOpen }: { r: LessonProgressRowT; onOpen?: () => void }): Rea
         <Body style={{ marginTop: 4 }}>{progressLine(r)}</Body>
         <Muted style={{ marginTop: 2 }}>{paceLine(r)}</Muted>
         <Muted style={{ marginTop: 2 }}>{lastLine(r)}</Muted>
+        {/* AL-11: the on-track column against the term target. */}
+        {target ? (
+          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space(2), marginTop: 4 }}>
+            <Muted>{STR.ltTargetCol}:</Muted>
+            <Badge text={target.text} tone={target.tone} />
+          </View>
+        ) : null}
+        {target?.detail ? <Muted style={{ marginTop: 2 }}>{target.detail}</Muted> : null}
         {r.skipped > 0 ? <Muted style={{ marginTop: 2 }}>{STR.lpSkipped}: {bnNum(r.skipped)}</Muted> : null}
         {reasons ? <Muted style={{ marginTop: 2 }}>{reasons}</Muted> : null}
         {r.unansweredNotes > 0 ? (
@@ -62,6 +71,8 @@ export default function LessonProgressScreen(): React.ReactElement {
   const canAll = can("lesson_progress:view_all") || can("reports:lesson_progress");
   const canSwitch = can("routine:settings");
   const canOpenTracker = hasRoute(nav, "LessonTracker");
+  // AL-11: the Office screen for term target dates (lesson_progress:set_targets).
+  const canSetTargets = can("lesson_progress:set_targets") && hasRoute(nav, "SyllabusTargets");
   const [scope, setScope] = useState<"ALL" | "MINE">(canAll ? "ALL" : "MINE");
   const [level, setLevel] = useState<number | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
@@ -98,6 +109,7 @@ export default function LessonProgressScreen(): React.ReactElement {
         {/* D-#952: the class note's lesson-plan question is off until switched on here. */}
         {canSwitch ? <LessonPlanQuestionSwitchCard /> : null}
         <Muted>{STR.lpOverviewHint}</Muted>
+        {canSetTargets ? <Button title={STR.ltOpen} variant="secondary" onPress={() => nav.navigate("SyllabusTargets")} /> : null}
         {canAll ? (
           <ChipRow>
             <Chip label={STR.lpAllSchool} selected={scope === "ALL"} onPress={() => setScope("ALL")} />

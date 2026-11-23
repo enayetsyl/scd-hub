@@ -368,3 +368,54 @@ describe("scenario 5 (AL-9): late marking + remove", () => {
     expect(await mongoose.model("HomeworkItem").countDocuments({})).toBe(0);
   });
 });
+
+describe("scenario 6 (AL-11): term targets + behind-target + remove", () => {
+  beforeAll(async () => {
+    await seedWorld();
+    // a 2027 year made by a year-change run: one Class 1 section with a MATH period every day (the seeded plan has 3 sessions)
+    const [y] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31"), current: true }]);
+    await AcademicYear.updateOne({ _id: year26 }, { $set: { current: false } });
+    await YearChangeRun.create({ runId: "yc-s6", fromYearId: year26, toYearId: y._id, status: "CUT_OVER" });
+    const [c1] = await Class.create([{ level: 1, nameBn: "প্রথম", academicYearId: y._id }]);
+    const teacher = new Types.ObjectId();
+    const [sec] = await Section.create([{ classId: c1._id, code: "A", nameBn: "প্রথম", classTeacherId: teacher }]);
+    await Student.create([{ schoolId: "S6-1", name: "Child", classId: c1._id, sectionId: sec._id, active: true }]);
+    for (const day of ["SUN", "MON", "TUE", "WED", "THU"]) {
+      await RoutineSlot.create([
+        {
+          groupType: "section", groupId: sec._id, classId: c1._id, dayOfWeek: day, periodNumber: 1, subject: "MATH", track: "general",
+          teacherId: teacher, effectiveFrom: new Date("2020-01-01"), createdBy: new Types.ObjectId(),
+        },
+      ]);
+    }
+    // a longer book (15 sessions) so the shortfall exceeds 2 weeks of the 5 periods a week
+    for (const ch of [2, 3]) {
+      for (const i of [1, 2, 3, 4, 5, 6]) {
+        await ContentArtifact.create([
+          {
+            docType: "session_plan", subject: "MATH", classLevel: 1, address: { anchorWord: "অধ্যায়", number: ch, title: `ch ${ch}` },
+            curationTag: "KEEP_AS_IS", reviewStatus: "reviewed", current: true, importedBy: new Types.ObjectId(),
+            envelopeJson: { payload: { session_plan: { session_form: "multi_period", period_index: i, period_of: 6, session_title: `c${ch}s${i}` } } },
+          },
+        ]);
+      }
+    }
+    await User.create({ role: "PRINCIPAL", name: "Head", phone: "01700000066", passwordHash: "x" });
+  });
+
+  it("sets half-yearly + annual targets for the class x subject, one half-yearly target ended on the run's last day (behind), tags them, and --remove leaves no residue", async () => {
+    const r = await runFake({ apply: true, scenarioIds: [6], now: NOW, guard, seed: 5 });
+    const runId = r.manifest!.runId;
+    const c = r.counts["6"]!;
+    expect(c.targetsSet).toBe(2);
+    expect(c.behindSections).toBeGreaterThanOrEqual(1); // the whole book was due on the last run day, nothing was taught
+    const tagged = await mongoose.model("SyllabusTarget").collection.find({ devFakeRun: runId }).toArray();
+    expect(tagged).toHaveLength(2);
+    expect(tagged.find((t) => t.term === "HALF_YEARLY")!.targetDate).toBe(r.manifest!.toDateKey); // ended on the run's last day
+    expect((await taggedIn(runId)).Notification).toBe(0); // muted: the Principal's notice reached nobody
+
+    const gone = await removeFakeRun(runId);
+    expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
+    expect(await mongoose.model("SyllabusTarget").countDocuments({})).toBe(0);
+  });
+});

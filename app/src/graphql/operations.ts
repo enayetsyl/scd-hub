@@ -5024,6 +5024,17 @@ export interface LessonProgressRowT {
   lagSessions: number;
   /** LP-4 (D-#827): catch-up tasks raised here that are not done. */
   openCatchups: number;
+  /** AL-11 (D-#1675): ON_TRACK | BEHIND | NO_TARGET against the class × subject's term target. */
+  targetState: "ON_TRACK" | "BEHIND" | "NO_TARGET" | string;
+  targetTerm: string | null;
+  targetDate: string | null;
+  targetSessions: number;
+  expectedByToday: number;
+  behindBy: number;
+  /** Null when the শাখা has no routine period for the subject. */
+  weeksBehind: number | null;
+  /** The year has at least one target; with none both screens hide the on-track line. */
+  yearHasTargets: boolean;
 }
 
 export interface LessonTrackerSessionT {
@@ -5131,6 +5142,7 @@ export const CHILD_MISSED_LESSONS_PAGE_QUERY = gql<
 const LESSON_PROGRESS_ROW_FIELDS = `
   sectionId classLevel classNameBn sectionNameBn subject total finished pct finishedLast4Weeks pacePerWeek
   projectedFinishKey lastFinishedKey daysSinceLastFinished skipped reasons { revision test other } unansweredNotes lagSessions openCatchups
+  targetState targetTerm targetDate targetSessions expectedByToday behindBy weeksBehind yearHasTargets
 `;
 
 export const LESSON_PROGRESS_OVERVIEW_QUERY = gql<
@@ -5158,6 +5170,66 @@ export const LESSON_SECTION_TRACKER_QUERY = gql<
       sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames absentCount attendanceComplete }
       catchups { ${LESSON_CATCHUP_FIELDS} }
     }
+  }
+`;
+
+/** AL-11 (D-#1675): the Office's term target dates, one class level at a time. */
+export interface SyllabusTargetViewT {
+  term: string;
+  targetDate: string;
+  endChapter: string;
+  endSessionIndex: number;
+  endKey: string;
+}
+export interface SyllabusTargetBoardRowT {
+  subject: string;
+  sessions: Array<{ key: string; chapter: string; chapterTitle: string | null; sessionIndex: number; sessionOf: number; titleBn: string }>;
+  halfYearly: SyllabusTargetViewT | null;
+  annual: SyllabusTargetViewT | null;
+}
+export interface SyllabusTargetInputT {
+  classLevel: number;
+  subject: string;
+  term: "HALF_YEARLY" | "ANNUAL";
+  targetDate?: string | null;
+  endChapter?: string | null;
+  endSessionIndex?: number | null;
+}
+
+export interface SyllabusTargetYearT {
+  id: string;
+  label: string;
+  current: boolean;
+  startKey: string;
+  endKey: string;
+}
+
+export const SYLLABUS_TARGET_YEARS_QUERY = gql<{ syllabusTargetYears: SyllabusTargetYearT[] }, Record<string, never>>`
+  query SyllabusTargetYears {
+    syllabusTargetYears { id label current startKey endKey }
+  }
+`;
+
+export const SYLLABUS_TARGET_BOARD_QUERY = gql<
+  { syllabusTargetBoard: SyllabusTargetBoardRowT[] },
+  { classLevel: number; academicYearId?: string | null }
+>`
+  query SyllabusTargetBoard($classLevel: Int!, $academicYearId: String) {
+    syllabusTargetBoard(classLevel: $classLevel, academicYearId: $academicYearId) {
+      subject
+      sessions { key chapter chapterTitle sessionIndex sessionOf titleBn }
+      halfYearly { term targetDate endChapter endSessionIndex endKey }
+      annual { term targetDate endChapter endSessionIndex endKey }
+    }
+  }
+`;
+
+export const SET_SYLLABUS_TARGETS = gql<
+  { setSyllabusTargets: { saved: number; cleared: number } },
+  { inputs: SyllabusTargetInputT[]; academicYearId?: string | null }
+>`
+  mutation SetSyllabusTargets($inputs: [SyllabusTargetInput!]!, $academicYearId: String) {
+    setSyllabusTargets(inputs: $inputs, academicYearId: $academicYearId) { saved cleared }
   }
 `;
 

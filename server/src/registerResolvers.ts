@@ -192,6 +192,7 @@ import "./modules/guardian-help/resolvers/questionHints";
 import "./modules/homework-integrity/resolvers/homeworkIntegrity";
 import "./modules/lesson-progress/resolvers/lessonDelivery";
 import "./modules/lesson-progress/resolvers/lessonProgress";
+import "./modules/lesson-progress/resolvers/syllabusTargets";
 import "./modules/lesson-progress/resolvers/studentLessons";
 import "./modules/lesson-progress/resolvers/lessonObjectives";
 import "./modules/lesson-progress/resolvers/guardianLessons";

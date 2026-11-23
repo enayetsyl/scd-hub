@@ -42,6 +42,16 @@ const ProgressRowRef = builder.objectRef<ProgressRow>("LessonProgressRow").imple
     unansweredNotes: t.exposeInt("unansweredNotes"),
     lagSessions: t.exposeInt("lagSessions"),
     openCatchups: t.exposeInt("openCatchups"),
+    /** AL-11 (D-#1675): ON_TRACK | BEHIND | NO_TARGET — NO_TARGET reads "লক্ষ্য দেওয়া নেই". */
+    targetState: t.exposeString("targetState"),
+    targetTerm: t.string({ nullable: true, resolve: (r) => r.targetTerm }),
+    targetDate: t.string({ nullable: true, resolve: (r) => r.targetDate }),
+    targetSessions: t.exposeInt("targetSessions"),
+    expectedByToday: t.exposeInt("expectedByToday"),
+    behindBy: t.exposeInt("behindBy"),
+    weeksBehind: t.float({ nullable: true, resolve: (r) => r.weeksBehind }),
+    /** AL-11: the year has at least one target; with none the screens hide the on-track line. */
+    yearHasTargets: t.exposeBoolean("yearHasTargets"),
   }),
 });
 

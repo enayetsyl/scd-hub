@@ -179,6 +179,10 @@ const dedupeKeys = {
    *  mid-week is never swallowed by the first's key and the D-#452 digest key is never shared. */
   guardianWeeklySummary: (weekKey: string, studentId: string, guardianId: string) =>
     `GWS:${weekKey}:${studentId}:${guardianId}`,
+  /** AL-11 (R14, D-#1675): the Principal's weekly "behind the term target" notice — school week + শাখা × subject +
+   *  RECIPIENT, so a second run that week sends nothing and a second Principal login is never swallowed by the first. */
+  lessonBehind: (weekKey: string, sectionId: string, subject: string, recipientId: string) =>
+    `LPB:${weekKey}:${sectionId}:${subject}:${recipientId}`,
   /** Per syllabus + guardian (D-#644). Per-GUARDIAN, not per-syllabus: an
    *  entity-only key would swallow the re-emit to a guardian who was linked to the
    *  class after the first publish (the recorded dedupe-scope trap). NOT versioned —
@@ -1338,6 +1342,40 @@ export async function emitGuardianWeeklySummary(ev: GuardianWeeklySummaryEvent):
     );
   });
   return notified;
+}
+
+// ---------------------------------------------------------------------------
+// AL-11 (R14, D-#1675) — LPBEHIND: a শাখা × subject is 2+ weeks behind its term target → each given Principal.
+// Title + body are built by the caller. Returns how many NEW notices were written (a re-run writes none).
+// ---------------------------------------------------------------------------
+
+export interface LessonBehindEvent {
+  recipientUserIds: IdLike[];
+  sectionId: IdLike;
+  subject: string;
+  /** dateKey of the school week's Sunday — the dedupe scope. */
+  weekKey: string;
+  titleBn: string;
+  messageBn: string;
+}
+
+export async function emitLessonBehind(ev: LessonBehindEvent): Promise<number> {
+  let written = 0;
+  await bestEffort("lesson behind target", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("LESSON_BEHIND")) return;
+    for (const r of ev.recipientUserIds) {
+      const res = await emit({
+        recipientUserId: r.toString(),
+        kind: "LESSON_BEHIND",
+        titleBn: ev.titleBn,
+        bodyBn: ev.messageBn,
+        refs: { date: ev.weekKey, sectionId: ev.sectionId.toString(), subject: ev.subject },
+        dedupeKey: dedupeKeys.lessonBehind(ev.weekKey, ev.sectionId.toString(), ev.subject, r.toString()),
+      });
+      if (res.created) written++;
+    }
+  });
+  return written;
 }
 
 export async function emitRevisionDelivery(ev: RevisionDeliveryEvent): Promise<string[]> {
