@@ -19,6 +19,12 @@ import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { MasteryQuestionType } from "../models/MasteryQuestionType";
 import { loCodeMongoFilter, loCodesOf, movedAliases, questionTypeCodeOf } from "../bank";
 import { masteryLevelLabels } from "./MasteryReviewService";
+import { QuestionUse } from "../../assessment/models/QuestionUse";
+import { AcademicYear } from "../../foundation/models/AcademicYear";
+import { Class } from "../../foundation/models/Class";
+import { dateKeyOf } from "../../attendance/dates";
+import { Section } from "../../foundation/models/Section";
+import { getPolicy } from "./MasteryCatalogueService";
 
 export interface BankCoveragePair {
   classToken: string;
@@ -272,4 +278,280 @@ export async function coverageBrief(view: BankCoverageView, now: Date = new Date
     lines.push(parts.join(" · "));
   }
   return lines.join("\n");
+}
+
+
+// ---------------------------------------------------------------------------
+// AL-13 (docs/prd-academic-loop-2027.md AC-L3, R21): weeks of stock
+// ---------------------------------------------------------------------------
+
+/** A class × subject under this many weeks of unseen gold questions is red (AC-L3). */
+export const LOW_STOCK_WEEKS = 4;
+/** The window the "average weekly use" is read over (AC-L3). */
+export const STOCK_USE_WINDOW_WEEKS = 4;
+const HW_USE_KINDS: readonly string[] = ["HW", "EXTRA_HW"];
+/** Nursery / KG give no assignment: their AS / CT share is the class test only. */
+const ASCT_USE_KINDS: readonly string[] = ["AS", "CT", "RETEST"];
+const CT_ONLY_KINDS: readonly string[] = ["CT"];
+
+/**
+ * Weeks the "recent use" is averaged over: the 4-week window, but early in the year only the school weeks there have been since
+ * the year began (10 January of a year that began 3 January = 1 week), never below 1.
+ */
+export function recentWeeks(todayKey: string, yearStartKey: string | null): number {
+  const t = Date.parse(`${todayKey}T00:00:00Z`);
+  const windowStart = t - STOCK_USE_WINDOW_WEEKS * 7 * 86_400_000;
+  const base = yearStartKey ? Math.max(windowStart, Date.parse(`${yearStartKey}T00:00:00Z`)) : windowStart;
+  const days = Math.max(0, Math.round((t - base) / 86_400_000));
+  return Math.max(1, Math.min(STOCK_USE_WINDOW_WEEKS, Math.ceil(days / 7)));
+}
+
+export interface StockUse {
+  qid: string;
+  kind: string;
+  givenOn: string;
+}
+
+export interface StockInput {
+  /** tagged row code -> the usable gold qids that name it (`goldPoolOf`). */
+  pool: Map<string, string[]>;
+  /** `homeworkBankSharePct`: homework may take at most this share of an objective's gold pool (R21). */
+  sharePct: number;
+  /** The live uses by ONE section this academic year (any kind). */
+  uses: StockUse[];
+  /** First day of the "recent use" window, `YYYY-MM-DD`. */
+  sinceDay: string;
+  /** Weeks the recent use is averaged over (`recentWeeks`). */
+  windowWeeks: number;
+  /** Per-week use assumed while the window holds no use of that share yet (the default layout's use; 0 = none assumed). */
+  defaultHwPerWeek: number;
+  defaultAsctPerWeek: number;
+  /** Which use kinds make up the AS / CT share (Nursery / KG: the class test only). */
+  asctKinds?: readonly string[];
+}
+
+export type StockShare = "HW" | "ASCT";
+
+export interface ObjectiveStock {
+  code: string;
+  hwLeft: number;
+  asctLeft: number;
+}
+
+export interface StockRead {
+  /** Distinct usable gold questions in the pool. */
+  gold: number;
+  /** Questions the homework share can still give / the AS + CT share can still give (R21), a question counted once. */
+  hwLeft: number;
+  asctLeft: number;
+  /** Average questions used per week in the window (the layout default when `*Default`). */
+  hwPerWeek: number;
+  asctPerWeek: number;
+  hwDefault: boolean;
+  asctDefault: boolean;
+  /** Weeks of stock = left / per week, one decimal; null = nothing is used per week, i.e. unlimited. */
+  hwWeeks: number | null;
+  asctWeeks: number | null;
+  /** AC-L3 per objective: objectives whose share has nothing left to give, and objectives with under one week left. */
+  empty: Array<{ code: string; share: StockShare }>;
+  underWeek: Array<{ code: string; share: StockShare }>;
+}
+
+/**
+ * Weeks of stock for ONE section (pure). Per objective the homework share is floor(pool x sharePct%) and the AS / CT share is
+ * the rest (R21); a share is short by what it already used, and never by more than the questions that were never given to the
+ * section at all (unseen). Pooled weeks = what is left / the average weekly use over the window (the layout default before any
+ * data); a question that names two objectives counts ONCE in the pool (under its first objective). Per objective, a share is
+ * empty when no unseen question is left for it, and under a week when its left / its own weekly use is below 1.
+ */
+export function stockRead(i: StockInput): StockRead {
+  const asctKinds = i.asctKinds ?? ASCT_USE_KINDS;
+  const usedAny = new Set(i.uses.map((u) => u.qid));
+  const hwUsed = new Set(i.uses.filter((u) => HW_USE_KINDS.includes(u.kind)).map((u) => u.qid));
+  const asctUsed = new Set(i.uses.filter((u) => asctKinds.includes(u.kind)).map((u) => u.qid));
+  const share = Math.min(100, Math.max(0, Number.isFinite(i.sharePct) ? i.sharePct : 50));
+  const weeks = Math.max(1, i.windowWeeks);
+  const recentOf = (kinds: readonly string[], among: Set<string>): number =>
+    new Set(i.uses.filter((u) => kinds.includes(u.kind) && u.givenOn >= i.sinceDay && among.has(u.qid)).map((u) => u.qid)).size;
+  const leftOf = (uniq: string[]): { hw: number; asct: number; unseen: number; hwCap: number; asctCap: number } => {
+    const hwCap = Math.floor((uniq.length * share) / 100);
+    const asctCap = uniq.length - hwCap;
+    const unseen = uniq.filter((q) => !usedAny.has(q)).length;
+    return {
+      hw: Math.max(0, Math.min(hwCap - uniq.filter((q) => hwUsed.has(q)).length, unseen)),
+      asct: Math.max(0, Math.min(asctCap - uniq.filter((q) => asctUsed.has(q)).length, unseen)),
+      unseen,
+      hwCap,
+      asctCap,
+    };
+  };
+
+  // The pool counts a question once: under the first objective that names it.
+  const primary = new Map<string, string>();
+  for (const [code, qids] of i.pool) for (const q of qids) if (!primary.has(q)) primary.set(q, code);
+  const goldQids = new Set(primary.keys());
+  let hwLeft = 0;
+  let asctLeft = 0;
+  for (const [code, qids] of i.pool) {
+    const mine = [...new Set(qids)].filter((q) => primary.get(q) === code);
+    const l = leftOf(mine);
+    hwLeft += l.hw;
+    asctLeft += l.asct;
+  }
+
+  const empty: StockRead["empty"] = [];
+  const underWeek: StockRead["underWeek"] = [];
+  for (const [code, qids] of i.pool) {
+    const uniq = [...new Set(qids)];
+    const l = leftOf(uniq);
+    const among = new Set(uniq);
+    const rows: Array<[StockShare, number, number, number]> = [
+      ["HW", l.hw, l.hwCap, recentOf(HW_USE_KINDS, among) / weeks],
+      ["ASCT", l.asct, l.asctCap, recentOf(asctKinds, among) / weeks],
+    ];
+    for (const [sh, left, cap, rate] of rows) {
+      if (l.unseen === 0 || (cap > 0 && left === 0)) empty.push({ code, share: sh });
+      else if (rate > 0 && left / rate < 1) underWeek.push({ code, share: sh });
+    }
+  }
+
+  const hwRecent = recentOf(HW_USE_KINDS, goldQids);
+  const asctRecent = recentOf(asctKinds, goldQids);
+  const hwPerWeek = hwRecent > 0 ? hwRecent / weeks : i.defaultHwPerWeek;
+  const asctPerWeek = asctRecent > 0 ? asctRecent / weeks : i.defaultAsctPerWeek;
+  const per = (left: number, perWeek: number): number | null => (perWeek > 0 ? Math.round((left / perWeek) * 10) / 10 : null);
+  return {
+    gold: goldQids.size,
+    hwLeft,
+    asctLeft,
+    hwPerWeek: Math.round(hwPerWeek * 10) / 10,
+    asctPerWeek: Math.round(asctPerWeek * 10) / 10,
+    hwDefault: hwRecent === 0,
+    asctDefault: asctRecent === 0,
+    hwWeeks: per(hwLeft, hwPerWeek),
+    asctWeeks: per(asctLeft, asctPerWeek),
+    empty,
+    underWeek,
+  };
+}
+
+/** The usable gold qids per tagged, question-assessed row of one class × subject (held-for-exam questions are not usable), + the row labels. */
+export async function goldPoolOf(classToken: MasteryClassToken, subject: MasterySubject): Promise<{ pool: Map<string, string[]>; labels: Map<string, string> }> {
+  const outcomes = await MasteryOutcome.find({ classToken, subject }).lean(); // bounded: one class × subject list
+  const rows = outcomes.filter(isLiveRow).filter((o) => treeShapeOf(o).tagged && o.assess === "QUESTION");
+  const codes = rows.map((o) => o.code);
+  const labels = new Map(rows.map((o) => [o.code, o.labelBn]));
+  const pool = new Map<string, string[]>(codes.map((c) => [c, []]));
+  if (codes.length === 0) return { pool, labels };
+  const alias = await movedAliases(codes);
+  const arts = await ContentArtifact.find({ docType: "question", current: true, retiredAt: null, reviewStatus: "gold", examPoolAt: null, ...loCodeMongoFilter(alias.all) })
+    .select("envelopeJson.tags envelopeJson.payload.qid")
+    .lean(); // bounded: one class × subject's gold questions, tags + qid only
+  for (const a of arts) {
+    const env = (a.envelopeJson ?? {}) as Record<string, unknown>;
+    const qid = (env.payload as { qid?: unknown } | undefined)?.qid;
+    if (typeof qid !== "string" || !qid) continue;
+    for (const c of new Set(loCodesOf(env.tags as Record<string, unknown> | undefined, null).map(alias.canon))) pool.get(c)?.push(qid);
+  }
+  return { pool, labels };
+}
+
+export interface BankStock {
+  classToken: string;
+  subject: string;
+  /** Distinct usable gold questions. */
+  gold: number;
+  /** Weeks of stock of the WORST section of the class; null = nothing is used per week (unlimited, green). */
+  hwWeeks: number | null;
+  asctWeeks: number | null;
+  hwPerWeek: number;
+  asctPerWeek: number;
+  /** Both per-week figures come from the layout default (no use in the window yet). */
+  usingDefault: boolean;
+  sections: number;
+  /** Objectives (code + label) with a share that has nothing left to give, in any section, and how many per share. */
+  emptyObjectives: Array<{ code: string; labelBn: string; share: StockShare }>;
+  hwEmptyCount: number;
+  asctEmptyCount: number;
+  hwUnderWeekCount: number;
+  asctUnderWeekCount: number;
+  /** Under {@link LOW_STOCK_WEEKS} pooled on either share, or any objective empty on either share, or no gold at all. */
+  low: boolean;
+  /** The class's usable gold qids (for the hints check). */
+  qids: string[];
+}
+
+/**
+ * The weeks of stock of one class × subject for an academic year: per section of the class (the year's own sections, so the
+ * prepared NEXT year reads its own - empty - history), the worst one is shown. Read-only.
+ */
+export async function bankStock(classToken: MasteryClassToken, subject: MasterySubject, academicYearId: string, today: string): Promise<BankStock> {
+  const level = classToken === "NUR" ? -1 : classToken === "KG" ? 0 : Number(classToken.slice(1));
+  const [{ pool, labels }, policy, year] = await Promise.all([
+    goldPoolOf(classToken, subject),
+    getPolicy(classToken, subject),
+    AcademicYear.findById(academicYearId).select("startDate").lean(),
+  ]);
+  const p = policy.resolved;
+  const classes = await Class.find({ academicYearId, level, active: { $ne: false } }).select("_id").lean();
+  const sections = classes.length ? await Section.find({ classId: { $in: classes.map((c) => c._id) }, active: { $ne: false } }).select("_id").lean() : [];
+  const allQids = [...new Set([...pool.values()].flat())];
+  const yearStartKey = year?.startDate ? dateKeyOf(year.startDate as Date) : null;
+  const windowWeeks = recentWeeks(today, yearStartKey);
+  const since = new Date(`${today}T00:00:00.000Z`);
+  since.setUTCDate(since.getUTCDate() - STOCK_USE_WINDOW_WEEKS * 7);
+  const sinceDay = since.toISOString().slice(0, 10);
+  const noAssignment = level <= 0; // Nursery / KG: no assignment, the class test alone is the AS / CT share
+  const defaults = {
+    defaultHwPerWeek: Number(p.homeworkDraftQuestionsPerObjective ?? 1) * 5,
+    defaultAsctPerWeek: noAssignment ? 0 : Math.ceil(Number(p.assignmentTotalMarks ?? 15) / 3),
+    asctKinds: noAssignment ? CT_ONLY_KINDS : ASCT_USE_KINDS,
+  };
+  const rows =
+    sections.length && allQids.length
+      ? await QuestionUse.find({ academicYearId, sectionId: { $in: sections.map((s) => s._id) }, qid: { $in: allQids }, withdrawnAt: null })
+          .select("sectionId qid kind givenOn")
+          .lean() // bounded: one class's uses of one pool
+      : [];
+  const bySection = new Map<string, StockUse[]>(sections.map((s) => [String(s._id), []]));
+  for (const r of rows) bySection.get(String(r.sectionId))?.push({ qid: r.qid, kind: r.kind, givenOn: r.givenOn });
+  const reads = (bySection.size ? [...bySection.values()] : [[]]).map((uses) =>
+    stockRead({ pool, sharePct: Number(p.homeworkBankSharePct), uses, sinceDay, windowWeeks, ...defaults }),
+  );
+  const worst = (pick: (r: StockRead) => number | null): number | null => {
+    const v = reads.map(pick).filter((x): x is number => x !== null);
+    return v.length ? Math.min(...v) : null;
+  };
+  const hwWeeks = worst((r) => r.hwWeeks);
+  const asctWeeks = worst((r) => r.asctWeeks);
+  const gold = reads[0]?.gold ?? 0;
+  const emptySeen = new Set<string>();
+  const emptyObjectives: BankStock["emptyObjectives"] = [];
+  for (const r of reads) {
+    for (const e of r.empty) {
+      const k = `${e.code}|${e.share}`;
+      if (emptySeen.has(k)) continue;
+      emptySeen.add(k);
+      emptyObjectives.push({ code: e.code, labelBn: labels.get(e.code) ?? e.code, share: e.share });
+    }
+  }
+  const maxOf = (pick: (r: StockRead) => number): number => Math.max(0, ...reads.map(pick));
+  return {
+    classToken,
+    subject,
+    gold,
+    hwWeeks,
+    asctWeeks,
+    hwPerWeek: maxOf((r) => r.hwPerWeek),
+    asctPerWeek: maxOf((r) => r.asctPerWeek),
+    usingDefault: reads.every((r) => r.hwDefault && r.asctDefault),
+    sections: sections.length,
+    emptyObjectives,
+    hwEmptyCount: maxOf((r) => r.empty.filter((e) => e.share === "HW").length),
+    asctEmptyCount: maxOf((r) => r.empty.filter((e) => e.share === "ASCT").length),
+    hwUnderWeekCount: maxOf((r) => r.underWeek.filter((e) => e.share === "HW").length),
+    asctUnderWeekCount: maxOf((r) => r.underWeek.filter((e) => e.share === "ASCT").length),
+    low: gold === 0 || (hwWeeks !== null && hwWeeks < LOW_STOCK_WEEKS) || (asctWeeks !== null && asctWeeks < LOW_STOCK_WEEKS) || emptyObjectives.length > 0,
+    qids: allQids,
+  };
 }

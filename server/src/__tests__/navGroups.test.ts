@@ -191,6 +191,8 @@ const FROZEN_GUARDIAN: typeof FROZEN_STAFF = {
 };
 
 const NEW_STAFF_LEAVES = [
+  // AL-13: the loop-health page (reports:loop_health) is a new Reports leaf.
+  "ReportsTab:LoopHealth",
   "AdminTab:Import",
   "AdminTab:MessageTemplates",
   "AdminTab:AiSettings",
@@ -273,14 +275,14 @@ describe("sidebar groups (D-#1654): staff", () => {
     expect(analysis).toEqual([
       "ClassTestTab:StudentProgress", "ReportsTab:StudentProgress", "MasteryTab:MasteryWork", "MasteryTab:MasteryLeader",
       "ReportsTab:MarksDrivers", "ReportsTab:ClassTestDashboard", "ReportsTab:AttendanceRanking", "ReportsTab:RevisionDashboard",
-      "ReportsTab:MasteryBankCoverage", "ReportsTab:GuardianEngagement", "ReportsTab:DailyReport", "DataAssistantTab:",
+      "ReportsTab:MasteryBankCoverage", "ReportsTab:LoopHealth", "ReportsTab:GuardianEngagement", "ReportsTab:DailyReport", "DataAssistantTab:",
     ]);
     const pending = groupOf(STAFF, "navGPending").map(key);
     expect(pending).toHaveLength(23);
     expect(pending.every((k) => k.startsWith("ReportsTab:"))).toBe(true);
     const oldReports = Object.keys(FROZEN_STAFF).filter((k) => k.startsWith("ReportsTab:"));
     expect(oldReports).toHaveLength(34);
-    const placed = flat(STAFF).map((x) => key(x.leaf)).filter((k) => k.startsWith("ReportsTab:"));
+    const placed = flat(STAFF).map((x) => key(x.leaf)).filter((k) => k.startsWith("ReportsTab:") && k !== "ReportsTab:LoopHealth");
     expect([...placed].sort()).toEqual([...oldReports].sort());
   });
 

@@ -330,6 +330,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "arTitle", icon: "🏅", screen: "AttendanceRanking", perms: REPORT_LEAF_ACTIONS.AttendanceRanking },
       { route: "ReportsTab", labelKey: "revDashTitle", icon: "🕌", screen: "RevisionDashboard", perms: REPORT_LEAF_ACTIONS.RevisionDashboard },
       { route: "ReportsTab", labelKey: "bcTitle", icon: "🧩", screen: "MasteryBankCoverage", perms: REPORT_LEAF_ACTIONS.MasteryBankCoverage },
+      // AL-13: the loop-health page + the January readiness list.
+      { route: "ReportsTab", labelKey: "lhTitle", icon: "🩺", screen: "LoopHealth", perms: REPORT_LEAF_ACTIONS.LoopHealth },
       { route: "ReportsTab", labelKey: "geTitle", icon: "👪", screen: "GuardianEngagement", perms: REPORT_LEAF_ACTIONS.GuardianEngagement },
       { route: "ReportsTab", labelKey: "drpTitle", icon: "🗓️", screen: "DailyReport", perms: REPORT_LEAF_ACTIONS.DailyReport },
       // Data assistant (docs/prd-data-assistant-mcp.md, D-#1537): read-only answers from school data.

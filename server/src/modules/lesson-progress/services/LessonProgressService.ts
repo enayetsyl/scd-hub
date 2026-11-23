@@ -185,7 +185,7 @@ interface Pair {
   subject: string;
 }
 
-interface SectionInfo {
+export interface SectionInfo {
   /** The year of the section's class — a target read only applies when it is the year the targets are read for. */
   academicYearId: string;
   classId: string;
@@ -196,7 +196,7 @@ interface SectionInfo {
 }
 
 /** Active sections of the current academic year at class levels 1–5 (where session plans exist). */
-async function currentSections(): Promise<Map<string, SectionInfo>> {
+export async function currentSections(): Promise<Map<string, SectionInfo>> {
   const year = await AcademicYear.findOne({ current: true }).select("_id").lean();
   if (!year) return new Map();
   const classes = (await Class.find({ academicYearId: year._id, active: { $ne: false }, level: { $gte: 1, $lte: 5 } })
@@ -215,7 +215,7 @@ async function currentSections(): Promise<Map<string, SectionInfo>> {
 }
 
 /** Which (class level, subject) pairs have session plans at all. */
-async function planSubjectsByLevel(): Promise<Map<number, Set<string>>> {
+export async function planSubjectsByLevel(): Promise<Map<number, Set<string>>> {
   const rows = (await ContentArtifact.aggregate([
     { $match: { docType: "session_plan", current: true, retiredAt: null } },
     { $group: { _id: { c: "$classLevel", s: "$subject" } } },

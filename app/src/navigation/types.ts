@@ -935,6 +935,8 @@ export type ReportsStackParamList = {
   LessonProgress: undefined;
   /** GH-3 (D-#1522): the Office homework-honesty queue. */
   HomeworkIntegrity: undefined;
+  /** AL-13: the loop-health page + the January readiness list. */
+  LoopHealth: undefined;
   QuestionReviewProgress: undefined;
   ReviewerEffectiveness: undefined;
   TeachingNoteOpenComments: undefined;

@@ -45,6 +45,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "StudentProgress", icon: "📈", title: STR.impNavTitle, onPress: () => navigation.navigate("StudentProgress") },
     { screen: "LessonProgress", icon: "📗", title: STR.lpNavTitle, onPress: () => navigation.navigate("LessonProgress") },
     { screen: "HomeworkIntegrity", icon: "🔎", title: STR.hiNavTitle, onPress: () => navigation.navigate("HomeworkIntegrity") },
+    { screen: "LoopHealth", icon: "🩺", title: STR.lhTitle, sub: STR.lhHubSub, onPress: () => navigation.navigate("LoopHealth") },
     { screen: "RevisionDashboard", icon: "🕌", title: STR.revDashTitle, onPress: () => navigation.navigate("RevisionDashboard", { date: mostRecentSaturday() }) },
     { screen: "QuestionReviewProgress", icon: "🔍", title: STR.qpTitle, sub: STR.qpSubtitle, onPress: () => navigation.navigate("QuestionReviewProgress") },
     { screen: "ReviewerEffectiveness", icon: "👁️", title: STR.obsReviewerEffTitle, onPress: () => navigation.navigate("ReviewerEffectiveness") },

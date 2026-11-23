@@ -20,6 +20,8 @@ import mongoose, { Types } from "mongoose";
 import { assertDevTarget, DevGuardError, type GuardInput } from "./guards";
 import { FAKE_BASE_MODELS, loadAllModels, resolveCollections, type ModelRef } from "./collections";
 import { SCENARIOS, type Scenario, type ScenarioCtx, type SectionInfo } from "./scenarios";
+import { MasteryCatalogueReview } from "../../modules/mastery/models/MasteryCatalogueReview";
+import { setEnablement } from "../../modules/mastery/services/MasteryCatalogueService";
 import { DevFakeRun, type IDevFakeRun } from "../../modules/platform/models/DevFakeRun";
 import { AcademicYear } from "../../modules/foundation/models/AcademicYear";
 import { Class } from "../../modules/foundation/models/Class";
@@ -168,6 +170,21 @@ async function yearMadeByRun(yearId: Types.ObjectId): Promise<boolean> {
 
 // ---------------------------------------------------------------------------
 
+/** Switch mastery on for every class x subject with a LOCKED review round (idempotent). Config - never removed with a run. */
+async function switchOnLockedPairs(yearId: string, switchedOn: string[], log: (l: string) => void): Promise<void> {
+  const rounds = (await MasteryCatalogueReview.find({ state: "LOCKED" }).select("classToken subject").lean()) as unknown as Array<{ classToken: string; subject: string }>;
+  const pairs = [...new Map(rounds.map((r) => [`${r.classToken}|${r.subject}`, r])).values()];
+  const actor = { userId: new Types.ObjectId().toString(), role: "PRINCIPAL" as const };
+  for (const r of pairs) {
+    try {
+      await setEnablement(yearId, r.classToken as never, r.subject as never, true, actor);
+      switchedOn.push(`mastery:${r.classToken}:${r.subject}`);
+    } catch (e) {
+      log(`[dev-fake] mastery switch refused for ${r.classToken} ${r.subject}: ${String((e as Error)?.message ?? e)}`);
+    }
+  }
+}
+
 export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARIOS): Promise<FakeReport> {
   const log = opts.log ?? (() => undefined);
   assertDevTarget(opts.guard);
@@ -299,6 +316,10 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
   setDevNotificationMute(true);
   const runStart = new Date();
   try {
+    // PRD 9.3: the 2027 scenarios run with mastery switched ON for every class x subject whose objective list is LOCKED (dev only,
+    // the 2027 year only). It is CONFIG, not run data: it is recorded in `switchedOn` and `--remove` leaves it. Through the
+    // enablement service itself, so its own rules apply; a pair it refuses is skipped.
+    if (dateMode === "2027") await switchOnLockedPairs(String(year._id), switchedOn, log);
     for (const s of chosen) {
       const since = new Date();
       log(`[dev-fake] scenario ${s.id} (${s.name})`);

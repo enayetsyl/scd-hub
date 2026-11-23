@@ -82,6 +82,51 @@ function assignmentDeadline(dueDate: Date, dow: number, isOpen: (d: Date) => boo
   return d;
 }
 
+/** Approved leave per teacher user id over [fromKey, toKey]: `(owner, key) => on leave that day`. One pass (AL-9, shared by AL-13). */
+export async function loadLeaveCheck(owners: string[], fromKey: string, toKey: string): Promise<(owner: string, key: string) => boolean> {
+  const profileOf = new Map<string, string>();
+  for (const o of owners) {
+    const prof = await resolveStaffProfileForUser(o);
+    if (prof) profileOf.set(o, String(prof._id));
+  }
+  const leaves = profileOf.size
+    ? await StaffLeaveApplication.find({
+        staffProfileId: { $in: [...profileOf.values()].map((p) => new Types.ObjectId(p)) },
+        status: "approved",
+        fromKey: { $lte: toKey },
+        toKey: { $gte: fromKey },
+      })
+        .select("staffProfileId fromKey toKey")
+        .lean()
+    : [];
+  return (owner, key) => {
+    const prof = profileOf.get(owner);
+    return !!prof && leaves.some((l) => String(l.staffProfileId) === prof && l.fromKey <= key && l.toKey >= key);
+  };
+}
+
+/**
+ * The first day on or after `from` this owner is actually expected to mark (open, unpaused for these kinds, not on leave) - their
+ * EFFECTIVE deadline - or null while that day is still in the future. The one rule of the AL-9 ladder, shared with AL-13.
+ */
+export function makeEffectiveKey(env: {
+  isOpen: (d: Date) => boolean;
+  isPaused: (kind: PauseKind, key: string) => boolean;
+  onLeave: (owner: string, key: string) => boolean;
+  today: string;
+}): (from: Date, owner: string, kinds: PauseKind[]) => string | null {
+  return (from, owner, kinds) => {
+    let d = from;
+    for (let i = 0; i < MAX_WALK_DAYS; i++) {
+      const k = keyOf(d);
+      if (k > env.today) return null; // still in the future: not late today
+      if (env.isOpen(d) && !kinds.some((kind) => env.isPaused(kind, k)) && !env.onLeave(owner, k)) return k;
+      d = addDays(d, 1);
+    }
+    return null;
+  };
+}
+
 /**
  * Every paper that is late right now, with the teachers it is late for. Empty with the switch off.
  * Pure read — nothing is written here.
@@ -131,37 +176,8 @@ export async function latePapers(now: Date = new Date()): Promise<LatePaper[]> {
 
   // Approved leave per owning teacher, in one pass.
   const owners = ids(...hwItems.map((i) => i.declaredBy), ...asItems.flatMap((i) => [i.deliveredBy, i.teacherId]));
-  const profileOf = new Map<string, string>();
-  for (const o of owners) {
-    const prof = await resolveStaffProfileForUser(o);
-    if (prof) profileOf.set(o, String(prof._id));
-  }
-  const leaves = profileOf.size
-    ? await StaffLeaveApplication.find({
-        staffProfileId: { $in: [...profileOf.values()].map((p) => new Types.ObjectId(p)) },
-        status: "approved",
-        fromKey: { $lte: today },
-        toKey: { $gte: keyOf(since) },
-      })
-        .select("staffProfileId fromKey toKey")
-        .lean()
-    : [];
-  const onLeave = (owner: string, key: string): boolean => {
-    const prof = profileOf.get(owner);
-    return !!prof && leaves.some((l) => String(l.staffProfileId) === prof && l.fromKey <= key && l.toKey >= key);
-  };
-
-  /** The first day on or after `from` this owner is actually expected to mark (open, unpaused, not on leave). */
-  const effectiveKey = (from: Date, owner: string, kinds: PauseKind[]): string | null => {
-    let d = from;
-    for (let i = 0; i < MAX_WALK_DAYS; i++) {
-      const k = keyOf(d);
-      if (k > today) return null; // still in the future: not late today
-      if (isOpen(d) && !kinds.some((kind) => isPaused(kind, k)) && !onLeave(owner, k)) return k;
-      d = addDays(d, 1);
-    }
-    return null;
-  };
+  const onLeave = await loadLeaveCheck(owners, keyOf(since), today);
+  const effectiveKey = makeEffectiveKey({ isOpen, isPaused, onLeave, today });
 
   // The day each homework comes in: the records' due date (an absent child has none until re-delivered).
   const hwDue = new Map<string, Date>();
@@ -238,4 +254,79 @@ export async function confirmedPaperIds(paperIds: (Types.ObjectId | string)[]): 
   if (valid.length === 0) return new Set();
   const rows = await MasteryPaper.find({ _id: { $in: valid }, entryState: "CONFIRMED" }).select("_id").lean();
   return new Set(rows.map((r) => String(r._id)));
+}
+
+/** AL-13: one issued HW / AS paper's mark deadline and whether it was confirmed by it (a read for the health page). */
+export interface PaperDeadline {
+  paperId: string;
+  tracker: MarkTracker;
+  /** The nominal deadline day `YYYY-MM-DD` (before leave / pause / closed-day moves). */
+  deadlineKey: string;
+  /**
+   * The LATEST effective deadline across the owners (AL-9 rule: closed, paused and on-leave days move it on), or null while
+   * some owner's effective deadline has not come yet. A paper is on time when confirmed on or before it (anyone may confirm).
+   */
+  effectiveKey: string | null;
+  /** The owning teacher user ids (HW: the declarer; AS: the deliverer + the assigned teacher). */
+  ownerIds: string[];
+  confirmed: boolean;
+  /** The Dhaka day the paper was confirmed on (null while OPEN). */
+  confirmedKey: string | null;
+}
+
+/**
+ * The deadline of each of these papers (AL-4 / AL-6 tracker-linked HW and AS papers whose tracker item was issued), leave- and
+ * pause-aware exactly as `latePapers` (the shared `makeEffectiveKey`), and whether a confirmation came on time. Pure read; no
+ * release-switch check (the caller decides). A paper whose item was never issued has no deadline and is left out.
+ */
+export async function paperDeadlines(paperIds: (Types.ObjectId | string)[], now: Date = new Date()): Promise<Map<string, PaperDeadline>> {
+  const out = new Map<string, PaperDeadline>();
+  const valid = paperIds.filter((p) => Types.ObjectId.isValid(String(p)));
+  if (valid.length === 0) return out;
+  const today = dhakaDayKey(now);
+  const policy = (await getPolicy(null, null)).resolved;
+  const hwDays = Number(policy.hwMarkDeadlineDays ?? 0);
+  const asDow = Number(policy.asMarkDeadlineDow ?? 2);
+  const papers = await MasteryPaper.find({ _id: { $in: valid }, trackerLinked: true, extra: { $ne: true }, source: { $in: ["HW", "AS"] } })
+    .select("source links entryState confirmedAt date")
+    .lean(); // bounded: the papers of one period the caller named
+  if (papers.length === 0) return out;
+  const hwOf = new Map<string, (typeof papers)[number]>();
+  const asOf = new Map<string, (typeof papers)[number]>();
+  for (const p of papers) {
+    if (p.source === "HW" && p.links?.hwItemId) hwOf.set(String(p.links.hwItemId), p);
+    if (p.source === "AS" && p.links?.asItemId) asOf.set(String(p.links.asItemId), p);
+  }
+  const hwItems = hwOf.size ? await HomeworkItem.find({ _id: { $in: [...hwOf.keys()] }, status: "issued" }).select("dateGiven declaredBy").lean() : [];
+  const asItems = asOf.size ? await AssignmentItem.find({ _id: { $in: [...asOf.keys()] }, status: "ISSUED" }).select("dueDate deliveredBy teacherId").lean() : [];
+  if (hwItems.length + asItems.length === 0) return out;
+  const dates = papers.map((p) => new Date(p.date).getTime());
+  const from = new Date(Math.min(...dates) - 7 * DAY_MS);
+  const isOpen = await loadOpenDayPredicate(from, new Date(Math.max(...dates, now.getTime()) + 60 * DAY_MS));
+  const isPaused = await loadPausePredicate(keyOf(from) < today ? keyOf(from) : today, today);
+  const owners = ids(...hwItems.map((i) => i.declaredBy), ...asItems.flatMap((i) => [i.deliveredBy, i.teacherId]));
+  const onLeave = await loadLeaveCheck(owners, keyOf(from), today);
+  const effectiveKey = makeEffectiveKey({ isOpen, isPaused, onLeave, today });
+  const hwDue = new Map<string, Date>();
+  if (hwItems.length) {
+    const rows = await HomeworkStudentRecord.aggregate<{ _id: Types.ObjectId; due: Date }>([
+      { $match: { hwItemId: { $in: hwItems.map((i) => i._id) }, dueDate: { $ne: null } } },
+      { $group: { _id: "$hwItemId", due: { $min: "$dueDate" } } },
+    ]);
+    for (const r of rows) hwDue.set(String(r._id), r.due);
+  }
+  const put = (tracker: MarkTracker, p: (typeof papers)[number], deadline: Date, ownerIds: string[], kinds: PauseKind[]): void => {
+    const confirmedKey = p.entryState === "CONFIRMED" ? dhakaDayKey(new Date(p.confirmedAt ?? p.date)) : null;
+    const effs = ownerIds.map((o) => effectiveKey(deadline, o, kinds));
+    // The latest of the owners' effective deadlines; one that has not come yet leaves it open (null).
+    const effective = effs.length === 0 || effs.some((e) => e === null) ? null : effs.reduce((a, b) => (a! >= b! ? a : b));
+    out.set(String(p._id), { paperId: String(p._id), tracker, deadlineKey: keyOf(deadline), effectiveKey: effective, ownerIds, confirmed: confirmedKey !== null, confirmedKey });
+  };
+  for (const i of hwItems) {
+    put("HOMEWORK", hwOf.get(String(i._id))!, deadlineFrom(atMidnight(hwDue.get(String(i._id)) ?? i.dateGiven), Math.max(0, hwDays), isOpen), ids(i.declaredBy), ["HOMEWORK_REQUIRED"]);
+  }
+  for (const i of asItems) {
+    put("ASSIGNMENT", asOf.get(String(i._id))!, assignmentDeadline(i.dueDate, asDow, isOpen), ids(i.deliveredBy, i.teacherId), ["ASSIGNMENT_CHASE", "ASSIGNMENT_GENERATION"]);
+  }
+  return out;
 }

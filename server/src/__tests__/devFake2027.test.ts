@@ -29,6 +29,10 @@ import { Notification } from "../modules/notifications/models/Notification";
 import { User } from "../modules/foundation/models/User";
 import { YearChangeRun } from "../modules/year-change/models/YearChangeRun";
 import { DevFakeRun } from "../modules/platform/models/DevFakeRun";
+import { LessonProgressConfig } from "../modules/lesson-progress/models/LessonProgressConfig";
+import { MasteryCatalogueReview } from "../modules/mastery/models/MasteryCatalogueReview";
+import { MasteryOutcome } from "../modules/mastery/models/MasteryOutcome";
+import { MasteryEnablement } from "../modules/mastery/models/MasteryEnablement";
 import { importCatalogue, setEnablement } from "../modules/mastery/services/MasteryCatalogueService";
 import { publishClassNote } from "../modules/routine/services/RoutineTriggerService";
 import { emit, setDevNotificationMute } from "../modules/notifications/services/NotificationService";
@@ -486,5 +490,63 @@ describe("scenario 7 (AL-12): high homework + low class test -> an outside-help 
     const gone = await removeFakeRun(runId);
     expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
     expect(await mongoose.model("IntegrityCase").countDocuments({})).toBe(0);
+  });
+});
+
+describe("scenario 8 (AL-13): the loop-health page + readiness list read the run, and write nothing", () => {
+  beforeAll(async () => {
+    await seedWorld();
+    const [y] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31"), current: true }]);
+    await AcademicYear.updateOne({ _id: year26 }, { $set: { current: false } });
+    await YearChangeRun.create({ runId: "yc-s8", fromYearId: year26, toYearId: y._id, status: "CUT_OVER" });
+    await LessonProgressConfig.create({ classNoteQuestionOn: true }); // marking a class is the session question: with it off the page has no period data
+    const [c1] = await Class.create([{ level: 1, nameBn: "প্রথম", academicYearId: y._id }]);
+    const teacher = new Types.ObjectId();
+    const [sec] = await Section.create([{ classId: c1._id, code: "A", nameBn: "প্রথম", classTeacherId: teacher }]);
+    await Student.create([{ schoolId: "S8-1", name: "Child", classId: c1._id, sectionId: sec._id, active: true }]);
+    for (const day of ["SUN", "MON", "TUE", "WED", "THU"]) {
+      await RoutineSlot.create([
+        {
+          groupType: "section", groupId: sec._id, classId: c1._id, dayOfWeek: day, periodNumber: 1, subject: "MATH", track: "general",
+          teacherId: teacher, effectiveFrom: new Date("2020-01-01"), createdBy: new Types.ObjectId(),
+        },
+      ]);
+    }
+    await User.create({ role: "PRINCIPAL", name: "Head", phone: "01700000088", passwordHash: "x" });
+  });
+
+  it("counts the run's periods per section and teacher, reads the readiness list, tags nothing, and --remove leaves no residue", async () => {
+    const r = await runFake({ apply: true, scenarioIds: [8], now: NOW, guard, seed: 3 });
+    const runId = r.manifest!.runId;
+    const c = r.counts["8"]!;
+    expect(c.sectionRows).toBeGreaterThanOrEqual(1);
+    expect(c.teacherRows).toBe(1);
+    expect(c.periodsScheduled).toBeGreaterThan(0); // the section's MATH period on every school day of the run
+    expect(c.periodsMarked).toBe(0); // scenario 0 was not run: nothing marked
+    expect(c.readinessPairs).toBe(0); // no catalogue in this world
+    expect(Object.values(await taggedIn(runId)).reduce((a, b) => a + b, 0)).toBe(0);
+    const gone = await removeFakeRun(runId);
+    expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
+  });
+
+  it("switches mastery ON for every class x subject with a LOCKED review round (2027 year, dev only) - config: recorded in switchedOn and kept by --remove", async () => {
+    // C1 MATH: a LOCKED round + a LOCKED row. C1 BAN: a LOCKED round but nothing to lock -> the service refuses it, it is skipped. C1 ENG: an OPEN round only.
+    await MasteryOutcome.create([{ code: "LO-C1-MATH-01-01", classToken: "C1", subject: "MATH", chapterNumber: 1, labelBn: "সংখ্যা", assess: "QUESTION", order: 1, status: "LOCKED" }]);
+    await MasteryCatalogueReview.create([
+      { classToken: "C1", subject: "MATH", round: 1, state: "LOCKED" },
+      { classToken: "C1", subject: "BAN", round: 1, state: "LOCKED" },
+      { classToken: "C1", subject: "ENG", round: 1, state: "OPEN" },
+    ]);
+    const r = await runFake({ apply: true, scenarioIds: [8], now: NOW, guard, seed: 4 });
+    const runId = r.manifest!.runId;
+    const rows = await MasteryEnablement.find({ enabled: true }).lean();
+    expect(rows.map((e) => `${e.classToken}:${e.subject}`)).toEqual(["C1:MATH"]);
+    const stored = (await DevFakeRun.findOne({ runId }).lean()) as unknown as { switchedOn: string[] };
+    expect(stored.switchedOn).toEqual(["mastery:C1:MATH"]);
+    await removeFakeRun(runId);
+    expect(await MasteryEnablement.countDocuments({ enabled: true })).toBe(1); // config is left in place
+    // a re-run is idempotent
+    await runFake({ apply: true, scenarioIds: [8], now: NOW, guard, seed: 4 });
+    expect(await MasteryEnablement.countDocuments({ enabled: true })).toBe(1);
   });
 });
