@@ -85,6 +85,7 @@ import {
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
 import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAutoIssueService";
+import { asDraftReady, deliverTailoredItems, runAsDraft } from "../../mastery/services/AssignmentSuggestionService";
 import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { captureReviewSnapshots } from "../../review-program/services/ReviewProgressService";
@@ -287,6 +288,8 @@ export interface TickSummary {
   hwAutoIssued: number;
   /** Assignment (section × week)s confirmed+issued by the D-#839 sweep this pass. */
   asAutoIssued: number;
+  /** AL-7 (ASDRAFT): weekly-assignment drafts the suggestion engine built this pass (release switch on only). */
+  asDraftCreated: number;
   /** End-of-due-day system chases (owner ruling 2026-08-04). */
   hwAutoChased: number;
   /** Weekly guardian homework-digest notifications emitted (D-#452). */
@@ -358,6 +361,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwDueFlipped: 0,
     hwAutoIssued: 0,
     asAutoIssued: 0,
+    asDraftCreated: 0,
     hwAutoChased: 0,
     hwWeeklyDigestEmitted: 0,
     ctOverdueDigestEmitted: 0,
@@ -520,11 +524,32 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   // becomes ready whenever its last delivery/nil lands. Idempotent: confirm claims
   // each draft atomically; an uncovered or over-cap week simply waits.
   await family("assignment auto-issue", async () => {
+    // AL-7: a SENT tailored assignment's tracker item is delivered by the system first (switch on, delivery day reached), so
+    // the sweep below sees every rotation cell delivered and issues the week. A failure here never blocks the sweep.
+    try {
+      await deliverTailoredItems(now);
+    } catch (err) {
+      console.error("[scheduler] tailored assignment delivery failed (next tick retries):", err);
+    }
     const res = await sweepAssignmentAutoIssue(now);
     summary.asAutoIssued = res.issued;
     if (res.issued > 0) {
       console.log(`[scheduler] assignment auto-issue: ${res.issued} section-week(s) confirmed+issued`);
     }
+  });
+
+  // --- ASDRAFT (AL-7, prd-academic-loop-2027 §4.1) — `asDraftLeadDays` school days before the resolved delivery day, from
+  // `asDraftHour`: one DRAFT weekly assignment per rotation subject (Class 1–5, mastery on), a notice to each subject teacher,
+  // the swap card to the class teacher + Office. Skips a SUSPENDED week and an ASSIGNMENT_GENERATION pause. The cheap gate
+  // (switch on, hour reached) runs every tick; the pass itself once per process per day and is idempotent (a second run
+  // finds the drafts and creates nothing). With the switch OFF nothing runs.
+  await family("assignment draft (ASDRAFT)", async () => {
+    if (!(await asDraftReady(now))) return;
+    await runOnce(dateKey, "ASDRAFT", async () => {
+      const res = await runAsDraft(now);
+      summary.asDraftCreated = res.created;
+      if (res.created > 0) console.log(`[scheduler] ASDRAFT: ${res.created} weekly assignment draft(s) built`);
+    });
   });
 
   // --- Mark-submission escalation (D-#890) — 09:30 on an assignment due day: snapshot

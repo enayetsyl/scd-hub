@@ -42,7 +42,7 @@ import {
   type Auth,
 } from "./MasteryWorkService";
 import { computeSection, liveSectionRows, lockedOutcomes, sectionLabel } from "./MasteryDiagnosisService";
-import { buildPartA, buildPartB, pickQuestion, type BankQuestion, type BuilderContext, type OutcomeInfo } from "../assignmentBuilder";
+import { buildPartA, buildPartB, pickQuestion, typeOfQuestion, type BankQuestion, type BuilderContext, type OutcomeInfo } from "../assignmentBuilder";
 import { sectionOutcomeSummary } from "../diagnosis";
 import { loCodeMongoFilter, loCodesOf, movedAliases, questionTypeCodeOf } from "../bank";
 import { groupStimulusParts, partLabelsByItem, printLabel, printPlan, stimulusRefOf } from "../parts";
@@ -55,7 +55,11 @@ import { objectiveGrain } from "./MasteryGuardianService";
 import type { MasteryLevelLabels } from "@scd/shared";
 
 import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
-import { avoidFor, isLoop2027On, recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
+import { avoidFor, expandSections, homeworkUsedThisYear, isLoop2027On, noRepeatWeeks, qidsOf, recordUsesSafe, todayKey, usedInWindow, usesOfPaper, windowStartKey } from "../../assessment/services/QuestionUseService";
+import { callerHasPermission } from "@scd/shared";
+import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
+import { resolveStaffProfileForUser } from "../../hr/services/staffMatch";
+import { StaffLeaveApplication } from "../../hr/models/StaffLeaveApplication";
 import { SECOND_ASSIGNMENT_MESSAGE, budgetPolicy, childDayLabel, dayLabel, staffDaySplit } from "../assignmentBudget";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 
@@ -68,6 +72,25 @@ const sum = (qs: { marks: number }[]) => qs.reduce((s, q) => s + q.marks, 0);
 // ---------------------------------------------------------------------------
 
 export type LayoutInput = MasteryAssignmentLayout;
+
+/**
+ * Evidence rows of a শাখা AND, while it is a merged (combined) শাখা, of its source শাখা (§3.7, AC-U2): the children moved
+ * to the combined শাখা keep the evidence written in their old one. A plain শাখা reads exactly `liveSectionRows`.
+ */
+export async function liveRowsWithMerges(sectionId: Types.ObjectId, subject: MasterySubject, loCode?: string) {
+  const ids = await expandSections([sectionId]);
+  const per = await Promise.all(ids.map((id) => liveSectionRows(id, subject, loCode)));
+  return per.flat();
+}
+
+/** `openExtraSeen` over the same merged set of শাখা. */
+export async function openExtraSeenWithMerges(sectionId: Types.ObjectId, subject: MasterySubject): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  for (const id of await expandSections([sectionId])) {
+    for (const [sid, qs] of await openExtraSeen(id, subject)) out.set(sid, new Set([...(out.get(sid) ?? []), ...qs]));
+  }
+  return out;
+}
 
 export async function marksTable(classToken: MasteryClassToken, subject: MasterySubject): Promise<Map<string, number>> {
   const rows = await MasteryQuestionType.find({ classToken, subject, active: true }).select("code marks").lean();
@@ -107,6 +130,7 @@ export async function goldBank(codes: string[], examPool: ExamPoolLens = "exclud
       textBn: typeof text === "string" ? text : null,
       stimulusRef: stimulusRefOf(payload),
       qtCode: questionTypeCodeOf(payload),
+      difficulty: typeof (env.tags as Record<string, unknown> | undefined)?.difficulty === "string" ? ((env.tags as Record<string, unknown>).difficulty as string) : null,
     }];
   });
 }
@@ -134,7 +158,7 @@ function validateLayout(l: LayoutInput, marks: Map<string, number>, questionLos:
 }
 
 /** The layout a new assignment starts from: the last remembered one, else the school policy. */
-async function startingLayout(sectionId: Types.ObjectId, subject: MasterySubject, classToken: MasteryClassToken): Promise<LayoutInput> {
+export async function startingLayout(sectionId: Types.ObjectId, subject: MasterySubject, classToken: MasteryClassToken): Promise<LayoutInput> {
   const last = await MasteryAssignment.findOne({ sectionId, subject, rememberLayout: true }).sort({ dueDate: -1 }).select("layout").lean();
   if (last?.layout) return last.layout as LayoutInput;
   const p = (await getPolicy(classToken, subject)).resolved;
@@ -167,6 +191,10 @@ export interface QuestionView {
   questionTypeCode: string;
   marks: number;
   band: string;
+  /** AL-7: why the engine picked it; null on a 2026 / hand-built item. */
+  reasonBn: string | null;
+  /** AL-7: a question the শাখা had before, outside the window — "আবার". */
+  repeat: boolean;
 }
 
 export interface SheetSummary {
@@ -195,8 +223,23 @@ export interface AssignmentView {
   countedMinutes: number | null;
   dayLabel: string | null;
   dayLabelEn: string | null;
+  /** AL-7: the engine's audit (who built it, from what); null on a hand-built assignment. */
+  suggestion: SuggestionView | null;
   partA: QuestionView[];
   sheets: SheetSummary[];
+}
+
+export interface SuggestionView {
+  builtBy: "ENGINE" | "TEACHER";
+  at: string;
+  noLessonMarks: boolean;
+  chapters: number[];
+  excludedHw: number;
+  excludedWindow: number;
+  excludedSeen: number;
+  /** A teacher changed the draft after the engine built it. */
+  edited: boolean;
+  needsReviewCount: number;
 }
 
 type Labels = Map<string, string>;
@@ -213,6 +256,8 @@ function questionView(q: MasteryAssignmentQuestion, labels: Labels): QuestionVie
     questionTypeCode: q.questionTypeCode,
     marks: q.marks,
     band: q.band,
+    reasonBn: q.reasonBn ?? null,
+    repeat: Boolean(q.repeat),
   };
 }
 
@@ -246,7 +291,7 @@ async function staffDayLabels(a: IMasteryAssignment, sheets: { items: { marks: n
   return { bn: dayLabel("bn", a.doOnDay, split, own) as string, en: dayLabel("en", a.doOnDay, split, own) as string };
 }
 
-async function assignmentView(a: IMasteryAssignment): Promise<AssignmentView> {
+export async function assignmentView(a: IMasteryAssignment): Promise<AssignmentView> {
   const [labels, sheets, roster, paper] = await Promise.all([
     labelsFor(a.classToken, a.subject),
     MasteryAssignmentSheet.find({ assignmentId: a._id }).lean(),
@@ -270,6 +315,19 @@ async function assignmentView(a: IMasteryAssignment): Promise<AssignmentView> {
     countedMinutes: typeof a.countedMinutes === "number" ? a.countedMinutes : null,
     dayLabel: staff?.bn ?? null,
     dayLabelEn: staff?.en ?? null,
+    suggestion: a.suggestion
+      ? {
+          builtBy: a.suggestion.builtBy,
+          at: new Date(a.suggestion.at).toISOString(),
+          noLessonMarks: Boolean(a.suggestion.inputs?.noLessonMarks),
+          chapters: a.suggestion.inputs?.chapters ?? [],
+          excludedHw: a.suggestion.inputs?.excluded?.hw ?? 0,
+          excludedWindow: a.suggestion.inputs?.excluded?.window ?? 0,
+          excludedSeen: a.suggestion.inputs?.excluded?.seen ?? 0,
+          edited: Boolean(a.suggestion.editedAt),
+          needsReviewCount: sheets.filter((s) => s.status === "NEEDS_REVIEW").length,
+        }
+      : null,
     partA: (a.partA ?? []).map((q) => questionView(q, labels)),
     sheets: roster.flatMap((st) => {
       const s = bySid.get(String(st._id));
@@ -521,11 +579,11 @@ async function loadSheet(a: IMasteryAssignment, studentId: string): Promise<IMas
 }
 
 export async function sheetDetail(assignmentId: string, studentId: string, auth: Auth): Promise<SheetDetail> {
-  const a = await loadAssignment(assignmentId, auth);
+  const { a } = await loadForFinalise(assignmentId, auth); // = the row rule, plus the Office on a teacher's leave day (switch on)
   return sheetDetailOf(a, await loadSheet(a, studentId));
 }
 
-export type SheetOp = "SWAP" | "REMOVE" | "ADD_OWN" | "APPROVE";
+export type SheetOp = "SWAP" | "REMOVE" | "ADD_OWN" | "ADD_BANK" | "APPROVE";
 
 export interface SheetEdit {
   op: SheetOp;
@@ -533,12 +591,89 @@ export interface SheetEdit {
   loCode?: string | null;
   questionTypeCode?: string | null;
   textBn?: string | null;
+  /** ADD_BANK (AL-7): the bank question to add. */
+  qid?: string | null;
+}
+
+const NOT_ON_MESSAGE = "এই সুবিধা এখনো চালু হয়নি।";
+const OPEN_LAYOUT = { partAOn: false, partAMarks: 0, partALoCodes: [] as string[], partBMarks: 0, mixWeak: 0, mixImproving: 0, mixRevision: 0, questionTypeCodes: [] as string[] };
+
+export interface AddableQuestion {
+  q: BankQuestion & { textBn: string | null };
+  loCode: string;
+  info: OutcomeInfo;
+  questionTypeCode: string;
+  marks: number;
+  /** The শাখা (Part A) / the child (Part B) has seen it before — shown "আবার". */
+  repeat: boolean;
+}
+
+/**
+ * The §4.3 re-check of a bank question a teacher adds to an engine draft (AL-7, AC-C3): a homework question of the year
+ * and any use inside the no-repeat window are refused with the reason; an unseen gold question passes. `studentId` = a
+ * child's Part B (that child's own rows + the শাখা's), null = Part A. A question the child saw BEFORE the window is
+ * allowed (it is how a NEEDS_REVIEW shortfall is resolved) and marked "আবার".
+ */
+export async function checkAddable(a: IMasteryAssignment, qid: string | null | undefined, studentId: string | null, alreadyOn: Set<string>): Promise<AddableQuestion> {
+  const want = (qid ?? "").trim();
+  if (!want) throw new MasteryWorkError("প্রশ্নের কোড দিন।");
+  const outcomes = (await lockedOutcomes(a.classToken, a.subject)).filter((o) => o.assess === "QUESTION" && isTaggedRow(o));
+  const infos = new Map<string, OutcomeInfo>(outcomes.map((o) => [o.code, { code: o.code, chapterNumber: o.chapterNumber ?? null, questionTypeCodes: o.questionTypeCodes ?? [] }]));
+  const bank = await goldBank([...infos.keys()]);
+  const q = bank.find((x) => x.qid === want);
+  const lo = q?.loCodes.find((c) => infos.has(c));
+  if (!q || !lo) throw new MasteryWorkError("এই প্রশ্নটি গোল্ড ব্যাংকে নেই, বা পরীক্ষার জন্য রাখা, বা এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় ট্যাগ করা নেই।");
+  if (alreadyOn.has(q.qid)) throw new MasteryWorkError("প্রশ্নটি এই অ্যাসাইনমেন্টে আগেই আছে।");
+  // Part A (no child): every child of the roster, so per-child rows and the rows a child earned in an earlier শাখা count too.
+  const sids = studentId ? [studentId] : (await rosterOf(a.sectionId)).map((s) => String(s._id));
+  const weeks = await noRepeatWeeks(a.classToken, a.subject);
+  const [hw, win] = await Promise.all([
+    homeworkUsedThisYear({ sectionIds: [a.sectionId], academicYearId: a.academicYearId, studentIds: sids, subject: a.subject }),
+    usedInWindow({ sectionIds: [a.sectionId], studentIds: sids, sinceDay: windowStartKey(todayKey(), weeks * 7), subject: a.subject }),
+  ]);
+  if (qidsOf(hw, studentId ?? undefined).has(q.qid)) {
+    throw new MasteryWorkError("এই প্রশ্নটি এই শিক্ষাবর্ষে বাড়ির কাজে দেওয়া হয়েছে — বাড়ির কাজের প্রশ্ন অ্যাসাইনমেন্টে দেওয়া যায় না।");
+  }
+  if (qidsOf(win, studentId ?? undefined).has(q.qid)) {
+    throw new MasteryWorkError(`এই প্রশ্নটি গত ${bn(weeks)} সপ্তাহের মধ্যে দেওয়া হয়েছে — এখন আবার দেওয়া যায় না।`);
+  }
+  const marks = await marksTable(a.classToken, a.subject);
+  const info = infos.get(lo)!;
+  const qt = typeOfQuestion(q, info, { marksOf: marks, layout: OPEN_LAYOUT }, undefined);
+  if (!qt) throw new MasteryWorkError("এই প্রশ্নের ধরনের নম্বর ঠিক করা নেই — নম্বর-তালিকা ঠিক করে তারপর যোগ করুন।");
+  // A question the child (or, Part A, any child) has seen before the window is allowed ONLY as "আবার" — it is how a NEEDS_REVIEW
+  // shortfall is resolved (§4.6). Mastery stays safe: only a child's FIRST attempt at a question counts as evidence, so a
+  // repeat can never prove mastery (the same rule that keeps seen questions out of the engine's own Part B).
+  const seen = (await liveRowsWithMerges(a.sectionId, a.subject, lo)).some((r) => r.qid === q.qid && (!studentId || r.studentId === studentId));
+  return { q, loCode: lo, info, questionTypeCode: qt, marks: marks.get(qt)!, repeat: seen };
+}
+
+/** An edit to an engine draft: mark it edited and write the `AS_SUGGESTION_EDIT` audit row (before / after qid, who). */
+async function auditSuggestionEdit(
+  a: IMasteryAssignment,
+  auth: Auth,
+  meta: { op: string; part: "A" | "B"; studentId?: string; beforeQid: string | null; afterQid: string | null },
+): Promise<void> {
+  if (!a.suggestion) return; // a hand-built assignment writes no suggestion audit (2026 flow unchanged)
+  a.suggestion.editedAt = new Date();
+  a.markModified("suggestion");
+  await a.save();
+  void writeAudit({
+    eventKind: "AS_SUGGESTION_EDIT",
+    actorId: auth.userId,
+    actorRole: auth.role,
+    targetKind: "MasteryAssignment",
+    targetId: a._id,
+    meta: { ...meta, week: a.week, subject: a.subject },
+  });
 }
 
 export async function editSheet(assignmentId: string, studentId: string, edit: SheetEdit, auth: Auth): Promise<SheetDetail> {
-  const a = await loadAssignment(assignmentId, auth);
+  const { a } = await loadForFinalise(assignmentId, auth);
   assertDraft(a);
   const sheet = await loadSheet(a, studentId);
+  let beforeQid: string | null = null;
+  let afterQid: string | null = null;
   const at = (i: number | null | undefined) => {
     if (i === null || i === undefined || !Number.isInteger(i) || i < 0 || i >= sheet.items.length) throw new MasteryWorkError("প্রশ্নটি পাওয়া যায়নি।");
     return i;
@@ -549,10 +684,26 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
     sheet.approvedBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   } else {
     if (edit.op === "REMOVE") {
-      sheet.items.splice(at(edit.index), 1);
+      const i = at(edit.index);
+      beforeQid = sheet.items[i].qid ?? null;
+      sheet.items.splice(i, 1);
+    } else if (edit.op === "ADD_BANK") {
+      // AL-7 (AC-C3): a bank question re-checked against §4.3 — a homework question or an in-window repeat is refused.
+      if (!(await isLoop2027On())) throw new MasteryWorkError(NOT_ON_MESSAGE);
+      const on = new Set([...sheet.items, ...a.partA].map((x) => x.qid).filter((x): x is string => Boolean(x)));
+      const add = await checkAddable(a, edit.qid, studentId, on);
+      sheet.items.push({
+        origin: "BANK", artifactId: oid(add.q.artifactId), qid: add.q.qid, textBn: add.q.textBn ?? undefined, loCode: add.loCode,
+        chapterNumber: add.info.chapterNumber, questionTypeCode: add.questionTypeCode, marks: add.marks, band: "TEACHER",
+        reasonBn: add.repeat ? "আবার — শিক্ষকের যোগ করা প্রশ্ন" : "শিক্ষকের যোগ করা প্রশ্ন", repeat: add.repeat,
+        ...(add.q.stimulusRef ? { stimulusRef: add.q.stimulusRef } : {}),
+      });
+      afterQid = add.q.qid;
+      sheet.warnings = sheet.warnings.filter((w) => w.loCode !== add.loCode);
     } else if (edit.op === "SWAP") {
       const i = at(edit.index);
       const cur = sheet.items[i];
+      beforeQid = cur.qid ?? null;
       if (cur.origin !== "BANK") throw new MasteryWorkError("নিজের লেখা প্রশ্ন বদলাতে সরিয়ে নতুন লিখুন।");
       const rows = await liveSectionRows(a.sectionId, a.subject, cur.loCode);
       const seen = new Set(rows.filter((r) => r.studentId === studentId && r.qid).map((r) => r.qid as string));
@@ -571,8 +722,10 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       sheet.items.splice(i, 1, {
         origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
         chapterNumber: cur.chapterNumber ?? null, questionTypeCode: cur.questionTypeCode, marks: cur.marks, band: cur.band,
+        ...(a.suggestion ? { reasonBn: "বদলানো প্রশ্ন", repeat: false } : {}),
         ...(next.stimulusRef ? { stimulusRef: next.stimulusRef } : {}),
       });
+      afterQid = next.qid;
       // A swapped-in part joins its stem's other parts (D-#926).
       if (next.stimulusRef) {
         const plain = sheet.items.map((x) => {
@@ -602,11 +755,121 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
     sheet.status = sheet.warnings.some((w) => w.code === "NO_UNSEEN_QUESTION" || w.code === "TYPE_HAS_NO_MARKS") ? "NEEDS_REVIEW" : "DRAFT";
   }
   await sheet.save();
+  if (edit.op !== "APPROVE") await auditSuggestionEdit(a, auth, { op: edit.op, part: "B", studentId, beforeQid, afterQid });
   return sheetDetailOf(a, sheet);
 }
 
+export interface PartAEdit {
+  op: "SWAP" | "REMOVE" | "ADD_BANK";
+  index?: number | null;
+  qid?: string | null;
+}
+
+/**
+ * AL-7 (§4.6): the common part of an engine draft — swap (another unseen question of the same objective that passes
+ * §4.3), remove, add a bank question (re-checked, AC-C3). Switch on only; each change writes `AS_SUGGESTION_EDIT`.
+ */
+export async function editPartA(assignmentId: string, edit: PartAEdit, auth: Auth): Promise<AssignmentView> {
+  if (!(await isLoop2027On())) throw new MasteryWorkError(NOT_ON_MESSAGE);
+  const { a } = await loadForFinalise(assignmentId, auth);
+  assertDraft(a);
+  const at = (i: number | null | undefined) => {
+    if (i === null || i === undefined || !Number.isInteger(i) || i < 0 || i >= a.partA.length) throw new MasteryWorkError("প্রশ্নটি পাওয়া যায়নি।");
+    return i;
+  };
+  let beforeQid: string | null = null;
+  let afterQid: string | null = null;
+  if (edit.op === "REMOVE") {
+    const i = at(edit.index);
+    beforeQid = a.partA[i].qid ?? null;
+    a.partA.splice(i, 1);
+  } else if (edit.op === "ADD_BANK") {
+    const sheetItems = (await MasteryAssignmentSheet.find({ assignmentId: a._id }).select("items.qid").lean()).flatMap((s) => s.items);
+    const on = new Set([...a.partA, ...sheetItems].map((x) => x.qid).filter((x): x is string => Boolean(x)));
+    const add = await checkAddable(a, edit.qid, null, on);
+    a.partA.push({
+      origin: "BANK", artifactId: oid(add.q.artifactId), qid: add.q.qid, textBn: add.q.textBn ?? undefined, loCode: add.loCode,
+      chapterNumber: add.info.chapterNumber, questionTypeCode: add.questionTypeCode, marks: add.marks, band: "SECTION",
+      reasonBn: add.repeat ? "আবার — শিক্ষকের যোগ করা প্রশ্ন" : "শিক্ষকের যোগ করা প্রশ্ন", repeat: add.repeat,
+      ...(add.q.stimulusRef ? { stimulusRef: add.q.stimulusRef } : {}),
+    });
+    afterQid = add.q.qid;
+  } else if (edit.op === "SWAP") {
+    const i = at(edit.index);
+    const cur = a.partA[i];
+    beforeQid = cur.qid ?? null;
+    if (cur.origin !== "BANK") throw new MasteryWorkError("নিজের লেখা প্রশ্ন বদলাতে সরিয়ে নতুন লিখুন।");
+    const rows = await liveRowsWithMerges(a.sectionId, a.subject, cur.loCode);
+    const roster = await rosterOf(a.sectionId);
+    const ledger = await avoidFor({ sectionId: a.sectionId, academicYearId: a.academicYearId, classToken: a.classToken, subject: a.subject, studentIds: roster.map((s) => String(s._id)) });
+    const avoid = new Set<string>([...ledger.forSection, ...rows.map((r) => r.qid).filter((x): x is string => Boolean(x))]);
+    for (const q of [...a.partA, ...(await MasteryAssignmentSheet.find({ assignmentId: a._id }).select("items.qid").lean()).flatMap((s) => s.items)]) if (q.qid) avoid.add(q.qid);
+    for (const q of [...(await openExtraSeenWithMerges(a.sectionId, a.subject)).values()].flatMap((s) => [...s])) avoid.add(q);
+    const exposure = new Map<string, number>();
+    for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
+    const goldHere = await goldBank([cur.loCode]);
+    const next = pickQuestion(cur.loCode, avoid, { bank: goldHere.filter((q) => !q.qtCode || q.qtCode === cur.questionTypeCode), exposure });
+    if (!next) throw new MasteryWorkError("এই কোডে আর নতুন গোল্ড প্রশ্ন নেই — নিজে যোগ করুন।");
+    const bank = goldHere.find((q) => q.qid === next.qid);
+    a.partA.splice(i, 1, {
+      origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
+      chapterNumber: cur.chapterNumber ?? null, questionTypeCode: cur.questionTypeCode, marks: cur.marks, band: cur.band,
+      reasonBn: "বদলানো প্রশ্ন", repeat: false,
+      ...(next.stimulusRef ? { stimulusRef: next.stimulusRef } : {}),
+    });
+    afterQid = next.qid;
+  } else {
+    throw new MasteryWorkError("অজানা কাজ।");
+  }
+  a.markModified("partA");
+  await a.save();
+  await auditSuggestionEdit(a, auth, { op: edit.op, part: "A", beforeQid, afterQid });
+  return assignmentView(a);
+}
+
+/** An approved staff leave covering `dateKey` (the same rule the mistake notes use). Never throws. */
+export async function teacherOnApprovedLeave(userId: string | null | undefined, dateKey: string): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const profile = await resolveStaffProfileForUser(userId);
+    if (!profile) return false;
+    return !!(await StaffLeaveApplication.exists({ staffProfileId: profile._id, status: "approved", fromKey: { $lte: dateKey }, toKey: { $gte: dateKey } }));
+  } catch {
+    return false;
+  }
+}
+
+/** Wednesday / Thursday (Dhaka) — the days R28 lets the substitute or the Office finalise for a teacher on leave. */
+export const isFinaliseLeaveDay = (dayKey: string): boolean => [3, 4].includes(new Date(`${dayKey}T00:00:00.000Z`).getUTCDay());
+
+/**
+ * Finalise reach (AL-7, AC-C14, R28): the subject teacher, `mastery:edit_all` or today's substitute (the row rule), and — with
+ * the switch on — a holder of `assignment:finalise_on_leave` (the Office) while the subject teacher is on approved leave on
+ * the Wednesday or Thursday. Any other caller, and the Office on a normal day, is refused in Bangla.
+ */
+async function loadForFinalise(id: string, auth: Auth): Promise<{ a: IMasteryAssignment; viaLeave: boolean; bySubstitute: boolean }> {
+  if (!Types.ObjectId.isValid(id)) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
+  const a = await MasteryAssignment.findById(id);
+  if (!a) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
+  try {
+    await assertMayWork(auth, a.sectionId, a.subject, new Date());
+    // No wider reach than the row rule + the build permission (switch on or off): an Office login that merely holds a routine
+    // slot of the শাখা is not a mastery builder.
+    if (!callerHasPermission(auth, "mastery:create")) throw new MasteryWorkError("রুটিন অনুযায়ী এই শাখা ও বিষয়ের দায়িত্ব আপনার নয়।");
+    const teacher = await resolveSubjectTeacher(String(a.sectionId), a.subject, new Date());
+    const bySubstitute = Boolean(teacher && teacher !== String(auth.userId) && !callerHasPermission(auth, "mastery:edit_all") && (await isLoop2027On()));
+    return { a, viaLeave: false, bySubstitute };
+  } catch (err) {
+    if (!(await isLoop2027On()) || !callerHasPermission(auth, "assignment:finalise_on_leave")) throw err;
+    const today = dhakaDayKey(new Date());
+    const teacher = await resolveSubjectTeacher(String(a.sectionId), a.subject, new Date());
+    if (isFinaliseLeaveDay(today) && (await teacherOnApprovedLeave(teacher, today))) return { a, viaLeave: true, bySubstitute: false };
+    throw new MasteryWorkError("বিষয়শিক্ষক ছুটিতে (বুধ বা বৃহস্পতিবার) না থাকলে অফিস অ্যাসাইনমেন্ট চূড়ান্ত করতে পারে না।");
+  }
+}
+
 export async function approveAllSheets(assignmentId: string, auth: Auth): Promise<AssignmentView> {
-  const a = await loadAssignment(assignmentId, auth);
+  const { a } = await loadForFinalise(assignmentId, auth);
   assertDraft(a);
   await MasteryAssignmentSheet.updateMany(
     { assignmentId: a._id, status: "DRAFT" },
@@ -628,14 +891,27 @@ export async function deleteAssignment(assignmentId: string, auth: Auth): Promis
 // ---------------------------------------------------------------------------
 
 export async function sendAssignment(assignmentId: string, auth: Auth): Promise<AssignmentView> {
-  const a = await loadAssignment(assignmentId, auth);
+  const { a, viaLeave, bySubstitute } = await loadForFinalise(assignmentId, auth);
   assertDraft(a);
   await assertEnabled(
     { sectionId: a.sectionId, classId: a.classId, academicYearId: a.academicYearId, classToken: a.classToken },
     a.subject,
   );
   const [sheets, roster] = await Promise.all([MasteryAssignmentSheet.find({ assignmentId: a._id }).lean(), rosterOf(a.sectionId)]);
-  const pending = sheets.filter((s) => s.status !== "APPROVED").length;
+  // AL-7 (AC-C11, switch on): a sheet with a gap (no unseen question) is named, so nothing half-built reaches the print queue.
+  if (await isLoop2027On()) {
+    const gaps = sheets.filter((s) => s.status === "NEEDS_REVIEW");
+    if (gaps.length > 0) {
+      const names = new Map(roster.map((st) => [String(st._id), personName(st)]));
+      const list = gaps.map((s) => names.get(String(s.studentId)) ?? "").filter(Boolean);
+      throw new MasteryWorkError(
+        `${bn(gaps.length)}টি শিটে প্রশ্নের ঘাটতি আছে (${list.slice(0, 6).join(", ")}${list.length > 6 ? "…" : ""}) — প্রশ্ন যোগ করুন বা শিটটি দেখে অনুমোদন দিন, তারপর চূড়ান্ত করুন।`,
+      );
+    }
+  }
+  // R28: the Office finalises the system's draft as it stands — its clean DRAFT sheets count as approved (written below, only
+  // after every refusal here and in the budget check has passed).
+  const pending = sheets.filter((s) => s.status !== "APPROVED" && !(viaLeave && s.status === "DRAFT")).length;
   if (pending > 0) throw new MasteryWorkError(`${bn(pending)}টি শিট এখনো অনুমোদন হয়নি।`);
   const bySid = new Map(sheets.map((s) => [String(s.studentId), s]));
   const ordered = roster.flatMap((st) => (bySid.has(String(st._id)) ? [bySid.get(String(st._id))!] : []));
@@ -664,6 +940,9 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
     return itemNo;
   };
   const partANos = (a.partA ?? []).map(add);
+  if (viaLeave) {
+    await MasteryAssignmentSheet.updateMany({ assignmentId: a._id, status: "DRAFT" }, { $set: { status: "APPROVED", ...(Types.ObjectId.isValid(auth.userId) ? { approvedBy: oid(auth.userId) } : {}) } });
+  }
   const perStudentItems = ordered.map((s) => ({ studentId: s.studentId, itemNos: [...partANos, ...s.items.map(add)] }));
   // ক/খ (D-#926): the paper records each part's label among its stem's parts on this paper.
   partLabelsByItem(items).forEach((label, i) => {
@@ -716,13 +995,25 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   } catch (err) {
     console.error("[mastery] assignment notice failed:", err);
   }
+  // AL-7: finalised on (or after) the delivery day → the tracker item is delivered right away (best effort; the tick retries).
+  if (loop && plan) {
+    try {
+      await (await import("./AssignmentSuggestionService")).deliverTailoredFor(a, new Date());
+    } catch (err) {
+      await (await import("../../../lib/reportError")).reportSilentFailure("assignment.deliverTailoredAtFinalise", err, { assignmentId: String(a._id) });
+    }
+  }
   void writeAudit({
     eventKind: "MASTERY_ASSIGNMENT_SENT",
     actorId: auth.userId,
     actorRole: auth.role,
     targetKind: "MasteryAssignment",
     targetId: a._id,
-    meta: { paperId: paper.paperId, students: ordered.length, items: items.length, week: a.week },
+    meta: {
+      paperId: paper.paperId, students: ordered.length, items: items.length, week: a.week,
+      // AL-7 (R28): who finalised for a teacher on leave, and why.
+      ...(viaLeave || bySubstitute ? { finalisedOnLeaveBy: auth.userId, reason: viaLeave ? "TEACHER_ON_LEAVE" : "SUBSTITUTE_COVER" } : {}),
+    },
   });
   return assignmentView(a);
 }

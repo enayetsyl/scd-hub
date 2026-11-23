@@ -38,9 +38,33 @@ export interface MasteryAssignmentQuestion {
   questionTypeCode: string;
   marks: number;
   /** Why the builder picked it: the student's state on the outcome when built (Part B), or SECTION (Part A). */
-  band: "WEAK" | "IMPROVING" | "REVISION" | "INSUFFICIENT" | "SECTION" | "TEACHER";
+  band: "WEAK" | "IMPROVING" | "REVISION" | "INSUFFICIENT" | "SECTION" | "TEACHER" | "MISSED";
+  /** AL-7 (§4.6): why the engine picked it ("দুর্বল: …", "ক্লাস মিস: …"); absent on a 2026 / teacher-written item. */
+  reasonBn?: string;
+  /** AL-7: a question the শাখা had before, outside the no-repeat window — shown "আবার". */
+  repeat?: boolean;
   /** ক/খ parts (D-#926): the bank question's stimulus (shared stem); its parts print 4(ক), 4(খ). */
   stimulusRef?: string;
+}
+
+/** AL-7 (§4.6): the audit of an engine draft — who built it, from what, and why each item. */
+export interface MasteryAssignmentSuggestion {
+  builtBy: "ENGINE" | "TEACHER";
+  at: Date;
+  inputs: {
+    /** The chapters the common part drew from (taught so far). */
+    chapters: number[];
+    weakCounts: { loCode: string; weak: number; improving: number }[];
+    excluded: { hw: number; window: number; seen: number };
+    /** No class note was marked taught: Part A is empty and the teacher picks chapters. */
+    noLessonMarks: boolean;
+  };
+  /** One row per item the engine placed; `studentId` null = Part A. */
+  reasons: { studentId: string | null; qid: string | null; loCode: string; reasonBn: string; repeat: boolean }[];
+  /** Set when a teacher changed the draft (swap / remove / add): a swap-accept then asks before dropping it. */
+  editedAt?: Date;
+  /** Set on a swapped-in subject (§4.5): the subject it replaced and itself. ASDRAFT, the swap card and the system delivery read it. */
+  swap?: { drop: string; add: string };
 }
 
 export interface IMasteryAssignment extends Document {
@@ -70,6 +94,8 @@ export interface IMasteryAssignment extends Document {
   countedMinutes?: number;
   doOnDay?: "FRI" | "SAT" | "BOTH";
   minutesByDay?: { FRI: number; SAT: number };
+  /** AL-7: set on a draft the suggestion engine built (switch on). Absent on a 2026 / hand-built assignment. */
+  suggestion?: MasteryAssignmentSuggestion;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,7 +110,9 @@ export const QuestionSchema = new Schema<MasteryAssignmentQuestion>(
     chapterNumber: { type: Number, default: null },
     questionTypeCode: { type: String, required: true },
     marks: { type: Number, required: true, min: 0 },
-    band: { type: String, enum: ["WEAK", "IMPROVING", "REVISION", "INSUFFICIENT", "SECTION", "TEACHER"], required: true },
+    band: { type: String, enum: ["WEAK", "IMPROVING", "REVISION", "INSUFFICIENT", "SECTION", "TEACHER", "MISSED"], required: true },
+    reasonBn: { type: String, trim: true },
+    repeat: { type: Boolean },
     stimulusRef: { type: String, trim: true },
   },
   { _id: false },
@@ -128,6 +156,8 @@ const MasteryAssignmentSchema = new Schema<IMasteryAssignment>(
     countedMinutes: { type: Number, min: 0 },
     doOnDay: { type: String, enum: ["FRI", "SAT", "BOTH"] },
     minutesByDay: { type: new Schema({ FRI: { type: Number, min: 0, default: 0 }, SAT: { type: Number, min: 0, default: 0 } }, { _id: false }), default: undefined },
+    // AL-7: the engine's audit (shape: MasteryAssignmentSuggestion) — Mixed keeps the model type cheap to check.
+    suggestion: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true },
 );

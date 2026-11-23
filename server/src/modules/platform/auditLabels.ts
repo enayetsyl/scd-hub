@@ -468,6 +468,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MASTERY_EXCLUSION_REVOKED: { bn: "বাদ দেওয়া প্রশ্ন ফিরিয়েছেন", en: "Brought an excluded question back", group: "MASTERY" },
   MASTERY_ASSIGNMENT_BUILT: { bn: "সাপ্তাহিক অ্যাসাইনমেন্ট তৈরি করেছেন", en: "Built a weekly assignment", group: "MASTERY" },
   MASTERY_ASSIGNMENT_SENT: { bn: "সাপ্তাহিক অ্যাসাইনমেন্ট পাঠিয়েছেন", en: "Sent a weekly assignment", group: "MASTERY" },
+  AS_SUGGESTION_EDIT: { bn: "অ্যাসাইনমেন্টের প্রস্তাবিত প্রশ্ন বদলেছেন", en: "Changed a suggested assignment question", group: "MASTERY" },
   MASTERY_ACTION_PROPOSED: { bn: "অতিরিক্ত ক্লাসের প্রস্তাব এসেছে", en: "Extra-class proposal opened", group: "MASTERY" },
   MASTERY_ACTION_DECIDED: { bn: "অতিরিক্ত ক্লাসের সিদ্ধান্ত দিয়েছেন", en: "Decided an extra-class proposal", group: "MASTERY" },
   MASTERY_EXTRA_CLASS_HELD: { bn: "অতিরিক্ত ক্লাস নিয়েছেন", en: "Held an extra class", group: "MASTERY" },

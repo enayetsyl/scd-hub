@@ -508,6 +508,7 @@ const MASTERY_BAND_LABELS: Record<string, [string, string]> = {
   INSUFFICIENT: ["তথ্য কম — যাচাই", "Gathering evidence"],
   SECTION: ["পুরো শাখা", "Whole section"],
   TEACHER: ["শিক্ষকের প্রশ্ন", "Teacher's question"],
+  MISSED: ["ক্লাস মিস", "Missed class"],
 };
 export const masteryBandLabel = (b: string): string => {
   const l = MASTERY_BAND_LABELS[b];

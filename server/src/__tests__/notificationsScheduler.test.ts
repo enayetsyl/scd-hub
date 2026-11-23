@@ -174,6 +174,14 @@ jest.mock("../modules/trackers/services/AssignmentAutoIssueService", () => ({
 // D-#890: the 09:30 unmarked-assignment escalation (covered in markSubmissionGuard.test.ts)
 // is DB-backed — stubbed so this suite stays DB-free.
 const mockMarkEscalation = jest.fn().mockResolvedValue(0);
+// AL-7: the ASDRAFT family (covered in al7AssignmentSuggestion.test.ts) is DB-backed — gated off here so this suite stays DB-free.
+const mockAsDraftReady = jest.fn().mockResolvedValue(false);
+const mockRunAsDraft = jest.fn().mockResolvedValue({ created: 0, existing: 0, manual: 0, failed: 0 });
+jest.mock("../modules/mastery/services/AssignmentSuggestionService", () => ({
+  asDraftReady: (now: unknown) => mockAsDraftReady(now),
+  runAsDraft: (now: unknown) => mockRunAsDraft(now),
+  deliverTailoredItems: () => Promise.resolve(0),
+}));
 jest.mock("../modules/trackers/services/MarkReminderService", () => ({
   MARK_ESCALATION_MINUTES: 9 * 60 + 30,
   runMarkEscalation: (now: unknown) => mockMarkEscalation(now),
