@@ -175,6 +175,10 @@ const dedupeKeys = {
    *  rung anywhere in the week is a no-op for the inbox; next Sunday's key is new. */
   hwWeeklyDigest: (weekStartKey: string, studentId: string, guardianId: string) =>
     `HWWD:${weekStartKey}:${studentId}:${guardianId}`,
+  /** AL-10 (R31, D-#1674): the separate weekly message per child — week + child + GUARDIAN, so a guardian linked
+   *  mid-week is never swallowed by the first's key and the D-#452 digest key is never shared. */
+  guardianWeeklySummary: (weekKey: string, studentId: string, guardianId: string) =>
+    `GWS:${weekKey}:${studentId}:${guardianId}`,
   /** Per syllabus + guardian (D-#644). Per-GUARDIAN, not per-syllabus: an
    *  entity-only key would swallow the re-emit to a guardian who was linked to the
    *  class after the first publish (the recorded dedupe-scope trap). NOT versioned —
@@ -1285,6 +1289,49 @@ export async function emitHomeworkWeeklyDigest(ev: HomeworkWeeklyDigestEvent): P
             sectionId: ev.sectionId.toString(),
           },
           dedupeKey: dedupeKeys.hwWeeklyDigest(ev.weekStartKey, ev.studentId.toString(), g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// AL-10 (R31, D-#1674) — GWSUM: the weekly message for ONE child → each login-enabled guardian of that child.
+// Title + body are built by the caller (self-clamped). Returns notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface GuardianWeeklySummaryEvent {
+  studentId: IdLike;
+  sectionId: IdLike;
+  /** dateKey of the school week's Sunday — the dedupe scope. */
+  weekKey: string;
+  titleBn: string;
+  messageBn: string;
+}
+
+export async function emitGuardianWeeklySummary(ev: GuardianWeeklySummaryEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("guardian weekly summary", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("GUARDIAN_WEEKLY_SUMMARY")) return;
+    const links = (await GuardianLink.find({ studentId: ev.studentId, active: { $ne: false } })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "GUARDIAN_WEEKLY_SUMMARY",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { date: ev.weekKey, studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString() },
+          dedupeKey: dedupeKeys.guardianWeeklySummary(ev.weekKey, ev.studentId.toString(), g._id.toString()),
         });
         notified.push(g._id.toString());
       }),

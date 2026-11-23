@@ -7191,6 +7191,8 @@ export interface ChildAssignmentT {
   deliveryDate: string;
   dueDate: string | null;
   marks: number | null;
+  /** AL-10 (R32, R35): the child's own sheet total; set → show "৮/১০ — ভালো", never the result word. */
+  availableMarks?: number | null;
   totalMarks: number | null;
   result: string | null;
   feedback: string | null;
@@ -7217,7 +7219,7 @@ export const CHILD_ASSIGNMENTS = gql<
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
       canClaim claimHoldBn
       claim { ${WORK_CLAIM_FIELDS} }
-      marks totalMarks result feedback isResubmission description attachmentIds
+      marks availableMarks totalMarks result feedback isResubmission description attachmentIds
     }
   }
 `;

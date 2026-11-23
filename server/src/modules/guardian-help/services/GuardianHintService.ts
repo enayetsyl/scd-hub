@@ -4,7 +4,8 @@
  *
  *  - childAssignedQuestions — the bank questions assigned to the child, from: the weekly assignment
  *    sheets (Part A + the child's Part B), extra homework (MasteryPaper HW `extra`, the child's
- *    `perStudentItems`) and homework (`selectedQids` / the record's `topupQids`). Question TEXT only:
+ *    `perStudentItems`) and homework (`selectedQids` / the record's `topupQids` / AL-10: the questions on the
+ *    item's class homework PAPER, as printed — D-#1674). Question TEXT only:
  *    no answer, no options, no correctness flag — nothing here reads those fields. With `hintCount`
  *    (0 or 3) and the steps THIS guardian already opened for this child.
  *  - openQuestionHint — step N's text, only for a question assigned to the child, only when steps
@@ -101,13 +102,24 @@ async function assignedOrigins(studentId: string, sources?: readonly AssignedQue
     : [];
   if (records.length > 0) {
     const items = await HomeworkItem.find({ _id: { $in: [...new Set(records.map((r) => String(r.hwItemId)))] } })
-      .select("subject dateGiven selectedQids")
+      .select("subject dateGiven selectedQids paperId")
       .lean();
     const itemById = new Map(items.map((i) => [String(i._id), i]));
+    // AL-10 (D-#1674): the class homework paper (AL-4) carries the picked questions with the text as printed; a paper
+    // exists only with the release switch on, so with it off nothing here changes. Question text + qid only.
+    const paperIds = [...new Set(items.flatMap((i) => (i.paperId ? [String(i.paperId)] : [])))];
+    const papers = paperIds.length
+      ? await MasteryPaper.find({ _id: { $in: paperIds.map(oid) }, extra: { $ne: true } }).select("items.qid items.textBn").lean()
+      : [];
+    const paperItemsById = new Map(papers.map((p) => [String(p._id), (p.items ?? []).filter((x) => x.qid)]));
     for (const r of records) {
       const item = itemById.get(String(r.hwItemId));
       if (!item) continue;
       const date = new Date(item.dateGiven).toISOString().slice(0, 10);
+      // The paper's rows go first so the text as printed wins the one-row-per-qid de-duplication below.
+      for (const it of item.paperId ? paperItemsById.get(String(item.paperId)) ?? [] : []) {
+        if (it.qid) found.push({ qid: it.qid, source: "HOMEWORK", subject: item.subject, date, printedText: it.textBn });
+      }
       for (const qid of [...(item.selectedQids ?? []), ...(r.topupQids ?? [])]) {
         if (qid) found.push({ qid, source: "HOMEWORK", subject: item.subject, date });
       }

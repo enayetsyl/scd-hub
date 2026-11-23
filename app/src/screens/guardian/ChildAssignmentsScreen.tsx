@@ -29,7 +29,8 @@ import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { ChildMasteryAssignments } from "./ChildMasteryAssignments";
 import { ChildQuestionHints } from "../../components/ChildQuestionHints";
 import { useRecordView } from "../../lib/useRecordView";
-import { STR, bnNum, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
+import { STR, bnNum, getActiveLang, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
+import { guardianMarksLine } from "../../lib/marksDisplay";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { space } from "../../theme/tokens";
 
@@ -119,7 +120,10 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
               <Muted>
                 {STR.asDeliverBy} {day(a.deliveryDate)} · {STR.asDueBy} {day(a.dueDate)}
               </Muted>
-              {a.result ? (
+              {a.availableMarks != null && a.marks !== null ? (
+                // AL-10 (R32, R35): a marked sheet shows the marks and the level word only - no CORRECT / PARTIAL / WRONG word.
+                <Muted>{guardianMarksLine(a.marks, a.availableMarks, bnNum, getActiveLang())}</Muted>
+              ) : a.result ? (
                 <Muted>
                   {hwResultLabel(a.result)}
                   {a.marks !== null && a.totalMarks !== null ? ` · ${bnNum(a.marks)}/${bnNum(a.totalMarks)}` : ""}

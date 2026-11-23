@@ -36,6 +36,8 @@ import { useRecordView } from "../../lib/useRecordView";
 import { countNewResults } from "../../lib/childClassTests";
 import { UpcomingClassTestsCard, ClassTestResultRow } from "../../components/ChildClassTestCards";
 import { ImprovementTasksGuardianCard } from "../../components/ImprovementTasksGuardianCard";
+import { ChildWeekCard } from "../../components/ChildWeekCard";
+import { guardianMarksLine } from "../../lib/marksDisplay";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
@@ -86,12 +88,17 @@ const HOME_RECENT = RECENT_ROWS;
 /** D-#919: given-dates the home homework card summarises; the rest are on its screen. */
 const HW_HOME_DATES = 3;
 
-export default function GuardianHomeScreen(): React.ReactElement {
+export default function GuardianHomeScreen({ route }: { route?: { params?: { studentId?: string } } } = {}): React.ReactElement {
   // D-#1011: storybook / activity cards (and the all-rounder that came with them) only when switched on.
   const guardianFeatures = useGuardianFeatures();
   const lessonProgressOn = useLessonProgressOn(); // GH-4 (D-#1528): the missed-lessons shortcut waits for the school switch
   const nav = useNavigation<Nav>();
-  const { selected, fetching } = useGuardianChild();
+  const { selected, fetching, selectChild } = useGuardianChild();
+  // AL-10: the weekly message (GUARDIAN_WEEKLY_SUMMARY) names its own child (refs.studentId), as LESSON_MISSED does.
+  const deepLinkedChild = route?.params?.studentId;
+  React.useEffect(() => {
+    if (deepLinkedChild) selectChild(deepLinkedChild);
+  }, [deepLinkedChild, selectChild]);
   useRecordView("HOME", selected?.studentId);
   const lang = getActiveLang();
   const [showTrajHow, setShowTrajHow] = React.useState(false);
@@ -411,6 +418,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
             the one thing here the family is asked to DO today. Renders nothing on a day
             without a task. */}
         {selected ? <ImprovementTasksGuardianCard studentId={selected.studentId} /> : null}
+
+        {/* AL-10 (R13, R31): this week's confirmed marks + level words, topics, what to practise - the weekly message, on screen. */}
+        {selected ? <ChildWeekCard studentId={selected.studentId} onOpenProgress={() => nav.navigate("ChildMastery")} /> : null}
 
         <UpcomingClassTestsCard tests={upcomingTests} />
 
@@ -743,9 +753,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
                         <Muted>
                           {a.asId}
                           {a.daysLate > 0 ? ` · ${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : ""}
-                          {a.marks !== null
-                            ? ` · ${bnNum(a.marks)}${a.totalMarks !== null ? `/${bnNum(a.totalMarks)}` : ""}`
-                            : ""}
+                          {a.availableMarks != null && a.marks !== null
+                            ? ` · ${guardianMarksLine(a.marks, a.availableMarks, bnNum, lang) ?? ""}`
+                            : a.marks !== null
+                              ? ` · ${bnNum(a.marks)}${a.totalMarks !== null ? `/${bnNum(a.totalMarks)}` : ""}`
+                              : ""}
                         </Muted>
                       </View>
                       <Badge text={lifecycleStateLabel(a.state)} tone={a.state === "CHASE" ? "danger" : "brand"} />

@@ -58,7 +58,7 @@ export const SectionObjectiveRowRef = builder.objectRef<SectionObjectiveRow>("Le
   }),
 });
 
-export const StudentObjectiveLessonRef = builder.objectRef<StudentObjectiveLesson>("StudentObjectiveLesson").implement({
+export const StudentObjectiveLessonRef = builder.objectRef<StudentObjectiveLesson & { classMissed?: boolean }>("StudentObjectiveLesson").implement({
   description:
     "OT-5 (D-#950): was this objective taught in the child's শাখা, and was the child there? " +
     "status TAUGHT | MISSED (absent on a day it was taught) | UNKNOWN (no attendance those days) | NOT_TAUGHT.",
@@ -68,6 +68,9 @@ export const StudentObjectiveLessonRef = builder.objectRef<StudentObjectiveLesso
     taughtOn: t.exposeStringList("taughtOn"),
     absentOn: t.exposeStringList("absentOn"),
     onLeave: t.exposeBoolean("onLeave"),
+    /** AL-10 (R11, AC-E1): MISSED with no evidence since the first missed day → staff read "ক্লাস মিস", not WEAK / not
+     *  assessed. Always false with the release switch off and wherever the caller did not compute it. */
+    classMissed: t.boolean({ resolve: (l) => l.classMissed === true }),
   }),
 });
 
