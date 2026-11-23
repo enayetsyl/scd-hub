@@ -108,7 +108,6 @@ const OPEN_FIELDS: Record<string, string> = {
 /** Catalogue actions declared ahead of the slice that will gate them. */
 const DECLARED_AHEAD: Record<string, string> = {
   // 2027 academic loop (docs/prd-academic-loop-2027.md §6): registered in the AL-0 contract PR, gated when built.
-  "reports:loop_health": "AL-13 loop health",
 };
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):

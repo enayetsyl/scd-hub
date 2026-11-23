@@ -188,6 +188,7 @@ import "./modules/mastery/resolvers/masteryGuardian";
 import "./modules/mastery/resolvers/masteryAction";
 import "./modules/mastery/resolvers/masteryReview";
 import "./modules/mastery/resolvers/masteryBankCoverage";
+import "./modules/mastery/resolvers/loopHealth";
 import "./modules/guardian-help/resolvers/questionHints";
 import "./modules/homework-integrity/resolvers/homeworkIntegrity";
 import "./modules/homework-integrity/resolvers/homeworkHelpNote";

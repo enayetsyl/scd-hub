@@ -91,12 +91,13 @@ export async function liveSectionRows(
   sectionId: Types.ObjectId,
   subject: MasterySubject,
   loCode?: string,
-  opts: { includeEarlierClasses?: boolean } = {},
+  /** `until` (AL-13): only evidence dated on or before it - a read of the past. */
+  opts: { includeEarlierClasses?: boolean; until?: Date } = {},
 ): Promise<LiveRow[]> {
   const own = loCode || opts.includeEarlierClasses ? null : await sectionClassToken(sectionId);
   const codeFilter = loCode ? { loCode } : own ? { loCode: { $regex: `^LO-${own}-` } } : {};
   const rows = await MasteryEvidence.find({
-    sectionId, subject, supersededAt: null, excludedAt: null, ...codeFilter,
+    sectionId, subject, supersededAt: null, excludedAt: null, ...codeFilter, ...(opts.until ? { at: { $lte: opts.until } } : {}),
   })
     .select("studentId paperId itemNo qid loCode earned available rubricStep rework signal routed at week source")
     .lean(); // bounded: one section × subject's evidence for the year

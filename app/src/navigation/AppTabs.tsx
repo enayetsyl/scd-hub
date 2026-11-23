@@ -92,6 +92,7 @@ import LessonProgressScreen from "../screens/lessonprogress/LessonProgressScreen
 import LessonTrackerScreen from "../screens/lessonprogress/LessonTrackerScreen";
 import SyllabusTargetsScreen from "../screens/lessonprogress/SyllabusTargetsScreen";
 import HomeworkIntegrityScreen from "../screens/trackers/HomeworkIntegrityScreen";
+import LoopHealthScreen from "../screens/reports/LoopHealthScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
 import TaskDetailScreen from "../screens/workboard/TaskDetailScreen";
@@ -1774,6 +1775,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="LessonProgress" component={LessonProgressScreen} options={{ title: STR.lpNavTitle }} />
       {/* GH-3 (D-#1522): the Office homework-honesty queue. */}
       <ReportsStack.Screen name="HomeworkIntegrity" component={HomeworkIntegrityScreen} options={{ title: STR.hiNavTitle }} />
+      {/* AL-13: the loop-health page + the January readiness list (reports:loop_health). */}
+      <ReportsStack.Screen name="LoopHealth" component={LoopHealthScreen} options={{ title: STR.lhTitle }} />
       <ReportsStack.Screen name="QuestionReviewProgress" component={QuestionReviewProgressScreen} options={{ title: STR.qpTitle }} />
       <ReportsStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
       <ReportsStack.Screen name="TeachingNoteOpenComments" component={TeachingNoteOpenCommentsScreen} options={{ title: STR.tnOpenComments }} />

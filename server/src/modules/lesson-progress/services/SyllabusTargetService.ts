@@ -123,21 +123,16 @@ export interface PaceEnv {
   memo: Map<string, number>;
 }
 
-/** The current year's term calendar, or null when there is no current year. */
-export async function loadPaceEnv(): Promise<PaceEnv | null> {
-  const year = await AcademicYear.findOne({ current: true }).select("startDate endDate").lean();
-  if (!year) return null;
-  const yearStartKey = dateKeyOf(year.startDate as Date);
-  const yearEndKey = dateKeyOf(year.endDate as Date);
-  // Targets FIRST: a year with none (2026) costs this one query and nothing else — no calendar, holiday, pause or exam reads.
-  const rows = (await SyllabusTarget.find({ academicYearId: year._id })
-    .select("classToken subject term targetDate endChapter endSessionIndex")
-    .lean()) as unknown as Array<ISyllabusTarget>;
-  const targets = new Map<string, TargetLite>();
-  for (const t of rows) targets.set(`${t.classToken}|${t.subject}|${t.term}`, t);
-  if (targets.size === 0) {
-    return { yearId: String(year._id), yearStartKey, yearEndKey, dayOpen: () => false, examDays: new Map(), targets, memo: new Map() };
-  }
+/**
+ * The teaching calendar of a year over [fromKey, toKey]: `dayOpen` (open school day, no assignment / homework pause) and the
+ * exam days per class (AL-13 reads the same rule for "periods expected"). One load; the callers memoise.
+ */
+export async function loadTeachingCalendar(
+  yearId: Types.ObjectId,
+  yearStartKey: string,
+  yearEndKey: string,
+): Promise<{ dayOpen: (key: string) => boolean; examDays: Map<string, { all: Set<string>; half: Set<string> }> }> {
+  const year = { _id: yearId };
   const [resolver, paused] = await Promise.all([
     buildDayTypeResolver(parseDateKey(yearStartKey), parseDateKey(yearEndKey)),
     loadPausePredicate(yearStartKey, yearEndKey),
@@ -163,6 +158,25 @@ export async function loadPaceEnv(): Promise<PaceEnv | null> {
     }
   }
 
+  return { dayOpen, examDays };
+}
+
+/** The current year's term calendar, or null when there is no current year. */
+export async function loadPaceEnv(): Promise<PaceEnv | null> {
+  const year = await AcademicYear.findOne({ current: true }).select("startDate endDate").lean();
+  if (!year) return null;
+  const yearStartKey = dateKeyOf(year.startDate as Date);
+  const yearEndKey = dateKeyOf(year.endDate as Date);
+  // Targets FIRST: a year with none (2026) costs this one query and nothing else — no calendar, holiday, pause or exam reads.
+  const rows = (await SyllabusTarget.find({ academicYearId: year._id })
+    .select("classToken subject term targetDate endChapter endSessionIndex")
+    .lean()) as unknown as Array<ISyllabusTarget>;
+  const targets = new Map<string, TargetLite>();
+  for (const t of rows) targets.set(`${t.classToken}|${t.subject}|${t.term}`, t);
+  if (targets.size === 0) {
+    return { yearId: String(year._id), yearStartKey, yearEndKey, dayOpen: () => false, examDays: new Map(), targets, memo: new Map() };
+  }
+  const { dayOpen, examDays } = await loadTeachingCalendar(year._id, yearStartKey, yearEndKey);
   return { yearId: String(year._id), yearStartKey, yearEndKey, dayOpen, examDays, targets, memo: new Map() };
 }
 
@@ -324,7 +338,7 @@ export async function targetYears(): Promise<TargetYear[]> {
 }
 
 /** The chosen year (default: current) — only the current year or the prepared next year are accepted. */
-async function chooseYear(academicYearId?: string | null): Promise<(YearLean & { current: boolean }) | null> {
+export async function chooseYear(academicYearId?: string | null): Promise<(YearLean & { current: boolean }) | null> {
   const years = await allowedYears();
   if (!academicYearId) return years[0] ?? null;
   const hit = years.find((y) => String(y._id) === academicYearId);
