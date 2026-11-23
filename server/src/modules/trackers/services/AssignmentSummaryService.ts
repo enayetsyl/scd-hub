@@ -13,6 +13,8 @@
  *     + assertGuardianOfStudent in the resolver (AJ-8 — nothing about any
  *     other student).
  */
+import { Types } from "mongoose";
+import { MasteryPaper } from "../../mastery/models/MasteryPaper";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import {
@@ -385,6 +387,10 @@ export interface AssignmentItemTally {
   returned: number;
   pendingSubmission: number;
   absent: number;
+  /** AL-6b: the item's AS paper code ("MP-…") when it has a linked question sheet — the card's way into the marks grid. */
+  paperCode?: string | null;
+  /** AL-6b: that sheet is locked (printed / issued / confirmed) — "শিট আবার মেলান" is offered only while it is not. */
+  paperLocked?: boolean;
 }
 
 const AS_PENDING_SUBMISSION_STATES = new Set(["GIVEN", "DUE", "CHASE"]);
@@ -423,6 +429,18 @@ export async function assignmentItemTallies(
     if (stamped.has("RETURNED")) t.returned += 1;
     if (AS_PENDING_SUBMISSION_STATES.has(r.state)) t.pendingSubmission += 1;
     if (r.state === "ABSENT_REDELIVER") t.absent += 1;
+  }
+  // AL-6b: read-only — which of these items carry a linked AS paper (one bounded query over the section's items).
+  if (byItem.size > 0) {
+    const papers = await MasteryPaper.find({ "links.asItemId": { $in: [...byItem.keys()].map((k) => new Types.ObjectId(k)) }, trackerLinked: true })
+      .select("paperId links.asItemId lockedAt entryState")
+      .lean(); // bounded: one AS paper per item of one section
+    for (const p of papers) {
+      const t = byItem.get(String(p.links?.asItemId));
+      if (!t) continue;
+      t.paperCode = p.paperId;
+      t.paperLocked = Boolean(p.lockedAt) || p.entryState === "CONFIRMED";
+    }
   }
   return [...byItem.values()];
 }

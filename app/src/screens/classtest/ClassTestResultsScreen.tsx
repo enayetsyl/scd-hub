@@ -341,6 +341,8 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           ) : null}
         </View>
         {sheetLink.paperId ? <Muted>{sheetConfirmed ? STR.ctSheetOwnsMarks : STR.ctSheetConfirmFirst}</Muted> : null}
+        {/* AL-6b (AC-F1): a mastery-ON test with no question sheet — a warning only, never a block. */}
+        {sheetLink.noSheetWarning ? <Notice message={STR.al6NoSheet} tone="warn" /> : null}
       </Card>
     ) : null;
 

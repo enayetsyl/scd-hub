@@ -584,6 +584,14 @@ export interface WeekLoadItem {
   subject: HwSubject;
   estMinutes: number;
   status: "DRAFT" | "ISSUED";
+  /** AL-6b (switch on): where the subject falls on the two home days; null on a 2026 item. */
+  doOnDay: "FRI" | "SAT" | "BOTH" | null;
+  friMinutes: number;
+  satMinutes: number;
+  /** AL-6b: the Bangla day label ("শুক্রবার" / "শনিবার" / "শুক্রবার: প্রশ্ন ১–৬ · শনিবার: প্রশ্ন ৭–১২"). */
+  dayLabel: string | null;
+  /** The same label in English (the app picks by language). */
+  dayLabelEn: string | null;
 }
 export interface WeekLoadResult {
   academicYearId: string;
@@ -596,6 +604,10 @@ export interface WeekLoadResult {
   overBy: number;
   withinCeiling: boolean;
   hasDrafts: boolean;
+  /** AL-6b (switch on): one home day's cap in minutes (`perDayHours` × 60) and the minutes the week puts on each day. 0 = no day budget (2026). */
+  dayCap: number;
+  friTotal: number;
+  satTotal: number;
   items: WeekLoadItem[];
 }
 
@@ -612,6 +624,27 @@ export async function assignmentWeekLoad(
   const totalMinutes = items.reduce((s, it) => s + (it.estMinutes ?? 0), 0);
   const draftMinutes = items.filter((it) => it.status === "DRAFT").reduce((s, it) => s + (it.estMinutes ?? 0), 0);
   const ceiling = await weeklyCeilingMinutes(); // AL-6: the policy cap with the release switch on, else the 360 constant
+  const loop = await isLoop2027On();
+  const paperSvc = loop ? await import("../../mastery/services/AssignmentPaperService") : null;
+  const budget = loop ? await import("../../mastery/assignmentBudget") : null;
+  const dayCap = budget ? budget.dayCapMinutes(await budget.budgetPolicy()) : 0;
+  const rows: WeekLoadItem[] = [];
+  for (const it of items) {
+    rows.push({
+      itemId: it._id.toString(),
+      asId: it.asId,
+      subject: it.subject,
+      estMinutes: it.estMinutes ?? 0,
+      status: it.status,
+      doOnDay: loop ? (it.doOnDay ?? null) : null,
+      friMinutes: loop ? (it.minutesByDay?.FRI ?? 0) : 0,
+      satMinutes: loop ? (it.minutesByDay?.SAT ?? 0) : 0,
+      ...(await (async () => {
+        const l = paperSvc ? await paperSvc.dayLabelsOfItem(it) : null;
+        return { dayLabel: l?.bn ?? null, dayLabelEn: l?.en ?? null };
+      })()),
+    });
+  }
   return {
     academicYearId,
     sectionId,
@@ -622,13 +655,10 @@ export async function assignmentWeekLoad(
     overBy: Math.max(0, totalMinutes - ceiling),
     withinCeiling: totalMinutes <= ceiling,
     hasDrafts: items.some((it) => it.status === "DRAFT"),
-    items: items.map((it) => ({
-      itemId: it._id.toString(),
-      asId: it.asId,
-      subject: it.subject,
-      estMinutes: it.estMinutes ?? 0,
-      status: it.status,
-    })),
+    dayCap,
+    friTotal: rows.reduce((n, r) => n + r.friMinutes, 0),
+    satTotal: rows.reduce((n, r) => n + r.satMinutes, 0),
+    items: rows,
   };
 }
 

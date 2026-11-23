@@ -242,7 +242,7 @@ export default function MasteryHeatmapScreen({ navigation, route }: Props): Reac
                         <Pressable
                           key={o.loCode}
                           accessibilityRole="button"
-                          accessibilityLabel={`${s.name} · ${o.labelBn} · ${masteryStateLabel(cell.state)}`}
+                          accessibilityLabel={`${s.name} · ${o.labelBn} · ${masteryStateLabel(cell.state)}${cell.inSchoolPending ? ` · ${STR.al6InSchoolPending}` : ""}`}
                           disabled={cell.state === "NOT_ASSESSED"}
                           onPress={() =>
                             o.level === "TAGGED"
@@ -256,7 +256,7 @@ export default function MasteryHeatmapScreen({ navigation, route }: Props): Reac
                         >
                           {o.level === "TAGGED" ? (
                             <Body style={{ color: c.fg, fontWeight: "700", fontSize: 12 }}>
-                              {cell.pct === null ? "—" : `${bnNum(cell.pct)}%`}
+                              {cell.pct === null ? "—" : `${bnNum(cell.pct)}%${cell.inSchoolPending ? "*" : ""}`}
                             </Body>
                           ) : (
                             // A roll-up cell carries the state word (no recent % at this level).
@@ -271,6 +271,7 @@ export default function MasteryHeatmapScreen({ navigation, route }: Props): Reac
                 ))}
               </View>
             </ScrollView>
+            {h.outcomes.some((o) => o.cells.some((c) => c.inSchoolPending)) ? <Muted>* {STR.al6InSchoolPending}</Muted> : null}
           </Card>
         </>
       )}

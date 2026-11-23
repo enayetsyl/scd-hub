@@ -37,6 +37,8 @@ import {
   budgetPolicy,
   countedMinutes,
   dayCapMinutes,
+  dayLabel,
+  staffDaySplit,
   dayOverMessage,
   hasAssignmentBudget,
   loadsOf,
@@ -405,4 +407,44 @@ export async function onAssignmentIssued(itemId: Types.ObjectId | string): Promi
     await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(new Date()), wholeIfAll: true }));
     throw err;
   }
+}
+
+/**
+ * AL-6b: the day label of an item for the finalise screen, in Bangla and English: "শুক্রবার" / "শনিবার", or for a subject
+ * that spans both days the Part A split plus where the per-child part falls — "শুক্রবার: প্রশ্ন ১–৬ · শনিবার: প্রশ্ন
+ * ৭–১২ + নিজস্ব অংশ". The per-child part is read off the median child's own questions. Null for a 2026 item.
+ */
+export async function dayLabelsOfItem(item: Pick<IAssignmentItem, "_id" | "doOnDay" | "minutesByDay">): Promise<{ bn: string; en: string } | null> {
+  if (!item.doOnDay) return null;
+  const pair = (split?: Parameters<typeof dayLabel>[2], own?: DoOnDay | null) => ({
+    bn: dayLabel("bn", item.doOnDay, split, own) as string,
+    en: dayLabel("en", item.doOnDay, split, own) as string,
+  });
+  if (item.doOnDay !== "BOTH") return pair();
+  const paper = await linkedAsPaper(item._id);
+  if (!paper) return pair();
+  const per = paper.perStudentItems ?? [];
+  const isCommon = (no: number) => per.length === 0 || per.every((p) => p.itemNos.includes(no));
+  const common = paper.items.filter((it) => isCommon(it.itemNo));
+  // The representative child: the median of the children's own-part marks (the same median the budget counts).
+  const marksOf = (nos: number[]) => paper.items.filter((it) => nos.includes(it.itemNo) && !isCommon(it.itemNo)).reduce((s, it) => s + it.marks, 0);
+  const ranked = per.map((p) => ({ nos: p.itemNos, marks: marksOf(p.itemNos) })).sort((a, b) => a.marks - b.marks);
+  const mid = ranked[Math.floor(ranked.length / 2)];
+  const own = mid ? paper.items.filter((it) => mid.nos.includes(it.itemNo) && !isCommon(it.itemNo)) : [];
+  const bp = await budgetPolicy();
+  const aLines = printPlan(common, 0);
+  const lastA = aLines.at(-1)?.no ?? 0;
+  const bLines = printPlan(own, lastA);
+  const r = staffDaySplit(
+    aLines.map((l) => ({ no: l.no, marks: l.item.marks })),
+    bLines.map((l) => ({ no: l.no, marks: l.item.marks })),
+    item.minutesByDay?.FRI ?? 0,
+    bp.minutesPerMark,
+  );
+  return pair(r.split, r.own);
+}
+
+/** The Bangla day label (see `dayLabelsOfItem`). */
+export async function dayLabelOfItem(item: Pick<IAssignmentItem, "_id" | "doOnDay" | "minutesByDay">): Promise<string | null> {
+  return (await dayLabelsOfItem(item))?.bn ?? null;
 }

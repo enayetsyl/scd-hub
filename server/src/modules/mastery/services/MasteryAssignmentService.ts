@@ -56,7 +56,7 @@ import type { MasteryLevelLabels } from "@scd/shared";
 
 import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
 import { avoidFor, isLoop2027On, recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
-import { SECOND_ASSIGNMENT_MESSAGE } from "../assignmentBudget";
+import { SECOND_ASSIGNMENT_MESSAGE, budgetPolicy, childDayLabel, dayLabel, staffDaySplit } from "../assignmentBudget";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 const oid = (s: string) => new Types.ObjectId(s);
@@ -191,6 +191,10 @@ export interface AssignmentView {
   status: string;
   paperId: string | null;
   asItemId: string | null;
+  /** AL-6b (switch on, set at finalise): the counted minutes of this subject and where they fall on the two home days. */
+  countedMinutes: number | null;
+  dayLabel: string | null;
+  dayLabelEn: string | null;
   partA: QuestionView[];
   sheets: SheetSummary[];
 }
@@ -216,6 +220,32 @@ async function labelsFor(classToken: MasteryClassToken, subject: MasterySubject)
   return new Map((await lockedOutcomes(classToken, subject)).map((o) => [o.code, o.labelBn]));
 }
 
+/**
+ * AL-6b (§4.4): the staff day label of a tailored assignment — Part A split over the whole sheet of the median child, plus
+ * where the per-child part falls ("শুক্রবার: প্রশ্ন ১–৬ · শনিবার: প্রশ্ন ৭–১২ + নিজস্ব অংশ"). Null with no split (2026).
+ */
+async function staffDayLabels(a: IMasteryAssignment, sheets: { items: { marks: number }[] }[]): Promise<{ bn: string; en: string } | null> {
+  if (!a.doOnDay) return null;
+  let split: Parameters<typeof dayLabel>[2] = null;
+  let own: Parameters<typeof dayLabel>[3] = null;
+  if (a.doOnDay === "BOTH") {
+    const ranked = [...sheets].sort((x, y) => sum(x.items) - sum(y.items));
+    const mid = ranked[Math.floor(ranked.length / 2)];
+    const aLines = printPlan(a.partA ?? [], 0);
+    const lastA = aLines.at(-1)?.no ?? 0;
+    const bLines = printPlan((mid?.items ?? []) as MasteryAssignmentQuestion[], lastA);
+    const r = staffDaySplit(
+      aLines.map((l) => ({ no: l.no, marks: l.item.marks })),
+      bLines.map((l) => ({ no: l.no, marks: l.item.marks })),
+      a.minutesByDay?.FRI ?? 0,
+      (await budgetPolicy()).minutesPerMark,
+    );
+    split = r.split;
+    own = r.own;
+  }
+  return { bn: dayLabel("bn", a.doOnDay, split, own) as string, en: dayLabel("en", a.doOnDay, split, own) as string };
+}
+
 async function assignmentView(a: IMasteryAssignment): Promise<AssignmentView> {
   const [labels, sheets, roster, paper] = await Promise.all([
     labelsFor(a.classToken, a.subject),
@@ -224,6 +254,7 @@ async function assignmentView(a: IMasteryAssignment): Promise<AssignmentView> {
     a.paperId ? MasteryPaper.findById(a.paperId).select("paperId").lean() : null,
   ]);
   const bySid = new Map(sheets.map((s) => [String(s.studentId), s]));
+  const staff = await staffDayLabels(a, sheets);
   return {
     id: String(a._id),
     sectionId: String(a.sectionId),
@@ -236,6 +267,9 @@ async function assignmentView(a: IMasteryAssignment): Promise<AssignmentView> {
     status: a.status,
     paperId: paper?.paperId ?? null,
     asItemId: a.asItemId ? String(a.asItemId) : null,
+    countedMinutes: typeof a.countedMinutes === "number" ? a.countedMinutes : null,
+    dayLabel: staff?.bn ?? null,
+    dayLabelEn: staff?.en ?? null,
     partA: (a.partA ?? []).map((q) => questionView(q, labels)),
     sheets: roster.flatMap((st) => {
       const s = bySid.get(String(st._id));
@@ -802,6 +836,17 @@ async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy
   const code = paper?.paperId ?? `খসড়া · ${a.week}`;
   const partA = a.partA ?? [];
   const stems = await stemsFor([...partA, ...sheets.flatMap((s) => s.items)]);
+  // AL-6b (§4.4): the day line — only an assignment finalised under the 2027 budget carries a split (`doOnDay`).
+  const minutesPerMark = a.doOnDay ? (await budgetPolicy()).minutesPerMark : 0;
+  // Each child's label comes from THEIR OWN questions and minutes: a sheet that fits Friday says "শুক্রবার".
+  const dayLine = (sheetItems: MasteryAssignmentQuestion[]): string | null => {
+    if (!a.doOnDay) return null;
+    const lastA = printPlan(partA, 0).at(-1)?.no ?? 0;
+    const lines = [...printPlan(partA, 0), ...printPlan(sheetItems, lastA)].map((l) => ({ no: l.no, marks: l.item.marks }));
+    return childDayLabel("bn", a.doOnDay, lines, a.minutesByDay?.FRI ?? 0, minutesPerMark);
+  };
+  // 2027 sheets print the counted minutes (R26), not the layout's.
+  const printedMinutes = typeof a.countedMinutes === "number" ? Math.round(a.countedMinutes) : a.layout.minutes;
 
   const pdf = await new Promise<Buffer>((resolve, reject) => {
     const M = 44;
@@ -875,11 +920,17 @@ async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy
       doc.fontSize(17).fillColor("#111111");
       mixedText(doc, `সাপ্তাহিক অ্যাসাইনমেন্ট · ${subjectBn}`, { width: W - 170 } as PDFKit.Mixins.TextOptions);
       doc.fontSize(11);
-      mixedText(doc, `${label.className} ${label.sectionName} · জমা: ${bn(a.dueDate.toISOString().slice(0, 10))} · সময় ${bn(a.layout.minutes)} মিনিট`, { width: W - 170 } as PDFKit.Mixins.TextOptions);
+      mixedText(doc, `${label.className} ${label.sectionName} · জমা: ${bn(a.dueDate.toISOString().slice(0, 10))} · সময় ${bn(printedMinutes)} মিনিট`, { width: W - 170 } as PDFKit.Mixins.TextOptions);
       const total = sum(partA) + sum(sheet.items);
       doc.fontSize(11).text(`নাম: ${personName(st)}`, M + W - 165, M, { width: 165, align: "right" });
       doc.text(`রোল: ${st.rollNumber ? bn(st.rollNumber) : "—"}`, { width: 165, align: "right" });
       doc.text(`পূর্ণমান: ${bn(total)}`, { width: 165, align: "right" });
+      const when = dayLine(sheet.items);
+      if (when) {
+        doc.x = M;
+        doc.fontSize(11);
+        mixedText(doc, `কবে করবে: ${when}`, { width: W - 170 } as PDFKit.Mixins.TextOptions);
+      }
       doc.y = Math.max(doc.y, M + 50);
       doc.moveTo(M, doc.y + 4).lineTo(M + W, doc.y + 4).strokeColor("#111111").lineWidth(2).stroke();
       doc.y += 14;

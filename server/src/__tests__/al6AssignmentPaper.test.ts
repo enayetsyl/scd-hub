@@ -44,7 +44,7 @@ import { MasteryAction } from "../modules/mastery/models/MasteryAction";
 import { MasteryEnablement } from "../modules/mastery/models/MasteryEnablement";
 import { MasteryEvidence } from "../modules/mastery/models/MasteryEvidence";
 import { MasteryPaper } from "../modules/mastery/models/MasteryPaper";
-import { importCatalogue, getPolicy, savePolicy, setEnablement } from "../modules/mastery/services/MasteryCatalogueService";
+import { importCatalogue, getPolicy, savePolicy, setEnablement, settleLoopRecompute } from "../modules/mastery/services/MasteryCatalogueService";
 import { classTestSheetLink, confirmPaper, createPaper, saveResults } from "../modules/mastery/services/MasteryWorkService";
 import { buildAssignment, assignmentFor, sendAssignment } from "../modules/mastery/services/MasteryAssignmentService";
 import { computeSection, liveSectionRows } from "../modules/mastery/services/MasteryDiagnosisService";
@@ -104,7 +104,11 @@ const CATALOGUE = JSON.stringify({
 });
 const bn = (n: number) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
 
-const setLoop = (on: boolean, extra: Record<string, unknown> = {}) => savePolicy(null, null, { academicLoop2027On: on, ...extra }, PRINCIPAL);
+const setLoop = async (on: boolean, extra: Record<string, unknown> = {}) => {
+  const r = await savePolicy(null, null, { academicLoop2027On: on, ...extra }, PRINCIPAL);
+  await settleLoopRecompute(); // the OFF → ON save recomputes in the background — let it finish before the test reads
+  return r;
+};
 let asSeq = 0;
 let fixtureWeek = 100;
 

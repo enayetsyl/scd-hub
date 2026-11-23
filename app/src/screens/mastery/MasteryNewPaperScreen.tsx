@@ -26,6 +26,7 @@ import {
   MASTERY_CLASS_TEST_OPTIONS_QUERY,
   MASTERY_HOMEWORK_DRAFT_QUERY,
   MASTERY_HOMEWORK_OPTIONS_QUERY,
+  MASTERY_LOOP_POLICY_QUERY,
   type MasteryHomeworkDraft,
   type MasteryClassTestOption,
   type MasteryOutcomeRow,
@@ -73,7 +74,10 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
   const { sectionId, subject, classLevel } = route.params;
   const classToken = tokenFor(classLevel);
   const toast = useToast();
-  const [source, setSource] = useState<"HW" | "CT" | "RUBRIC">(route.params.classTestId ? "CT" : "HW");
+  // AL-6b: "ক্লাসের কাজ" (CW) — in-class work, marked in the period; only with the 2027 release switch on (§3.6).
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY });
+  const loopOn = loopQ.data?.masteryPolicy?.resolved?.academicLoop2027On === true;
+  const [source, setSource] = useState<"HW" | "CT" | "RUBRIC" | "CW">(route.params.classTestId ? "CT" : route.params.source === "CW" ? "CW" : "HW");
   const [classTestId, setClassTestId] = useState<string | null>(route.params.classTestId ?? null);
   const [date, setDate] = useState(route.params.date ?? todayDhaka());
   const [title, setTitle] = useState("");
@@ -224,7 +228,9 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
     }
     const paperId = res.data?.createMasteryPaper?.paperId as string;
     toast.show(STR.msSaved);
-    navigation.replace("MasteryEntry", { paperId });
+    // AL-6b: an in-class work sheet takes its marks on the same tick-wrong grid as a homework.
+    if (source === "CW") navigation.replace("HomeworkMarksGrid", { paperId });
+    else navigation.replace("MasteryEntry", { paperId });
   }
 
   const canCreate = source === "RUBRIC" ? rubric.length > 0 : items.length > 0;
@@ -238,7 +244,9 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
         <Chip label={STR.msSourceHW} selected={source === "HW"} onPress={() => setSource("HW")} />
         <Chip label={STR.msSourceCT} selected={source === "CT"} onPress={() => setSource("CT")} />
         <Chip label={STR.msSourceRubric} selected={source === "RUBRIC"} onPress={() => setSource("RUBRIC")} />
+        {loopOn || source === "CW" ? <Chip label={STR.al6CwSource} selected={source === "CW"} onPress={() => setSource("CW")} /> : null}
       </ChipRow>
+      {source === "CW" ? <Notice message={STR.al6CwHint} tone="info" /> : null}
       {source === "CT" && ctOptions.length > 0 ? (
         <>
           <Muted>{STR.msCtLinkPick}</Muted>
@@ -298,10 +306,10 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
           ) : null}
         </Card>
       ) : null}
-      {source === "HW" ? (
+      {source === "HW" || source === "CW" ? (
         <Button title={STR.msDraftFromLesson} variant="secondary" onPress={() => void draftFromLesson()} loading={drafting} />
       ) : null}
-      {source === "HW" ? draftNotes.map((n, i) => <Notice key={i} message={n} tone="info" />) : null}
+      {source === "HW" || source === "CW" ? draftNotes.map((n, i) => <Notice key={i} message={n} tone="info" />) : null}
       {source === "HW" && (hwData?.masteryHomeworkOptions ?? []).length > 0 ? (
         <>
           <Muted>{STR.msLinkHw}</Muted>

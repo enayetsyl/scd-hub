@@ -13,6 +13,7 @@ import {
   APPROVE_MASTERY_ASSIGNMENT_SHEETS,
   BUILD_MASTERY_ASSIGNMENT,
   MASTERY_ASSIGNMENT_QUERY,
+  MASTERY_LOOP_POLICY_QUERY,
   MASTERY_ASSIGNMENT_TRACKER_ITEMS_QUERY,
   MASTERY_CATALOGUE_QUERY,
   SEND_MASTERY_ASSIGNMENT,
@@ -20,9 +21,11 @@ import {
   type MasteryAssignmentLayout,
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Select, H2 } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, masteryBandLabel } from "../../lib/labels";
+import { STR, bnNum, getActiveLang, hwSubjectLabel, masteryBandLabel } from "../../lib/labels";
+import { countedMinutesOf, pickDayLabel } from "../../lib/asBudget";
 import { friendlyError } from "../../lib/errors";
 import { openPdf } from "../../lib/pdf";
+import { AsRefusalNotice } from "../../components/AsRefusalNotice";
 import { useAuth } from "../../auth/AuthContext";
 import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -60,6 +63,13 @@ export default function MasteryAssignmentScreen({ navigation, route }: Props): R
   });
   const week = data?.masteryAssignment as { week: string; startingLayout: MasteryAssignmentLayout; assignment: MasteryAssignmentData | null } | undefined;
   const a = week?.assignment ?? null;
+  // AL-6b: with the 2027 switch on, the counted time is shown BEFORE sending (PRD §4.4); the server still holds the budget.
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY, pause: !can("mastery:view") });
+  const loop = loopQ.data?.masteryPolicy?.resolved;
+  const draftMinutes =
+    loop?.academicLoop2027On === true && a && a.status !== "SENT" && a.sheets.length > 0
+      ? countedMinutesOf(a.partA.reduce((s, q) => s + q.marks, 0), a.sheets.map((s) => s.marks), loop.minutesPerMark)
+      : null;
   // Back from a child screen (entry, sheet, action) must show what changed there.
   useEffect(() => {
     const unsub = navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" }));
@@ -151,13 +161,20 @@ export default function MasteryAssignmentScreen({ navigation, route }: Props): R
       <Field label={STR.msAsDueDate} value={dueDate} onChangeText={setDueDate} />
       {week ? <Muted>{bnNum(week.week)}</Muted> : null}
       {error ? <Notice message={friendlyError(error)} tone="danger" /> : null}
-      {msg ? <Notice message={msg} tone="danger" /> : null}
+      {msg ? <AsRefusalNotice message={msg} sectionId={sectionId} subject={subject} /> : null}
       {fetching && !week ? <Loader /> : null}
 
       {a && !draft ? (
         <Card>
           <Badge text={fill(STR.msAsSent, { paper: a.paperId ?? "" })} tone="ok" />
           <Muted>{STR.msAsSentNote}</Muted>
+          {/* AL-6b (§4.4): the counted time and when it is done (Friday / Saturday / split by question). */}
+          {a.countedMinutes != null ? (
+            <Muted>
+              {STR.al6WeekTime}: {bnNum(a.countedMinutes)} {STR.asMinutes}
+              {pickDayLabel(a.dayLabel, a.dayLabelEn, getActiveLang()) ? ` · ${STR.al6DayWhen}: ${pickDayLabel(a.dayLabel, a.dayLabelEn, getActiveLang())}` : ""}
+            </Muted>
+          ) : null}
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
             {a.paperId ? <Button title={STR.msAsEnterMarks} onPress={() => navigation.navigate("MasteryEntry", { paperId: a.paperId! })} /> : null}
             <Button title={STR.msAsAllPdf} variant="secondary" onPress={onPdf} />
@@ -270,6 +287,11 @@ export default function MasteryAssignmentScreen({ navigation, route }: Props): R
             </Pressable>
           ))}
 
+          {draftMinutes !== null ? (
+            <Muted>
+              {STR.al6CountedTime}: {bnNum(draftMinutes)} {STR.asMinutes}
+            </Muted>
+          ) : null}
           {draft && canCreate ? (
             <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
               <Button title={STR.msAsAllPdf} variant="secondary" onPress={onPdf} />

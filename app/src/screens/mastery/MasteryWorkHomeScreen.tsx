@@ -11,7 +11,7 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { HW_SUBJECTS, subjectsForClassLevel } from "@scd/shared";
-import { MASTERY_PAPERS_PAGE_QUERY, type MasteryPaperRow } from "../../graphql/mastery";
+import { MASTERY_LOOP_POLICY_QUERY, MASTERY_PAPERS_PAGE_QUERY, type MasteryPaperRow } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
 import { useAccessibleClasses } from "../../components/ClassSectionDashboard";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
@@ -42,6 +42,9 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [subject, setSubject] = useState<string>("MATH");
   const [page, setPage] = useState(1);
+  // AL-6b: the in-class work sheet ("ক্লাসের কাজ") exists only with the 2027 release switch on (§3.6).
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY });
+  const loopOn = loopQ.data?.masteryPolicy?.resolved?.academicLoop2027On === true;
   const [printMsg, setPrintMsg] = useState<string | null>(null);
   const active = sectionId ?? sections[0]?.id ?? null;
   const activeLevel = sections.find((s) => s.id === active)?.level ?? null;
@@ -110,6 +113,10 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
           />
           {/* PR-D (D-#1322): an extra tailored homework for the weak children of this শাখা × subject. */}
           <Button title={STR.msExtraButton} variant="secondary" onPress={() => navigation.navigate("MasteryExtraHomework", { sectionId: active, subject })} />
+          {/* AL-6b: in-class work, marked in the period — never printed for home, never a tracker item. */}
+          {loopOn ? (
+            <Button title={STR.al6CwButton} variant="secondary" onPress={() => navigation.navigate("MasteryNewPaper", { sectionId: active, subject, classLevel: activeLevel, source: "CW" })} />
+          ) : null}
         </View>
       ) : null}
 
@@ -135,6 +142,10 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
           </Muted>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
             <Button title={STR.msEntry} variant="secondary" onPress={() => navigation.navigate("MasteryEntry", { paperId: p.paperId })} />
+            {/* AL-6b: an AS / in-class sheet's marks go on the grid (each child only their own questions). */}
+            {(p.source === "AS" && loopOn) || p.source === "CW" ? (
+              <Button title={STR.al5GridOpen} variant="secondary" onPress={() => navigation.navigate("HomeworkMarksGrid", { paperId: p.paperId })} />
+            ) : null}
             {/* PR-J (D-#1420): the extra sheet as printed — one page per child. */}
             {p.extra ? <Button title={STR.msPrint} variant="secondary" onPress={() => { setPrintMsg(null); void openPdf(`/pdf/mastery-extra/${p.paperId}`).catch(() => setPrintMsg(STR.errGeneric)); }} /> : null}
           </View>

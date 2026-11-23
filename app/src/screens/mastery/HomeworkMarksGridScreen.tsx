@@ -31,7 +31,7 @@ import {
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, Notice, H2 } from "../../components/ui";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
-import { STR, bnNum, getActiveLang, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
+import { STR, bnNum, getActiveLang, hwSubjectLabel, masteryClassLabel, masterySourceLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
@@ -211,11 +211,15 @@ export default function HomeworkMarksGridScreen({ route }: Props): React.ReactEl
           </H2>
           <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap" }}>
             <Badge text={paper.paperId} tone="muted" />
+            {/* AL-6b: the weekly assignment and the in-class work sheet use this same grid. */}
+            {paper.source === "AS" || paper.source === "CW" ? <Badge text={masterySourceLabel(paper.source)} tone="info" /> : null}
             <Badge text={confirmed ? STR.al5GridConfirmedBadge : STR.msOpen} tone={confirmed ? "ok" : "gold"} />
             <Badge text={`${bnNum(items.length)} · ${bnNum(paper.totalMarks)}`} tone="brand" />
           </View>
           <Notice message={confirmed ? STR.al5GridCorrectionNote : STR.al5GridHint} tone="info" />
           {paper.marksOnly ? <Notice message={STR.al5GridMarksOnly} tone="info" /> : null}
+          {paper.source === "AS" ? <Notice message={STR.al6GridAsHint} tone="info" /> : null}
+          {paper.source === "CW" ? <Notice message={STR.al6CwHint} tone="info" /> : null}
         </>
       ) : (
         <>
@@ -271,6 +275,9 @@ export default function HomeworkMarksGridScreen({ route }: Props): React.ReactEl
                 const given = s.itemNos ? new Set(s.itemNos) : null;
                 const shownItems = given ? items.filter((it) => given.has(it.itemNo)) : items;
                 const total = childTotal(mine, shownItems);
+                // AL-6b: a child with their own questions (the weekly assignment) is numbered as THEIR printed sheet is.
+                const ownNo = new Map<number, string>();
+                if (given) printedLabels(shownItems, bnNum).forEach((l, i) => ownNo.set(shownItems[i]!.itemNo, l));
                 return (
                   <View
                     key={s.studentId}
@@ -303,9 +310,10 @@ export default function HomeworkMarksGridScreen({ route }: Props): React.ReactEl
                           onPress={() => onTap(s.studentId, it.itemNo, it.marks)}
                           disabled={!editable}
                           accessibilityRole="button"
-                          accessibilityLabel={`${printed[items.indexOf(it)]} ${cellLabel(earned, it.marks, bnNum)}`}
+                          accessibilityLabel={`${ownNo.get(it.itemNo) ?? printed[items.indexOf(it)]} ${cellLabel(earned, it.marks, bnNum)}`}
                           style={{ width: ITEM_W - 6, minHeight: 36, marginHorizontal: 3, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: cellBg(st), borderWidth: 1, borderColor: st === "FULL" ? colors.border : "transparent" }}
                         >
+                          {given ? <Body style={{ fontSize: 10, color: colors.textSecondary }}>{ownNo.get(it.itemNo)}</Body> : null}
                           <Body style={{ color: colors.textPrimary, fontWeight: st === "FULL" ? "400" : "700" }}>{cellLabel(earned, it.marks, bnNum)}</Body>
                         </Pressable>
                       );

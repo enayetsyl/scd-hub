@@ -80,6 +80,7 @@ setPdfRouter.get("/:id", async (req: Request, res: Response) => {
   const opts: RenderOptions = {
     showAnswers: truthy(req.query.answers),
     showMarks: truthy(req.query.marks),
+    whenLine: await asWhenLine(set, items),
   };
 
   // Isolate the render: a renderer/font failure returns 500 instead of rejecting
@@ -106,6 +107,24 @@ interface RenderOptions {
   showAnswers: boolean;
   /** Render per-question [marks] and the total-marks meta line. */
   showMarks: boolean;
+  /** AL-6b: "কবে করবে: …" for an AS set whose tracker item carries a 2027 day split; null otherwise. */
+  whenLine?: string | null;
+}
+
+/**
+ * AL-6b (§4.4): the untailored weekly-assignment sheet printed from its set says when to do it, like the tailored one.
+ * Only with the 2027 release switch on and only when the item that uses this set holds a split.
+ */
+export async function asWhenLine(set: Pick<LeanSet, "_id" | "setType">, items: Pick<BasketItem, "marks">[]): Promise<string | null> {
+  if (set.setType !== "AS") return null;
+  const { isLoop2027On } = await import("../services/QuestionUseService");
+  if (!(await isLoop2027On())) return null;
+  const { AssignmentItem } = await import("../../trackers/models/AssignmentItem");
+  const it = await AssignmentItem.findOne({ setId: set._id, doOnDay: { $exists: true, $ne: null } }).sort({ dueDate: -1 }).select("doOnDay minutesByDay").lean();
+  if (!it?.doOnDay) return null;
+  const { budgetPolicy, childDayLabel } = await import("../../mastery/assignmentBudget");
+  const label = childDayLabel("bn", it.doOnDay, items.map((x, i) => ({ no: i + 1, marks: x.marks })), it.minutesByDay?.FRI ?? 0, (await budgetPolicy()).minutesPerMark);
+  return label ? `কবে করবে: ${label}` : null;
 }
 
 async function renderSetToPdf(
@@ -153,6 +172,7 @@ async function renderSetToPdf(
         metaLine.push(`জমার তারিখ: ${due instanceof Date ? due.toLocaleDateString("bn-BD") : String(due)}`);
       }
     }
+    if (opts.whenLine) metaLine.push(opts.whenLine);
     if (metaLine.length > 0) {
       doc.fontSize(10);
       mixedText(doc, metaLine.join("   |   "), { align: "center" });

@@ -12,7 +12,8 @@ import { useQuery, useMutation } from "urql";
 import { AS_WEEK_LOAD, SET_AS_ITEM_MINUTES, CONFIRM_AS_WEEK } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, Loader, EmptyState, Notice } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, monthLabel } from "../../lib/labels";
+import { STR, bnNum, getActiveLang, hwSubjectLabel, monthLabel } from "../../lib/labels";
+import { pickDayLabel } from "../../lib/asBudget";
 import { friendlyError } from "../../lib/errors";
 import { useSectionLabel } from "../../lib/useSectionNames";
 import { space } from "../../theme/tokens";
@@ -106,6 +107,19 @@ export default function AssignmentReconcileScreen({ route, navigation }: Props):
                   {STR.asOverBy} {bnNum(load.overBy)} {STR.asMinutes} — {STR.asTrimHint}
                 </Muted>
               ) : null}
+              {/* AL-6b (§4.4): the two home days, each against its cap — only while the 2027 budget is on. */}
+              {(load.dayCap ?? 0) > 0 ? (
+                <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap", marginTop: space(2) }}>
+                  <Badge
+                    text={`${STR.al6DayFri} ${bnNum(load.friTotal ?? 0)} / ${bnNum(load.dayCap ?? 0)} ${STR.asMinutes}`}
+                    tone={(load.friTotal ?? 0) <= (load.dayCap ?? 0) ? "ok" : "warn"}
+                  />
+                  <Badge
+                    text={`${STR.al6DaySat} ${bnNum(load.satTotal ?? 0)} / ${bnNum(load.dayCap ?? 0)} ${STR.asMinutes}`}
+                    tone={(load.satTotal ?? 0) <= (load.dayCap ?? 0) ? "ok" : "warn"}
+                  />
+                </View>
+              ) : null}
             </Card>
 
             {load.items.map((it) => (
@@ -118,6 +132,11 @@ export default function AssignmentReconcileScreen({ route, navigation }: Props):
                   />
                 </View>
                 <Muted style={{ marginTop: 2 }}>{it.asId}</Muted>
+                {pickDayLabel(it.dayLabel, it.dayLabelEn, getActiveLang()) ? (
+                  <Muted style={{ marginTop: 2 }}>
+                    {STR.al6DayWhen}: {pickDayLabel(it.dayLabel, it.dayLabelEn, getActiveLang())}
+                  </Muted>
+                ) : null}
                 {it.status === "DRAFT" ? (
                   <View style={{ flexDirection: "row", alignItems: "flex-end", gap: space(2), marginTop: 6 }}>
                     <View style={{ flex: 1 }}>

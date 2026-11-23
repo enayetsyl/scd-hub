@@ -19,6 +19,7 @@ import {
   type MultiUploadResult,
 } from "../../lib/files";
 import { UploadDropZone } from "../../components/UploadDropZone";
+import { AsRefusalNotice } from "../../components/AsRefusalNotice";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, breakAnywhere, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, classSectionLabel, monthLabel } from "../../lib/labels";
@@ -81,6 +82,8 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
   const [setId, setSetId] = useState("");
   const [setIdError, setSetIdError] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  // AL-6b: the item was delivered but its question sheet could not be made — stay on the screen and say so.
+  const [paperWarning, setPaperWarning] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /** Delivery-pass attachments (≤5, D-#298) — uploaded on pick, bound at deliver. */
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -151,6 +154,11 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
     });
     setBusy(false);
     if (res.error || !res.data?.deliverAssignment) return setError(friendlyError(res.error));
+    const warn = res.data.deliverAssignment.paperWarning;
+    if (warn) {
+      setPaperWarning(warn);
+      return;
+    }
     navigation.goBack();
   }
 
@@ -213,7 +221,13 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
           </UploadDropZone>
         </Card>
 
-        {error ? <Notice message={error} tone="danger" /> : null}
+        {error ? <AsRefusalNotice message={error} sectionId={sectionId} subject={subject} /> : null}
+        {paperWarning ? (
+          <>
+            <Notice message={paperWarning} tone="warn" />
+            <Button title={STR.al6Back} variant="secondary" onPress={() => navigation.goBack()} />
+          </>
+        ) : null}
 
         {studentsQ.fetching ? (
           <Loader label={STR.loading} />
@@ -258,7 +272,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
                 title={STR.asDeliver}
                 onPress={onDeliver}
                 loading={busy}
-                disabled={busy || pickBusy || students.length === 0}
+                disabled={busy || pickBusy || students.length === 0 || paperWarning !== null}
               />
             </View>
           </Card>

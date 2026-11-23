@@ -162,3 +162,112 @@ export function dayOverMessage(overBy: number, dayCap: number): string {
     `প্রশ্ন কমিয়ে তারপর চূড়ান্ত করুন।`
   );
 }
+
+// ---------------------------------------------------------------------------
+// Day labels (AL-6b, §4.4): what the sheet and the finalise screen say about WHEN a subject is done
+// ---------------------------------------------------------------------------
+
+export interface DayQuestion {
+  /** The printed question number (parts of one stem share it). */
+  no: number;
+  marks: number;
+}
+
+/** The question numbers Friday and Saturday get when a subject spans both days: Friday takes questions while its minutes fit. */
+export function dayQuestionSplit(
+  questions: DayQuestion[],
+  friMinutes: number,
+  minutesPerMark: number,
+): { fri: [number, number] | null; sat: [number, number] | null } {
+  const byNo = new Map<number, number>();
+  for (const q of questions) byNo.set(q.no, (byNo.get(q.no) ?? 0) + q.marks);
+  const nos = [...byNo.keys()].sort((a, b) => a - b);
+  let used = 0;
+  const friNos: number[] = [];
+  const satNos: number[] = [];
+  for (const n of nos) {
+    const mins = (byNo.get(n) ?? 0) * minutesPerMark;
+    if (satNos.length === 0 && (friNos.length === 0 || used + mins <= friMinutes + 1e-9)) {
+      friNos.push(n);
+      used += mins;
+    } else satNos.push(n);
+  }
+  const span = (xs: number[]): [number, number] | null => (xs.length ? [xs[0]!, xs[xs.length - 1]!] : null);
+  return { fri: span(friNos), sat: span(satNos) };
+}
+
+type Span = [number, number] | null;
+export interface DaySplit {
+  fri: Span;
+  sat: Span;
+}
+export type DayLang = "bn" | "en";
+
+const WORDS = {
+  bn: { fri: "শুক্রবার", sat: "শনিবার", both: "শুক্র + শনি", q: "প্রশ্ন", own: "নিজস্ব অংশ" },
+  en: { fri: "Friday", sat: "Saturday", both: "Fri + Sat", q: "questions", own: "own part" },
+} as const;
+const numL = (lang: DayLang, n: number): string => (lang === "bn" ? bn(n) : String(n));
+const range = (lang: DayLang, r: [number, number]): string => (r[0] === r[1] ? numL(lang, r[0]) : `${numL(lang, r[0])}–${numL(lang, r[1])}`);
+
+/**
+ * The day label of an assignment in `lang`: "শুক্রবার" / "শনিবার" / "শুক্র + শনি" — and, when it spans both days and the
+ * question split is known, "শুক্রবার: প্রশ্ন ১–৬ · শনিবার: প্রশ্ন ৭–১২" (PRD §4.4). `own` = the per-child part exists and
+ * falls on that day (staff view): " + নিজস্ব অংশ". Null when no split is set (a 2026 item).
+ */
+export function dayLabel(lang: DayLang, doOnDay: DoOnDay | null | undefined, split?: DaySplit | null, own?: DoOnDay | null): string | null {
+  const w = WORDS[lang];
+  if (doOnDay === "FRI") return w.fri;
+  if (doOnDay === "SAT") return w.sat;
+  if (doOnDay !== "BOTH") return null;
+  const parts: string[] = [];
+  if (split?.fri) parts.push(`${w.fri}: ${w.q} ${range(lang, split.fri)}`);
+  if (split?.sat) parts.push(`${w.sat}: ${w.q} ${range(lang, split.sat)}`);
+  let out = parts.length > 0 ? parts.join(" · ") : w.both;
+  if (own) {
+    const tag = own === "FRI" ? ` (${w.fri})` : own === "SAT" ? ` (${w.sat})` : "";
+    out += ` + ${w.own}${tag}`;
+  }
+  return out;
+}
+
+export function dayLabelBn(doOnDay: DoOnDay | null | undefined, split?: DaySplit | null, own?: DoOnDay | null): string | null {
+  return dayLabel("bn", doOnDay, split, own);
+}
+export function dayLabelEn(doOnDay: DoOnDay | null | undefined, split?: DaySplit | null, own?: DoOnDay | null): string | null {
+  return dayLabel("en", doOnDay, split, own);
+}
+
+const clip = (r: Span, lo: number, hi: number): Span => {
+  if (!r) return null;
+  const a = Math.max(r[0], lo);
+  const b = Math.min(r[1], hi);
+  return a <= b ? [a, b] : null;
+};
+
+/**
+ * The staff view of a subject that spans both days: Part A (common, numbered 1..N) is split by Friday's minutes over the
+ * WHOLE sheet of a representative child (Part A, then that child's own part numbered N+1…), plus the day(s) the own part
+ * falls on.
+ */
+export function staffDaySplit(partA: DayQuestion[], partB: DayQuestion[], friMinutes: number, minutesPerMark: number): { split: DaySplit; own: DoOnDay | null } {
+  const lastA = partA.reduce((m, q) => Math.max(m, q.no), 0);
+  const full = dayQuestionSplit([...partA, ...partB], friMinutes, minutesPerMark);
+  const split: DaySplit = { fri: clip(full.fri, 1, lastA), sat: clip(full.sat, 1, lastA) };
+  if (partB.length === 0) return { split, own: null };
+  const onFri = Boolean(full.fri && full.fri[1] > lastA);
+  const onSat = Boolean(full.sat && full.sat[1] > lastA);
+  return { split, own: onFri && onSat ? "BOTH" : onFri ? "FRI" : "SAT" };
+}
+
+/**
+ * ONE child's own label for the printed sheet, from that child's own minutes: a sheet that fits what is left of Friday
+ * says "শুক্রবার"; one that does not is split over the child's questions (numbered over their whole sheet).
+ */
+export function childDayLabel(lang: DayLang, doOnDay: DoOnDay | null | undefined, questions: DayQuestion[], friMinutes: number, minutesPerMark: number): string | null {
+  if (doOnDay !== "BOTH") return dayLabel(lang, doOnDay);
+  const sp = dayQuestionSplit(questions, friMinutes, minutesPerMark);
+  if (!sp.sat) return dayLabel(lang, "FRI");
+  if (!sp.fri) return dayLabel(lang, "SAT");
+  return dayLabel(lang, "BOTH", sp);
+}

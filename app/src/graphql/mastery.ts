@@ -497,6 +497,8 @@ export interface MasteryClassTestSheetLink {
   entryState: string | null;
   sectionId: string | null;
   classLevel: number | null;
+  /** AL-6b (AC-F1): mastery is on here but no question sheet is linked (switch on) — a warning, never a block. */
+  noSheetWarning?: boolean;
 }
 
 export const MASTERY_CLASS_TEST_SHEET_QUERY = gql`
@@ -507,6 +509,7 @@ export const MASTERY_CLASS_TEST_SHEET_QUERY = gql`
       entryState
       sectionId
       classLevel
+      noSheetWarning
     }
   }
 `;
@@ -684,6 +687,7 @@ const STATE_FIELDS = `
   reworkCount
   reasons
   nextRevisionAt
+  inSchoolPending
   level
   parentCode
   domainCode
@@ -709,6 +713,7 @@ const HEAT_COLUMN_FIELDS = `
   cells {
     state
     pct
+    inSchoolPending
   }
   level
   parentCode
@@ -945,6 +950,8 @@ export type MasteryOutcomeStateRow = {
   reworkCount: number;
   reasons: string[];
   nextRevisionAt: string | null;
+  /** AL-6b (§3.8): IMPROVING only because the good work was at home — "ক্লাসে যাচাই বাকি". */
+  inSchoolPending?: boolean;
   /** OT-3: OBJECTIVE | SUB (a flat row: OBJECTIVE, no parent, no domain). */
   level: string;
   parentCode: string | null;
@@ -1007,7 +1014,7 @@ export type MasteryHeatColumn = {
   sectionMeanPct: number | null;
   actionId: string | null;
   actionStatus: string | null;
-  cells: { state: string; pct: number | null }[];
+  cells: { state: string; pct: number | null; inSchoolPending?: boolean }[];
   /** OT-3: TAGGED | OBJECTIVE | DOMAIN */
   level: string;
   parentCode: string | null;
@@ -1193,6 +1200,9 @@ const ASSIGNMENT_FIELDS = `
   status
   paperId
   asItemId
+  countedMinutes
+  dayLabel
+  dayLabelEn
   layout { ${LAYOUT_FIELDS} }
   partA { ${AS_QUESTION_FIELDS} }
   sheets {
@@ -1367,6 +1377,10 @@ export type MasteryAssignmentData = {
   status: string;
   paperId: string | null;
   asItemId: string | null;
+  /** AL-6b: counted minutes + the Bangla day label, set at finalise with the release switch on. */
+  countedMinutes?: number | null;
+  dayLabel?: string | null;
+  dayLabelEn?: string | null;
   layout: MasteryAssignmentLayout;
   partA: MasteryAssignmentQuestionRow[];
   sheets: {
@@ -1826,6 +1840,20 @@ export const MASTERY_LOOP_POLICY_QUERY = gql`
 `;
 
 export type MasteryLoopPolicy = { academicLoop2027On: boolean; minutesPerMark: number };
+
+/** AL-6b: the school-wide "সাপ্তাহিক চক্র" keys (§3.5, the S keys without the two integrity ones — those are AL-12). */
+export const MASTERY_CYCLE_KEYS = [
+  "academicLoop2027On", "weeklyAssignmentHoursCap", "perDayHours", "subjectsPerWeekMin", "subjectsPerWeekMax",
+  "minutesPerMark", "asDraftLeadDays", "asDraftHour", "hwMarkDeadlineDays", "asMarkDeadlineDow",
+  "termBehindAlertWeeks", "lateMarksMistakeFromTerm", "guardianSummaryDow", "guardianSummaryHour",
+] as const;
+export const MASTERY_CYCLE_QUERY = gql`
+  query MasteryCyclePolicy {
+    masteryPolicy {
+      resolved { ${MASTERY_CYCLE_KEYS.join(" ")} }
+    }
+  }
+`;
 
 /** The free-line done / not-done grid of one homework (R22): which children have a record, and the lines not done. */
 export const HOMEWORK_FREE_LINE_GRID_QUERY = gql`

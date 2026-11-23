@@ -12,6 +12,8 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import {
+  MASTERY_CYCLE_KEYS,
+  MASTERY_CYCLE_QUERY,
   MASTERY_COVERAGE_QUERY,
   MASTERY_ENABLEMENTS_QUERY,
   MASTERY_POLICY_QUERY,
@@ -24,6 +26,7 @@ import type { MasteryLevelLabels } from "@scd/shared";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { ACADEMIC_YEARS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, H2 } from "../../components/ui";
+import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { STR, hwSubjectLabel, masteryClassLabel, masteryPolicyLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -94,6 +97,93 @@ function LevelNamesCard({ canManage }: { canManage: boolean }): React.ReactEleme
   );
 }
 
+/**
+ * "সাপ্তাহিক চক্র" (AL-6b, PRD §3.5) — the school-wide 2027 keys (release switch, weekly cap, per-day hours, subjects
+ * a week, minutes per mark, draft / marking / summary timing). School row only; a class × subject cannot override them.
+ * The two homework-check keys are NOT here (they sit on the হোমওয়ার্ক যাচাই screen, AL-12).
+ *
+ * The existing save replaces the OLDER keys wholesale (the server keeps only the 2027 keys it is not sent), so this
+ * card sends the school's current older values together with its own keys — saving here never resets them.
+ */
+function WeeklyCycleCard({ canManage, olderValues }: { canManage: boolean; olderValues: Record<string, number | boolean> }): React.ReactElement | null {
+  const toast = useToast();
+  // PRD §3.6: only the Principal turns the release switch on or off (the server refuses anyone else too).
+  const { role } = useAuth();
+  const canSwitch = canManage && role === "PRINCIPAL";
+  const [{ data, fetching }, refetch] = useQuery({ query: MASTERY_CYCLE_QUERY, requestPolicy: "cache-and-network" });
+  const resolved = data?.masteryPolicy?.resolved as Record<string, number | boolean> | undefined;
+  const [draft, setDraft] = useState<Record<string, string | boolean>>({});
+  const [err, setErr] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [save, savePolicy] = useMutation(SAVE_MASTERY_POLICY);
+
+  useEffect(() => {
+    if (!resolved) return;
+    const next: Record<string, string | boolean> = {};
+    for (const k of MASTERY_CYCLE_KEYS) {
+      const v = resolved[k];
+      if (v !== undefined && v !== null) next[k] = typeof v === "boolean" ? v : String(v);
+    }
+    setDraft(next);
+  }, [resolved]);
+
+  if (!resolved) return fetching ? <Loader /> : null;
+  const switchChanged = draft.academicLoop2027On !== undefined && draft.academicLoop2027On !== resolved.academicLoop2027On;
+
+  async function doSave(): Promise<void> {
+    setAsking(false);
+    setErr(null);
+    const values: Record<string, number | boolean> = { ...olderValues };
+    for (const k of MASTERY_CYCLE_KEYS) {
+      const v = draft[k];
+      if (typeof v === "boolean") values[k] = v;
+      else if (typeof v === "string") {
+        const n = v.trim() === "" ? NaN : Number(v.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))));
+        if (!Number.isFinite(n)) {
+          setErr(`${masteryPolicyLabel(k)}: ${STR.al6FieldInvalid}`);
+          return;
+        }
+        values[k] = n;
+      }
+    }
+    const res = await savePolicy({ classToken: null, subject: null, values });
+    if (res.error) {
+      setErr(friendlyError(res.error));
+      return;
+    }
+    toast.show(STR.al6PolicySaved);
+    // The older keys went through unchanged, so the card above this one (and its unsaved edits) is left alone.
+    refetch({ requestPolicy: "network-only" });
+  }
+
+  return (
+    <Card>
+      <H2>{STR.al6PolicyCard}</H2>
+      <Muted>{STR.al6PolicyHint}</Muted>
+      {err ? <Notice message={err} tone="danger" /> : null}
+      {MASTERY_CYCLE_KEYS.map((k) => {
+        const isBool = typeof resolved[k] === "boolean";
+        return (
+          <View key={k} style={{ gap: space(1), paddingVertical: space(1) }}>
+            <Body>{masteryPolicyLabel(k)}</Body>
+            {isBool ? (
+              <ChipRow>
+                <Chip label={STR.msActive} selected={draft[k] === true} onPress={() => (k === "academicLoop2027On" ? canSwitch : canManage) && setDraft((d) => ({ ...d, [k]: true }))} />
+                <Chip label={STR.msInactive} selected={draft[k] === false} onPress={() => (k === "academicLoop2027On" ? canSwitch : canManage) && setDraft((d) => ({ ...d, [k]: false }))} />
+              </ChipRow>
+            ) : (
+              <Field value={String(draft[k] ?? "")} onChangeText={(t) => setDraft((d) => ({ ...d, [k]: t }))} keyboardType="decimal-pad" editable={canManage} />
+            )}
+          </View>
+        );
+      })}
+      {!canSwitch ? <Muted>{STR.al6SwitchPrincipalOnly}</Muted> : null}
+      {canManage ? <Button title={STR.msSave} onPress={() => (switchChanged ? setAsking(true) : void doSave())} loading={save.fetching} /> : null}
+      <ConfirmSheet visible={asking} message={STR.al6SwitchAsk} confirmLabel={STR.msSave} tone="primary" onCancel={() => setAsking(false)} onConfirm={() => void doSave()} />
+    </Card>
+  );
+}
+
 export default function MasteryPolicyScreen(_props: Props): React.ReactElement {
   const toast = useToast();
   const { can } = useAuth();
@@ -129,14 +219,16 @@ export default function MasteryPolicyScreen(_props: Props): React.ReactElement {
 
   async function onSave(clear = false): Promise<void> {
     setError(null);
+    // A stale read (the scope chip changed, the new scope has not loaded) must never be saved onto the wrong row.
+    if (!policy || (scope === "SCHOOL") !== (policy.scopeKey === "SCHOOL")) return;
     const values: Record<string, number | boolean> = {};
     if (!clear) {
       for (const [k, v] of Object.entries(own)) {
         if (typeof v === "boolean") values[k] = v;
         else {
-          const n = Number(v.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))));
+          const n = v.trim() === "" ? NaN : Number(v.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))));
           if (!Number.isFinite(n)) {
-            setError(`${masteryPolicyLabel(k)}: ?`);
+            setError(`${masteryPolicyLabel(k)}: ${STR.al6FieldInvalid}`);
             return;
           }
           values[k] = n;
@@ -257,6 +349,12 @@ export default function MasteryPolicyScreen(_props: Props): React.ReactElement {
         </Card>
       ) : null}
 
+      {scope === "SCHOOL" && policy?.scopeKey === "SCHOOL" ? (
+        <WeeklyCycleCard
+          canManage={canManage}
+          olderValues={Object.fromEntries(Object.entries(policy.resolved).filter(([k, v]) => k !== "__typename" && (typeof v === "number" || typeof v === "boolean"))) as Record<string, number | boolean>}
+        />
+      ) : null}
       {scope === "SCHOOL" ? <LevelNamesCard canManage={canManage} /> : null}
 
       <H2>{STR.msSwitch}</H2>

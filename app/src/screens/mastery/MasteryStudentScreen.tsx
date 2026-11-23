@@ -39,6 +39,8 @@ function whyLine(o: MasteryOutcomeStateRow): string {
   if (o.reworkCount > 0) parts.push(`${STR.msReworkCount} ${bnNum(o.reworkCount)}`);
   if (o.sectionMeanPct !== null) parts.push(`${STR.msSectionMean} ${bnNum(o.sectionMeanPct)}%`);
   for (const r of o.reasons) if (r !== "REWORK") parts.push(masteryReasonLabel(r));
+  // AL-6b (§3.8): IMPROVING only because the good work was at home.
+  if (o.inSchoolPending) parts.push(STR.al6InSchoolPending);
   return parts.join(" · ");
 }
 
@@ -124,7 +126,10 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
       >
         <StateDot state={o.state} />
         <Body style={{ flex: 1 }}>{o.labelBn}</Body>
-        <Muted>{masteryStateLabel(o.state)}</Muted>
+        <Muted>
+          {masteryStateLabel(o.state)}
+          {o.inSchoolPending ? ` · ${STR.al6InSchoolPending}` : ""}
+        </Muted>
       </Pressable>
     );
   };
