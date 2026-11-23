@@ -43,7 +43,10 @@ import {
 } from "./MasteryWorkService";
 import {
   computeOutcomeState,
+  inSchoolSectionSummary,
+  isInSchoolSource,
   paperQuality,
+  requireInSchool,
   sectionOutcomeSummary,
   QUALITY_RANK_WEEKS,
   type DiagnosisPolicy,
@@ -95,7 +98,7 @@ export async function liveSectionRows(
   const rows = await MasteryEvidence.find({
     sectionId, subject, supersededAt: null, excludedAt: null, ...codeFilter,
   })
-    .select("studentId paperId itemNo qid loCode earned available rubricStep rework signal routed at week")
+    .select("studentId paperId itemNo qid loCode earned available rubricStep rework signal routed at week source")
     .lean(); // bounded: one section × subject's evidence for the year
   return rows.map((r) => ({
     studentId: String(r.studentId),
@@ -111,6 +114,9 @@ export async function liveSectionRows(
     routed: Boolean(r.routed),
     at: new Date(r.at),
     week: r.week,
+    // §3.8: the paper's source; the in-school rule reads it (and only when the 2027 switch is on).
+    source: r.source ?? null,
+    inSchool: isInSchoolSource(r.source),
   }));
 }
 
@@ -434,6 +440,8 @@ export interface OutcomeStateView {
   reworkCount: number;
   reasons: string[];
   nextRevisionAt: string | null;
+  /** AL-6 (§3.8): IMPROVING only because the good work was at home — "ক্লাসে যাচাই বাকি". False with the 2026 rule. */
+  inSchoolPending: boolean;
   // OT-3: where the row sits in the tree (a flat row: OBJECTIVE, no parent, no domain).
   level: string;
   parentCode: string | null;
@@ -469,6 +477,7 @@ function stateView(
     reworkCount: s?.reworkCount ?? 0,
     reasons: s?.reasons ?? [],
     nextRevisionAt: iso(s?.nextRevisionAt),
+    inSchoolPending: s?.inSchoolPending ?? false,
   };
 }
 
@@ -794,6 +803,10 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
   const actionOf = new Map(actions.map((x) => [x.loCode, { id: String(x._id), status: x.status as string }]));
   const sec = computeSection(rows, policy, new Date());
   const students = roster.map((s) => String(s._id));
+  // §3.8: with the 2027 in-school rule the section banner reads in-school evidence only (the cells keep each child's state).
+  const schoolRule = requireInSchool(policy);
+  const rowsByLo = new Map<string, typeof rows>();
+  if (schoolRule) for (const r of rows) rowsByLo.set(r.loCode, [...(rowsByLo.get(r.loCode) ?? []), r]);
   const heat: HeatOutcome[] = [];
   const parentLabel = (code: string | null | undefined) => (code ? t.tree.byCode.get(code)?.labelBn ?? null : null);
   for (const o of t.tree.tagged) {
@@ -803,8 +816,12 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
       const s = per.get(sid);
       return { state: (s?.state ?? "NOT_ASSESSED") as MasteryState, pct: round(s?.recentPct) };
     });
-    const assessments = sec.assessments.get(o.code) ?? 0;
-    const sum = sectionOutcomeSummary(cells.map((c) => c.state), assessments, policy);
+    const school = schoolRule ? inSchoolSectionSummary(rowsByLo.get(o.code) ?? [], policy, students.length) : null;
+    // With the in-school rule the number shown is the in-school paper count the trigger uses (§3.8).
+    const assessments = school ? school.inSchoolAssessments : sec.assessments.get(o.code) ?? 0;
+    const sum = school
+      ? { weak: school.weak, verdicts: school.verdicts, weakPct: school.weakPct, triggered: school.triggered }
+      : sectionOutcomeSummary(cells.map((c) => c.state), assessments, policy);
     heat.push({
       loCode: o.code, labelBn: o.labelBn, chapterNumber: o.chapterNumber ?? null, strand: o.strand ?? null,
       assessments, ...sum, sectionMeanPct: round(sec.means.get(o.code)),

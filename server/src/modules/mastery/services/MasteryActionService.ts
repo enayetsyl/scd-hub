@@ -32,7 +32,7 @@ import { MasteryWorkError, assertMayWork, dayOf, nextPaperId, rosterOf, sectionC
 import { computeSection, liveSectionRows, sectionLabel } from "./MasteryDiagnosisService";
 import { goldBank, marksTable } from "./MasteryAssignmentService";
 import { pickTyped } from "../assignmentBuilder";
-import { sectionOutcomeSummary, type DiagnosisPolicy } from "../diagnosis";
+import { inSchoolSectionSummary, requireInSchool, sectionOutcomeSummary, type DiagnosisPolicy } from "../diagnosis";
 import { notifyExtraClass, notifyProposal, outcomeNaming } from "../notify";
 import { recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
@@ -74,8 +74,18 @@ async function outcomeNow(a: Pick<IMasteryAction, "sectionId" | "subject" | "cla
   const [rows, policy] = await Promise.all([liveSectionRows(a.sectionId, a.subject, a.loCode), getPolicy(a.classToken, a.subject)]);
   const sec = computeSection(rows, policy.resolved, new Date());
   const per = sec.states.get(a.loCode) ?? new Map();
-  const summary = sectionOutcomeSummary([...per.values()].map((s) => s.state), sec.assessments.get(a.loCode) ?? 0, policy.resolved);
-  return { per, summary, policy: policy.resolved };
+  let summary: { weak: number; verdicts: number; weakPct: number | null; triggered: boolean } = sectionOutcomeSummary(
+    [...per.values()].map((s) => s.state), sec.assessments.get(a.loCode) ?? 0, policy.resolved,
+  );
+  // R17 (AL-6, switch + masteredNeedsInSchool): the section's numbers — before / after grading, attendees — read the
+  // in-school summary, the same one the trigger used. The child's own state stays as it is. Off → the 2026 summary.
+  let schoolRule = false;
+  if (requireInSchool(policy.resolved)) {
+    schoolRule = true;
+    const s = inSchoolSectionSummary(rows, policy.resolved, (await rosterOf(a.sectionId)).length);
+    summary = { weak: s.weak, verdicts: s.verdicts, weakPct: s.weakPct, triggered: s.triggered };
+  }
+  return { per, summary, policy: policy.resolved, schoolRule };
 }
 
 const meanOf = (xs: (number | null)[]) => {
@@ -93,9 +103,23 @@ export async function evaluateSectionTriggers(sectionId: Types.ObjectId, subject
   if (!(await isMasteryEnabled(ctx.academicYearId, ctx.classToken, subject))) return 0;
   const [rows, policy] = await Promise.all([liveSectionRows(ctx.sectionId, subject), getPolicy(ctx.classToken, subject)]);
   const sec = computeSection(rows, policy.resolved, new Date());
+  // §3.8 (switch on + masteredNeedsInSchool): the trigger reads in-school evidence only; the child's own state (WEAK from
+  // homework) is unchanged by this. Off → the 2026 summary over every child's state, exactly as before.
+  const schoolRule = requireInSchool(policy.resolved);
+  const rosterSize = schoolRule ? (await rosterOf(ctx.sectionId)).length : 0;
   let opened = 0;
   for (const [loCode, per] of sec.states) {
-    const s = sectionOutcomeSummary([...per.values()].map((x) => x.state), sec.assessments.get(loCode) ?? 0, policy.resolved);
+    let s: { weak: number; verdicts: number; weakPct: number | null; triggered: boolean };
+    let weakIds = [...per.entries()].filter(([, x]) => x.state === "WEAK").map(([sid]) => sid);
+    let papers = sec.assessments.get(loCode) ?? 0;
+    if (schoolRule) {
+      const inS = inSchoolSectionSummary(rows.filter((r) => r.loCode === loCode), policy.resolved, rosterSize);
+      s = inS;
+      weakIds = inS.weakStudentIds;
+      papers = inS.inSchoolAssessments;
+    } else {
+      s = sectionOutcomeSummary([...per.values()].map((x) => x.state), papers, policy.resolved);
+    }
     if (!s.triggered) continue;
     if (await MasteryAction.exists({ sectionId: ctx.sectionId, subject, loCode, status: { $in: OPEN } })) continue;
     const now = new Date();
@@ -111,8 +135,8 @@ export async function evaluateSectionTriggers(sectionId: Types.ObjectId, subject
         kind: "EXTRA_CLASS",
         status: "PROPOSED",
         trigger: {
-          at: now, weakPct: s.weakPct ?? 0, weak: s.weak, verdicts: s.verdicts, assessments: sec.assessments.get(loCode) ?? 0,
-          weakStudentIds: [...per.entries()].filter(([, x]) => x.state === "WEAK").map(([sid]) => oid(sid)),
+          at: now, weakPct: s.weakPct ?? 0, weak: s.weak, verdicts: s.verdicts, assessments: papers,
+          weakStudentIds: weakIds.map((sid) => oid(sid)),
         },
         events: [{ at: now, kind: "PROPOSED" }],
       });
@@ -176,10 +200,13 @@ export async function decideAction(id: string, input: DecideInput, auth: Auth): 
       }
     }
     const attendees: MasteryAttendeeSet = input.attendees ?? "WEAK";
-    const { per, summary, policy } = await outcomeNow(a);
+    const { per, summary, policy, schoolRule } = await outcomeNow(a);
     const roster = await rosterOf(a.sectionId);
-    const want = (st: string) => (attendees === "SECTION" ? true : attendees === "WEAK_IMPROVING" ? st === "WEAK" || st === "IMPROVING" : st === "WEAK");
-    const studentIds = roster.map((s) => String(s._id)).filter((sid) => want(per.get(sid)?.state ?? "NOT_ASSESSED"));
+    // R17: with the in-school rule the default attendees are the trigger's in-school weak children.
+    const triggerWeak = new Set((a.trigger?.weakStudentIds ?? []).map(String));
+    const isWeak = (sid: string, st: string) => (schoolRule ? triggerWeak.has(sid) : st === "WEAK");
+    const want = (sid: string, st: string) => (attendees === "SECTION" ? true : attendees === "WEAK_IMPROVING" ? isWeak(sid, st) || st === "IMPROVING" : isWeak(sid, st));
+    const studentIds = roster.map((s) => String(s._id)).filter((sid) => want(sid, per.get(sid)?.state ?? "NOT_ASSESSED"));
     if (studentIds.length === 0) throw new MasteryWorkError("এই বাছাইয়ে কোনো শিক্ষার্থী নেই।");
     const base = date ?? dayOf(ymd(now)!);
     const retestDate = input.retestDate ? dayOf(input.retestDate) : new Date(base.getTime() + policy.retestAfterDays * DAY);
@@ -544,6 +571,7 @@ async function weakChildrenOf(
   objectiveCode: string,
   policy: DiagnosisPolicy,
 ): Promise<ActionDetail["weakChildren"]> {
+  const rosterSize = requireInSchool(policy) ? (await rosterOf(a.sectionId)).length : 0;
   const kids = await MasteryOutcome.find({ parentCode: objectiveCode, status: "LOCKED", tagged: { $ne: false } })
     .select("code labelBn order")
     .sort({ order: 1, code: 1 })
@@ -555,7 +583,9 @@ async function weakChildrenOf(
   return kids
     .map((k) => {
       const per = sec.states.get(k.code);
-      const s = sectionOutcomeSummary(per ? [...per.values()].map((x) => x.state) : [], sec.assessments.get(k.code) ?? 0, policy);
+      const s = requireInSchool(policy)
+        ? inSchoolSectionSummary(rows.filter((r) => r.loCode === k.code), policy, rosterSize)
+        : sectionOutcomeSummary(per ? [...per.values()].map((x) => x.state) : [], sec.assessments.get(k.code) ?? 0, policy);
       return { code: k.code, labelBn: k.labelBn, weak: s.weak, verdicts: s.verdicts, weakPct: s.weakPct, triggered: s.triggered };
     })
     .filter((k) => k.weak > 0)

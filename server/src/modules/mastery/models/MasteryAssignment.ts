@@ -65,6 +65,11 @@ export interface IMasteryAssignment extends Document {
   builtBy: Types.ObjectId;
   sentAt?: Date;
   sentBy?: Types.ObjectId;
+  /** AL-6 (§4.4, switch on): the minutes the week budget counted for this subject at finalise — (Part A + the median
+   *  child's Part B marks) × minutesPerMark — and where they fall on the two home days. Unset on a 2026 assignment. */
+  countedMinutes?: number;
+  doOnDay?: "FRI" | "SAT" | "BOTH";
+  minutesByDay?: { FRI: number; SAT: number };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -120,6 +125,9 @@ const MasteryAssignmentSchema = new Schema<IMasteryAssignment>(
     builtBy: { type: Schema.Types.ObjectId, required: true },
     sentAt: { type: Date },
     sentBy: { type: Schema.Types.ObjectId },
+    countedMinutes: { type: Number, min: 0 },
+    doOnDay: { type: String, enum: ["FRI", "SAT", "BOTH"] },
+    minutesByDay: { type: new Schema({ FRI: { type: Number, min: 0, default: 0 }, SAT: { type: Number, min: 0, default: 0 } }, { _id: false }), default: undefined },
   },
   { timestamps: true },
 );

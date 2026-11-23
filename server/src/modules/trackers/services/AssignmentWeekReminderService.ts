@@ -8,6 +8,9 @@
  */
 import { AS_WEEKLY_CEILING_MIN, HW_SUBJECT_LABELS_BN, type HwSubject } from "@scd/shared";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { weeklyCeilingMinutes } from "../assignmentCeiling";
+import { isLoop2027On } from "../../assessment/services/QuestionUseService";
+import { budgetPolicy, dayCapMinutes, splitDays } from "../../mastery/assignmentBudget";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
@@ -32,6 +35,11 @@ export interface PendingAssignmentWeek {
   weekOfMonth: number | null;
   /** Σ estMinutes of ALL the week's items (draft + issued) — over the cap, confirm is refused until trimmed. */
   totalMinutes: number;
+  /** AL-6: the week ceiling the total is checked against (the policy cap with the release switch on, else 360). */
+  ceilingMinutes?: number;
+  /** AL-6 (switch on): the week cannot be placed on Friday + Saturday under the per-day cap (confirm refuses; trim). */
+  dayOver?: boolean;
+  dayCapMinutes?: number;
   /** The ACTIVE class teacher; null when none or they have left (the scheduler then tells Office). */
   classTeacherId: string | null;
   draftSubjects: HwSubject[];
@@ -67,15 +75,22 @@ export function weekReminderBodyBn(p: {
   draftSubjects: readonly string[];
   missingSubjects: readonly string[];
   totalMinutes: number;
+  ceilingMinutes?: number;
+  /** AL-6 (switch on): the week fits the weekly cap but its subjects cannot fit Friday + Saturday under the day cap. */
+  dayCapMinutes?: number;
+  dayOver?: boolean;
 }): string {
+  const ceiling = p.ceilingMinutes ?? AS_WEEKLY_CEILING_MIN;
   const drafts = p.draftSubjects.map(subjectBn).join(", ");
   const head = `${p.nameBn} — ${dayMonthBn(p.deliveredOn)} থেকে দেওয়া অ্যাসাইনমেন্ট (${drafts}) এখনো ছাত্রদের কাছে যায়নি।`;
   const missing = p.missingSubjects.length > 0 ? ` বাকি: ${p.missingSubjects.map(subjectBn).join(", ")} (দেওয়া হয়নি)।` : "";
   // Over the weekly cap the confirm is REFUSED, so the reminder must say to trim first — never promise the button works.
   const action =
-    p.totalMinutes > AS_WEEKLY_CEILING_MIN
-      ? ` এই সপ্তাহের মোট সময় ${bnNum(p.totalMinutes)} মিনিট, সীমা ${bnNum(AS_WEEKLY_CEILING_MIN)} মিনিট — কোনো বিষয়ের সময় কমিয়ে তারপর ‘সপ্তাহ নিশ্চিত করুন’ চাপুন।`
-      : " ‘সপ্তাহ নিশ্চিত করুন’ চাপলে দেওয়াগুলো ছাত্রদের কাছে যাবে।";
+    p.totalMinutes > ceiling
+      ? ` এই সপ্তাহের মোট সময় ${bnNum(p.totalMinutes)} মিনিট, সীমা ${bnNum(ceiling)} মিনিট — কোনো বিষয়ের সময় কমিয়ে তারপর ‘সপ্তাহ নিশ্চিত করুন’ চাপুন।`
+      : p.dayOver
+        ? ` শুক্র ও শনিবারের দৈনিক সীমা (${bnNum(p.dayCapMinutes ?? 0)} মিনিট করে) পেরিয়ে যাচ্ছে — কোনো বিষয়ের সময় কমিয়ে তারপর ‘সপ্তাহ নিশ্চিত করুন’ চাপুন।`
+        : " ‘সপ্তাহ নিশ্চিত করুন’ চাপলে দেওয়াগুলো ছাত্রদের কাছে যাবে।";
   return head + missing + action;
 }
 
@@ -142,16 +157,22 @@ export async function pendingAssignmentWeeks(now: Date): Promise<PendingAssignme
     .select("academicYearId sectionId weekNumber estMinutes")
     .lean()) as unknown as Array<{ academicYearId: { toString(): string }; sectionId: { toString(): string }; weekNumber: number; estMinutes?: number }>;
   const minutes = new Map<string, number>();
+  const listByWeek = new Map<string, number[]>();
   for (const it of allItems) {
     const k = `${it.academicYearId.toString()}|${it.sectionId.toString()}|${it.weekNumber}`;
     minutes.set(k, (minutes.get(k) ?? 0) + (it.estMinutes ?? 0));
+    listByWeek.set(k, [...(listByWeek.get(k) ?? []), it.estMinutes ?? 0]);
   }
+  // AL-6 (switch on): the per-day cap can hold a week back even under the weekly cap.
+  const loopOn = await isLoop2027On();
+  const dayCap = loopOn ? dayCapMinutes(await budgetPolicy()) : 0;
   // A class teacher who has left must not swallow the reminder — Office gets it instead.
   const ctIds = [...new Set(sections.map((s) => (s.classTeacherId ? s.classTeacherId.toString() : null)).filter(Boolean) as string[])];
   const activeCt = new Set(
     ((await User.find({ _id: { $in: ctIds }, active: true }).select("_id").lean()) as unknown as Array<{ _id: { toString(): string } }>).map((u) => u._id.toString()),
   );
 
+  const ceilingMinutes = await weeklyCeilingMinutes();
   const weekCache = new Map<string, ExpectedWeek | null>();
   const out: PendingAssignmentWeek[] = [];
   for (const g of groups) {
@@ -173,6 +194,8 @@ export async function pendingAssignmentWeeks(now: Date): Promise<PendingAssignme
       month: week ? week.month : null,
       weekOfMonth: week ? week.weekOfMonth : null,
       totalMinutes: minutes.get(`${g.academicYearId}|${g.sectionId}|${g.weekNumber}`) ?? 0,
+      ceilingMinutes,
+      ...(loopOn ? { dayCapMinutes: dayCap, dayOver: splitDays((listByWeek.get(`${g.academicYearId}|${g.sectionId}|${g.weekNumber}`) ?? []).map((m, i) => ({ key: String(i), minutes: m })), dayCap).overBy > 0 } : {}),
       classTeacherId: sec.classTeacherId && activeCt.has(sec.classTeacherId.toString()) ? sec.classTeacherId.toString() : null,
       missingSubjects: week ? missingSubjectsForSection(week, g.sectionId) : [],
     });

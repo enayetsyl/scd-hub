@@ -49,6 +49,33 @@ export async function presentOnRegister(studentIds: string[], dateKey: string): 
     .map((s) => s.id);
 }
 
+/**
+ * Students the register shows ABSENT that day (their unit — the শাখা, or the Quran / Arabic group for a class whose
+ * attendance is kept there — is marked and they are on its absent list). A unit not marked yet proves nothing. AL-6:
+ * the in-class work sheet defaults these children to ABSENT so they get no in-school evidence.
+ */
+export async function absentOnRegister(studentIds: string[], dateKey: string): Promise<string[]> {
+  const ids = studentIds.filter((id) => Types.ObjectId.isValid(id));
+  if (ids.length === 0) return [];
+  const students = (await Student.find({ _id: { $in: ids.map((id) => new Types.ObjectId(id)) } })
+    .select("_id sectionId classId")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; sectionId: Types.ObjectId; classId: Types.ObjectId }>;
+  if (students.length === 0) return [];
+  const days = (await StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId absentStudentIds").lean()) as unknown as Array<{
+    sectionId?: Types.ObjectId | null;
+    subjectGroupId?: Types.ObjectId | null;
+    absentStudentIds: Types.ObjectId[];
+  }>;
+  const marked = new Set(days.map((d) => (d.sectionId ? `section:${d.sectionId}` : `subjectgroup:${d.subjectGroupId}`)));
+  const absent = new Set(days.flatMap((d) => d.absentStudentIds.map(String)));
+  const lites: StudentLite[] = students.map((s) => ({ id: String(s._id), sectionId: String(s.sectionId), classId: String(s.classId) }));
+  const units = await resolveUnits(lites, dateKey);
+  return lites.filter((s) => {
+    const u = units.get(s.id);
+    return !!u && marked.has(unitKey(u)) && absent.has(s.id);
+  }).map((s) => s.id);
+}
+
 export async function recordAbsentAtDelivery(input: AbsentAtDeliveryInput): Promise<boolean> {
   try {
     if (input.absentStudentIds.length === 0 || !input.ownerId || !input.dateKey) return false;

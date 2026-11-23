@@ -56,6 +56,7 @@ import type { MasteryLevelLabels } from "@scd/shared";
 
 import { examPoolClause, heldStimulusRefs, type ExamPoolLens } from "../examHold";
 import { avoidFor, isLoop2027On, recordUsesSafe, usesOfPaper } from "../../assessment/services/QuestionUseService";
+import { SECOND_ASSIGNMENT_MESSAGE } from "../assignmentBudget";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 const oid = (s: string) => new Types.ObjectId(s);
@@ -329,6 +330,8 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   }
 
   let a = await MasteryAssignment.findOne({ sectionId: ctx.sectionId, subject: input.subject, week });
+  // AL-6 / AC-C12 (switch on): a second assignment for one ISO week × শাখা × subject is refused, pointing to extra homework.
+  if (a && a.status !== "DRAFT" && (await isLoop2027On())) throw new MasteryWorkError(SECOND_ASSIGNMENT_MESSAGE);
   if (a) assertDraft(a);
 
   // Diagnosis of the whole section, read the way M-3 reads it (D-#808).
@@ -603,6 +606,9 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   const bySid = new Map(sheets.map((s) => [String(s.studentId), s]));
   const ordered = roster.flatMap((st) => (bySid.has(String(st._id)) ? [bySid.get(String(st._id))!] : []));
   if (ordered.length === 0) throw new MasteryWorkError("পাঠানোর মতো কোনো শিট নেই।");
+  // AL-6 (switch on): the week + day budget (AC-C4, AC-C9) and the tracker item this AS paper links to. Off → nothing here.
+  const loop = (await isLoop2027On()) ? await import("./AssignmentPaperService") : null;
+  const plan = loop ? await loop.planFinalise(a, ordered) : null;
 
   type Item = {
     itemNo: number; origin: "BANK" | "TEACHER"; artifactId?: Types.ObjectId; qid?: string; textBn?: string; loCodes: string[];
@@ -640,7 +646,9 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
     classToken: a.classToken,
     subject: a.subject,
     date: a.dueDate,
-    links: { assignmentId: a._id, ...(a.asItemId ? { asItemId: a.asItemId } : {}) },
+    links: { assignmentId: a._id, ...(plan?.asItemId ? { asItemId: plan.asItemId } : a.asItemId ? { asItemId: a.asItemId } : {}) },
+    // AL-6: an AS paper linked to its tracker item is a tracker paper — the §3.1 guards, the write-back and the lock apply.
+    ...(plan?.asItemId ? { trackerLinked: true, extra: false } : {}),
     items,
     perStudentItems,
     rubricLoCodes: [],
@@ -649,11 +657,20 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   });
   // AL-3: the AS paper went to the children — Part A (on every sheet) is a whole-শাখা use, Part B per child.
   await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(new Date()), wholeIfAll: true }));
+  if (plan) {
+    a.countedMinutes = plan.counted;
+    if (plan.placement) {
+      a.doOnDay = plan.placement.doOnDay;
+      a.minutesByDay = plan.placement.minutesByDay;
+    }
+    if (plan.asItemId) a.asItemId = plan.asItemId;
+  }
   a.status = "SENT";
   a.paperId = paper._id;
   a.sentAt = new Date();
   a.sentBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await a.save();
+  if (loop && plan) await loop.afterSend(a, plan, auth.userId);
   try {
     const names = new Map(roster.map((st) => [String(st._id), personName(st)]));
     await notifyAssignmentSent({

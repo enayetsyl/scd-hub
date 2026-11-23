@@ -23,6 +23,12 @@
  *    ("no problem seen yet, not enough to call it mastered" — the assignment builder gives it
  *    one question to gather evidence).
  * At read time a MASTERED outcome whose revision date has passed shows REVISION_DUE.
+ *
+ * 2027 in-school rule (docs/prd-academic-loop-2027.md §3.8, D-#1670; only with `academicLoop2027On` AND
+ * `masteredNeedsInSchool`, see `requireInSchool`): MASTERED additionally needs at least one good counted question
+ * answered IN SCHOOL (CT, RETEST, RUBRIC, CW). Good work at home alone gives IMPROVING with `inSchoolPending`
+ * ("ক্লাসে যাচাই বাকি"); a good at-home revision item leaves REVISION_DUE as it is; separate weeks are counted in
+ * school weeks (Sun–Sat, D-#275). With the rule off every line above is exactly the 2026 behaviour.
  */
 import type { MasteryPolicyValues, MasteryState } from "@scd/shared";
 
@@ -39,6 +45,22 @@ export interface EvidenceLike {
   routed: boolean;
   at: Date;
   week: string;
+  /** The paper source of the row (HW / AS / CT / RETEST / RUBRIC / CW). Read only by the 2027 in-school rule. */
+  source?: string | null;
+  /** Derived from `source` (see `isInSchoolSource`); wins over it when both are given. */
+  inSchool?: boolean;
+}
+
+/** In-school sources (§3.8): teacher-observed in class. HW, AS and extra homework are at home. */
+export const IN_SCHOOL_SOURCES: readonly string[] = ["CT", "RETEST", "RUBRIC", "CW"];
+export const isInSchoolSource = (source: string | null | undefined): boolean => IN_SCHOOL_SOURCES.includes(String(source ?? ""));
+const inSchoolOf = (u: EvidenceLike): boolean => (typeof u.inSchool === "boolean" ? u.inSchool : isInSchoolSource(u.source));
+
+/** The Sunday (of the stored paper day, UTC date) that starts the school week (Sun–Sat, D-#275), as "YYYY-MM-DD". */
+export function schoolWeekKey(at: Date): string {
+  const d = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.toISOString().slice(0, 10);
 }
 
 export type DiagnosisPolicy = Pick<
@@ -58,7 +80,11 @@ export type DiagnosisPolicy = Pick<
   | "rubricGoodAt"
   | "sectionTriggerPct"
   | "sectionTriggerMinAssessments"
->;
+> &
+  Partial<Pick<MasteryPolicyValues, "academicLoop2027On" | "masteredNeedsInSchool" | "sectionTriggerMinAssessedPct">>;
+
+/** True when the §3.8 in-school rule applies: the release switch AND the per-class key. Off → 2026 behaviour exactly. */
+export const requireInSchool = (p: DiagnosisPolicy): boolean => p.academicLoop2027On === true && p.masteredNeedsInSchool === true;
 
 /** Why an outcome is WEAK — the app turns these into Bangla. */
 export const WEAK_REASONS = ["LOW_PCT", "BELOW_SECTION", "REWORK", "WEAK_TAG", "RUBRIC_LOW", "LIGHT_SIGNALS", "REVISION_FAILED"] as const;
@@ -82,6 +108,8 @@ export interface OutcomeState {
   seenQids: string[];
   goodQids: { qid: string; week: string }[];
   nextRevisionAt: Date | null;
+  /** §3.8: the 2027 mastery rule held on at-home work only — IMPROVING "ক্লাসে যাচাই বাকি" until a good in-school item. */
+  inSchoolPending: boolean;
   history: { state: MasteryState; at: Date; paperId: string | null }[];
 }
 
@@ -143,12 +171,25 @@ export function computeOutcomeState(
   let reasons: WeakReason[] = [];
   const history: OutcomeState["history"] = [];
 
+  const inSchoolRule = requireInSchool(p);
+  // §3.8: separate weeks are school weeks (Sun–Sat) under the 2027 rule, ISO weeks as stored otherwise.
+  const weekOf = (u: EvidenceLike) => (inSchoolRule ? schoolWeekKey(u.at) : u.week);
+  let pendingNow = false;
+  // The mastery rule on the counted questions. With the in-school rule a rule that holds on at-home work only is
+  // not MASTERED (`pendingNow`): the caller turns it into IMPROVING.
   const masteredOk = (): boolean => {
+    pendingNow = false;
     const goods = [...firstByKey.values()].filter((u) => isGood(u, p));
     if (goods.length < p.masteredDistinctQuestions) return false;
-    if (p.masteredSeparateWeeks && new Set(goods.map((u) => u.week)).size < p.masteredDistinctQuestions) return false;
-    return seen.slice(-2).every((u) => !weakSignal(u, p) && (isRubric(u) ? true : pct(u) >= p.weakBelowPct));
+    if (p.masteredSeparateWeeks && new Set(goods.map(weekOf)).size < p.masteredDistinctQuestions) return false;
+    if (!seen.slice(-2).every((u) => !weakSignal(u, p) && (isRubric(u) ? true : pct(u) >= p.weakBelowPct))) return false;
+    if (inSchoolRule && !goods.some(inSchoolOf)) {
+      pendingNow = true;
+      return false;
+    }
+    return true;
   };
+  let pending = false;
 
   groups.forEach((g, gi) => {
     for (const u of g.units) {
@@ -159,11 +200,13 @@ export function computeOutcomeState(
     const prev = state;
     let next: MasteryState;
     let nextReasons: WeakReason[] = [];
+    pendingNow = false;
 
     if (prev === "MASTERED" && nextRev && g.at.getTime() >= nextRev.getTime()) {
       if (g.units.every((u) => isGood(u, p))) {
         next = "MASTERED";
-        nextRev = new Date(g.at.getTime() + p.revisionThenWeeks * 7 * DAY);
+        // §3.8: a good AT-HOME revision item leaves REVISION_DUE as it is — only a good in-school one resets the date.
+        if (!inSchoolRule || g.units.some(inSchoolOf)) nextRev = new Date(g.at.getTime() + p.revisionThenWeeks * 7 * DAY);
       } else {
         next = "WEAK";
         nextReasons = ["REVISION_FAILED"];
@@ -194,7 +237,8 @@ export function computeOutcomeState(
       } else if (masteredOk()) {
         next = "MASTERED";
         if (prev !== "MASTERED" || !nextRev) nextRev = new Date(g.at.getTime() + p.revisionFirstWeeks * 7 * DAY);
-      } else if (prev === "WEAK" || prev === "IMPROVING") next = "IMPROVING";
+      } else if (pendingNow) next = "IMPROVING"; // §3.8: the rule held on at-home work only
+      else if (prev === "WEAK" || prev === "IMPROVING") next = "IMPROVING";
       else if (prev === "MASTERED") next = "MASTERED";
       else next = "INSUFFICIENT";
     }
@@ -204,6 +248,7 @@ export function computeOutcomeState(
       since = g.at;
     }
     state = next;
+    pending = next === "IMPROVING" && pendingNow;
     reasons = next === "WEAK" ? nextReasons : [];
   });
 
@@ -232,6 +277,7 @@ export function computeOutcomeState(
     seenQids: qids,
     goodQids,
     nextRevisionAt: nextRev,
+    inSchoolPending: pending && state === "IMPROVING",
     history,
   };
 }
@@ -262,6 +308,64 @@ export function sectionOutcomeSummary(
     verdicts,
     weakPct,
     triggered: weakPct !== null && weakPct >= policy.sectionTriggerPct && assessments >= policy.sectionTriggerMinAssessments,
+  };
+}
+
+export interface InSchoolSectionSummary {
+  weak: number;
+  /** Children with at least one in-school item on the objective (the denominator). */
+  verdicts: number;
+  weakPct: number | null;
+  triggered: boolean;
+  /** Distinct in-school papers with evidence on the objective. */
+  inSchoolAssessments: number;
+  /** verdicts ÷ roster, in percent (the Q12 guard reads it). */
+  assessedPct: number | null;
+  weakStudentIds: string[];
+}
+
+/**
+ * The section (re-teach) trigger on IN-SCHOOL evidence only (§3.8, D-#1670; AC-F2). `rows` are the live rows of ONE
+ * objective for the whole section. A child is weak for the trigger when, over their last two in-school assessments,
+ * the earned % is below `weakBelowPct`, a rubric step is at or below `rubricWeakAtOrBelow`, or the % is more than
+ * `weakGapVsSection` under the mean of those children. The denominator is the children with at least one in-school
+ * item; `sectionTriggerMinAssessments` counts in-school papers; and (`sectionTriggerMinAssessedPct`, Q12 / R36) the
+ * children with an in-school item must be at least that share of the roster. Homework state plays no part.
+ */
+export function inSchoolSectionSummary(
+  rows: (EvidenceLike & { studentId: string })[],
+  policy: DiagnosisPolicy,
+  rosterSize: number,
+): InSchoolSectionSummary {
+  const school = rows.filter(inSchoolOf);
+  const perStudent = new Map<string, EvidenceLike[]>();
+  for (const r of school) perStudent.set(r.studentId, [...(perStudent.get(r.studentId) ?? []), r]);
+  const recent = new Map<string, EvidenceLike[]>();
+  for (const [sid, rs] of perStudent) recent.set(sid, assessmentsOf(rs).slice(-2).flatMap((g) => g.units));
+  const pcts = [...recent.values()].map((rs) => sumPct(rs)).filter((x): x is number => x !== null);
+  const mean = pcts.length > 0 ? pcts.reduce((s, x) => s + x, 0) / pcts.length : null;
+  const weakIds: string[] = [];
+  for (const [sid, rs] of recent) {
+    const p = sumPct(rs);
+    const low = p !== null && p < policy.weakBelowPct;
+    const gap = p !== null && mean !== null && p < mean - policy.weakGapVsSection;
+    const rubricLow = rs.some((u) => isRubric(u) && (u.rubricStep as number) <= policy.rubricWeakAtOrBelow);
+    if (low || gap || rubricLow) weakIds.push(sid);
+  }
+  const verdicts = perStudent.size;
+  const weakPct = verdicts > 0 ? Math.round((weakIds.length / verdicts) * 100) : null;
+  const papers = new Set(school.map((r) => r.paperId)).size;
+  const assessedPct = rosterSize > 0 ? (verdicts / rosterSize) * 100 : null;
+  const minAssessed = Number(policy.sectionTriggerMinAssessedPct ?? 0);
+  const guardOk = minAssessed <= 0 || (assessedPct !== null && assessedPct >= minAssessed);
+  return {
+    weak: weakIds.length,
+    verdicts,
+    weakPct,
+    triggered: weakPct !== null && weakPct >= policy.sectionTriggerPct && papers >= policy.sectionTriggerMinAssessments && guardOk,
+    inSchoolAssessments: papers,
+    assessedPct,
+    weakStudentIds: weakIds,
   };
 }
 

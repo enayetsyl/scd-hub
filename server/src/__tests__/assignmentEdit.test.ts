@@ -36,6 +36,8 @@ jest.mock("../modules/routine/models/HolidayException", () => ({ HolidayExceptio
 
 // AL-4: deleting a DRAFT also removes an AL-4 AS paper (a DB read); this suite is DB-free and 2026-only.
 jest.mock("../modules/mastery/services/HomeworkPaperService", () => ({ removePaperOfAsItem: () => Promise.resolve() }));
+// AL-6: an edit reads the 2027 release switch (sheet-linked minutes, question-set re-sync); this DB-free suite is the 2026 flow (OFF).
+jest.mock("../modules/assessment/services/QuestionUseService", () => ({ isLoop2027On: () => Promise.resolve(false) }));
 import {
   updateAssignmentItem,
   deleteAssignmentItem,

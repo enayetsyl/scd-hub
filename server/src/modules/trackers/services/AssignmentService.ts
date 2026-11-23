@@ -25,7 +25,10 @@ import type { LifecycleState, HwSubject } from "@scd/shared";
 import { acceptClaimsForRecords, hasOpenClaim } from "./WorkClaimService";
 import { emitAssignmentFirstChase, emitWorkClaimResolved } from "../../notifications/services/emitters";
 import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
-import { AS_WEEKLY_CEILING_MIN, classToken } from "@scd/shared";
+import { classToken } from "@scd/shared";
+import { weeklyCeilingMinutes } from "../assignmentCeiling";
+import { isLoop2027On } from "../../assessment/services/QuestionUseService";
+import { SECOND_ASSIGNMENT_MESSAGE } from "../../mastery/assignmentBudget";
 import { Types } from "mongoose";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
@@ -137,6 +140,8 @@ export interface DeliverAssignmentResult {
   /** Roster tallies (from draftRoster — records spawn only at confirmAssignmentWeek). */
   presentCount: number;
   absentCount: number;
+  /** AL-6 (switch on): the item was delivered but its question sheet (AS paper) could not be made — Bangla reason. */
+  paperWarning?: string;
 }
 
 export async function deliverAssignmentItem(
@@ -170,8 +175,10 @@ export async function deliverAssignmentItem(
     sectionId: entry.sectionId,
     subject: entry.subject,
   }).lean();
+  const loop2027 = await isLoop2027On();
   if (existing) {
-    throw new Error(`Week ${input.weekNumber} ${entry.subject} for this section is already delivered`);
+    // AL-6 / AC-C12 (switch on): a second assignment for the cell points the teacher to the extra homework.
+    throw new Error(loop2027 ? SECOND_ASSIGNMENT_MESSAGE : `Week ${input.weekNumber} ${entry.subject} for this section is already delivered`);
   }
 
   if (!Array.isArray(input.roster) || input.roster.length === 0) {
@@ -267,6 +274,19 @@ export async function deliverAssignmentItem(
     sectionId: entry.sectionId,
     subject: entry.subject,
   });
+  // AL-6 (switch on): the item's AS paper — a tailored paper already sent for the week is linked, else one is made from
+  // the item's question set. The delivery itself never fails on it (the item exists; the paper can be re-synced on edit).
+  let paperWarning: string | undefined;
+  if (loop2027) {
+    try {
+      await (await import("../../mastery/services/AssignmentPaperService")).onAssignmentItemDelivered(item, input.actorId);
+    } catch (err) {
+      // The delivery stands; the failure is reported to Sentry AND shown to the teacher (the app shows `paperWarning`).
+      const { reportSilentFailure, reasonBn } = await import("../../../lib/reportError");
+      await reportSilentFailure("assignment.asPaperAtDelivery", err, { itemId: String(item._id) });
+      paperWarning = `প্রশ্নভিত্তিক শিট তৈরি হয়নি: ${reasonBn(err)}`;
+    }
+  }
 
   return {
     itemId: item._id.toString(),
@@ -279,6 +299,7 @@ export async function deliverAssignmentItem(
     estMinutes,
     presentCount: input.roster.filter((r) => r.present).length,
     absentCount: input.roster.filter((r) => !r.present).length,
+    ...(paperWarning ? { paperWarning } : {}),
   };
 }
 
@@ -410,6 +431,8 @@ export async function updateAssignmentItem(
     if (!Number.isInteger(input.estMinutes) || input.estMinutes < 0) {
       throw new Error("estMinutes must be a non-negative integer");
     }
+    // AL-6 (switch on): a sheet-linked item's time is its marks × the policy rate — trim the questions, not the minutes.
+    if ((await isLoop2027On()) && (await linkedAsPaperOf(item._id))) throw new Error("প্রশ্নভিত্তিক শিটের সময় প্রশ্ন বদলে কমান");
     item.estMinutes = input.estMinutes;
   }
 
@@ -463,6 +486,10 @@ export async function updateAssignmentItem(
     item.attachmentIds = next;
   }
 
+  // AL-6 (switch on): a changed question set re-syncs the item's AS paper; a locked / worked paper refuses (§3.1 guard 4).
+  if (input.setId !== undefined && (await isLoop2027On())) {
+    await (await import("../../mastery/services/AssignmentPaperService")).syncAsPaperForItem(item, input.actorId);
+  }
   await item.save();
   // The Maruf incident (2026-07-23): a delivered assignment had no trace of who
   // touched it. Every after-the-fact edit is now on the audit log.
@@ -499,6 +526,11 @@ export async function updateAssignmentItem(
     deliveryDate: dateOnlyISO(item.deliveryDate),
     dueDate: dateOnlyISO(item.dueDate),
   };
+}
+
+/** AL-6: the AS paper linked to an item (switch-on callers only). */
+async function linkedAsPaperOf(itemId: Types.ObjectId) {
+  return (await import("../../mastery/paperLink")).linkedAsPaper(itemId);
 }
 
 export interface DeleteAssignmentItemInput {
@@ -579,15 +611,16 @@ export async function assignmentWeekLoad(
     .lean()) as unknown as IAssignmentItem[];
   const totalMinutes = items.reduce((s, it) => s + (it.estMinutes ?? 0), 0);
   const draftMinutes = items.filter((it) => it.status === "DRAFT").reduce((s, it) => s + (it.estMinutes ?? 0), 0);
+  const ceiling = await weeklyCeilingMinutes(); // AL-6: the policy cap with the release switch on, else the 360 constant
   return {
     academicYearId,
     sectionId,
     weekNumber,
-    ceiling: AS_WEEKLY_CEILING_MIN,
+    ceiling,
     totalMinutes,
     draftMinutes,
-    overBy: Math.max(0, totalMinutes - AS_WEEKLY_CEILING_MIN),
-    withinCeiling: totalMinutes <= AS_WEEKLY_CEILING_MIN,
+    overBy: Math.max(0, totalMinutes - ceiling),
+    withinCeiling: totalMinutes <= ceiling,
     hasDrafts: items.some((it) => it.status === "DRAFT"),
     items: items.map((it) => ({
       itemId: it._id.toString(),
@@ -613,6 +646,7 @@ export async function setAssignmentItemMinutes(
   if (item.status !== "DRAFT") {
     throw new Error("Only a DRAFT assignment's minutes can be changed (the week is already issued)");
   }
+  if ((await isLoop2027On()) && (await linkedAsPaperOf(item._id))) throw new Error("প্রশ্নভিত্তিক শিটের সময় প্রশ্ন বদলে কমান");
   item.estMinutes = estMinutes;
   await item.save();
   return { itemId: item._id.toString(), estMinutes };
@@ -653,12 +687,16 @@ export async function confirmAssignmentWeek(input: {
   }
 
   const totalMinutes = items.reduce((s, it) => s + (it.estMinutes ?? 0), 0);
-  if (totalMinutes > AS_WEEKLY_CEILING_MIN) {
+  const ceiling = await weeklyCeilingMinutes();
+  if (totalMinutes > ceiling) {
     throw new Error(
-      `Week ${input.weekNumber} total ${totalMinutes} min exceeds the ${AS_WEEKLY_CEILING_MIN}-min weekly ceiling — ` +
+      `Week ${input.weekNumber} total ${totalMinutes} min exceeds the ${ceiling}-min weekly ceiling — ` +
         `trim a subject before confirming (AS-T6)`,
     );
   }
+  // AL-6 / AC-C4 (switch on): the per-day budget — Friday + Saturday — and the day split of the items without one.
+  const loop2027 = await isLoop2027On();
+  if (loop2027) await (await import("../../mastery/services/AssignmentPaperService")).finaliseWeekDays(items);
 
   const at = input.at ?? new Date();
   let recordsIssued = 0;
@@ -674,6 +712,15 @@ export async function confirmAssignmentWeek(input: {
     );
     if (claimed.modifiedCount === 0) continue;
     itemsIssued += 1;
+    // AL-6 (switch on): the AS paper locks at issue and its §3.2 rows are written (guard 4); never fails the issue.
+    if (loop2027) {
+      try {
+        await (await import("../../mastery/services/AssignmentPaperService")).onAssignmentIssued(item._id);
+      } catch (err) {
+        // The issue stands (the paper's own fallback already wrote its AS ledger rows); report it.
+        await (await import("../../../lib/reportError")).reportSilentFailure("assignment.asPaperLockAtIssue", err, { itemId: String(item._id) });
+      }
+    }
     const roster = item.draftRoster ?? [];
     const records = roster.map((r) => {
       const state: LifecycleState = r.present ? "GIVEN" : "ABSENT_REDELIVER";
@@ -719,7 +766,7 @@ export async function confirmAssignmentWeek(input: {
     academicYearId: input.academicYearId,
     sectionId: input.sectionId,
     weekNumber: input.weekNumber,
-    ceiling: AS_WEEKLY_CEILING_MIN,
+    ceiling,
     totalMinutes,
     itemsIssued,
     recordsIssued,
