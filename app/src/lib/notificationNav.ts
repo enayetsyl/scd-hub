@@ -265,6 +265,20 @@ export function notificationTarget(
     case "MASTERY_EXTRA_HOMEWORK":
       // PR-D: the guardian's child progress page lists it under "what the school did".
       return guardian ? { tab: "GuardianHomeTab", screen: "ChildMastery" } : { tab: "MasteryTab", screen: "MasteryWork" };
+    // AL-8: the weekly-assignment suggestion. The draft-ready notice and a comment open the draft by id; the swap card
+    // (to the class teacher, the Office and both subject teachers) opens the শাখা's week, where it is accepted or ignored.
+    case "AS_DRAFT_READY":
+    case "AS_COMMENT":
+      return refs?.masteryAssignmentId
+        ? { tab: "MasteryTab", screen: "AssignmentDraftReview", params: { assignmentId: refs.masteryAssignmentId } }
+        : refs?.sectionId
+          ? { tab: "MasteryTab", screen: "AssignmentWeekReview", params: refs.date ? { sectionId: refs.sectionId, dueDate: refs.date } : { sectionId: refs.sectionId } }
+          : { tab: "MasteryTab", screen: "MasteryWork" };
+    case "AS_SWAP_SUGGESTED":
+      // The week's date rides on the notice, so the screen opens THAT week (a swap card is for one week).
+      return refs?.sectionId
+        ? { tab: "MasteryTab", screen: "AssignmentWeekReview", params: refs.date ? { sectionId: refs.sectionId, dueDate: refs.date } : { sectionId: refs.sectionId } }
+        : { tab: "MasteryTab", screen: "MasteryWork" };
     case "MASTERY_ASSIGNMENT_SENT":
       // Guardian-only: the week's assignment sits on the Assignments tab (M-4b).
       return guardian

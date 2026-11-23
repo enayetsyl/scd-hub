@@ -1187,6 +1187,8 @@ const AS_QUESTION_FIELDS = `
   questionTypeCode
   marks
   band
+  reasonBn
+  repeat
 `;
 
 const ASSIGNMENT_FIELDS = `
@@ -1203,6 +1205,19 @@ const ASSIGNMENT_FIELDS = `
   countedMinutes
   dayLabel
   dayLabelEn
+  mayEdit
+  mayFinalise
+  suggestion {
+    builtBy
+    at
+    noLessonMarks
+    chapters
+    excludedHw
+    excludedWindow
+    excludedSeen
+    edited
+    needsReviewCount
+  }
   layout { ${LAYOUT_FIELDS} }
   partA { ${AS_QUESTION_FIELDS} }
   sheets {
@@ -1249,6 +1264,7 @@ const SHEET_FIELDS = `
     labelBn
     marks
   }
+  mayEdit
 `;
 
 export const MASTERY_ASSIGNMENT_QUERY = gql`
@@ -1307,6 +1323,7 @@ export const EDIT_MASTERY_ASSIGNMENT_SHEET = gql`
     $loCode: String
     $questionTypeCode: String
     $textBn: String
+    $qid: String
   ) {
     editMasteryAssignmentSheet(
       assignmentId: $assignmentId
@@ -1316,6 +1333,7 @@ export const EDIT_MASTERY_ASSIGNMENT_SHEET = gql`
       loCode: $loCode
       questionTypeCode: $questionTypeCode
       textBn: $textBn
+      qid: $qid
     ) { ${SHEET_FIELDS} }
   }
 `;
@@ -1362,6 +1380,10 @@ export type MasteryAssignmentQuestionRow = {
   questionTypeCode: string;
   marks: number;
   band: string;
+  /** AL-7: why the engine picked it; null on a 2026 / teacher-written item. */
+  reasonBn?: string | null;
+  /** AL-7: a question the শাখা had before, outside the window — shown "আবার". */
+  repeat?: boolean | null;
 };
 
 export type MasteryAssignmentWarningRow = { code: string; loCode: string | null; labelBn: string | null };
@@ -1381,6 +1403,21 @@ export type MasteryAssignmentData = {
   countedMinutes?: number | null;
   dayLabel?: string | null;
   dayLabelEn?: string | null;
+  /** AL-8: set by assignmentForReview only (null on a mutation result) — the controls show when true. */
+  mayEdit?: boolean | null;
+  mayFinalise?: boolean | null;
+  /** AL-7: the engine's audit of a draft it built. */
+  suggestion?: {
+    builtBy: string;
+    at: string;
+    noLessonMarks: boolean;
+    chapters: number[];
+    excludedHw: number;
+    excludedWindow: number;
+    excludedSeen: number;
+    edited: boolean;
+    needsReviewCount: number;
+  } | null;
   layout: MasteryAssignmentLayout;
   partA: MasteryAssignmentQuestionRow[];
   sheets: {
@@ -1407,6 +1444,8 @@ export type MasteryAssignmentSheetData = {
   warnings: MasteryAssignmentWarningRow[];
   outcomeChoices: { loCode: string; labelBn: string; questionTypeCodes: string[] }[];
   typeChoices: { code: string; labelBn: string; marks: number }[];
+  /** AL-8: false = a read-only reader of the week. */
+  mayEdit?: boolean | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -1888,3 +1927,230 @@ export const MASTERY_HOMEWORK_CANDIDATES_QUERY = gql`
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// AL-8 — the weekly-assignment suggestion screens (docs/prd-academic-loop-2027.md §4.5, §4.6)
+// ---------------------------------------------------------------------------
+
+export const ASSIGNMENT_SUGGESTION_WEEK_QUERY = gql`
+  query AssignmentSuggestionWeek($sectionId: String!, $dueDate: String!) {
+    assignmentSuggestionWeek(sectionId: $sectionId, dueDate: $dueDate) {
+      week
+      dueDate
+      deliveryDate
+      weekNumber
+      hasWeek
+      suspended
+      canAcceptSwap
+      subjects {
+        subject
+        subjectBn
+        teacherId
+        teacherName
+        state
+        assignmentId
+        builtBy
+        edited
+        needsReviewCount
+        minutes
+        doOnDay
+        noLessonMarks
+        inRotation
+        chapterChoices { chapterNumber objectives }
+      }
+      swapCard { dropSubject dropSubjectBn addSubject addSubjectBn addWeakPct addWeakRows dropWeakRows }
+      dayPlan { FRI SAT overBy dayCap }
+    }
+  }
+`;
+
+export const ASSIGNMENT_LOAD_QUERY = gql`
+  query AssignmentLoad($sectionId: String!, $dueDate: String!) {
+    assignmentLoad(sectionId: $sectionId, dueDate: $dueDate) {
+      week
+      dayCap
+      thursdayHomework { subject minutes description }
+      children {
+        studentId
+        name
+        schoolId
+        fri
+        sat
+        extraFri
+        extraSat
+        overFri
+        overSat
+        warn
+        subjects { subject fri sat }
+      }
+    }
+  }
+`;
+
+export const SUGGEST_ASSIGNMENT = gql`
+  mutation SuggestAssignment($sectionId: String!, $dueDate: String!, $subject: String, $rebuild: Boolean) {
+    suggestAssignment(sectionId: $sectionId, dueDate: $dueDate, subject: $subject, rebuild: $rebuild) {
+      manualSubjects
+      items { subject state noLessonMarks needsReviewCount assignment { id } }
+    }
+  }
+`;
+
+export const ACCEPT_ASSIGNMENT_SWAP = gql`
+  mutation AcceptAssignmentSwap($sectionId: String!, $dueDate: String!, $dropSubject: String!, $addSubject: String!, $confirmEdited: Boolean) {
+    acceptAssignmentSwap(sectionId: $sectionId, dueDate: $dueDate, dropSubject: $dropSubject, addSubject: $addSubject, confirmEdited: $confirmEdited) {
+      subject
+      state
+    }
+  }
+`;
+
+export const ASSIGNMENT_FOR_REVIEW_QUERY = gql`
+  query AssignmentForReview($assignmentId: String!) {
+    assignmentForReview(assignmentId: $assignmentId) { ${ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const EDIT_MASTERY_ASSIGNMENT_PART_A = gql`
+  mutation EditMasteryAssignmentPartA($assignmentId: String!, $op: String!, $index: Int, $qid: String) {
+    editMasteryAssignmentPartA(assignmentId: $assignmentId, op: $op, index: $index, qid: $qid) { ${ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const ASSIGNMENT_OFFICE_WEEKS_PAGE_QUERY = gql`
+  query AssignmentOfficeWeeksPage($dueDate: String!, $page: Int, $pageSize: Int) {
+    assignmentOfficeWeeksPage(dueDate: $dueDate, page: $page, pageSize: $pageSize) {
+      total
+      page
+      pageSize
+      rows {
+        assignmentId
+        sectionId
+        sectionLabelBn
+        subject
+        subjectBn
+        status
+        builtBy
+        edited
+        needsReviewCount
+        minutes
+        commentCount
+        dueDate
+      }
+    }
+  }
+`;
+
+export const ASSIGNMENT_COMMENTS_QUERY = gql`
+  query AssignmentComments($assignmentId: String!) {
+    assignmentComments(assignmentId: $assignmentId) { id authorName textBn createdAt }
+  }
+`;
+
+export const ADD_ASSIGNMENT_COMMENT = gql`
+  mutation AddAssignmentComment($assignmentId: String!, $text: String!) {
+    addAssignmentComment(assignmentId: $assignmentId, text: $text) { id authorName textBn createdAt }
+  }
+`;
+
+export type AssignmentWeekSubject = {
+  subject: string;
+  subjectBn: string;
+  teacherId: string | null;
+  teacherName: string | null;
+  state: "NONE" | "DRAFT" | "SENT" | "MANUAL" | "NIL" | "DELIVERED";
+  assignmentId: string | null;
+  builtBy: string | null;
+  edited: boolean;
+  needsReviewCount: number;
+  minutes: number | null;
+  doOnDay: "FRI" | "SAT" | "BOTH" | null;
+  noLessonMarks: boolean;
+  inRotation: boolean;
+  chapterChoices: { chapterNumber: number; objectives: number }[];
+};
+
+export type AssignmentSwapCard = {
+  dropSubject: string;
+  dropSubjectBn: string;
+  addSubject: string;
+  addSubjectBn: string;
+  addWeakPct: number;
+  addWeakRows: number;
+  dropWeakRows: number;
+};
+
+export type AssignmentSuggestionWeek = {
+  week: string;
+  dueDate: string;
+  deliveryDate: string | null;
+  weekNumber: number | null;
+  hasWeek: boolean;
+  suspended: boolean;
+  canAcceptSwap: boolean;
+  subjects: AssignmentWeekSubject[];
+  swapCard: AssignmentSwapCard | null;
+  dayPlan: { FRI: number; SAT: number; overBy: number; dayCap: number };
+};
+
+export type AssignmentChildLoad = {
+  studentId: string;
+  name: string;
+  schoolId: string | null;
+  fri: number;
+  sat: number;
+  extraFri: number;
+  extraSat: number;
+  overFri: boolean;
+  overSat: boolean;
+  warn: boolean;
+  subjects: { subject: string; fri: number; sat: number }[];
+};
+
+export type AssignmentLoad = {
+  week: string;
+  dayCap: number;
+  thursdayHomework: { subject: string; minutes: number; description: string | null }[];
+  children: AssignmentChildLoad[];
+};
+
+export type AssignmentOfficeWeekRow = {
+  assignmentId: string;
+  sectionId: string;
+  sectionLabelBn: string;
+  subject: string;
+  subjectBn: string;
+  status: string;
+  builtBy: string | null;
+  edited: boolean;
+  needsReviewCount: number;
+  minutes: number | null;
+  commentCount: number;
+  dueDate: string;
+};
+
+export type AssignmentCommentRow = { id: string; authorName: string; textBn: string; createdAt: string };
+
+export const ASSIGNMENT_ADD_CANDIDATES_QUERY = gql`
+  query AssignmentAddCandidates($assignmentId: String!, $studentId: String, $filter: String) {
+    assignmentAddCandidates(assignmentId: $assignmentId, studentId: $studentId, filter: $filter) {
+      qid
+      textBn
+      loCode
+      labelBn
+      questionTypeCode
+      marks
+      repeat
+    }
+  }
+`;
+
+export type AssignmentAddCandidate = {
+  qid: string;
+  textBn: string | null;
+  loCode: string;
+  labelBn: string;
+  questionTypeCode: string;
+  marks: number;
+  repeat: boolean;
+};

@@ -24,6 +24,7 @@ import { MyPeriodsSelfCard } from "../../components/MyPeriodsStrip";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { ReviewHubTodayCard } from "../../components/ReviewHubTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
+import { AssignmentNewsTodayCard } from "../../components/AssignmentNewsTodayCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
 import { CtHeldResultsCard } from "../../components/CtHeldResultsCard";
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
@@ -275,6 +276,8 @@ export default function AdminTodayScreen(): React.ReactElement {
         {can("class_test_script:scan") ? <CtScriptOfficeCard /> : null}
         {/* CT-RC Option B — results an approver held at approval to see the paper. Own query; nothing when empty. */}
         {can("class_test:publish") ? <CtHeldResultsCard /> : null}
+        {/* AL-8 — weekly-assignment swap cards and comments, unread. Own query; nothing when empty. */}
+        {can("assignment:accept_swap") || can("assignment:suggest") ? <AssignmentNewsTodayCard /> : null}
 
         {/* SP-4 (D-#738) — improvement tasks of today not yet ticked, with the list to mark
             on the teacher's behalf; and any task this person was given to do themselves. */}

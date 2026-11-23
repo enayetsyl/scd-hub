@@ -356,6 +356,9 @@ import MasteryOutcomeTrailScreen from "../screens/mastery/MasteryOutcomeTrailScr
 import MasteryQualityScreen from "../screens/mastery/MasteryQualityScreen";
 import MasteryAssignmentScreen from "../screens/mastery/MasteryAssignmentScreen";
 import MasteryAssignmentSheetScreen from "../screens/mastery/MasteryAssignmentSheetScreen";
+import AssignmentWeekReviewScreen from "../screens/mastery/AssignmentWeekReviewScreen";
+import AssignmentDraftReviewScreen from "../screens/mastery/AssignmentDraftReviewScreen";
+import AssignmentOfficeWeeksScreen from "../screens/mastery/AssignmentOfficeWeeksScreen";
 import MasteryActionsScreen from "../screens/mastery/MasteryActionsScreen";
 import MasteryActionScreen from "../screens/mastery/MasteryActionScreen";
 import MasteryReviewsScreen from "../screens/mastery/MasteryReviewsScreen";
@@ -1552,6 +1555,9 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryQuality" component={MasteryQualityScreen} options={{ title: STR.msQuality }} />
       <MasteryStack.Screen name="MasteryAssignment" component={MasteryAssignmentScreen} options={{ title: STR.msAssignment }} />
       <MasteryStack.Screen name="MasteryAssignmentSheet" component={MasteryAssignmentSheetScreen} options={{ title: STR.msAsSheet }} />
+      <MasteryStack.Screen name="AssignmentWeekReview" component={AssignmentWeekReviewScreen} options={{ title: STR.al8WeekTitle }} />
+      <MasteryStack.Screen name="AssignmentDraftReview" component={AssignmentDraftReviewScreen} options={{ title: STR.al8DraftTitle }} />
+      <MasteryStack.Screen name="AssignmentOfficeWeeks" component={AssignmentOfficeWeeksScreen} options={{ title: STR.al8OfficeTitle }} />
       <MasteryStack.Screen name="MasteryLeader" component={MasteryActionsScreen} options={{ title: STR.msLeader }} />
       <MasteryStack.Screen name="MasteryActions" component={MasteryActionsScreen} options={{ title: STR.msActions }} />
       <MasteryStack.Screen name="MasteryAction" component={MasteryActionScreen} options={{ title: STR.msAction }} />

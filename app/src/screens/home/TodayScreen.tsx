@@ -73,6 +73,7 @@ import { QuranExamTodayCard } from "../../components/QuranExamTodayCard";
 import { VivaTodayCard } from "../../components/VivaTodayCard";
 import { ExamDutyTodayCard } from "../../components/ExamDutyTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
+import { AssignmentNewsTodayCard } from "../../components/AssignmentNewsTodayCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
   STR,
@@ -552,6 +553,9 @@ export default function TodayScreen(): React.ReactElement {
       {/* HW-VOID (D-#741) — 0-question homework confirm never issues, for a per-user
           homework:void grant. Outside the QueryGate for the same reason as above. */}
       {canVoidHomework ? <UnissuedHomeworkCard /> : null}
+
+      {/* AL-8 — weekly-assignment notices still unread: draft ready, swap card, an Office comment. Own query; nothing when empty. */}
+      {can("assignment:suggest") ? <AssignmentNewsTodayCard /> : null}
 
       {/* CS-1/CS-3 (D-#715/#719) — ক্লাস টেস্টের খাতা: hand the scripts to the office,
           and later return them to the students. OUTSIDE the QueryGate for the same

@@ -9,13 +9,13 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { CHILD_HINT_STEPS } from "../../graphql/homeworkIntegrity";
-import { EDIT_MASTERY_ASSIGNMENT_SHEET, MASTERY_ASSIGNMENT_SHEET_QUERY, type MasteryAssignmentSheetData } from "../../graphql/mastery";
+import { EDIT_MASTERY_ASSIGNMENT_SHEET, MASTERY_ASSIGNMENT_SHEET_QUERY, MASTERY_LOOP_POLICY_QUERY, type MasteryAssignmentSheetData } from "../../graphql/mastery";
+import { AssignmentBankPicker } from "../../components/AssignmentBankPicker";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Select, H2 } from "../../components/ui";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { STR, bnNum, masteryBandLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf } from "../../lib/pdf";
-import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
 import { levelFill, fill } from "./masteryStateUi";
@@ -27,8 +27,9 @@ const bandTone = (b: string) => (b === "WEAK" ? "danger" : b === "IMPROVING" ? "
 export default function MasteryAssignmentSheetScreen({ navigation, route }: Props): React.ReactElement {
   const lv = useMasteryLevelLabels();
   const { assignmentId, studentId, subject } = route.params;
-  const { can } = useAuth();
-  const canEdit = can("mastery:create");
+  // AL-8: "add from the bank" belongs to the 2027 loop only (§3.6) — with the switch off the 2026 sheet is unchanged.
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY });
+  const loopOn = loopQ.data?.masteryPolicy?.resolved?.academicLoop2027On === true;
   const [{ data, fetching, error }] = useQuery({
     query: MASTERY_ASSIGNMENT_SHEET_QUERY,
     variables: { assignmentId, studentId },
@@ -76,7 +77,10 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
       </Screen>
     );
   }
-  const editable = canEdit && s.assignmentStatus === "DRAFT";
+  // Editable = the server says so (the rule the edit mutation applies, incl. the Office on a leave day); read from the loaded
+  // copy — an edit result does not carry the flag. A read-only reader (class teacher, another subject's teacher, the Office on a
+  // normal day) sees the sheet and nothing to press.
+  const editable = (data?.masteryAssignmentSheet as MasteryAssignmentSheetData | undefined)?.mayEdit === true && s.assignmentStatus === "DRAFT";
   const loChoice = s.outcomeChoices.find((o) => o.loCode === lo);
 
   return (
@@ -106,6 +110,7 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
               <Body style={{ fontWeight: "700" }}>{bnNum(i + 1)}.</Body>
               <Badge text={masteryBandLabel(q.band)} tone={bandTone(q.band)} />
               <Badge text={`${q.questionTypeCode} · ${bnNum(q.marks)}`} tone="muted" />
+              {q.repeat ? <Badge text={STR.al8Again} tone="warn" /> : null}
             </View>
             {editable ? (
               <View style={{ flexDirection: "row", gap: space(1) }}>
@@ -119,10 +124,15 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
             {q.qid ? ` · ${q.qid}` : ""}
           </Muted>
           <Body>{q.textBn ?? q.qid}</Body>
+          {q.reasonBn ? <Muted>{q.reasonBn}</Muted> : null}
           {q.qid && (hintSteps.get(q.qid) ?? 0) > 0 ? <Muted>{STR.hiHints.replace("{n}", bnNum(hintSteps.get(q.qid) ?? 0))}</Muted> : null}
         </Card>
       ))}
 
+      {/* AL-8 (§4.6): the child's Part B takes a bank question picked from the filtered list (or typed by code); the server
+          re-checks §4.3 and its refusal shows above. Switch on only. */}
+      {editable && loopOn ? <AssignmentBankPicker assignmentId={assignmentId} studentId={studentId} disabled={editState.fetching} onAdd={(q) => run({ op: "ADD_BANK", qid: q })} /> : null}
+      {!editable && s.assignmentStatus === "DRAFT" && loopOn ? <Notice message={STR.al8ReadOnly} tone="info" /> : null}
       {editable && !adding ? <Button title={STR.msAsAddOwn} variant="secondary" onPress={() => setAdding(true)} /> : null}
       {editable && adding ? (
         <Card>

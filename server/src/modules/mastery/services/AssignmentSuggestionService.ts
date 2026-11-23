@@ -469,6 +469,29 @@ export async function assertWeekReader(auth: Auth, sectionId: Types.ObjectId, ce
   throw new MasteryWorkError("এই শাখার সাপ্তাহিক অ্যাসাইনমেন্ট শুধু এই সপ্তাহের বিষয়শিক্ষক, ক্লাস শিক্ষক ও অফিস দেখতে পারেন।");
 }
 
+/**
+ * AL-8 (§4.4 reach): may this caller READ one weekly assignment? Everyone `assertWeekReader` admits for the week — the class
+ * teacher, a rotation-cell teacher, today's substitute, the Office / Principal — plus the subject's own teacher (a swapped-in
+ * subject has no rotation cell). Reading is not editing: the edit mutations keep their own row rule.
+ */
+export async function canReadAssignment(a: IMasteryAssignment, auth: Auth): Promise<boolean> {
+  if (callerHasPermission(auth, "assignment:comment") || callerHasPermission(auth, "assignment:view_all") || callerHasPermission(auth, "mastery:edit_all")) return true;
+  try {
+    await assertMayWork(auth, a.sectionId, a.subject as MasterySubject, new Date());
+    return true;
+  } catch {
+    /* fall through to the week's readers */
+  }
+  try {
+    const ctx = await sectionContext(String(a.sectionId));
+    const week = await weekForDue(ctx.academicYearId, a.dueDate.toISOString().slice(0, 10));
+    await assertWeekReader(auth, ctx.sectionId, cellsOf(week, String(ctx.sectionId)));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function mayAcceptSwap(auth: Auth, sectionId: Types.ObjectId): Promise<boolean> {
   if (callerHasPermission(auth, "assignment:view_all")) return true; // the Office (reach), R29
   const sec = await Section.findById(sectionId).select("classTeacherId").lean();
@@ -680,7 +703,7 @@ export async function acceptAssignmentSwap(
     if (!teacher) continue;
     await emit({
       recipientUserId: teacher, kind: "AS_SWAP_SUGGESTED", titleBn: "অ্যাসাইনমেন্টে বিষয় বদল", bodyBn: body,
-      refs: { sectionId: input.sectionId, subject: role === "DROP" ? input.dropSubject : input.addSubject, masteryAssignmentId: String(built.assignment._id) },
+      refs: { sectionId: input.sectionId, subject: role === "DROP" ? input.dropSubject : input.addSubject, masteryAssignmentId: String(built.assignment._id), date: input.dueYmd },
       dedupeKey: `ASSWA:${iso}:${input.sectionId}:${input.dropSubject}:${input.addSubject}:${teacher}`,
     }).catch((err) => reportSilentFailure("assignmentSwap.notify", err, { teacher }));
   }
@@ -917,7 +940,7 @@ const notifyDraft = async (a: IMasteryAssignment, teacherId: string, where: stri
   await emit({
     recipientUserId: teacherId, kind: "AS_DRAFT_READY", titleBn: "সাপ্তাহিক অ্যাসাইনমেন্টের খসড়া তৈরি",
     bodyBn: `${where} · ${subjectBn(a.subject)} — প্রস্তাব দেখে চূড়ান্ত করুন${gapLine}`,
-    refs: { sectionId: String(a.sectionId), subject: a.subject, masteryAssignmentId: String(a._id) },
+    refs: { sectionId: String(a.sectionId), subject: a.subject, masteryAssignmentId: String(a._id), date: a.dueDate.toISOString().slice(0, 10) },
     // The recipient, the week and the শাখা × subject: a second teacher (a cover) is never swallowed by the first.
     dedupeKey: `ASDR:${a.week}:${String(a.sectionId)}:${a.subject}:${teacherId}`,
   });
@@ -1032,7 +1055,7 @@ async function emitSwapCard(ctx: SectionCtx, week: ExpectedWeek, drafts: Map<str
     await emit({
       recipientUserId: r, kind: "AS_SWAP_SUGGESTED", titleBn: "অ্যাসাইনমেন্টে বিষয় বদলের প্রস্তাব",
       bodyBn: `${where} · এই সপ্তাহে ${subjectBn(card.dropSubject)}-এর বদলে ${subjectBn(card.addSubject)}? (${bn(card.addWeakPct)}% দুর্বল)`,
-      refs: { sectionId: String(ctx.sectionId), subject: card.addSubject },
+      refs: { sectionId: String(ctx.sectionId), subject: card.addSubject, date: (week.dueDate as string).slice(0, 10) },
       dedupeKey: `ASSW:${iso}:${String(ctx.sectionId)}:${card.dropSubject}:${card.addSubject}:${r}`,
     });
   }
