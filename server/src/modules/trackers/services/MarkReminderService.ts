@@ -17,6 +17,11 @@
  *   09:30        the scheduler snapshots what is still unmarked and pushes Office + Principal
  *                (`mark_submission:alerts`); their pop-up reads the snapshot
  *
+ * AL-9 (switch on): a second, later question rides the same ladder — "are the per-question marks entered?".
+ * A homework / assignment paper still OPEN after its deadline (MarkDeadlineService) is a "MARKS" row: it joins the
+ * teacher's pop-up (one reminder per teacher per day, the same MORNING / NINE acks), the 09:30 snapshot, and — from
+ * term 2 — one quiet staff-mistake row (D-#1020). With the switch off none of it exists.
+ *
  * Identity/operational plane behind ADR-005 (no corpus path).
  */
 import { Types } from "mongoose";
@@ -26,7 +31,9 @@ import { personName } from "../../../lib/personName";
 import { dateOnlyISO } from "../assignmentCalendar";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
-import { MarkEscalation, MarkReminderAck, type MarkReminderStage } from "../models/MarkReminder";
+import { MarkEscalation, MarkReminderAck, type MarkReminderStage, type MarkRowStage } from "../models/MarkReminder";
+import { confirmedPaperIds, latePapers, type LatePaper, type MarkTracker } from "./MarkDeadlineService";
+import { reportSilentFailure } from "../../../lib/reportError";
 import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { Section } from "../../foundation/models/Section";
@@ -59,6 +66,13 @@ export interface DueItemShape {
   sectionLabel: string;
   marked: boolean;
   teacherIds: string[];
+  /** AL-9 — absent / "RECORDS" = nobody marked who handed in (2026); "MARKS" = the paper's marks are not entered. */
+  stage?: MarkRowStage;
+  tracker?: MarkTracker;
+  paperId?: string;
+  mistakeDue?: boolean;
+  /** MARKS rows: per teacher, the day their deadline really fell on (the day an approved leave is checked against). */
+  effectiveKeys?: Record<string, string>;
 }
 
 async function sectionLabels(sectionIds: string[]): Promise<Map<string, string>> {
@@ -135,6 +149,50 @@ export async function dueItemsToday(now: Date = new Date()): Promise<DueItemShap
   });
 }
 
+/** AL-9: papers whose marks are still not entered after their deadline, as ladder items (empty with the switch off). */
+/** The late-paper read is ~8 queries and the pop-up polls every few minutes per teacher: when the caller asks for the live
+ *  clock (`cacheable`) the result is kept for LATE_CACHE_MS. An explicit `now` (tests, the scheduler) always reads fresh. */
+const LATE_CACHE_MS = 30_000;
+let lateCache: { at: number; dayKey: string; late: LatePaper[] } | null = null;
+
+/** `latePapers` that can never break the 2026 RECORDS path: a throw is reported and reads as "nothing late". */
+async function safeLatePapers(now: Date, cacheable: boolean): Promise<LatePaper[]> {
+  try {
+    if (cacheable && lateCache && Date.now() - lateCache.at < LATE_CACHE_MS && lateCache.dayKey === dhakaDayKey(now)) return lateCache.late;
+    const late = await latePapers(now);
+    if (cacheable) lateCache = { at: Date.now(), dayKey: dhakaDayKey(now), late };
+    return late;
+  } catch (err) {
+    await reportSilentFailure("MarkReminderService.latePapers", err);
+    return [];
+  }
+}
+
+/** Test hook: forget the cached late list. */
+export function resetLateMarkCache(): void {
+  lateCache = null;
+}
+
+export async function lateMarkItems(now: Date = new Date(), cacheable = false): Promise<DueItemShape[]> {
+  const late = await safeLatePapers(now, cacheable);
+  if (late.length === 0) return [];
+  const labels = await sectionLabels([...new Set(late.map((l) => l.sectionId))]);
+  return late.map((l) => ({
+    asItemId: l.itemId,
+    asId: l.code,
+    subject: l.subject,
+    sectionId: l.sectionId,
+    sectionLabel: labels.get(l.sectionId) ?? "",
+    marked: false,
+    teacherIds: l.teacherIds,
+    stage: "MARKS" as const,
+    tracker: l.tracker,
+    paperId: l.paperId,
+    mistakeDue: l.mistakeDue,
+    effectiveKeys: l.effectiveKeys,
+  }));
+}
+
 // ---------------------------------------------------------------------------
 // The teacher's pop-ups (MORNING / NINE)
 // ---------------------------------------------------------------------------
@@ -145,8 +203,9 @@ export interface MyMarkReminderShape {
   items: DueItemShape[];
 }
 
-export async function myMarkReminder(userId: string, now: Date = new Date()): Promise<MyMarkReminderShape | null> {
-  const mine = (await dueItemsToday(now)).filter((i) => i.teacherIds.includes(userId));
+export async function myMarkReminder(userId: string, nowArg?: Date): Promise<MyMarkReminderShape | null> {
+  const now = nowArg ?? new Date();
+  const mine = [...(await dueItemsToday(now)), ...(await lateMarkItems(now, !nowArg))].filter((i) => i.teacherIds.includes(userId));
   if (mine.length === 0) return null;
   const dateKey = dhakaDayKey(now);
   const acked = new Set(
@@ -193,7 +252,9 @@ export async function acknowledgeMarkReminder(
 export async function runMarkEscalation(now: Date = new Date()): Promise<number> {
   const dateKey = dhakaDayKey(now);
   if (await MarkEscalation.exists({ dateKey })) return 0;
-  const late = (await dueItemsToday(now)).filter((i) => !i.marked);
+  const records = (await dueItemsToday(now)).filter((i) => !i.marked);
+  const marks = await lateMarkItems(now);
+  const late = [...records, ...marks];
   if (late.length === 0) return 0; // nothing unmarked ⇒ say nothing
   try {
     await MarkEscalation.create({
@@ -204,6 +265,7 @@ export async function runMarkEscalation(now: Date = new Date()): Promise<number>
         sectionId: new Types.ObjectId(i.sectionId),
         subject: i.subject,
         teacherIds: i.teacherIds.map((t) => new Types.ObjectId(t)),
+        ...(i.stage === "MARKS" ? { stage: "MARKS" as const, tracker: i.tracker, paperId: new Types.ObjectId(i.paperId!) } : {}),
       })),
     });
   } catch (err) {
@@ -212,7 +274,7 @@ export async function runMarkEscalation(now: Date = new Date()): Promise<number>
   }
   const teacherCount = new Set(late.flatMap((i) => i.teacherIds)).size;
   // D-#955: on the 09:30 list — a missed duty for each teacher of the item.
-  for (const i of late) {
+  for (const i of records) {
     for (const t of i.teacherIds) {
       await recordPlaceMistake({
         kind: "ASSIGNMENT_UNMARKED", tier: 3, refKey: i.asItemId, ownerId: t, correctedBy: "system", at: now,
@@ -220,7 +282,20 @@ export async function runMarkEscalation(now: Date = new Date()): Promise<number>
       });
     }
   }
-  return emitMarkSubmissionEscalation({ dateKey, teacherCount, itemCount: late.length });
+  // AL-9 R30: term 1 = the list + the Principal's alert only; from `lateMarksMistakeFromTerm` also ONE quiet row per
+  // teacher x paper (no notice to the teacher, D-#1020, even with staff_mistakes:view_own: `quiet`).
+  for (const i of marks) {
+    if (!i.mistakeDue) continue;
+    for (const t of i.teacherIds) {
+      await recordPlaceMistake({
+        kind: i.tracker === "HOMEWORK" ? "HOMEWORK_MARKS_LATE" : "ASSIGNMENT_MARKS_LATE", tier: 3, refKey: `AL9:${i.tracker}:${i.asItemId}`,
+        ownerId: t, correctedBy: "system", at: now, oncePerRef: true, quiet: true,
+        leaveDateKey: i.effectiveKeys?.[t] ?? dateKey,
+        line: `${i.asId}: ${i.tracker === "HOMEWORK" ? "বাড়ির কাজের" : "অ্যাসাইনমেন্টের"} প্রশ্নভিত্তিক নম্বর শেষ দিনের মধ্যে দেওয়া হয়নি`,
+      });
+    }
+  }
+  return emitMarkSubmissionEscalation({ dateKey, teacherCount, itemCount: late.length, marksItemCount: marks.length });
 }
 
 export interface MarkEscalationRowShape {
@@ -233,6 +308,9 @@ export interface MarkEscalationRowShape {
   teacherNames: string[];
   /** Marked after the 09:30 snapshot. */
   markedNow: boolean;
+  /** AL-9: "RECORDS" (2026 hand-in ladder) or "MARKS" (per-question marks not entered). */
+  stage: MarkRowStage;
+  tracker: MarkTracker;
 }
 
 export interface MyMarkEscalationShape {
@@ -241,13 +319,32 @@ export interface MyMarkEscalationShape {
   rows: MarkEscalationRowShape[];
 }
 
+type SnapRow = {
+  asItemId: Types.ObjectId; asId: string; sectionId: Types.ObjectId; subject: HwSubject; teacherIds: Types.ObjectId[];
+  stage?: MarkRowStage; tracker?: MarkTracker; paperId?: Types.ObjectId;
+};
+
+/** Keys (`RECORDS:<id>` / `MARKS:<id>`, so one id in both stages cannot mask the other) of these rows still open: records GIVEN|DUE for a RECORDS row, an unconfirmed
+ *  paper for a MARKS row. */
+async function openRowIds(rows: SnapRow[]): Promise<Set<string>> {
+  const records = rows.filter((r) => r.stage !== "MARKS");
+  const marks = rows.filter((r) => r.stage === "MARKS" && r.paperId);
+  const open = new Set<string>();
+  for (const id of await unmarkedIds(records.map((r) => r.asItemId))) open.add(`RECORDS:${id}`);
+  if (marks.length) {
+    const done = await confirmedPaperIds(marks.map((r) => r.paperId!));
+    for (const r of marks) if (!done.has(String(r.paperId))) open.add(`MARKS:${r.asItemId}`);
+  }
+  return open;
+}
+
 /** Rows of one snapshot, with names, labels and "marked since". */
 async function escalationShape(snap: {
   dateKey: string;
   createdAt: Date;
-  rows: { asItemId: Types.ObjectId; asId: string; sectionId: Types.ObjectId; subject: HwSubject; teacherIds: Types.ObjectId[] }[];
+  rows: SnapRow[];
 }): Promise<MyMarkEscalationShape> {
-  const open = await unmarkedIds(snap.rows.map((r) => r.asItemId));
+  const open = await openRowIds(snap.rows);
   const sectionIds = [...new Set(snap.rows.map((r) => String(r.sectionId)))];
   const labels = await sectionLabels(sectionIds);
   const sections = await Section.find({ _id: { $in: sectionIds } }).select("classId").lean();
@@ -267,7 +364,9 @@ async function escalationShape(snap: {
       classId: classOf.get(String(r.sectionId)) ?? "",
       sectionLabel: labels.get(String(r.sectionId)) ?? "",
       teacherNames: r.teacherIds.map((t) => name.get(String(t)) ?? "").filter(Boolean),
-      markedNow: !open.has(String(r.asItemId)),
+      markedNow: !open.has(`${r.stage ?? "RECORDS"}:${r.asItemId}`),
+      stage: r.stage ?? "RECORDS",
+      tracker: r.tracker ?? "ASSIGNMENT",
     })),
   };
 }
@@ -305,13 +404,13 @@ export async function markEscalationDays(limit = 26): Promise<MarkEscalationDayS
   const snaps = await MarkEscalation.find({})
     .sort({ dateKey: -1 })
     .limit(Math.min(Math.max(limit, 1), 100))
-    .select("dateKey rows.asItemId")
+    .select("dateKey rows.asItemId rows.stage rows.paperId")
     .lean();
-  const open = await unmarkedIds(snaps.flatMap((s) => s.rows.map((r) => r.asItemId)));
+  const open = await openRowIds(snaps.flatMap((s) => s.rows) as unknown as SnapRow[]);
   return snaps.map((s) => ({
     dateKey: s.dateKey,
     itemCount: s.rows.length,
-    openCount: s.rows.filter((r) => open.has(String(r.asItemId))).length,
+    openCount: s.rows.filter((r) => open.has(`${r.stage ?? "RECORDS"}:${r.asItemId}`)).length,
   }));
 }
 

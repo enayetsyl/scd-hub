@@ -36,6 +36,9 @@ const DueItemRef = builder.objectRef<DueItemShape>("MarkDueItem").implement({
     subject: t.exposeString("subject"),
     sectionLabel: t.exposeString("sectionLabel"),
     marked: t.exposeBoolean("marked"),
+    // AL-9: RECORDS (the 2026 hand-in question) or MARKS (per-question marks not entered).
+    stage: t.string({ resolve: (i) => i.stage ?? "RECORDS" }),
+    tracker: t.string({ resolve: (i) => i.tracker ?? "ASSIGNMENT" }),
   }),
 });
 
@@ -57,6 +60,8 @@ const EscalationRowRef = builder.objectRef<MarkEscalationRowShape>("MarkEscalati
     sectionLabel: t.exposeString("sectionLabel"),
     teacherNames: t.exposeStringList("teacherNames"),
     markedNow: t.exposeBoolean("markedNow"),
+    stage: t.exposeString("stage"),
+    tracker: t.exposeString("tracker"),
   }),
 });
 

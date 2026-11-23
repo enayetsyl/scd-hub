@@ -90,8 +90,16 @@ export function MarkReminderPopup(): React.ReactElement | null {
   async function close(open: boolean) {
     const r = await acknowledge({ stage: rem!.stage });
     if (!r.error) reexec({ requestPolicy: "network-only" });
-    if (open) openAppScreen("AssignmentTab", "AssignmentWorkspace");
+    if (open) {
+      // A homework item opens the homework workspace (its marks grid is one tap in); an assignment its workspace.
+      const first = rem!.items.find((i) => i.stage !== "MARKS") ?? rem!.items[0];
+      if (first?.tracker === "HOMEWORK") openAppScreen("HomeworkTab", "HomeworkWorkspace");
+      else openAppScreen("AssignmentTab", "AssignmentWorkspace");
+    }
   }
+  const recItems = rem.items.filter((i) => i.stage !== "MARKS");
+  const markItems = rem.items.filter((i) => i.stage === "MARKS");
+  const marksOnly = recItems.length === 0;
 
   return (
     <Modal
@@ -106,16 +114,28 @@ export function MarkReminderPopup(): React.ReactElement | null {
       <View style={styles.wrap}>
         <View style={styles.card}>
           <Muted>{STR.qxSchoolNotice}</Muted>
-          <Body style={styles.title}>{nine ? STR.msgNineTitle : STR.msgMornTitle}</Body>
-          <Body>{nine ? STR.msgNineBody : STR.msgMornBody}</Body>
+          {/* A marks-only day has its own title and body: no gift / streak text, no Thursday-collection text. */}
+          <Body style={styles.title}>{marksOnly ? STR.msgMarksTitle : nine ? STR.msgNineTitle : STR.msgMornTitle}</Body>
+          <Body>{marksOnly ? (nine ? STR.msgMarksBodyNine : STR.msgMarksBody) : nine ? STR.msgNineBody : STR.msgMornBody}</Body>
           <ScrollView style={{ maxHeight: 260 }}>
-            {rem.items.map((i) => (
+            {recItems.map((i) => (
               <ItemLine
-                key={i.asItemId}
+                key={`R:${i.asItemId}`}
                 text={`${i.sectionLabel} · ${hwSubjectLabel(i.subject)} (${i.asId})`}
                 done={i.marked}
                 doneLabel={STR.msgItemMarked}
                 pendingLabel={STR.msgItemPending}
+              />
+            ))}
+            {markItems.length > 0 && !marksOnly ? <Body style={styles.title2}>{STR.msgMarksTitle}</Body> : null}
+            {markItems.length > 0 && !marksOnly ? <Muted>{STR.msgMarksNote}</Muted> : null}
+            {markItems.map((i) => (
+              <ItemLine
+                key={`M:${i.asItemId}`}
+                text={`${i.sectionLabel} · ${hwSubjectLabel(i.subject)} (${i.asId}) · ${i.tracker === "HOMEWORK" ? STR.msgMarksHw : STR.msgMarksAs}`}
+                done={i.marked}
+                doneLabel={STR.msgItemMarked}
+                pendingLabel={STR.msgMarksPending}
               />
             ))}
           </ScrollView>
@@ -150,6 +170,9 @@ export function MarkEscalationPopup(): React.ReactElement | null {
   const locked = useLock(showing ? esc!.dateKey : null);
   if (!showing || !esc) return null;
 
+  const escRecords = esc.rows.filter((r) => r.stage !== "MARKS");
+  const escMarks = esc.rows.filter((r) => r.stage === "MARKS");
+
   async function close() {
     const r = await acknowledge({});
     if (!r.error) reexec({ requestPolicy: "network-only" });
@@ -161,16 +184,26 @@ export function MarkEscalationPopup(): React.ReactElement | null {
       <View style={styles.wrap}>
         <View style={styles.card}>
           <Muted>{STR.qxSchoolNotice}</Muted>
-          <Body style={styles.title}>{STR.msgEscTitle}</Body>
-          <Body>{STR.msgEscBody}</Body>
+          <Body style={styles.title}>{escRecords.length === 0 ? STR.msgEscMarksTitle : STR.msgEscTitle}</Body>
+          <Body>{escRecords.length === 0 ? STR.msgEscMarksBody : STR.msgEscBody}</Body>
           <ScrollView style={{ maxHeight: 320 }}>
-            {esc.rows.map((r) => (
+            {escRecords.map((r) => (
               <ItemLine
-                key={r.asItemId}
+                key={`R:${r.asItemId}`}
                 text={`${r.teacherNames.join(", ")} — ${r.sectionLabel} · ${hwSubjectLabel(r.subject)} (${r.asId})`}
                 done={r.markedNow}
                 doneLabel={STR.msgEscMarkedNow}
                 pendingLabel={STR.msgItemPending}
+              />
+            ))}
+            {escMarks.length > 0 && escRecords.length > 0 ? <Body style={styles.title2}>{STR.msgEscMarksTitle}</Body> : null}
+            {escMarks.map((r) => (
+              <ItemLine
+                key={`M:${r.asItemId}`}
+                text={`${r.teacherNames.join(", ")} — ${r.sectionLabel} · ${hwSubjectLabel(r.subject)} (${r.asId}) · ${r.tracker === "HOMEWORK" ? STR.msgMarksHw : STR.msgMarksAs}`}
+                done={r.markedNow}
+                doneLabel={STR.msgEscMarkedNow}
+                pendingLabel={STR.msgMarksPending}
               />
             ))}
           </ScrollView>
@@ -194,6 +227,7 @@ const useStyles = makeStyles((colors) => ({
     gap: space(2),
   },
   title: { fontWeight: "700", fontSize: 20 },
+  title2: { fontWeight: "700", fontSize: 16, marginTop: space(2) },
   row: { flexDirection: "row", gap: space(2), marginTop: space(2) },
   line: {
     flexDirection: "row",

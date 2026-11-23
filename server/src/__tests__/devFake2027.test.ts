@@ -309,3 +309,62 @@ describe("scenario 0 + remove + re-run", () => {
     expect(await ClassNote.countDocuments({ devFakeRun: { $exists: true } })).toBe(0);
   });
 });
+
+describe("scenario 5 (AL-9): late marking + remove", () => {
+  let y27: Types.ObjectId;
+  beforeAll(async () => {
+    await seedWorld();
+    // a 2027 year made by a year-change run: one Class 1 section, children, a MATH period every day, a small gold bank
+    const [y] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31"), current: true }]);
+    y27 = y._id as Types.ObjectId;
+    await AcademicYear.updateOne({ _id: year26 }, { $set: { current: false } });
+    await YearChangeRun.create({ runId: "yc-s5", fromYearId: year26, toYearId: y27, status: "CUT_OVER" });
+    const [c1] = await Class.create([{ level: 1, nameBn: "প্রথম", academicYearId: y27 }]);
+    const teacher = new Types.ObjectId();
+    const [sec] = await Section.create([{ classId: c1._id, code: "A", nameBn: "প্রথম", classTeacherId: teacher }]);
+    for (let i = 0; i < 10; i++) await Student.create([{ schoolId: `S5-${i}`, name: `Child ${i}`, classId: c1._id, sectionId: sec._id, active: true }]);
+    for (const day of ["SUN", "MON", "TUE", "WED", "THU"]) {
+      await RoutineSlot.create([
+        {
+          groupType: "section", groupId: sec._id, classId: c1._id, dayOfWeek: day, periodNumber: 1, subject: "MATH", track: "general",
+          teacherId: teacher, effectiveFrom: new Date("2020-01-01"), createdBy: new Types.ObjectId(),
+        },
+      ]);
+    }
+    for (let n = 1; n <= 6; n++) {
+      await ContentArtifact.create([
+        {
+          docType: "question", subject: "MATH", classLevel: 1, address: { anchorWord: "অধ্যায়", number: 1 }, curationTag: "KEEP_AS_IS",
+          current: true, importedBy: new Types.ObjectId(), reviewStatus: "gold",
+          envelopeJson: { tags: {}, payload: { qid: `QP-MATH-C1-U01-Q9${n}`, marks: 2, question_text: `প্রশ্ন ${n}` } },
+        },
+      ]);
+    }
+  });
+
+  it("declares + issues homework, leaves the papers unconfirmed, writes a MARKS snapshot, tags it all, and --remove leaves no residue", async () => {
+    const r = await runFake({ apply: true, scenarioIds: [5], now: NOW, guard, seed: 7 });
+    const runId = r.manifest!.runId;
+    const c = r.counts["5"]!;
+    expect(c.declared).toBeGreaterThan(0);
+    expect(c.issued).toBe(c.declared);
+    expect(c.unconfirmed).toBeGreaterThan(0);
+    expect(c.snapshotRows).toBeGreaterThanOrEqual(0);
+
+    const papers = await mongoose.model("MasteryPaper").collection.find({ devFakeRun: runId }).toArray();
+    expect(papers.length).toBe(c.unconfirmed);
+    expect(papers.every((p) => p.entryState === "OPEN" && p.trackerLinked === true)).toBe(true);
+    const snaps = await mongoose.model("MarkEscalation").collection.find({ devFakeRun: runId }).toArray();
+    expect(snaps).toHaveLength(1);
+    const rows = snaps[0]!.rows as Array<{ stage?: string; tracker?: string }>;
+    expect(rows.length).toBe(c.unconfirmed);
+    expect(rows.every((x) => x.stage === "MARKS" && x.tracker === "HOMEWORK")).toBe(true);
+    expect((await taggedIn(runId)).Notification).toBe(0); // muted: the 09:30 push reached nobody
+
+    const gone = await removeFakeRun(runId);
+    expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
+    expect(await mongoose.model("MasteryPaper").countDocuments({})).toBe(0);
+    expect(await mongoose.model("MarkEscalation").countDocuments({})).toBe(0);
+    expect(await mongoose.model("HomeworkItem").countDocuments({})).toBe(0);
+  });
+});

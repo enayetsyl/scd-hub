@@ -11,6 +11,9 @@ export interface MarkDueItemT {
   subject: string;
   sectionLabel: string;
   marked: boolean;
+  /** AL-9: RECORDS = nobody marked who handed in; MARKS = per-question marks not entered. */
+  stage?: "RECORDS" | "MARKS";
+  tracker?: "HOMEWORK" | "ASSIGNMENT";
 }
 
 export interface MyMarkReminderT {
@@ -21,7 +24,7 @@ export interface MyMarkReminderT {
 
 export const MY_MARK_REMINDER = gql<{ myMarkReminder: MyMarkReminderT | null }>`
   query MyMarkReminder {
-    myMarkReminder { stage dateKey items { asItemId asId subject sectionLabel marked } }
+    myMarkReminder { stage dateKey items { asItemId asId subject sectionLabel marked stage tracker } }
   }
 `;
 
@@ -36,13 +39,15 @@ export interface MarkEscalationRowT {
   sectionLabel: string;
   teacherNames: string[];
   markedNow: boolean;
+  stage?: "RECORDS" | "MARKS";
+  tracker?: "HOMEWORK" | "ASSIGNMENT";
 }
 
 export const MY_MARK_ESCALATION = gql<{
   myMarkEscalation: { dateKey: string; createdAt: string; rows: MarkEscalationRowT[] } | null;
 }>`
   query MyMarkEscalation {
-    myMarkEscalation { dateKey createdAt rows { asItemId asId subject sectionLabel teacherNames markedNow } }
+    myMarkEscalation { dateKey createdAt rows { asItemId asId subject sectionLabel teacherNames markedNow stage tracker } }
   }
 `;
 
@@ -62,7 +67,7 @@ export const MARK_ESCALATION = gql<
 >`
   query MarkEscalation($dateKey: String) {
     markEscalation(dateKey: $dateKey) {
-      dateKey createdAt rows { asItemId asId subject sectionId classId sectionLabel teacherNames markedNow }
+      dateKey createdAt rows { asItemId asId subject sectionId classId sectionLabel teacherNames markedNow stage tracker }
     }
   }
 `;

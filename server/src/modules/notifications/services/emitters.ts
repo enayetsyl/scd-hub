@@ -2380,12 +2380,18 @@ export async function emitMarkSubmissionEscalation(ev: {
   dateKey: string;
   teacherCount: number;
   itemCount: number;
+  /** AL-9: how many of `itemCount` are papers whose per-question marks are not entered (0 / absent = the 2026 text). */
+  marksItemCount?: number;
 }): Promise<number> {
   let created = 0;
   await bestEffort("mark submission escalation", async () => {
     const recipients = await holderIdsOf("mark_submission:alerts");
-    const titleBn = "অ্যাসাইনমেন্টের জমার হিসাব বাকি";
-    const bodyBn = `${bnNum(ev.teacherCount)} জন শিক্ষক ${bnNum(ev.itemCount)}টি অ্যাসাইনমেন্টের জমার হিসাব এখনো দেননি। তালিকা দেখতে অ্যাপ খুলুন।`;
+    const marksN = ev.marksItemCount ?? 0;
+    const titleBn = marksN > 0 ? "জমার হিসাব ও নম্বর বাকি" : "অ্যাসাইনমেন্টের জমার হিসাব বাকি";
+    const bodyBn =
+      marksN > 0
+        ? `${bnNum(ev.teacherCount)} জন শিক্ষকের ${bnNum(ev.itemCount)}টি কাজের জমার হিসাব বা প্রশ্নভিত্তিক নম্বর এখনো দেওয়া হয়নি (এর মধ্যে ${bnNum(marksN)}টি নম্বরের)। তালিকা দেখতে অ্যাপ খুলুন।`
+        : `${bnNum(ev.teacherCount)} জন শিক্ষক ${bnNum(ev.itemCount)}টি অ্যাসাইনমেন্টের জমার হিসাব এখনো দেননি। তালিকা দেখতে অ্যাপ খুলুন।`;
     for (const rid of recipients) {
       const res = await emit({
         recipientUserId: rid,

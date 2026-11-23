@@ -36,13 +36,23 @@ MarkReminderAckSchema.index({ userId: 1, dateKey: 1, stage: 1 }, { unique: true 
 
 export const MarkReminderAck = model<IMarkReminderAck>("MarkReminderAck", MarkReminderAckSchema);
 
+/** AL-9: which question the row is about — "RECORDS" = nobody marked who handed in (2026 ladder); "MARKS" = the
+ *  per-question marks are not entered / the paper is not confirmed after its deadline. */
+export const MARK_ROW_STAGES = ["RECORDS", "MARKS"] as const;
+export type MarkRowStage = (typeof MARK_ROW_STAGES)[number];
+
 export interface MarkEscalationRow {
+  /** The tracker item's id (an AssignmentItem; for `tracker` HOMEWORK a HomeworkItem). */
   asItemId: Types.ObjectId;
   asId: string;
   sectionId: Types.ObjectId;
   subject: HwSubject;
   /** The deliverer + any due-day proxy (D-#889). */
   teacherIds: Types.ObjectId[];
+  /** AL-9 — absent on 2026 rows, which read as RECORDS / ASSIGNMENT. */
+  stage?: MarkRowStage;
+  tracker?: "HOMEWORK" | "ASSIGNMENT";
+  paperId?: Types.ObjectId;
 }
 
 export interface IMarkEscalation extends Document {
@@ -59,6 +69,9 @@ const RowSchema = new Schema<MarkEscalationRow>(
     sectionId: { type: Schema.Types.ObjectId, required: true },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
     teacherIds: { type: [Schema.Types.ObjectId], default: [] },
+    stage: { type: String, enum: MARK_ROW_STAGES },
+    tracker: { type: String, enum: ["HOMEWORK", "ASSIGNMENT"] },
+    paperId: { type: Schema.Types.ObjectId },
   },
   { _id: false },
 );

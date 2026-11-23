@@ -33,6 +33,8 @@ export interface PlaceMistakeInput {
   oncePerRef?: boolean;
   /** The duty's day: an approved leave covering it is accepted at once (D-#955). */
   leaveDateKey?: string | null;
+  /** AL-9: record quietly - no notice, no warning step (see RecordMistakeInput.quiet). */
+  quiet?: boolean;
 }
 
 export async function recordPlaceMistake(ev: PlaceMistakeInput): Promise<boolean> {
@@ -65,6 +67,7 @@ export async function recordPlaceMistake(ev: PlaceMistakeInput): Promise<boolean
       staffUserId: owner,
       correctedBy: ev.correctedBy,
       at: ev.at,
+      quiet: ev.quiet,
       autoReason: onLeave ? { code: "ON_LEAVE", text: "অনুমোদিত ছুটি (অ্যাপ মিলিয়েছে)" } : null,
     });
     return true;
