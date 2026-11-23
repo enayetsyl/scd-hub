@@ -17,6 +17,7 @@
  * Everything here runs only with `academicLoop2027On` (§3.6): the callers read the switch, so with it off a 2026
  * assignment flow is byte-for-byte unchanged. Nursery / KG have no weekly assignment, so no budget (AC-C15).
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import type { MasterySubject } from "@scd/shared";
 import { MasteryAssignment, type IMasteryAssignment } from "../models/MasteryAssignment";
@@ -404,7 +405,7 @@ export async function onAssignmentIssued(itemId: Types.ObjectId | string): Promi
     await lockPaper(paper);
   } catch (err) {
     // Same fallback as the homework issue path: the ledger rows are written even when the lock failed.
-    await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(new Date()), wholeIfAll: true }));
+    await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(appNow()), wholeIfAll: true }));
     throw err;
   }
 }

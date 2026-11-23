@@ -10,6 +10,7 @@
  * the routine names them on this section × subject on that date. Never a role check (D-#799).
  * And the add-on must be switched on for the year × class × subject (D-#775).
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import { untaggedRefusal } from "../taggedGuard";
 import { callerHasPermission, MASTERY_CLASS_TOKENS, MASTERY_RUBRIC_STEPS } from "@scd/shared";
@@ -126,7 +127,7 @@ export async function assertMayWork(auth: Auth, sectionId: Types.ObjectId, subje
   if (teacherId && String(teacherId) === String(auth.userId)) return;
   // AL-4 / AC-S1 (switch on): today's substitute for the absent subject teacher reaches the শাখা × subject for the
   // day — pick, enter marks, finalise — the same rule the mark reminders use (§7). Off → exactly the 2026 rule.
-  if (dhakaDayKey(on) === dhakaDayKey(new Date()) && (await isLoop2027On())) {
+  if (dhakaDayKey(on) === dhakaDayKey(appNow()) && (await isLoop2027On())) {
     const { isTodaySubstituteFor } = await import("./HomeworkPaperService");
     if (await isTodaySubstituteFor(String(auth.userId), sectionId, subject)) return;
   }
@@ -200,7 +201,7 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     // it is dated today or earlier, and it is never a tracker item (no hwItemId, no classTestId).
     if (!(await isLoop2027On())) throw new MasteryWorkError("এই সুবিধা এখনো চালু হয়নি।");
     if (input.hwItemId || input.classTestId) throw new MasteryWorkError("ক্লাসের কাজ বাড়ির কাজ বা ক্লাস টেস্টের সাথে যুক্ত হয় না।");
-    if (dhakaDayKey(date) > dhakaDayKey(new Date())) throw new MasteryWorkError("ক্লাসের কাজের তারিখ আজকের পরে হতে পারে না।");
+    if (dhakaDayKey(date) > dhakaDayKey(appNow())) throw new MasteryWorkError("ক্লাসের কাজের তারিখ আজকের পরে হতে পারে না।");
   }
   const isRubric = input.source === "RUBRIC";
   const rubricCodes = [...new Set(input.rubricLoCodes ?? [])];
@@ -475,7 +476,7 @@ export async function listPapersPage(
   auth: Auth,
 ): Promise<Page<PaperView>> {
   const ctx = await sectionContext(sectionId);
-  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  await assertMayWork(auth, ctx.sectionId, subject, appNow());
   return queryPage(MasteryPaper, { sectionId: ctx.sectionId, subject }, { date: -1, _id: -1 }, args, (docs) =>
     (docs as unknown as IMasteryPaper[]).map(paperView),
   );
@@ -787,7 +788,7 @@ async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Pro
     liveCodes: new Set(live.map((o) => o.code)),
     studentItems: studentItemsOf(paper) ?? undefined,
   });
-  const now = new Date();
+  const now = appNow();
   await MasteryEvidence.updateMany(
     { paperId: paper._id, studentId: { $in: studentIds.map(oid) }, supersededAt: null },
     { $set: { supersededAt: now } },
@@ -917,7 +918,7 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
       refKey: String(paper._id),
       ownerId: owner,
       correctedBy: auth.userId,
-      at: new Date(),
+      at: appNow(),
       line: `নিশ্চিত করার পর ${n} জন শিক্ষার্থীর ফল বদলানো হয়েছে`,
     });
   }
@@ -956,7 +957,7 @@ export async function confirmPaper(paperId: string, auth: Auth): Promise<Confirm
   }
   const res = await writeEvidenceFor(paper, ids);
   paper.entryState = "CONFIRMED";
-  paper.confirmedAt = new Date();
+  paper.confirmedAt = appNow();
   paper.confirmedBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await paper.save();
   await afterEvidence(paper);
@@ -988,7 +989,7 @@ export interface HomeworkLinkOption {
 /** The section × subject's homework items of the last 21 days — to link a sheet to its tracker row. */
 export async function homeworkLinkOptions(sectionId: string, subject: MasterySubject, auth: Auth): Promise<HomeworkLinkOption[]> {
   const ctx = await sectionContext(sectionId);
-  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  await assertMayWork(auth, ctx.sectionId, subject, appNow());
   const since = new Date(Date.now() - 21 * 86_400_000);
   const rows = await HomeworkItem.find({ sectionId: ctx.sectionId, subject, dateGiven: { $gte: since } })
     .select("hwId dateGiven description")
@@ -1021,7 +1022,7 @@ export interface ClassTestLinkOption {
  */
 export async function classTestLinkOptions(sectionId: string, subject: MasterySubject, auth: Auth): Promise<ClassTestLinkOption[]> {
   const ctx = await sectionContext(sectionId);
-  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  await assertMayWork(auth, ctx.sectionId, subject, appNow());
   const since = new Date(Date.now() - 30 * 86_400_000);
   const tests = await ClassTest.find({
     sectionId: ctx.sectionId, subjectGroupId: null, subject, status: { $in: ["REQUESTED", "PRINTED"] }, examDate: { $gte: since },

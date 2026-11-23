@@ -40,6 +40,9 @@ import { DevGuardError } from "../lib/devData/guards";
 import { FAKE_BASE_MODELS, loadAllModels, resolveCollections } from "../lib/devData/collections";
 import { fallbackStartKey, fakeRunId, removeFakeRun, runFake, seededRng, weekDayKeys } from "../lib/devData/devFake2027";
 import { SCENARIOS, type Scenario } from "../lib/devData/scenarios";
+import { appNow, setDevClock } from "../lib/devClock";
+import { recordUses } from "../modules/assessment/services/QuestionUseService";
+import { QuestionUse } from "../modules/assessment/models/QuestionUse";
 
 jest.setTimeout(300_000);
 
@@ -57,6 +60,29 @@ const taggedIn = async (runId?: string): Promise<Record<string, number>> => {
   const out: Record<string, number> = {};
   for (const m of declared()) {
     out[m] = await mongoose.model(m).collection.countDocuments(runId ? { devFakeRun: runId } : { devFakeRun: { $exists: true } });
+  }
+  return out;
+};
+
+/** Row count of EVERY registered collection (declared or not): the baseline a run must leave behind after `--remove`. */
+const countsOfAll = async (): Promise<Record<string, number>> => {
+  const out: Record<string, number> = {};
+  for (const m of mongoose.modelNames()) {
+    const c = mongoose.model(m).collection;
+    out[c.collectionName] = await c.countDocuments({});
+  }
+  return out;
+};
+/** Counters / config a run may legitimately leave (sequence rows are bumped, never removed; the release switch and the system tags are configuration). */
+const KEPT_BY_DESIGN = /sequences?$|masterypolicies$|masteryenablements$|masterytags$/i; // masterytags: the 8 system tags a first marks read seeds (ensureSystemTags)
+/** Collections whose row count grew since `before` although a `--remove` ran: an untagged side effect the declared list missed. */
+const leftovers = async (before: Record<string, number>): Promise<Record<string, number>> => {
+  const after = await countsOfAll();
+  const out: Record<string, number> = {};
+  for (const [coll, n] of Object.entries(after)) {
+    if (KEPT_BY_DESIGN.test(coll)) continue;
+    const grew = n - (before[coll] ?? 0);
+    if (grew > 0) out[coll] = grew;
   }
   return out;
 };
@@ -145,6 +171,25 @@ describe("pure helpers", () => {
     const a = seededRng(7);
     const b = seededRng(7);
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
+  });
+});
+
+describe("dev clock", () => {
+  it("is new Date() until set, honoured only on a `_dev` database, and cleared again", () => {
+    expect(Math.abs(appNow().getTime() - Date.now())).toBeLessThan(1000);
+    setDevClock(new Date("2027-01-03T05:00:00Z"));
+    expect(appNow().toISOString()).toBe("2027-01-03T05:00:00.000Z");
+    setDevClock(null);
+    expect(Math.abs(appNow().getTime() - Date.now())).toBeLessThan(1000);
+    const own = Object.getOwnPropertyDescriptor(mongoose.connection, "name");
+    Object.defineProperty(mongoose.connection, "name", { value: "scdhub", configurable: true });
+    try {
+      expect(() => setDevClock(new Date("2027-01-03T05:00:00Z"))).toThrow(/_dev/);
+      expect(Math.abs(appNow().getTime() - Date.now())).toBeLessThan(1000);
+    } finally {
+      if (own) Object.defineProperty(mongoose.connection, "name", own);
+      else delete (mongoose.connection as unknown as Record<string, unknown>).name;
+    }
   });
 });
 
@@ -313,6 +358,45 @@ describe("scenario 0 + remove + re-run", () => {
     await removeFakeRun(id, [boom]);
     expect(await ClassNote.countDocuments({ devFakeRun: { $exists: true } })).toBe(0);
   });
+
+  it("logs each refusal reason once with its count and keeps a reasons map per scenario in the report", async () => {
+    const lines: string[] = [];
+    const refuser: Scenario = {
+      id: 0,
+      name: "refuser",
+      collections: [{ model: "ClassNote" }],
+      run: async (ctx) => {
+        for (let i = 0; i < 3; i++) ctx.refuse("asRefused", new Error(`budget over for 507f1f77bcf86cd79943901${i}`));
+        ctx.refuse("asRefused", new Error("another reason"));
+        ctx.refuse("confirmRefused", "plain text");
+        return { asRefused: 4 };
+      },
+    };
+    const r = await runFake({ apply: true, allow2026: true, now: new Date(NOW.getTime() + 180_000), guard, log: (l) => lines.push(l) }, [refuser]);
+    expect(r.reasons["0"]).toEqual({ "asRefused: budget over for <id>": 3, "asRefused: another reason": 1, "confirmRefused: plain text": 1 });
+    expect(lines).toEqual(expect.arrayContaining(["[dev-fake] s0 asRefused x3: budget over for <id>", "[dev-fake] s0 confirmRefused x1: plain text"]));
+    expect(lines.filter((l) => l.includes("budget over"))).toHaveLength(1); // once per distinct reason, not per refusal
+    await removeFakeRun(r.manifest!.runId, [refuser]);
+  });
+
+  it("tags a row whose writer left NO createdAt (a pipeline upsert, like the question ledger) and --remove deletes it", async () => {
+    const sec = new Types.ObjectId();
+    const writer: Scenario = {
+      id: 0,
+      name: "pipeline-upsert",
+      collections: [{ model: "QuestionUse" }],
+      run: async () => {
+        await recordUses([{ qid: "QP-X-1", kind: "HW", sourceType: "MASTERY_PAPER", sourceId: new Types.ObjectId(), academicYearId: new Types.ObjectId(), sectionId: sec, subject: "MATH", givenOn: "2027-01-03" }]);
+        return {};
+      },
+    };
+    const r = await runFake({ apply: true, allow2026: true, now: new Date(NOW.getTime() + 240_000), guard }, [writer]);
+    const raw = await QuestionUse.collection.findOne({ qid: "QP-X-1" });
+    expect(raw?.createdAt).toBeUndefined(); // the cause: no timestamp, so a createdAt-only filter never matched it
+    expect(raw?.devFakeRun).toBe(r.manifest!.runId);
+    await removeFakeRun(r.manifest!.runId, [writer]);
+    expect(await QuestionUse.collection.countDocuments({ qid: "QP-X-1" })).toBe(0);
+  });
 });
 
 describe("scenario 5 (AL-9): late marking + remove", () => {
@@ -348,6 +432,7 @@ describe("scenario 5 (AL-9): late marking + remove", () => {
   });
 
   it("declares + issues homework, leaves the papers unconfirmed, writes a MARKS snapshot, tags it all, and --remove leaves no residue", async () => {
+    const before = await countsOfAll();
     const r = await runFake({ apply: true, scenarioIds: [5], now: NOW, guard, seed: 7 });
     const runId = r.manifest!.runId;
     const c = r.counts["5"]!;
@@ -365,9 +450,13 @@ describe("scenario 5 (AL-9): late marking + remove", () => {
     expect(rows.length).toBe(c.unconfirmed);
     expect(rows.every((x) => x.stage === "MARKS" && x.tracker === "HOMEWORK")).toBe(true);
     expect((await taggedIn(runId)).Notification).toBe(0); // muted: the 09:30 push reached nobody
+    // the homework issue wrote its question-ledger rows (through the real declare -> issue -> lock path): every one is tagged
+    expect(await QuestionUse.countDocuments({})).toBeGreaterThan(0);
+    expect(await QuestionUse.countDocuments({ devFakeRun: { $exists: false } })).toBe(0);
 
     const gone = await removeFakeRun(runId);
     expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
+    expect(await leftovers(before)).toEqual({}); // NOTHING the run caused is left in ANY collection (declared or not)
     expect(await mongoose.model("MasteryPaper").countDocuments({})).toBe(0);
     expect(await mongoose.model("MarkEscalation").countDocuments({})).toBe(0);
     expect(await mongoose.model("HomeworkItem").countDocuments({})).toBe(0);
@@ -470,6 +559,7 @@ describe("scenario 7 (AL-12): high homework + low class test -> an outside-help 
   });
 
   it("writes a HW sheet (all right) and a CT sheet (a few children all wrong) on one objective, opens cases, records one outcome (tag on), tags it all, muted, and --remove leaves no residue", async () => {
+    const before = await countsOfAll();
     const r = await runFake({ apply: true, scenarioIds: [7], now: NOW, guard, seed: 9 });
     const runId = r.manifest!.runId;
     const c = r.counts["7"]!;
@@ -486,10 +576,109 @@ describe("scenario 7 (AL-12): high homework + low class test -> an outside-help 
     expect(closed[0]!.outcome).toBe("GUARDIAN_DID");
     expect(closed[0]!.tagActive).toBe(true);
     expect((await taggedIn(runId)).Notification).toBe(0); // muted: nobody was told
+    // the HW sheet's ledger rows (written by createPaper, a pipeline upsert with no createdAt) are tagged too
+    expect(await QuestionUse.countDocuments({})).toBeGreaterThan(0);
+    expect(await QuestionUse.countDocuments({ devFakeRun: { $exists: false } })).toBe(0);
 
     const gone = await removeFakeRun(runId);
     expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
     expect(await mongoose.model("IntegrityCase").countDocuments({})).toBe(0);
+    expect(await leftovers(before)).toEqual({});
+  });
+});
+
+describe("scenarios 2, 2.5 and 4: homework marks, class work / class test / weekly assignment, re-teach", () => {
+  const PRINCIPAL = { userId: new Types.ObjectId().toString(), role: "PRINCIPAL" as const };
+  const LO = "LO-C1-MATH-01-01";
+  beforeAll(async () => {
+    await seedWorld();
+    const [y] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31"), current: true }]);
+    await AcademicYear.updateOne({ _id: year26 }, { $set: { current: false } });
+    await YearChangeRun.create({ runId: "yc-s24", fromYearId: year26, toYearId: y._id, status: "CUT_OVER" });
+    const [c1] = await Class.create([{ level: 1, nameBn: "প্রথম", academicYearId: y._id }]);
+    const teacher = new Types.ObjectId();
+    const [sec] = await Section.create([{ classId: c1._id, code: "A", nameBn: "প্রথম", classTeacherId: teacher }]);
+    for (let i = 1; i <= 8; i++) await Student.create([{ schoolId: `S24-${i}`, name: `Child ${i}`, classId: c1._id, sectionId: sec._id, active: true }]);
+    for (const day of ["SUN", "MON", "TUE", "WED", "THU"]) {
+      await RoutineSlot.create([
+        {
+          groupType: "section", groupId: sec._id, classId: c1._id, dayOfWeek: day, periodNumber: 1, subject: "MATH", track: "general",
+          teacherId: teacher, effectiveFrom: new Date("2020-01-01"), createdBy: new Types.ObjectId(),
+        },
+      ]);
+    }
+    await User.create({ role: "PRINCIPAL", name: "Head", phone: "01700000088", passwordHash: "x" });
+    const cat = await importCatalogue(
+      JSON.stringify({
+        classToken: "C1", subject: "MATH", status: "LOCKED",
+        chapters: [{ number: 1, titleBn: "সংখ্যা" }],
+        outcomes: [{ code: LO, labelBn: "সংখ্যা চেনা", assess: "QUESTION", questionTypeCodes: ["QT-SHORT"] }],
+        questionTypes: [{ code: "QT-SHORT", labelBn: "সংক্ষিপ্ত", marks: 2 }],
+      }),
+      true,
+      PRINCIPAL,
+    );
+    if (!cat.ok) throw new Error(cat.errors.join("; "));
+    await setEnablement(String(y._id), "C1", "MATH", true, PRINCIPAL);
+    for (let n = 1; n <= 40; n++) {
+      await ContentArtifact.create([
+        {
+          docType: "question", classLevel: 1, subject: "MATH", address: { anchorWord: "অধ্যায়", number: 1 }, curationTag: "KEEP_AS_IS",
+          current: true, importedBy: new Types.ObjectId(), reviewStatus: "gold",
+          envelopeJson: { tags: { topic_tag: LO }, payload: { qid: `QP-MATH-C1-U01-Q96${String(n).padStart(3, "0")}`, topic_tag: LO, marks: 2, question_text: `প্রশ্ন ${n}` } },
+        },
+      ]);
+    }
+  });
+
+  it("each scenario produces its intended data, every row it caused is tagged (the question ledger included), reasons are reported, and --remove leaves nothing", async () => {
+    const before = await countsOfAll();
+    const lines: string[] = [];
+    const r = await runFake({ apply: true, scenarioIds: [2, 2.5, 3, 4], now: NOW, guard, seed: 11, log: (l) => lines.push(l) });
+    const runId = r.manifest!.runId;
+    // the run's own homework / class tests / assignments used up this small bank: scenario 3's sheets are empty and SAY so
+    expect(r.counts["3"]!.sent).toBeGreaterThan(0);
+    expect(Object.keys(r.reasons["3"] ?? {}).every((k) => k.startsWith("emptyPapers:"))).toBe(true);
+
+    const c2 = r.counts["2"]!;
+    expect(c2.declared).toBeGreaterThan(0);
+    expect(c2.declareRefused).toBe(0); // every pick went through the declare's own guard first
+    expect(c2.issued).toBe(c2.declared);
+
+    const c25 = r.counts["2.5"]!;
+    expect(c25.cwPapers).toBeGreaterThan(0); // a CW sheet is dated the fake day (2027): the dev clock lets it through
+    expect(c25.cwRefused).toBe(0);
+    expect(c25.ctLinked).toBeGreaterThan(0); // the linked CT sheet is what writes the CT ledger rows and the test's results
+    expect(c25.asSent).toBeGreaterThan(0); // the weekly assignment: one per section per week
+    expect(c25.confirmRefused).toBe(0); // the records were handed in first, the CW / CT / AS sheets confirmed
+
+    const c4 = r.counts["4"]!;
+    expect(c4.cwPapers).toBe(2); // two in-school papers on one objective
+    expect(c4.refused).toBe(0);
+    expect(c4.proposals).toBe(1);
+    expect(await mongoose.model("MasteryAction").countDocuments({ devFakeRun: runId })).toBeGreaterThanOrEqual(1);
+
+    // the CT ledger rows exist once a test owns the sheet, and ALL ledger rows are tagged
+    expect(await QuestionUse.countDocuments({ kind: "CT" })).toBeGreaterThan(0);
+    expect(await QuestionUse.countDocuments({ devFakeRun: { $exists: false } })).toBe(0);
+    expect((await taggedIn(runId)).Notification).toBe(0);
+
+    const gone = await removeFakeRun(runId);
+    expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
+    expect(await leftovers(before)).toEqual({});
+  });
+
+  it("scenario 3 after scenario 2.5 only (no homework eating the bank): the engine's sheets carry questions, the weak children are ticked, the next week is confirmed right", async () => {
+    const before = await countsOfAll();
+    const r = await runFake({ apply: true, scenarioIds: [2.5, 3], now: new Date(NOW.getTime() + 60_000), guard, seed: 12 });
+    const c3 = r.counts["3"]!;
+    expect(c3.sent).toBe(2);
+    expect(c3.refused).toBe(0);
+    expect(c3.weakTicks).toBeGreaterThan(0);
+    expect(c3.improvedConfirms + c3.emptyPapers).toBe(1); // week 2: confirmed right - or, on this 40-question bank, nothing unseen left to put on the sheet
+    expect(await QuestionUse.countDocuments({ devFakeRun: { $exists: false } })).toBe(0);
+    await removeFakeRun(r.manifest!.runId);
+    expect(await leftovers(before)).toEqual({});
   });
 });
 

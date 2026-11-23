@@ -14,6 +14,7 @@
  * This file imports the trackers service; the trackers resolver reaches it by a LAZY import, so the
  * two modules never import each other at load time.
  */
+import { appNow } from "../../lib/devClock";
 import { Types } from "mongoose";
 import { MasteryPaper, type IMasteryPaper } from "./models/MasteryPaper";
 import { MasteryResult, type MasteryResultStatus } from "./models/MasteryResult";
@@ -126,7 +127,7 @@ export async function storedOutcomes(paper: IMasteryPaper, rosterIds: string[]):
 }
 
 /** The confirm-time check: the test must be printed and its exam date reached. Null = ready. */
-export function testNotReadyMessage(test: IClassTest, now: Date = new Date()): string | null {
+export function testNotReadyMessage(test: IClassTest, now: Date = appNow()): string | null {
   if (test.status !== "PRINTED") return "ক্লাস টেস্টটি এখনো ছাপা হয়নি — ছাপা হওয়ার পর শিট নিশ্চিত করুন।";
   // The class test's own rule (J3): the exam day itself counts (date-only comparison).
   const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();

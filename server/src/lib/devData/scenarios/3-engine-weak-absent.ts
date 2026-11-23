@@ -13,24 +13,24 @@ import { MasteryEnablement } from "../../../modules/mastery/models/MasteryEnable
 import { MasteryAssignmentSheet } from "../../../modules/mastery/models/MasteryAssignmentSheet";
 import { MasteryPaper } from "../../../modules/mastery/models/MasteryPaper";
 import { MasteryPolicy } from "../../../modules/mastery/models/MasteryPolicy";
-import { approveAllSheets, sendAssignment } from "../../../modules/mastery/services/MasteryAssignmentService";
+import { sendAssignment } from "../../../modules/mastery/services/MasteryAssignmentService";
 import { buildSuggestedDraft } from "../../../modules/mastery/services/AssignmentSuggestionService";
 import { classTokenForLevel, confirmPaper, saveResults, type Auth } from "../../../modules/mastery/services/MasteryWorkService";
 import { isLoop2027On } from "../../../modules/assessment/services/QuestionUseService";
 import { Student } from "../../../modules/foundation/models/Student";
 import { slotsForDate } from "../../../modules/routine/services/RoutineSlotService";
 import type { MasterySubject } from "@scd/shared";
+import { approveWithReview } from "./helpers";
 import type { Scenario, ScenarioCtx } from "./types";
 
 const WEAK_CHILDREN = 3;
-const addDays = (key: string, n: number) => new Date(Date.parse(`${key}T00:00:00.000Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 export const scenario3: Scenario = {
   id: 3,
   name: "engine-weak-absent",
-  collections: [{ model: "MasteryPaper" }, { model: "MasteryResult" }, { model: "MasteryAssignment" }, { model: "MasteryAssignmentSheet" }],
+  collections: [{ model: "MasteryPaper" }, { model: "MasteryResult" }, { model: "MasteryAssignment" }, { model: "MasteryAssignmentSheet" }, { model: "AssignmentItem" }, { model: "AssignmentStudentRecord" }],
   async run(ctx: ScenarioCtx): Promise<Record<string, number>> {
-    const c: Record<string, number> = { drafts: 0, sent: 0, refused: 0, weakTicks: 0, improvedConfirms: 0, missedEasyItems: 0, weakItems: 0, noStock: 0 };
+    const c: Record<string, number> = { drafts: 0, sent: 0, refused: 0, weakTicks: 0, improvedConfirms: 0, missedEasyItems: 0, weakItems: 0, noStock: 0, noPaper: 0, emptyPapers: 0, gapApprovals: 0 };
     if (!(await isLoop2027On())) {
       await MasteryPolicy.updateOne({ scopeKey: "SCHOOL" }, { $set: { "values.academicLoop2027On": true }, $setOnInsert: { scopeKey: "SCHOOL" } }, { upsert: true });
       ctx.switchedOn.push("academicLoop2027On");
@@ -38,6 +38,7 @@ export const scenario3: Scenario = {
     const first = ctx.dayKeys[Math.min(ctx.dayKeys.length - 1, 7)];
     if (!first) return c;
     const since = new Date();
+    ctx.clock(first); // "today" = the fake day: the engine's due-day, delivery and routine-teacher rules read it
     for (const sec of ctx.sections.filter((s) => s.level >= 1)) {
       const token = classTokenForLevel(sec.level);
       if (!token) continue;
@@ -50,7 +51,12 @@ export const scenario3: Scenario = {
       const auth = { userId: teacherOf.get(subject)!, role: "TEACHER" } as unknown as Auth;
       const kids = (await Student.find({ sectionId: sec.sectionId, active: true }).select("_id").lean()).map((k) => String(k._id));
       try {
-        for (const [week, due] of [[1, addDays(first, 3)], [2, addDays(first, 10)]] as const) {
+        // Due on SCHOOL days (two Sundays, a week apart): the confirm reads the routine teacher of the paper's own date, and a Friday
+        // has none, so a Friday due day was refused at the confirm.
+        const dues = [ctx.dayKeys[Math.min(ctx.dayKeys.length - 1, 10)]!, ctx.dayKeys[Math.min(ctx.dayKeys.length - 1, 15)]!];
+        for (const [week, due] of [[1, dues[0]!], [2, dues[1]!]] as const) {
+          const dueSlots = (await slotsForDate("section", sec.sectionId, new Date(`${due}T00:00:00.000Z`))).filter((s) => !s.isBreak && s.teacherId && s.subject === subject);
+          const dueAuth = { userId: dueSlots[0] ? String(dueSlots[0].teacherId) : auth.userId, role: "TEACHER" } as unknown as Auth;
           const r = await buildSuggestedDraft({ sectionId: sec.sectionId, subject: subject as MasterySubject, dueYmd: due, nSubjects: 2, builtBy: "ENGINE", actorId: auth.userId, rebuild: true });
           if (!r.assignment) {
             c.noStock++;
@@ -62,24 +68,38 @@ export const scenario3: Scenario = {
             c.missedEasyItems += s.items.filter((i) => i.band === "MISSED").length;
             c.weakItems += s.items.filter((i) => i.band === "WEAK").length;
           }
-          await approveAllSheets(String(r.assignment._id), auth);
+          c.gapApprovals += await approveWithReview(String(r.assignment._id), auth);
           const sent = await sendAssignment(String(r.assignment._id), auth);
           c.sent++;
-          if (!sent.paperId) continue;
+          if (!sent.paperId) {
+            c.noPaper++;
+            continue;
+          }
           const paper = await MasteryPaper.findOne({ paperId: sent.paperId });
-          if (!paper || paper.items.length === 0) continue;
+          if (!paper || paper.items.length === 0) {
+            // every unseen question of the objectives was already given (HW / CT / AS of the run): a sheet with nothing to tick
+            c.emptyPapers++;
+            ctx.refuse("emptyPapers", "the sent AS paper carries no question (the bank has no unseen question left for this section)");
+            continue;
+          }
           if (week === 1) {
             // The weak children: wrong on the first item of the sheet.
-            const rows = ctx.pick(kids, Math.min(WEAK_CHILDREN, kids.length)).map((studentId) => ({ studentId, items: [{ itemNo: paper.items[0]!.itemNo, marks: 0 }] }));
+            // (the first item of the child's OWN list: each child's sheet is Part A + their own Part B; a child whose sheet is empty is skipped)
+            const withSheet = kids.filter((studentId) => (paper.perStudentItems?.find((l) => String(l.studentId) === studentId)?.itemNos.length ?? 0) > 0);
+            const rows = ctx.pick(withSheet, Math.min(WEAK_CHILDREN, withSheet.length)).map((studentId) => {
+              const own = paper.perStudentItems!.find((l) => String(l.studentId) === studentId)!.itemNos;
+              return { studentId, items: [{ itemNo: Math.min(...own), marks: 0 }] };
+            });
             if (rows.length > 0) {
-              await saveResults(sent.paperId, rows, auth);
+              await saveResults(sent.paperId, rows, dueAuth);
               c.weakTicks += rows.length;
             }
           } else c.improvedConfirms++; // week 2: every child right, so the weak children read IMPROVING
-          await confirmPaper(sent.paperId, auth);
+          await confirmPaper(sent.paperId, dueAuth);
         }
-      } catch {
+      } catch (e) {
         c.refused++;
+        ctx.refuse("refused", e);
       }
     }
     await ctx.tagSince(since);

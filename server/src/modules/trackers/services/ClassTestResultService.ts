@@ -19,6 +19,7 @@
  *
  * Identity-plane (names studentIds); NO corpus path (ADR-005).
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import { CLASS_TEST_ATTENDANCE_STATUSES } from "@scd/shared";
 import type { ClassTestAttendanceStatus } from "@scd/shared";
@@ -157,7 +158,7 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
   }
 
   // On/after the exam date (J3). Date-only comparison (the exam day itself counts).
-  const now = input.now ?? new Date();
+  const now = input.now ?? appNow();
   if (atMidnight(now).getTime() < atMidnight(new Date(test.examDate)).getTime()) {
     throw new ClassTestResultError("Results can only be entered on or after the exam date");
   }
@@ -403,7 +404,7 @@ export function deriveReportOwnership(i: ReportOwnershipInput): {
  * deterministic). Overdue means past-deadline and NOT PUBLISHED (D-#603) — entering
  * every mark no longer stops the clock; only release to guardians does.
  */
-export async function examReportStatus(testId: string, now: Date = new Date()): Promise<ExamReportStatus> {
+export async function examReportStatus(testId: string, now: Date = appNow()): Promise<ExamReportStatus> {
   const test = await loadTest(testId);
 
   // The denominator is the exam's OWN roster: the section's active students, or —

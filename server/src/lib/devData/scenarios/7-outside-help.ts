@@ -49,6 +49,7 @@ export const scenario7: Scenario = {
     if (days.length < 2) return c;
     const [hwDay, ctDay] = days as [string, string];
     const since = new Date();
+    ctx.clock(ctDay);
 
     for (const sec of ctx.sections.filter((s) => s.level >= 1)) {
       if (c.sections >= SECTIONS_MAX) break;
@@ -66,7 +67,7 @@ export const scenario7: Scenario = {
       const bank = await goldBank(outcomes.map((o) => o.code));
       const marks = await marksTable(token, subject as MasterySubject);
       // One objective with at least four usable bank questions: two for the HW sheet, two (other) for the CT sheet.
-      let picked: { loCode: string; hw: PaperItemInput[]; ct: PaperItemInput[] } | null = null;
+      let picked: { loCode: string; hw: PaperItemInput[]; ctPool: PaperItemInput[] } | null = null;
       for (const o of outcomes) {
         const usable: PaperItemInput[] = [];
         for (const q of bank) {
@@ -76,7 +77,7 @@ export const scenario7: Scenario = {
           usable.push({ origin: "BANK", artifactId: q.artifactId, loCode: o.code, questionTypeCode: type });
         }
         if (usable.length >= 4) {
-          picked = { loCode: o.code, hw: usable.slice(0, 2), ct: usable.slice(2, 4) };
+          picked = { loCode: o.code, hw: usable.slice(0, 2), ctPool: usable.slice(2) };
           break;
         }
       }
@@ -90,7 +91,20 @@ export const scenario7: Scenario = {
         const hw = await createPaper({ sectionId: sec.sectionId, subject: subject as MasterySubject, source: "HW", date: hwDay, items: picked.hw }, auth);
         c.hwPapers++;
         await confirmPaper(hw.paperId, auth); // nobody ticked wrong: HW 100 %
-        const ct = await createPaper({ sectionId: sec.sectionId, subject: subject as MasterySubject, source: "CT", date: ctDay, items: picked.ct }, auth);
+        // The class-test block (R19) refuses a question the section had as homework / assignment in the no-repeat window, and the run's
+        // own earlier scenarios gave out many: walk the objective's other questions, two at a time, until one pair is accepted.
+        let ct: { paperId: string } | null = null;
+        for (let i = 0; i < picked.ctPool.length && i < 12 && !ct; i += 2) {
+          try {
+            ct = await createPaper({ sectionId: sec.sectionId, subject: subject as MasterySubject, source: "CT", date: ctDay, items: picked.ctPool.slice(i, i + 2) }, auth);
+          } catch (e) {
+            ctx.refuse("ctBlocked", e);
+          }
+        }
+        if (!ct) {
+          c.refused++;
+          continue;
+        }
         c.ctPapers++;
         const paper = await MasteryPaper.findOne({ paperId: ct.paperId });
         if (!paper) continue;
@@ -106,8 +120,9 @@ export const scenario7: Scenario = {
           await recordOutcome(String(open._id), "GUARDIAN_DID", "ফেক ডেটা", { userId: auth.userId, role: "TEACHER", all: true });
           c.outcomesRecorded++;
         }
-      } catch {
+      } catch (e) {
         c.refused++;
+        ctx.refuse("refused", e);
       }
       await ctx.tagSince(since);
     }

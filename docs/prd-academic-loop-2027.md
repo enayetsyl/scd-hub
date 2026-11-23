@@ -894,7 +894,10 @@ weeks**, dry run by default, `--apply`, `--remove <runId>`.
   subject with a locked tree; the others get marks-only homework (R20), lessons and attendance.
 - Dates: **8 school weeks from Sun 3 Jan 2027** (to the end of February) on the 2027 calendar (holidays, pauses and the
   rotation as copied by the year change). These dates are in the future while testing in December, so the "today"
-  screens and real-time jobs are checked with `dev-tick.ts --at <date>` (§8.1 flag 4; no dev clock in v1, Q17, R36). Classes
+  screens and real-time jobs are checked with `dev-tick.ts --at <date>` (§8.1 flag 4; no dev-wide clock in v1, Q17, R36).
+  *Note 23 Nov 2026:* the generator itself sets a process-local clock (`server/src/lib/devClock.ts`, `_dev` databases
+  only, set and cleared per fake day inside the `dev-fake-2027` CLI) so its writes pass the services' "today" guards; the
+  dev API and testers never see it, so R36 still holds. Classes
   Nursery–Class 5 only (Class 6 is new in 2027 and not part of these scenarios).
 - **Scenarios** (added by the slice that makes them testable; each names the children it used, picked at random):
   0 (AL-2, run on the 2026 year until the rehearsal, then re-run on 2027) lessons, attendance and absences; 1 (AL-3)

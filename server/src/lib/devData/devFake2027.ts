@@ -28,6 +28,7 @@ import { Class } from "../../modules/foundation/models/Class";
 import { Section } from "../../modules/foundation/models/Section";
 import { YearChangeRun } from "../../modules/year-change/models/YearChangeRun";
 import { setDevNotificationMute } from "../../modules/notifications/services/NotificationService";
+import { setDevClock } from "../devClock";
 import { dateKeyOf } from "../../modules/attendance/dates";
 
 export const FAKE_CLASS_LEVELS = [-1, 0, 1, 2, 3, 4, 5];
@@ -73,6 +74,8 @@ export interface FakeReport {
   counts: Record<string, Record<string, number>>;
   /** Tagged rows per collection after the run (apply). */
   tagged: Record<string, number>;
+  /** Per scenario: `"<counter>: <refusal message>"` -> how many times (every refusal a scenario counted, by reason). */
+  reasons: Record<string, Record<string, number>>;
   /** `--remove`: rows deleted per collection and the residue (must be all 0). */
   removed?: Record<string, number>;
   residue?: Record<string, number>;
@@ -123,15 +126,23 @@ function declaredRefs(scenarios: Scenario[]): ModelRef[] {
   return [...FAKE_BASE_MODELS, ...scenarios.flatMap((s) => s.collections)];
 }
 
-/** Stamp `devFakeRun` on rows created since `since` in the given models (raw driver, bypasses strict mode). */
+/**
+ * Stamp `devFakeRun` on rows created since `since` in the given models (raw driver, bypasses strict mode).
+ *
+ * A row counts as new when its timestamp (createdAt, else eventAt) is >= since, OR when it has no such timestamp at all and its
+ * ObjectId time is >= since. The second branch matters: a writer that upserts with an update PIPELINE (QuestionUse's `recordUses`,
+ * the ledger) gets no `createdAt` from mongoose, so a timestamp-only filter never saw those rows and `--remove` left them behind.
+ * A model with no timestamp field (StoredFile) is matched by ObjectId time alone.
+ */
 export async function tagRowsSince(models: string[], runId: string, since: Date): Promise<number> {
   let n = 0;
+  const sinceId = Types.ObjectId.createFromTime(Math.floor(since.getTime() / 1000));
   for (const name of models) {
     const model = mongoose.model(name);
     const field = model.schema.path("createdAt") ? "createdAt" : model.schema.path("eventAt") ? "eventAt" : null;
     const when: Record<string, unknown> = field
-      ? { [field]: { $gte: since } }
-      : { _id: { $gte: Types.ObjectId.createFromTime(Math.floor(since.getTime() / 1000)) } };
+      ? { $or: [{ [field]: { $gte: since } }, { [field]: { $exists: false }, _id: { $gte: sinceId } }] }
+      : { _id: { $gte: sinceId } };
     const res = await model.collection.updateMany({ ...when, devFakeRun: { $exists: false } }, { $set: { devFakeRun: runId } });
     n += res.modifiedCount;
   }
@@ -192,7 +203,7 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
 
   // --- --remove <runId> -------------------------------------------------------
   if (opts.remove) {
-    const report: FakeReport = { applied: opts.apply, removedRuns: [opts.remove], counts: {}, tagged: {} };
+    const report: FakeReport = { applied: opts.apply, removedRuns: [opts.remove], counts: {}, tagged: {}, reasons: {} };
     if (!opts.apply) {
       const c = await DevFakeRun.countDocuments({ runId: opts.remove });
       log(`[dev-fake] dry run: would remove run ${opts.remove} (${c ? "manifest found" : "no manifest row - tagged rows only"})`);
@@ -269,7 +280,7 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
   };
 
   const previous = (await DevFakeRun.find({}).select("runId").lean()) as unknown as Array<{ runId: string }>;
-  const report: FakeReport = { applied: opts.apply, manifest, removedRuns: previous.map((p) => p.runId), counts: {}, tagged: {} };
+  const report: FakeReport = { applied: opts.apply, manifest, removedRuns: previous.map((p) => p.runId), counts: {}, tagged: {}, reasons: {} };
   log(`[dev-fake] manifest ${JSON.stringify(manifest)}`);
 
   if (!opts.apply) {
@@ -294,6 +305,8 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
 
   const rng = seededRng(seed);
   const models = resolved.found.map((f) => f.model);
+  // Every refusal a scenario counts, by reason (ctx.refuse): logged once per distinct reason with its count, and kept in the report.
+  let reasonBook = new Map<string, number>();
   const switchedOn: string[] = [];
   const ctx: ScenarioCtx = {
     runId,
@@ -305,6 +318,12 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     log,
     switchedOn,
     tagSince: (since) => tagRowsSince(models, runId, since),
+    clock: (dayKey) => setDevClock(dayKey ? new Date(`${dayKey}T11:00:00+06:00`) : null), // 11:00 Dhaka: school hours of the fake day
+    refuse: (tag, err) => {
+      const msg = String((err as Error)?.message ?? err).replace(/[0-9a-f]{24}/gi, "<id>").replace(/\s+/g, " ").trim().slice(0, 300);
+      const key = `${tag}: ${msg}`;
+      reasonBook.set(key, (reasonBook.get(key) ?? 0) + 1);
+    },
     pick: <T>(items: T[], k: number): T[] => {
       const pool = [...items];
       const out: T[] = [];
@@ -323,7 +342,17 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     for (const s of chosen) {
       const since = new Date();
       log(`[dev-fake] scenario ${s.id} (${s.name})`);
-      report.counts[String(s.id)] = await s.run(ctx);
+      reasonBook = new Map();
+      try {
+        report.counts[String(s.id)] = await s.run(ctx);
+      } finally {
+        ctx.clock(null);
+        report.reasons[String(s.id)] = Object.fromEntries([...reasonBook.entries()].sort((a, b) => b[1] - a[1]));
+        for (const [key, count] of [...reasonBook.entries()].sort((a, b) => b[1] - a[1])) {
+          const i = key.indexOf(": ");
+          log(`[dev-fake] s${s.id} ${key.slice(0, i)} x${count}: ${key.slice(i + 2)}`);
+        }
+      }
       await ctx.tagSince(since);
     }
     for (const f of resolved.found) {
@@ -340,6 +369,7 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     throw err;
   } finally {
     setDevNotificationMute(false);
+    setDevClock(null);
   }
   log(`[dev-fake] done ${runId}: ${JSON.stringify(report.counts)}; tagged ${JSON.stringify(report.tagged)}`);
   return report;

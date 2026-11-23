@@ -14,6 +14,7 @@
  * A child's history follows the child: whole-শাখা uses of an earlier শাখা the child sat in are read through the
  * child's Enrolment history and credited to that child only for the days they were enrolled there.
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import {
   QuestionUse,
@@ -52,7 +53,7 @@ export function classTokenOfLevel(level: number | null | undefined): string {
 // Day arithmetic (Dhaka day keys)
 // ---------------------------------------------------------------------------
 
-export function todayKey(now: Date = new Date()): string {
+export function todayKey(now: Date = appNow()): string {
   return dhakaDayKey(now);
 }
 

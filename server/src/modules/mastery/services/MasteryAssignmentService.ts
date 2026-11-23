@@ -15,6 +15,7 @@
  * holder or `mastery:edit_all`, D-#807). The assignment tracker is NOT written: a sheet may link
  * to the tracker's item for that week only to read who was absent / did not submit (D-#809).
  */
+import { appNow } from "../../../lib/devClock";
 import path from "path";
 import PDFDocument from "pdfkit";
 import { Types } from "mongoose";
@@ -357,7 +358,7 @@ async function loadAssignment(id: string, auth: Auth): Promise<IMasteryAssignmen
   if (!Types.ObjectId.isValid(id)) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
   const a = await MasteryAssignment.findById(id);
   if (!a) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
-  await assertMayWork(auth, a.sectionId, a.subject, new Date());
+  await assertMayWork(auth, a.sectionId, a.subject, appNow());
   return a;
 }
 
@@ -376,7 +377,7 @@ export async function assignmentFor(
   auth: Auth,
 ): Promise<{ week: string; assignment: AssignmentView | null; startingLayout: LayoutInput }> {
   const ctx = await sectionContext(sectionId);
-  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  await assertMayWork(auth, ctx.sectionId, subject, appNow());
   const week = isoWeekKey(dayOf(dueDate));
   const a = await MasteryAssignment.findOne({ sectionId: ctx.sectionId, subject, week });
   return {
@@ -402,7 +403,7 @@ export interface BuildInput {
 export async function buildAssignment(input: BuildInput, auth: Auth): Promise<AssignmentView> {
   const ctx = await sectionContext(input.sectionId);
   await assertEnabled(ctx, input.subject);
-  await assertMayWork(auth, ctx.sectionId, input.subject, new Date());
+  await assertMayWork(auth, ctx.sectionId, input.subject, appNow());
   if (!Types.ObjectId.isValid(auth.userId)) throw new MasteryWorkError("ব্যবহারকারী পাওয়া যায়নি।");
   const due = dayOf(input.dueDate);
   const week = isoWeekKey(due);
@@ -435,7 +436,7 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   if (a) assertDraft(a);
 
   // Diagnosis of the whole section, read the way M-3 reads it (D-#808).
-  const sec = computeSection(rows, policy.resolved, new Date());
+  const sec = computeSection(rows, policy.resolved, appNow());
   const outcomeInfo = new Map<string, OutcomeInfo>(
     questionOutcomes.map((o) => [o.code, { code: o.code, chapterNumber: o.chapterNumber ?? null, questionTypeCodes: o.questionTypeCodes ?? [] }]),
   );
@@ -475,7 +476,7 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   );
   const partAQids = new Set(partA.map((q) => q.qid));
 
-  const now = new Date();
+  const now = appNow();
   const by = oid(auth.userId);
   const toDoc = (q: (typeof partA)[number]): MasteryAssignmentQuestion => ({
     origin: q.origin, artifactId: oid(q.artifactId), qid: q.qid, textBn: q.textBn ?? undefined, loCode: q.loCode,
@@ -741,7 +742,7 @@ async function auditSuggestionEdit(
   meta: { op: string; part: "A" | "B"; studentId?: string; beforeQid: string | null; afterQid: string | null },
 ): Promise<void> {
   if (!a.suggestion) return; // a hand-built assignment writes no suggestion audit (2026 flow unchanged)
-  a.suggestion.editedAt = new Date();
+  a.suggestion.editedAt = appNow();
   a.markModified("suggestion");
   await a.save();
   void writeAudit({
@@ -938,17 +939,17 @@ async function loadForFinalise(id: string, auth: Auth): Promise<{ a: IMasteryAss
   const a = await MasteryAssignment.findById(id);
   if (!a) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
   try {
-    await assertMayWork(auth, a.sectionId, a.subject, new Date());
+    await assertMayWork(auth, a.sectionId, a.subject, appNow());
     // No wider reach than the row rule + the build permission (switch on or off): an Office login that merely holds a routine
     // slot of the শাখা is not a mastery builder.
     if (!callerHasPermission(auth, "mastery:create")) throw new MasteryWorkError("রুটিন অনুযায়ী এই শাখা ও বিষয়ের দায়িত্ব আপনার নয়।");
-    const teacher = await resolveSubjectTeacher(String(a.sectionId), a.subject, new Date());
+    const teacher = await resolveSubjectTeacher(String(a.sectionId), a.subject, appNow());
     const bySubstitute = Boolean(teacher && teacher !== String(auth.userId) && !callerHasPermission(auth, "mastery:edit_all") && (await isLoop2027On()));
     return { a, viaLeave: false, bySubstitute };
   } catch (err) {
     if (!(await isLoop2027On()) || !callerHasPermission(auth, "assignment:finalise_on_leave")) throw err;
-    const today = dhakaDayKey(new Date());
-    const teacher = await resolveSubjectTeacher(String(a.sectionId), a.subject, new Date());
+    const today = dhakaDayKey(appNow());
+    const teacher = await resolveSubjectTeacher(String(a.sectionId), a.subject, appNow());
     if (isFinaliseLeaveDay(today) && (await teacherOnApprovedLeave(teacher, today))) return { a, viaLeave: true, bySubstitute: false };
     throw new MasteryWorkError("বিষয়শিক্ষক ছুটিতে (বুধ বা বৃহস্পতিবার) না থাকলে অফিস অ্যাসাইনমেন্ট চূড়ান্ত করতে পারে না।");
   }
@@ -1055,7 +1056,7 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
     createdBy: Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined,
   });
   // AL-3: the AS paper went to the children — Part A (on every sheet) is a whole-শাখা use, Part B per child.
-  await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(new Date()), wholeIfAll: true }));
+  await recordUsesSafe(usesOfPaper(paper, "AS", { givenOn: dhakaDayKey(appNow()), wholeIfAll: true }));
   if (plan) {
     a.countedMinutes = plan.counted;
     if (plan.placement) {
@@ -1066,7 +1067,7 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   }
   a.status = "SENT";
   a.paperId = paper._id;
-  a.sentAt = new Date();
+  a.sentAt = appNow();
   a.sentBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await a.save();
   if (loop && plan) await loop.afterSend(a, plan, auth.userId);
@@ -1084,7 +1085,7 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   // AL-7: finalised on (or after) the delivery day → the tracker item is delivered right away (best effort; the tick retries).
   if (loop && plan) {
     try {
-      await (await import("./AssignmentSuggestionService")).deliverTailoredFor(a, new Date());
+      await (await import("./AssignmentSuggestionService")).deliverTailoredFor(a, appNow());
     } catch (err) {
       await (await import("../../../lib/reportError")).reportSilentFailure("assignment.deliverTailoredAtFinalise", err, { assignmentId: String(a._id) });
     }
@@ -1118,7 +1119,7 @@ export interface TrackerOption {
 /** The section × subject's tracker assignment items due in the last / next 4 weeks. */
 export async function trackerOptions(sectionId: string, subject: MasterySubject, auth: Auth): Promise<TrackerOption[]> {
   const ctx = await sectionContext(sectionId);
-  await assertMayWork(auth, ctx.sectionId, subject, new Date());
+  await assertMayWork(auth, ctx.sectionId, subject, appNow());
   const from = new Date(Date.now() - 28 * 86_400_000);
   const to = new Date(Date.now() + 28 * 86_400_000);
   const rows = await AssignmentItem.find({ sectionId: ctx.sectionId, subject, dueDate: { $gte: from, $lte: to } })
