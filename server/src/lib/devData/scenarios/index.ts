@@ -6,8 +6,9 @@ import { scenario3 } from "./3-engine-weak-absent";
 import { scenario4 } from "./4-reteach";
 import { scenario5 } from "./5-late-marking";
 import { scenario6 } from "./6-behind-target";
+import { scenario7 } from "./7-outside-help";
 import type { Scenario } from "./types";
 
-export const SCENARIOS: Scenario[] = [scenario0, scenario2, scenario2b, scenario3, scenario4, scenario5, scenario6];
+export const SCENARIOS: Scenario[] = [scenario0, scenario2, scenario2b, scenario3, scenario4, scenario5, scenario6, scenario7];
 
 export type { Scenario, ScenarioCtx, SectionInfo } from "./types";

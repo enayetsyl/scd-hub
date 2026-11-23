@@ -190,6 +190,7 @@ import "./modules/mastery/resolvers/masteryReview";
 import "./modules/mastery/resolvers/masteryBankCoverage";
 import "./modules/guardian-help/resolvers/questionHints";
 import "./modules/homework-integrity/resolvers/homeworkIntegrity";
+import "./modules/homework-integrity/resolvers/homeworkHelpNote";
 import "./modules/lesson-progress/resolvers/lessonDelivery";
 import "./modules/lesson-progress/resolvers/lessonProgress";
 import "./modules/lesson-progress/resolvers/syllabusTargets";

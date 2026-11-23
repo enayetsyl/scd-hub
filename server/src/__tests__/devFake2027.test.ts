@@ -29,6 +29,7 @@ import { Notification } from "../modules/notifications/models/Notification";
 import { User } from "../modules/foundation/models/User";
 import { YearChangeRun } from "../modules/year-change/models/YearChangeRun";
 import { DevFakeRun } from "../modules/platform/models/DevFakeRun";
+import { importCatalogue, setEnablement } from "../modules/mastery/services/MasteryCatalogueService";
 import { publishClassNote } from "../modules/routine/services/RoutineTriggerService";
 import { emit, setDevNotificationMute } from "../modules/notifications/services/NotificationService";
 import { DevGuardError } from "../lib/devData/guards";
@@ -417,5 +418,73 @@ describe("scenario 6 (AL-11): term targets + behind-target + remove", () => {
     const gone = await removeFakeRun(runId);
     expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
     expect(await mongoose.model("SyllabusTarget").countDocuments({})).toBe(0);
+  });
+});
+
+describe("scenario 7 (AL-12): high homework + low class test -> an outside-help case + remove", () => {
+  const PRINCIPAL = { userId: new Types.ObjectId().toString(), role: "PRINCIPAL" as const };
+  const LO = "LO-C1-MATH-01-01";
+  beforeAll(async () => {
+    await seedWorld();
+    const [y] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31"), current: true }]);
+    await AcademicYear.updateOne({ _id: year26 }, { $set: { current: false } });
+    await YearChangeRun.create({ runId: "yc-s7", fromYearId: year26, toYearId: y._id, status: "CUT_OVER" });
+    const [c1] = await Class.create([{ level: 1, nameBn: "প্রথম", academicYearId: y._id }]);
+    const teacher = new Types.ObjectId();
+    const [sec] = await Section.create([{ classId: c1._id, code: "A", nameBn: "প্রথম", classTeacherId: teacher }]);
+    for (let i = 1; i <= 8; i++) await Student.create([{ schoolId: `S7-${i}`, name: `Child ${i}`, classId: c1._id, sectionId: sec._id, active: true }]);
+    for (const day of ["SUN", "MON", "TUE", "WED", "THU"]) {
+      await RoutineSlot.create([
+        {
+          groupType: "section", groupId: sec._id, classId: c1._id, dayOfWeek: day, periodNumber: 1, subject: "MATH", track: "general",
+          teacherId: teacher, effectiveFrom: new Date("2020-01-01"), createdBy: new Types.ObjectId(),
+        },
+      ]);
+    }
+    await User.create({ role: "PRINCIPAL", name: "Head", phone: "01700000077", passwordHash: "x" });
+    const cat = await importCatalogue(
+      JSON.stringify({
+        classToken: "C1", subject: "MATH", status: "LOCKED",
+        chapters: [{ number: 1, titleBn: "সংখ্যা" }],
+        outcomes: [{ code: LO, labelBn: "সংখ্যা চেনা", assess: "QUESTION", questionTypeCodes: ["QT-SHORT"] }],
+        questionTypes: [{ code: "QT-SHORT", labelBn: "সংক্ষিপ্ত", marks: 2 }],
+      }),
+      true,
+      PRINCIPAL,
+    );
+    if (!cat.ok) throw new Error(cat.errors.join("; "));
+    await setEnablement(String(y._id), "C1", "MATH", true, PRINCIPAL);
+    for (let n = 1; n <= 8; n++) {
+      await ContentArtifact.create([
+        {
+          docType: "question", classLevel: 1, subject: "MATH", address: { anchorWord: "অধ্যায়", number: 1 }, curationTag: "KEEP_AS_IS",
+          current: true, importedBy: new Types.ObjectId(), reviewStatus: "gold",
+          envelopeJson: { tags: { topic_tag: LO }, payload: { qid: `QP-MATH-C1-U01-Q97${String(n).padStart(3, "0")}`, topic_tag: LO, marks: 2, question_text: `প্রশ্ন ${n}` } },
+        },
+      ]);
+    }
+  });
+
+  it("writes a HW sheet (all right) and a CT sheet (a few children all wrong) on one objective, opens cases, records one outcome (tag on), tags it all, muted, and --remove leaves no residue", async () => {
+    const r = await runFake({ apply: true, scenarioIds: [7], now: NOW, guard, seed: 9 });
+    const runId = r.manifest!.runId;
+    const c = r.counts["7"]!;
+    expect(c.sections).toBe(1);
+    expect(c.hwPapers).toBe(1);
+    expect(c.ctPapers).toBe(1);
+    expect(c.casesOpened).toBeGreaterThanOrEqual(1); // the awaited recompute may find some already opened by the confirm hook
+    expect(c.outcomesRecorded).toBe(1);
+    const cases = await mongoose.model("IntegrityCase").collection.find({ devFakeRun: runId }).toArray();
+    expect(cases.length).toBeGreaterThanOrEqual(3); // three children were ticked wrong on every CT item
+    expect(cases.every((x) => x.loCode === "LO-C1-MATH-01-01")).toBe(true);
+    const closed = cases.filter((x) => x.status === "CLOSED");
+    expect(closed).toHaveLength(1);
+    expect(closed[0]!.outcome).toBe("GUARDIAN_DID");
+    expect(closed[0]!.tagActive).toBe(true);
+    expect((await taggedIn(runId)).Notification).toBe(0); // muted: nobody was told
+
+    const gone = await removeFakeRun(runId);
+    expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
+    expect(await mongoose.model("IntegrityCase").countDocuments({})).toBe(0);
   });
 });

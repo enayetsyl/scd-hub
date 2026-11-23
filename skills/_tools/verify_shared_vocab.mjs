@@ -964,6 +964,8 @@ const ROLE_CHECK_DEFAULTS = {
   TEACHER: ["review_stats:view_own", "assignment:confirm_week", "assignment_gift:issue",
     // 2027 academic loop (docs/prd-academic-loop-2027.md §6, AL-0): declared ahead, row rules land with AL-7.
     "assignment:suggest", "assignment:accept_swap", "work_claim:view_all", "work_claim:remind",
+    // AL-12 (D-#1676, owner R16): class + subject teachers investigate homework-check cases (row-scoped).
+    "homework_integrity:view", "homework_integrity:record",
     "student_comments:view", "parents_meeting:view_brief", "monthly_report:review", "attendance:view",
     "teaching_notes:view", "teaching_notes:send", "english_drive:view", "english_drive:send",
     "library:lend", "library:return", "library:remind",

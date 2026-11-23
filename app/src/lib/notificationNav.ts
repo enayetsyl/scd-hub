@@ -335,6 +335,9 @@ export function notificationTarget(
       return refs?.sectionId && refs?.subject
         ? { tab: "ClassNotesTab", screen: "LessonTracker", params: { sectionId: refs.sectionId, subject: refs.subject } }
         : { tab: "ClassNotesTab", screen: "LessonProgress" };
+    // AL-12 (R16, D-#1676): "a new homework check case" opens that case on the হোমওয়ার্ক যাচাই screen (staff only).
+    case "INTEGRITY_CASE":
+      return guardian ? null : { tab: "ReportsTab", screen: "HomeworkIntegrity" };
     // Student support profile (D-#1546): staff only; the notice names no child (§9.7).
     case "SUPPORT_PROFILE":
       return guardian ? null : { tab: "HomeTab", screen: "SupportHome" };

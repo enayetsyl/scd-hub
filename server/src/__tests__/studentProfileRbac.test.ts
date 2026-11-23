@@ -100,6 +100,13 @@ jest.mock("../modules/foundation/models/Student", () => ({
   Student: { findById: (id: unknown) => leanChain(mockStudentFindById(id)) },
 }));
 
+// AL-12: the outside-help tag read is its own service (covered in homeworkIntegrityAl12.test.ts); here only the gate + narrowing.
+const mockTags = jest.fn();
+jest.mock("../modules/homework-integrity/services/IntegrityTagService", () => ({
+  OUTSIDE_HELP_MARK_BN: "mark",
+  tagsForStudent: (...a: unknown[]) => mockTags(...a),
+}));
+
 import { builder } from "../schema";
 import "../modules/trackers/resolvers/studentProfile";
 
@@ -311,5 +318,29 @@ describe("subject-free panels (SP-2)", () => {
     mockAllowedSubjects.mockResolvedValue(null);
     const full = await run(HEADER, "PRINCIPAL");
     expect((full.data as { studentProfileHeader: { fullView: boolean } }).studentProfileHeader.fullView).toBe(true);
+  });
+});
+
+describe("AL-12 studentProfileOutsideHelp - the same gate and the same subject narrowing", () => {
+  const OH = `query { studentProfileOutsideHelp(studentId: "${STUDENT}") { caseId subject loCode markBn } }`;
+  const tag = (subject: string) => ({ caseId: `c-${subject}`, studentId: STUDENT, subject, loCode: `LO-${subject}`, loLabelBn: "x", outcome: "GUARDIAN_DID", tagUntil: "2027-07-02T00:00:00.000Z", recurring: false });
+
+  test("a subject teacher sees only the tags of their own subjects; a class teacher (walk null) sees all", async () => {
+    mockTags.mockResolvedValue([tag("MATH"), tag("ENG"), tag("BAN")]);
+    mockAllowedSubjects.mockResolvedValue(new Set(["ENG"]));
+    const narrowed = await run(OH, "TEACHER");
+    expect(ok(narrowed)).toBe(true);
+    expect((narrowed.data as { studentProfileOutsideHelp: Array<{ subject: string }> }).studentProfileOutsideHelp.map((x) => x.subject)).toEqual(["ENG"]);
+    mockAllowedSubjects.mockResolvedValue(null);
+    const full = await run(OH, "TEACHER");
+    expect((full.data as { studentProfileOutsideHelp: unknown[] }).studentProfileOutsideHelp).toHaveLength(3);
+  });
+
+  test("tier 1 refusal (out-of-scope teacher, guardian) reads nothing; anonymous is denied", async () => {
+    mockAssertReportRead.mockRejectedValue(new FakeForbidden());
+    expect(denied(await run(OH, "TEACHER"))).toBe(true);
+    expect(denied(await run(OH, "GUARDIAN"))).toBe(true);
+    expect(mockTags).not.toHaveBeenCalled();
+    expect(denied(await run(OH, null))).toBe(true);
   });
 });

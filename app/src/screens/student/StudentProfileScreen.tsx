@@ -34,6 +34,7 @@ import {
   STUDENT_PROFILE_COMMENTS_QUERY,
   STUDENT_PROFILE_HEADER_QUERY,
   STUDENT_PROFILE_HOMEWORK_QUERY,
+  STUDENT_PROFILE_OUTSIDE_HELP_QUERY,
 } from "../../graphql/studentProfile";
 import { STUDENT_WHOLE_PICTURE_QUERY } from "../../graphql/wholePicture";
 import { Screen, Card, Loader, Notice, Chip, ChipRow, Button, EmptyState } from "../../components/ui";
@@ -156,6 +157,12 @@ export default function StudentProfileScreen(): React.ReactElement {
     query: STUDENT_PROFILE_HOMEWORK_QUERY,
     variables: rangeVars,
     pause: !rangeReady || !onTab("homework"),
+  });
+  // AL-12 (AC-H4): the outside-help term tags; a light read, only on the two tabs that show it.
+  const [ohQ] = useQuery({
+    query: STUDENT_PROFILE_OUTSIDE_HELP_QUERY,
+    variables: { studentId },
+    pause: !studentId || !(onTab("homework") || onTab("assignment")),
   });
   const [asQ] = useQuery({
     query: STUDENT_PROFILE_ASSIGNMENT_QUERY,
@@ -352,6 +359,7 @@ export default function StudentProfileScreen(): React.ReactElement {
             error={err(hwQ.error)}
             narrowed={narrowed}
             rangeControl={rangeControl}
+            outsideHelp={ohQ.data?.studentProfileOutsideHelp ?? null}
           />
         );
       case "assignment":
@@ -363,6 +371,7 @@ export default function StudentProfileScreen(): React.ReactElement {
             error={err(asQ.error)}
             narrowed={narrowed}
             rangeControl={rangeControl}
+            outsideHelp={ohQ.data?.studentProfileOutsideHelp ?? null}
           />
         );
       case "lessons":

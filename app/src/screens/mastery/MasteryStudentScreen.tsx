@@ -28,6 +28,8 @@ import type { MasteryStackParamList } from "../../navigation/types";
 import { STATE_ORDER, levelFill, stateCell, stateTone } from "./masteryStateUi";
 import { EarlierSteps, StateDot, SummaryBar, summaryLine } from "./MasteryTreeParts";
 import { ObjectiveLessonNote } from "../../components/ObjectiveLessonNote";
+import { STUDENT_OUTSIDE_HELP_TAGS, type OutsideHelpTagT } from "../../graphql/homeworkIntegrity";
+import { OutsideHelpCard } from "../student/profile/OutsideHelpCard";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryStudent">;
 
@@ -57,6 +59,10 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
     requestPolicy: "cache-and-network",
   });
   const d = data?.masteryStudentDiagnosis as MasteryStudentDiagnosisData | undefined;
+  // AL-12 (AC-H4): this child's live outside-help term tags on this subject - a note on the tagged objective, no mark changes.
+  const [tagQ] = useQuery({ query: STUDENT_OUTSIDE_HELP_TAGS, variables: { studentId, subject } });
+  const helpTags = (tagQ.data?.studentOutsideHelpTags ?? []) as OutsideHelpTagT[];
+  const taggedCodes = new Set(helpTags.map((x) => x.loCode));
 
   if (fetching && !d) {
     return (
@@ -128,7 +134,10 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
         style={{ flexDirection: "row", gap: space(2), paddingVertical: space(1), paddingLeft: indent }}
       >
         <StateDot state={o.state} />
-        <Body style={{ flex: 1 }}>{o.labelBn}</Body>
+        <Body style={{ flex: 1 }}>
+          {o.labelBn}
+          {taggedCodes.has(code) ? `  ⚑ ${STR.hiOutsideHelpMark}` : ""}
+        </Body>
         <Muted>
           {stateWord(o.loCode, o.state)}
           {o.inSchoolPending ? ` · ${STR.al6InSchoolPending}` : ""}
@@ -180,6 +189,8 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
           ))}
         </ChipRow>
       ) : null}
+
+      <OutsideHelpCard tags={helpTags} />
 
       <Card>
         <Body style={{ fontWeight: "700" }}>{levelFill(STR.msOutcomesCount, lv, { n: bnNum(summaryN) })}</Body>

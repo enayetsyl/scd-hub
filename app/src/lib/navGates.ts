@@ -44,7 +44,7 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   RevisionDashboard: ["reports:revision_dashboard", "saturday_revision:view_all"],
   LessonProgress: ["reports:lesson_progress", "lesson_progress:view_all"],
   // GH-3 (D-#1522): the homework-honesty queue - its own pair of switches (Office + Principal).
-  HomeworkIntegrity: ["homework_integrity:view"],
+  HomeworkIntegrity: ["homework_integrity:view", "homework_integrity:view_all"],
   QuestionReviewProgress: ["reports:review_progress", "question_review:view_all"],
   ReviewerEffectiveness: ["reports:reviewer_effectiveness", "classroom_observation:view_reports"],
   TeachingNoteOpenComments: ["reports:teaching_note_comments", "teaching_notes:review"],

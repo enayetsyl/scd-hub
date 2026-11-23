@@ -5,7 +5,7 @@
  *  - one OPEN case per child x objective; a recompute updates numbers and keeps history
  *  - a closed case reopens only on NEW evidence
  *  - the Office outcome closes the case and changes no mark; double record refused
- *  - nothing is notified; the service never imports the notification layer
+ *  - no guardian is ever messaged; the service has no static import of the notification layer (AL-12 notices: homeworkIntegrityAl12.test.ts)
  *  - the teacher hint count shows the max step across a child's guardians
  */
 import fs from "fs";
@@ -41,7 +41,7 @@ let otherYear: Types.ObjectId;
 let sectionId: Types.ObjectId;
 let classId: Types.ObjectId;
 const students: Types.ObjectId[] = [];
-const OFFICE = { userId: new Types.ObjectId().toString(), role: "OFFICE" };
+const OFFICE = { userId: new Types.ObjectId().toString(), role: "OFFICE", all: true };
 let lo = 0;
 const nextLo = () => `LO-GH3-${++lo}`;
 
@@ -289,7 +289,7 @@ describe("Office read", () => {
 });
 
 describe("no guardian message", () => {
-  it("creates no notification in recompute or record, and the service never imports the notification layer", async () => {
+  it("creates no notification where nobody is to be told (no class teacher, no Principal), and no static notification import", async () => {
     const before = await Notification.countDocuments({});
     const l = nextLo();
     await ev({ s: students[0], lo: l, source: "HW", earned: 10, available: 10, day: "2027-08-01" });

@@ -116,16 +116,17 @@ export const FEATURE_CATALOGUE = {
       issue: { en: "Mark gift given", bn: "উপহার দেওয়া হয়েছে চিহ্নিত করা", desc: "Tick a handover, undo a mis-tick", teacher: true, office: true, flags: [], designation: "class_teacher" },
     },
   },
-  // GH-3 (D-#1522, docs/prd-guardian-help.md section 4): the homework-honesty flag. Office / Principal only;
-  // a teacher never sees a case and no guardian is told about one.
+  // GH-3 (D-#1522, docs/prd-guardian-help.md section 4): the homework-honesty flag. AL-12 (D-#1676, owner R16):
+  // teachers investigate too — `view` / `record` are on for teachers, ROW-SCOPED in the service to the class
+  // teacher of the শাখা or the teacher of that subject there; `view_all` (every case) stays Office/Principal.
   homework_integrity: {
     group: "teaching_and_trackers",
     en: "Homework honesty check",
     bn: "হোমওয়ার্ক যাচাই",
     actions: {
-      view: { en: "See homework check cases", bn: "হোমওয়ার্ক যাচাইয়ের কেস দেখা", desc: "The queue of children whose homework marks run 20+ points above their class-test marks on an objective, with the items behind it", teacher: false, office: true, flags: [] },
-      record: { en: "Record the outcome", bn: "যাচাইয়ের ফলাফল লেখা", desc: "Close a case with what the Office found (guardian did it / child did it / unclear) and a note; recalculate now", teacher: false, office: true, flags: [] },
-      // 2027 academic loop (docs/prd-academic-loop-2027.md §3.4 + §6, D-#1676), declared ahead of AL-12.
+      view: { en: "See homework check cases", bn: "হোমওয়ার্ক যাচাইয়ের কেস দেখা", desc: "The cases of your own শাখা (class teacher) or your own subject there (subject teacher): homework marks 20+ points above class-test marks on an objective, with the items behind it; add notes", teacher: true, office: true, flags: [] },
+      record: { en: "Record the outcome", bn: "যাচাইয়ের ফলাফল লেখা", desc: "Close a case you can see with what was found (guardian did it / child did it / unclear) and a note", teacher: true, office: true, flags: [] },
+      // 2027 academic loop (docs/prd-academic-loop-2027.md §3.4 + §6, D-#1676).
       view_all: { en: "All homework check cases", bn: "সব যাচাইয়ের কেস দেখা", desc: "Every case school-wide", teacher: false, office: true, flags: [] },
       settings: { en: "Homework check settings", bn: "হোমওয়ার্ক যাচাইয়ের সেটিং", desc: "The gap in points that opens a case and the cases in a term that make a child recurring", teacher: false, office: false, flags: ["LOCKED"] },
     },

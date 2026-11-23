@@ -101,13 +101,13 @@ const OPEN_FIELDS: Record<string, string> = {
   childLibraryLoans: "guardian plane",
   // A published meeting result: the guardian's own linked child, or meeting-view staff — checked in the body (D-#1634).
   guardianMeetingResults: "own child (guardian link) or meeting staff, checked in the body",
+  // AL-12 (D-#1676): the guardian's gentle homework-help note - the child's own linked guardian, checked in the body.
+  childHomeworkHelpNotes: "own child (guardian link), checked in the body",
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
 const DECLARED_AHEAD: Record<string, string> = {
   // 2027 academic loop (docs/prd-academic-loop-2027.md §6): registered in the AL-0 contract PR, gated when built.
-  "homework_integrity:view_all": "AL-12 outside-help reach",
-  "homework_integrity:settings": "AL-12 integrity settings",
   "reports:loop_health": "AL-13 loop health",
 };
 
