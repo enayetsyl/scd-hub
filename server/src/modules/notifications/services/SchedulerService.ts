@@ -87,6 +87,7 @@ import {
 import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAutoIssueService";
 import { asDraftReady, deliverTailoredItems, runAsDraft } from "../../mastery/services/AssignmentSuggestionService";
 import { guardianSummaryReady, runGuardianWeeklySummary } from "../../mastery/services/GuardianWeeklySummaryService";
+import { LPBEHIND_MINUTES, runLessonBehind } from "../../lesson-progress/services/SyllabusTargetService";
 import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { captureReviewSnapshots } from "../../review-program/services/ReviewProgressService";
@@ -293,6 +294,8 @@ export interface TickSummary {
   asDraftCreated: number;
   /** AL-10 (GWSUM): the separate weekly message per child — guardian notifications emitted this pass (switch on only). */
   gwSummaryEmitted: number;
+  /** AL-11 (LPBEHIND): "behind the term target" notices written to the Principal this pass (runs regardless of the switch). */
+  lessonBehindEmitted: number;
   /** End-of-due-day system chases (owner ruling 2026-08-04). */
   hwAutoChased: number;
   /** Weekly guardian homework-digest notifications emitted (D-#452). */
@@ -366,6 +369,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     asAutoIssued: 0,
     asDraftCreated: 0,
     gwSummaryEmitted: 0,
+    lessonBehindEmitted: 0,
     hwAutoChased: 0,
     hwWeeklyDigestEmitted: 0,
     ctOverdueDigestEmitted: 0,
@@ -966,6 +970,24 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       if (!windowOpen(nowMin, LESSON_MISSED_MINUTES)) return;
       await runOnce(dateKey, "LPMISS", async () => {
         summary.lessonMissedEmitted = await dispatchLessonMissed(now);
+      });
+    });
+
+    // --- LPBEHIND (AL-11, prd-academic-loop-2027 §3.3 / journey A5, R14) — weekly, 08:30 on the FIRST open school day of the
+    // week (a holiday Sunday rolls it to Monday): the Principal gets one notice per শাখা × subject that is
+    // `termBehindAlertWeeks`+ weeks behind its term target. A class × subject with no target is never listed. Runs
+    // REGARDLESS of the release switch (§3.6). runOnce guards the reads; the dedupe key (week, শাখা × subject, recipient)
+    // guards the rows, so a second run that week sends nothing.
+    await family("lesson behind target (LPBEHIND)", async () => {
+      if (!windowOpen(nowMin, LPBEHIND_MINUTES)) return;
+      for (let back = now.getDay(); back > 0; back--) {
+        const earlier = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
+        if ((await resolveDayType(earlier)) === "FULL") return; // an earlier open day of this week already carried it
+      }
+      await runOnce(dateKey, "LPBEHIND", async () => {
+        const res = await runLessonBehind(now);
+        summary.lessonBehindEmitted = res.notified;
+        if (res.notified > 0) console.log(`[scheduler] LPBEHIND: ${res.behind} section x subject behind target, ${res.notified} notice(s)`);
       });
     });
   }

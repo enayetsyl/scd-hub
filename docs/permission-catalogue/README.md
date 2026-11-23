@@ -305,7 +305,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 |---|---|---|---|---|---|---|---|
 | `lesson_progress:view` | See lesson-plan progress | পাঠ পরিকল্পনার অগ্রগতি দেখা | A শাখা × subject's sessions taught (routine holder or class teacher), a student's lessons and presence | on | on | | routine:read (expansion, like class_note) |
 | `lesson_progress:view_all` | Any শাখা + the overview | সব শাখার অগ্রগতি ও সারসংক্ষেপ | School-wide overview, any শাখা's tracker, any student's lessons | — | on | | routine:manage (expansion, like class_note) |
-| `lesson_progress:set_targets` | Set term target dates | মেয়াদের লক্ষ্য তারিখ ঠিক করা | Save/clear half-yearly + annual end session and date per class × subject (2027 loop, D-#1675) | — | on | | declared ahead (AL-11) |
+| `lesson_progress:set_targets` | Set term target dates | মেয়াদের লক্ষ্য তারিখ ঠিক করা | Save/clear half-yearly + annual end session and date per class × subject (2027 loop, D-#1675) | — | on | | AL-11: `syllabusTargetBoard` + `setSyllabusTargets` |
 
 #### `saturday_revision` — শনিবারের রিভিশন
 | permission | EN | BN | what it allows | T | O | flags | replaces |

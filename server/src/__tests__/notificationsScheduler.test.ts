@@ -187,6 +187,11 @@ jest.mock("../modules/mastery/services/GuardianWeeklySummaryService", () => ({
   guardianSummaryReady: () => Promise.resolve(false),
   runGuardianWeeklySummary: () => Promise.resolve({ students: 0, notified: 0 }),
 }));
+// AL-11: the LPBEHIND family (covered in al11Targets.test.ts) is DB-backed — stubbed so this suite stays DB-free.
+jest.mock("../modules/lesson-progress/services/SyllabusTargetService", () => ({
+  LPBEHIND_MINUTES: 8 * 60 + 30,
+  runLessonBehind: () => Promise.resolve({ behind: 0, notified: 0 }),
+}));
 jest.mock("../modules/trackers/services/MarkReminderService", () => ({
   MARK_ESCALATION_MINUTES: 9 * 60 + 30,
   runMarkEscalation: (now: unknown) => mockMarkEscalation(now),

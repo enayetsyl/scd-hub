@@ -141,6 +141,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   ROUTINE_SLOT_REVISED: { bn: "রুটিনের পিরিয়ড সংশোধন করেছেন", en: "Revised a routine slot", group: "ROUTINE" },
   ROUTINE_SLOT_RETIRED: { bn: "রুটিনের পিরিয়ড বাদ দিয়েছেন", en: "Retired a routine slot", group: "ROUTINE" },
   LESSON_PLAN_QUESTION_SET: { bn: "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন চালু/বন্ধ করেছেন", en: "Switched the class note's lesson-plan question", group: "ROUTINE" },
+  SYLLABUS_TARGETS_SET: { bn: "মেয়াদের লক্ষ্য তারিখ ঠিক করেছেন", en: "Set term target dates", group: "ROUTINE" },
   HOME_GUIDES_IMPORTED: { bn: "অভিভাবকের বাড়ির গাইড ইম্পোর্ট করেছেন", en: "Imported guardian home guides", group: "ROUTINE" },
 
   // --- Homework -------------------------------------------------------------

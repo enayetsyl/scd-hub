@@ -14,6 +14,7 @@ import { callerHasPermission, LESSON_NONE_REASONS, type AccessProfile, type Less
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
+import { SectionMerge } from "../../foundation/models/SectionMerge";
 import { User } from "../../foundation/models/User";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ClassNote } from "../../routine/models/ClassNote";
@@ -25,6 +26,7 @@ import { LessonDelivery, type ILessonDelivery } from "../models/LessonDelivery";
 import { LessonProgressError, sessionKey, sessionPlansFor, type PlanSession } from "./LessonDeliveryService";
 import { absencesByNote } from "../presence";
 import { catchupsFor, openCatchupCounts } from "./LessonCatchupService";
+import { NO_TARGET_READ, loadPaceEnv, resolveTermRead, type TargetRead } from "./SyllabusTargetService";
 
 export type Auth = AccessProfile & { userId: string; role: string };
 
@@ -60,6 +62,17 @@ export interface ProgressSummary {
 }
 
 export interface ProgressRow extends ProgressSummary {
+  /** AL-11: the year being read has at least one target — with none, the screens hide the on-track line altogether. */
+  yearHasTargets: boolean;
+  /** AL-11 (D-#1675): the on-track read against the class × subject's term target (NO_TARGET with none). */
+  targetState: TargetRead["state"];
+  targetTerm: TargetRead["term"];
+  targetDate: string | null;
+  targetSessions: number;
+  expectedByToday: number;
+  behindBy: number;
+  /** Null when the শাখা has no routine period for the subject (no honest weeks figure). */
+  weeksBehind: number | null;
   sectionId: string;
   classLevel: number;
   classNameBn: string;
@@ -173,6 +186,9 @@ interface Pair {
 }
 
 interface SectionInfo {
+  /** The year of the section's class — a target read only applies when it is the year the targets are read for. */
+  academicYearId: string;
+  classId: string;
   sectionId: string;
   classLevel: number;
   classNameBn: string;
@@ -193,7 +209,7 @@ async function currentSections(): Promise<Map<string, SectionInfo>> {
   const out = new Map<string, SectionInfo>();
   for (const s of sections) {
     const c = byClass.get(String(s.classId));
-    if (c) out.set(String(s._id), { sectionId: String(s._id), classLevel: c.level, classNameBn: c.nameBn, sectionNameBn: s.nameBn });
+    if (c) out.set(String(s._id), { academicYearId: String(year._id), sectionId: String(s._id), classId: String(c._id), classLevel: c.level, classNameBn: c.nameBn, sectionNameBn: s.nameBn });
   }
   return out;
 }
@@ -251,15 +267,22 @@ async function rowsFor(pairs: Pair[], sections: Map<string, SectionInfo>, allPai
   const list = [...needed.values()];
   if (list.length === 0) return [];
 
+  // AL-11 / PRD §3.7: a COMBINED শাখা (active SectionMerge) also reads the deliveries of its source শাখা, so the
+  // sessions its children's earlier classes finished count for it.
+  const mergeSources = await mergeSourcesOf(list.map((p) => p.sectionId));
+  const ownersOf = new Map<string, string[]>(); // source শাখা -> the combined শাখা that read it
+  for (const [combined, srcs] of mergeSources) for (const src of srcs) ownersOf.set(src, [...(ownersOf.get(src) ?? []), combined]);
   const deliveries = (await LessonDelivery.find({
-    $or: list.map((p) => ({ sectionId: new Types.ObjectId(p.sectionId), subject: p.subject })),
+    $or: list.flatMap((p) => [p.sectionId, ...(mergeSources.get(p.sectionId) ?? [])].map((id) => ({ sectionId: new Types.ObjectId(id), subject: p.subject }))),
   })
     .select("noteId sectionId subject dateKey sessions noneReason teacherId")
     .lean()) as unknown as Array<DeliveryLite & { sectionId: Types.ObjectId; subject: string }>;
   const byPair = new Map<string, typeof deliveries>();
   for (const d of deliveries) {
-    const k = `${d.sectionId}|${d.subject}`;
-    byPair.set(k, [...(byPair.get(k) ?? []), d]);
+    for (const id of [String(d.sectionId), ...(ownersOf.get(String(d.sectionId)) ?? [])]) {
+      const k = `${id}|${d.subject}`;
+      byPair.set(k, [...(byPair.get(k) ?? []), d]);
+    }
   }
 
   // Notes since each pair's first mark (the unanswered count only starts when marking did).
@@ -281,6 +304,22 @@ async function rowsFor(pairs: Pair[], sections: Map<string, SectionInfo>, allPai
     notesByPair.set(k, [...(notesByPair.get(k) ?? []), String(n._id)]);
   }
 
+  // AL-11: the term calendar once per call + each শাখা's routine periods per week for the subject.
+  const paceEnv = await loadPaceEnv();
+  const perWeek = new Map<string, number>();
+  for (const sl of (paceEnv && paceEnv.targets.size > 0 ? await RoutineSlot.find({
+    groupType: "section",
+    groupId: { $in: list.map((p) => new Types.ObjectId(p.sectionId)) },
+    active: true,
+    isBreak: { $ne: true },
+    ...liveWindow(parseDateKey(todayKey)),
+  })
+    .select("groupId subject")
+    .lean() : []) as unknown as Array<{ groupId: Types.ObjectId; subject: string }>) {
+    const slotKey = `${sl.groupId}|${sl.subject}`;
+    perWeek.set(slotKey, (perWeek.get(slotKey) ?? 0) + 1);
+  }
+
   const plans = new Map<string, PlanSession[]>();
   const rows: ProgressRow[] = [];
   for (const p of list) {
@@ -289,12 +328,34 @@ async function rowsFor(pairs: Pair[], sections: Map<string, SectionInfo>, allPai
     const planKey = `${info.classLevel}|${p.subject}`;
     if (!plans.has(planKey)) plans.set(planKey, await sessionPlansFor(info.classLevel, p.subject));
     const k = `${p.sectionId}|${p.subject}`;
+    const summary = summarize(plans.get(planKey)!, byPair.get(k) ?? [], notesByPair.get(k) ?? [], todayKey);
+    const read =
+      info.classLevel >= 1 && info.classLevel <= 5 && paceEnv && info.academicYearId === paceEnv.yearId
+        ? resolveTermRead(paceEnv, {
+            academicYearId: info.academicYearId,
+            classId: info.classId,
+            classLevel: info.classLevel,
+            subject: p.subject,
+            plan: plans.get(planKey)!,
+            finished: summary.finished,
+            periodsPerWeek: perWeek.get(k) ?? 0,
+            todayKey,
+          })
+        : NO_TARGET_READ;
     rows.push({
       ...info,
       subject: p.subject,
       lagSessions: 0,
       openCatchups: 0,
-      ...summarize(plans.get(planKey)!, byPair.get(k) ?? [], notesByPair.get(k) ?? [], todayKey),
+      yearHasTargets: !!paceEnv && paceEnv.targets.size > 0 && info.academicYearId === paceEnv.yearId,
+      targetState: read.state,
+      targetTerm: read.term,
+      targetDate: read.targetDate,
+      targetSessions: read.targetSessions,
+      expectedByToday: read.expectedByToday,
+      behindBy: read.behindBy,
+      weeksBehind: read.weeksBehind,
+      ...summary,
     });
   }
   const lead = new Map<string, number>();
@@ -348,6 +409,17 @@ export async function assertMayViewSection(auth: Auth, sectionId: string, subjec
   throw new LessonProgressError("এই শাখা ও বিষয়ের অগ্রগতি দেখার অনুমতি আপনার নেই।");
 }
 
+/** combined শাখা id -> its source শাখা ids, for the active merges among `ids`. */
+async function mergeSourcesOf(ids: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (ids.length === 0) return out;
+  const merges = (await SectionMerge.find({ status: "active", combinedSectionId: { $in: ids.map((id) => new Types.ObjectId(id)) } })
+    .select("combinedSectionId sourceSectionIds")
+    .lean()) as unknown as Array<{ combinedSectionId: Types.ObjectId; sourceSectionIds: Types.ObjectId[] }>;
+  for (const m of merges) out.set(String(m.combinedSectionId), m.sourceSectionIds.map(String));
+  return out;
+}
+
 /** One শাখা × subject in book order, with its summary row. */
 export async function sectionTracker(sectionId: string, subject: string, auth: Auth, today = new Date()): Promise<SectionTracker> {
   if (!Types.ObjectId.isValid(sectionId)) throw new LessonProgressError("শাখা পাওয়া যায়নি।");
@@ -357,16 +429,17 @@ export async function sectionTracker(sectionId: string, subject: string, auth: A
   if (!info) {
     // A section outside the current year (or deactivated) still reads its own history.
     const sec = await Section.findById(sectionId).select("classId nameBn").lean();
-    const cls = sec ? await Class.findById(sec.classId).select("level nameBn").lean() : null;
+    const cls = sec ? await Class.findById(sec.classId).select("level nameBn academicYearId").lean() : null;
     if (!sec || !cls) throw new LessonProgressError("শাখা পাওয়া যায়নি।");
-    info = { sectionId, classLevel: cls.level as number, classNameBn: cls.nameBn as string, sectionNameBn: sec.nameBn as string };
+    info = { academicYearId: String(cls.academicYearId), sectionId, classId: String(sec.classId), classLevel: cls.level as number, classNameBn: cls.nameBn as string, sectionNameBn: sec.nameBn as string };
     sections.set(sectionId, info);
   }
   const all = await schoolPairs(sections, today);
   const pair = { sectionId, subject };
   const [row] = await rowsFor([pair], sections, [...all, pair], dateKeyOf(today));
   const plan = await sessionPlansFor(info.classLevel, subject);
-  const deliveries = (await LessonDelivery.find({ sectionId: new Types.ObjectId(sectionId), subject })
+  const srcIds = (await mergeSourcesOf([sectionId])).get(sectionId) ?? [];
+  const deliveries = (await LessonDelivery.find({ sectionId: { $in: [sectionId, ...srcIds].map((id) => new Types.ObjectId(id)) }, subject })
     .select("noteId dateKey sessions noneReason teacherId rosterStudentIds attendanceUnits")
     .lean()) as unknown as Array<DeliveryLite & { rosterStudentIds: Types.ObjectId[]; attendanceUnits?: string[] }>;
   const states = sessionStates(plan, deliveries);

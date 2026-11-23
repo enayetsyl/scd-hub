@@ -34,7 +34,6 @@ const KNOWN_UNMAPPED: Record<string, string> = {
   // 2027 academic loop (docs/prd-academic-loop-2027.md §7): declared in the AL-0 contract PR, nothing emits them
   // yet; each slice that starts emitting one wires its deep-link and removes it here.
   INTEGRITY_CASE: "AL-12 case deep-link not built yet",
-  LESSON_BEHIND: "AL-11 targets screen not built yet",
 };
 
 const isMapped = (kind: string) => source.includes(`case "${kind}":`);

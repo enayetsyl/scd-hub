@@ -33,7 +33,7 @@ export const COPY_MODELS: ModelRef[] = [
   m("MasteryDomain"), m("MasteryChapter"), m("MasteryOutcome"), m("MasteryQuestionType"), m("MasteryTag"),
   m("MasteryPolicy"), m("MasteryEnablement"), m("MasteryCatalogueReview"), m("MasterySequence"),
   m("MasteryExclusion"),
-  m("LessonProgressConfig"),
+  m("LessonProgressConfig"), m("SyllabusTarget"),
   // the prepared 2027 year change (prod ran Prepare on 21 Nov 2026): without its run row the copied 2027
   // classes / enrolments are orphans and the dev rehearsal cannot cut over
   m("YearChangeRun"),

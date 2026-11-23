@@ -108,7 +108,6 @@ const DECLARED_AHEAD: Record<string, string> = {
   // 2027 academic loop (docs/prd-academic-loop-2027.md §6): registered in the AL-0 contract PR, gated when built.
   "homework_integrity:view_all": "AL-12 outside-help reach",
   "homework_integrity:settings": "AL-12 integrity settings",
-  "lesson_progress:set_targets": "AL-11 term target dates",
   "reports:loop_health": "AL-13 loop health",
 };
 

@@ -329,6 +329,12 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianHomeTab", screen: "ChildMissedLessons", params: refs?.studentId ? { studentId: refs.studentId } : undefined }
         : { tab: "HomeTab", screen: "Today" };
+    // AL-11 (R14, D-#1675): the Principal's "behind the term target" notice opens that শাখা × subject's tracker
+    // (the session list + the on-track line); with no ids it opens the overview.
+    case "LESSON_BEHIND":
+      return refs?.sectionId && refs?.subject
+        ? { tab: "ClassNotesTab", screen: "LessonTracker", params: { sectionId: refs.sectionId, subject: refs.subject } }
+        : { tab: "ClassNotesTab", screen: "LessonProgress" };
     // Student support profile (D-#1546): staff only; the notice names no child (§9.7).
     case "SUPPORT_PROFILE":
       return guardian ? null : { tab: "HomeTab", screen: "SupportHome" };

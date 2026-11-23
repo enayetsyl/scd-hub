@@ -26,7 +26,7 @@ import { friendlyError } from "../../lib/errors";
 import { usePagedRows } from "../../lib/paging";
 import { space } from "../../theme/tokens";
 import type { ClassNotesStackParamList } from "../../navigation/types";
-import { dayMonth, lastLine, paceLine, progressLine, reasonsLine } from "./lessonProgressUi";
+import { dayMonth, lastLine, paceLine, progressLine, reasonsLine, targetLine } from "./lessonProgressUi";
 
 type Props = NativeStackScreenProps<ClassNotesStackParamList, "LessonTracker">;
 
@@ -228,6 +228,7 @@ export default function LessonTrackerScreen({ route, navigation }: Props): React
   if (!t) return <Screen>{q.fetching ? <Loader label={STR.loading} /> : <EmptyState message={STR.lpEmpty} />}</Screen>;
   const r = t.row;
   const reasons = reasonsLine(r);
+  const target = targetLine(r);
 
   return (
     <Screen padded={false}>
@@ -239,6 +240,14 @@ export default function LessonTrackerScreen({ route, navigation }: Props): React
           </View>
           <Muted style={{ marginTop: 2 }}>{paceLine(r)}</Muted>
           <Muted style={{ marginTop: 2 }}>{lastLine(r)}</Muted>
+          {/* AL-11: where the term target says the school should be. */}
+          {target ? (
+            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space(2), marginTop: 4 }}>
+              <Muted>{STR.ltTargetCol}:</Muted>
+              <Badge text={target.text} tone={target.tone} />
+            </View>
+          ) : null}
+          {target?.detail ? <Muted style={{ marginTop: 2 }}>{target.detail}</Muted> : null}
           {reasons ? <Muted style={{ marginTop: 2 }}>{reasons}</Muted> : null}
           {r.unansweredNotes > 0 ? (
             <Muted style={{ marginTop: 2 }}>
