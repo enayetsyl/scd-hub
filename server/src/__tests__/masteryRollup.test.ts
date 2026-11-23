@@ -350,7 +350,7 @@ describe("guardians see the objective grain only (D-#925, §10 item 8)", () => {
     expect(math.subject).toBe("MATH");
     expect(math.attention).toEqual([{ labelBn: "হাতে রেখে যোগ", homeTipBn: "খেজুর দশটি করে বেঁধে হাতে রাখা দেখান।" }]);
     // 07-03 attention; 07-05 good; 07-02 half-checked ⇒ not known yet (D-#943), never "good".
-    expect(math.counts).toEqual({ attention: 1, improving: 0, good: 1, unknown: 1 });
+    expect(math.counts).toEqual({ attention: 1, improving: 0, good: 1, unknown: 1, classMissed: 0 });
     expect(math.levelWordBn).toBe("শিখনফল");
     assertNoSub(math);
   });
