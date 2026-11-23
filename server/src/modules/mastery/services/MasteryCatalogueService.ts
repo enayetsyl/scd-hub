@@ -1120,6 +1120,10 @@ export async function savePolicy(
     if (touched.length) throw new MasteryCatalogueError("হোমওয়ার্ক যাচাইয়ের নিয়ম হোমওয়ার্ক যাচাই পাতা থেকে বদলান।");
   }
   const resolved = key === "SCHOOL" ? resolvePolicy(clean, null) : resolvePolicy(school?.values, clean);
+  // The release switch (PRD §3.6: "the Principal turns it on"): only the Principal may change it, here or anywhere.
+  const switchWas = resolvePolicy(school?.values, null).academicLoop2027On === true;
+  const switchNow = key === "SCHOOL" ? resolved.academicLoop2027On === true : switchWas;
+  if (key === "SCHOOL" && switchNow !== switchWas && actor.role !== "PRINCIPAL") throw new MasteryCatalogueError(SWITCH_PRINCIPAL_ONLY);
   const complaint = validatePolicy(resolved);
   if (complaint) throw new MasteryCatalogueError(complaint);
   if (key === "SCHOOL") {
@@ -1144,8 +1148,28 @@ export async function savePolicy(
     targetKind: "MasteryPolicy",
     meta: { scopeKey: key, values: clean },
   });
+  // OFF → ON: every state is recomputed once so a section whose in-school evidence now crosses the line gets its
+  // proposal (PRD §3.6). In the background — the save returns first; a failure is reported, never thrown.
+  if (!switchWas && switchNow) {
+    recomputeRun = (async () => {
+      try {
+        await (await import("./Loop2027Recompute")).recomputeForSwitch({ apply: true });
+      } catch (err) {
+        await (await import("../../../lib/reportError")).reportSilentFailure("masteryPolicy.loop2027Recompute", err, {});
+      }
+    })();
+  }
   return getPolicy(classToken, subject);
 }
+
+let recomputeRun: Promise<void> | null = null;
+/** Resolves when the background recompute of the last OFF → ON save is done (tests; nothing in production waits on it). */
+export async function settleLoopRecompute(): Promise<void> {
+  await recomputeRun;
+}
+
+/** Shown when anyone but the Principal tries to change the 2027 release switch. */
+export const SWITCH_PRINCIPAL_ONLY = "২০২৭ শিক্ষাচক্রের মূল সুইচ শুধু প্রধান শিক্ষক বদলাতে পারেন।";
 
 // ---------------------------------------------------------------------------
 // Domains (D-#921)

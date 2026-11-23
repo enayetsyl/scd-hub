@@ -753,7 +753,7 @@ export interface HeatOutcome {
   actionId: string | null;
   actionStatus: string | null;
   /** One cell per student, in `students` order. */
-  cells: { state: MasteryState; pct: number | null }[];
+  cells: { state: MasteryState; pct: number | null; /** AL-6b: IMPROVING only because the good work was at home (§3.8). */ inSchoolPending?: boolean }[];
   // OT-3 — a column is a tagged row (TAGGED), an objective (OBJECTIVE, rolled up) or a domain (DOMAIN).
   level: "TAGGED" | "OBJECTIVE" | "DOMAIN";
   parentCode: string | null;
@@ -814,7 +814,7 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
     if (!per) continue;
     const cells = students.map((sid) => {
       const s = per.get(sid);
-      return { state: (s?.state ?? "NOT_ASSESSED") as MasteryState, pct: round(s?.recentPct) };
+      return { state: (s?.state ?? "NOT_ASSESSED") as MasteryState, pct: round(s?.recentPct), inSchoolPending: s?.inSchoolPending ?? false };
     });
     const school = schoolRule ? inSchoolSectionSummary(rowsByLo.get(o.code) ?? [], policy, students.length) : null;
     // With the in-school rule the number shown is the in-school paper count the trigger uses (§3.8).

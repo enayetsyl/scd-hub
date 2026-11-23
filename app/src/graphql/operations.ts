@@ -6392,13 +6392,20 @@ export interface AsRosterEntryIn {
 }
 
 export const DELIVER_ASSIGNMENT = gql<
-  { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number } },
+  { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number; paperWarning?: string | null } },
   { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; description: string; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
 >`
   mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $description: String!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
     deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, description: $description, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
-      itemId asId deliveryDate dueDate status estMinutes presentCount absentCount
+      itemId asId deliveryDate dueDate status estMinutes presentCount absentCount paperWarning
     }
+  }
+`;
+
+/** AL-6b: rebuild a delivered, unlocked item's question sheet from its question set (release switch on). */
+export const RESYNC_ASSIGNMENT_PAPER = gql<{ resyncAssignmentPaper: boolean }, { itemId: string }>`
+  mutation ResyncAssignmentPaper($itemId: String!) {
+    resyncAssignmentPaper(itemId: $itemId)
   }
 `;
 
@@ -6409,6 +6416,12 @@ export interface AsWeekLoadItemT {
   subject: string;
   estMinutes: number;
   status: string;
+  /** AL-6b (switch on): FRI / SAT / BOTH, and the minutes on each day; null / 0 on a 2026 week. */
+  doOnDay?: string | null;
+  friMinutes?: number;
+  satMinutes?: number;
+  dayLabel?: string | null;
+  dayLabelEn?: string | null;
 }
 export interface AsWeekLoadT {
   academicYearId: string;
@@ -6420,6 +6433,10 @@ export interface AsWeekLoadT {
   overBy: number;
   withinCeiling: boolean;
   hasDrafts: boolean;
+  /** AL-6b: one home day's cap in minutes and what the week puts on each day; 0 = no day budget (2026). */
+  dayCap?: number;
+  friTotal?: number;
+  satTotal?: number;
   items: AsWeekLoadItemT[];
 }
 
@@ -6429,8 +6446,8 @@ export const AS_WEEK_LOAD = gql<
 >`
   query AssignmentWeekLoad($academicYearId: String!, $sectionId: String!, $weekNumber: Int!) {
     assignmentWeekLoad(academicYearId: $academicYearId, sectionId: $sectionId, weekNumber: $weekNumber) {
-      academicYearId sectionId weekNumber ceiling totalMinutes draftMinutes overBy withinCeiling hasDrafts
-      items { itemId asId subject estMinutes status }
+      academicYearId sectionId weekNumber ceiling totalMinutes draftMinutes overBy withinCeiling hasDrafts dayCap friTotal satTotal
+      items { itemId asId subject estMinutes status doOnDay friMinutes satMinutes dayLabel dayLabelEn }
     }
   }
 `;
@@ -6559,6 +6576,9 @@ export interface AsItemTallyT {
   returned: number;
   pendingSubmission: number;
   absent: number;
+  /** AL-6b: the item's AS paper code (MP-…) and whether the sheet is locked. */
+  paperCode?: string | null;
+  paperLocked?: boolean;
 }
 
 export const ASSIGNMENT_ITEM_TALLIES = gql<
@@ -6567,7 +6587,7 @@ export const ASSIGNMENT_ITEM_TALLIES = gql<
 >`
   query AssignmentItemTallies($sectionId: String!, $classId: String!) {
     assignmentItemTallies(sectionId: $sectionId, classId: $classId) {
-      asItemId total submitted checked returned pendingSubmission absent
+      asItemId total submitted checked returned pendingSubmission absent paperCode paperLocked
     }
   }
 `;

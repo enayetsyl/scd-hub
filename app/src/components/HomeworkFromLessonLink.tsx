@@ -7,7 +7,7 @@
 import React from "react";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { MASTERY_SECTION_SWITCH_QUERY } from "../graphql/mastery";
+import { MASTERY_LOOP_POLICY_QUERY, MASTERY_SECTION_SWITCH_QUERY } from "../graphql/mastery";
 import { Button } from "./ui";
 import { STR } from "../lib/labels";
 import { useAuth } from "../auth/AuthContext";
@@ -35,8 +35,12 @@ export function HomeworkFromLessonLink({
     pause: !show,
   });
   const sw = data?.masterySectionSwitch as { enabled: boolean; classLevel: number | null } | undefined;
+  // AL-6b: with the 2027 release switch on, the same lesson can also make an in-class work sheet.
+  const [{ data: loopData }] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY, pause: !show });
+  const loopOn = loopData?.masteryPolicy?.resolved?.academicLoop2027On === true;
   if (!show || !sw?.enabled || sw.classLevel === null) return null;
   return (
+    <>
     <Button
       title={STR.ctnHomeworkFromLesson}
       variant="secondary"
@@ -49,5 +53,20 @@ export function HomeworkFromLessonLink({
         })
       }
     />
+    {loopOn ? (
+      <Button
+        title={STR.al6CwFromLesson}
+        variant="secondary"
+        style={{ marginTop: space(2) }}
+        onPress={() =>
+          nav.navigate("MasteryTab", {
+            screen: "MasteryNewPaper",
+            params: { sectionId, subject, classLevel: sw.classLevel, date, fromLesson: true, source: "CW" },
+            initial: false,
+          })
+        }
+      />
+    ) : null}
+    </>
   );
 }

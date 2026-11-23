@@ -1373,6 +1373,11 @@ interface WeekLoadItemShape {
   subject: string;
   estMinutes: number;
   status: string;
+  doOnDay: string | null;
+  friMinutes: number;
+  satMinutes: number;
+  dayLabel: string | null;
+  dayLabelEn: string | null;
 }
 const WeekLoadItemRef = builder.objectRef<WeekLoadItemShape>("AssignmentWeekLoadItem");
 WeekLoadItemRef.implement({
@@ -1382,6 +1387,11 @@ WeekLoadItemRef.implement({
     subject: t.exposeString("subject"),
     estMinutes: t.exposeInt("estMinutes"),
     status: t.exposeString("status"),
+    doOnDay: t.string({ nullable: true, description: "AL-6b: FRI / SAT / BOTH (release switch on), else null.", resolve: (r) => r.doOnDay }),
+    friMinutes: t.exposeInt("friMinutes"),
+    satMinutes: t.exposeInt("satMinutes"),
+    dayLabel: t.string({ nullable: true, description: "AL-6b: the Bangla day label for the screen.", resolve: (r) => r.dayLabel }),
+    dayLabelEn: t.string({ nullable: true, description: "AL-6b: the same label in English.", resolve: (r) => r.dayLabelEn }),
   }),
 });
 
@@ -1395,6 +1405,9 @@ interface WeekLoadShape {
   overBy: number;
   withinCeiling: boolean;
   hasDrafts: boolean;
+  dayCap: number;
+  friTotal: number;
+  satTotal: number;
   items: WeekLoadItemShape[];
 }
 const WeekLoadRef = builder.objectRef<WeekLoadShape>("AssignmentWeekLoad");
@@ -1410,6 +1423,9 @@ WeekLoadRef.implement({
     overBy: t.exposeInt("overBy"),
     withinCeiling: t.exposeBoolean("withinCeiling"),
     hasDrafts: t.exposeBoolean("hasDrafts"),
+    dayCap: t.exposeInt("dayCap", { description: "AL-6b: one home day's cap in minutes (release switch on); 0 when there is no day budget." }),
+    friTotal: t.exposeInt("friTotal"),
+    satTotal: t.exposeInt("satTotal"),
     items: t.field({ type: [WeekLoadItemRef], resolve: (r) => r.items }),
   }),
 });
@@ -1883,6 +1899,8 @@ AsItemTallyRef.implement({
     returned: t.exposeInt("returned"),
     pendingSubmission: t.exposeInt("pendingSubmission"),
     absent: t.exposeInt("absent"),
+    paperCode: t.string({ nullable: true, description: "AL-6b: the item's AS paper code (MP-…) for the mastery grid.", resolve: (r) => r.paperCode ?? null }),
+    paperLocked: t.boolean({ description: "AL-6b: that sheet is locked — no resync.", resolve: (r) => r.paperLocked ?? false }),
   }),
 });
 

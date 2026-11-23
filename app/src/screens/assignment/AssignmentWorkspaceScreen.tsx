@@ -36,6 +36,7 @@ import {
   TRANSITION_AS_RECORD,
   ISSUE_AS_RESUBMISSION,
   REVERT_AS_RECORD,
+  RESYNC_ASSIGNMENT_PAPER,
   type AsOpenRecordT,
   type AsItemTallyT,
 } from "../../graphql/operations";
@@ -54,6 +55,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice,
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
 import { namesOrCount } from "../../lib/nameList";
 import { attachToExisting } from "../../lib/attachRows";
+import { MASTERY_LOOP_POLICY_QUERY } from "../../graphql/mastery";
 import { useAuth } from "../../auth/AuthContext";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -438,6 +440,24 @@ function ItemCard({
   const { confirmAction } = useConfirm();
   const { askMistakeReason } = useMistakeReason();
   const [busyId, setBusyId] = useState<string | null>(null);
+  // AL-6b: an item with an AS question sheet takes its marks on the grid (release switch on only, §3.6).
+  const [loopQ] = useQuery({ query: MASTERY_LOOP_POLICY_QUERY, pause: !open || !can("mastery:view") });
+  const paperCode = loopQ.data?.masteryPolicy?.resolved?.academicLoop2027On === true ? (tally?.paperCode ?? null) : null;
+  const canGrid = can("mastery:view") && can("mastery:enter_results");
+  // Like homework: the marks grid opens once the week is collected — nobody still owes a submission.
+  const collected = !!tally && tally.total > 0 && tally.pendingSubmission === 0;
+  const canResync = can("assignment:declare") && !readOnly && tally?.paperLocked !== true;
+  const [, resyncPaper] = useMutation(RESYNC_ASSIGNMENT_PAPER);
+  const [resyncBusy, setResyncBusy] = useState(false);
+  const cardNav = useNavigation() as unknown as { navigate: (name: string, params?: object) => void };
+  async function onResync(): Promise<void> {
+    setResyncBusy(true);
+    const res = await resyncPaper({ itemId: group.asItemId });
+    setResyncBusy(false);
+    if (res.error) return onNotify(null, friendlyError(res.error));
+    onNotify(res.data?.resyncAssignmentPaper ? STR.al6Resynced : STR.al6ResyncSame, null);
+    onDone();
+  }
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
@@ -583,6 +603,23 @@ function ItemCard({
           {!open && summary ? <Muted style={{ marginTop: 2 }}>{summary}</Muted> : null}
         </View>
       </Pressable>
+
+      {/* AL-6b: the question sheet — marks on the grid (each child only their own questions); re-match while unlocked. */}
+      {open && paperCode ? (
+        <View style={{ marginTop: space(2), gap: space(2) }}>
+          <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+            {canGrid && collected ? (
+              <Button
+                title={STR.al6AsGridOpen}
+                variant="secondary"
+                onPress={() => cardNav.navigate("MasteryTab", { screen: "HomeworkMarksGrid", params: { paperId: paperCode }, initial: false })}
+              />
+            ) : null}
+            {canResync ? <Button title={STR.al6Resync} variant="secondary" onPress={() => void onResync()} loading={resyncBusy} /> : null}
+          </View>
+          {tally?.paperLocked ? <Muted>{STR.al6SheetLocked}</Muted> : null}
+        </View>
+      ) : null}
 
       {!open ? null : readOnly ? (
         /* D-#388 — a folded, not-my-subject card: oversight only. The server refuses

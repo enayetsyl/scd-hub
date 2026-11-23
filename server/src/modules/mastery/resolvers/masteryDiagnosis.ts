@@ -259,7 +259,11 @@ TrailRef.implement({
 
 const HeatCellRef = builder.objectRef<HeatOutcome["cells"][number]>("MasteryHeatCell");
 HeatCellRef.implement({
-  fields: (t) => ({ state: t.exposeString("state"), pct: t.int({ nullable: true, resolve: (c) => c.pct }) }),
+  fields: (t) => ({
+    state: t.exposeString("state"),
+    pct: t.int({ nullable: true, resolve: (c) => c.pct }),
+    inSchoolPending: t.boolean({ description: "AL-6b: IMPROVING because the good work was at home only — \"ক্লাসে যাচাই বাকি\".", resolve: (c) => c.inSchoolPending ?? false }),
+  }),
 });
 
 const HeatOutcomeRef = builder.objectRef<HeatOutcome>("MasteryHeatOutcome");
