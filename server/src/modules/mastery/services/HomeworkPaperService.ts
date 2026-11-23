@@ -16,6 +16,7 @@
  * Everything here that CHANGES a 2026 behaviour is called only with `academicLoop2027On` (§3.6); the callers read the
  * switch (`isLoop2027On`) and this file never reads it for them, except `syncPaperForItem` which is the declare gate.
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import type { HomeworkFreeLineKind, MasterySubject } from "@scd/shared";
 import { HOMEWORK_FREE_LINE_KINDS } from "@scd/shared";
@@ -327,13 +328,13 @@ export async function removePaperOfItem(itemId: Types.ObjectId | string): Promis
 /** Lock the paper (once) and write its ledger rows; idempotent. Rows are keyed on the paper, kind HW (AS: AS). */
 export async function lockPaper(paper: IMasteryPaper, printRequestId?: Types.ObjectId | string | null): Promise<void> {
   const set: Record<string, unknown> = {};
-  if (!paper.lockedAt) set.lockedAt = new Date();
+  if (!paper.lockedAt) set.lockedAt = appNow();
   if (printRequestId && !paper.printRequestId) set.printRequestId = oid(printRequestId);
   if (Object.keys(set).length > 0) await MasteryPaper.updateOne({ _id: paper._id }, { $set: set });
   const kind = paper.source === "AS" ? "AS" : "HW";
   // An AS paper is "given" the day it is locked (print / issue), not on its due date (AL-6); the ledger write is
   // idempotent on (source, item, qid), so the tailored paper's finalise write (AL-3) and this one never double count.
-  await recordUsesSafe(usesOfPaper(paper, kind, { givenOn: dhakaDayKey(kind === "AS" ? new Date() : paper.date), wholeIfAll: kind === "AS" }));
+  await recordUsesSafe(usesOfPaper(paper, kind, { givenOn: dhakaDayKey(kind === "AS" ? appNow() : paper.date), wholeIfAll: kind === "AS" }));
 }
 
 /**
@@ -378,7 +379,7 @@ export async function voidConfirmedPaper(paperId: string, auth: Auth, reason = "
     throw new MasteryWorkError("এই কাজটি এখান থেকে বাতিল করা যায় না।");
   }
   if (paper.entryState !== "CONFIRMED") throw new MasteryWorkError("নিশ্চিত না করা কাজ মুছে ফেলুন — বাতিলের দরকার নেই।");
-  const now = new Date();
+  const now = appNow();
   const by = oid(auth.userId);
   let excluded = 0;
   for (const it of paper.items) {
@@ -409,7 +410,7 @@ export async function voidConfirmedPaper(paperId: string, auth: Auth, reason = "
  * True when `userId` is today's active `RoutineSubstitution` cover on a slot of this শাখা whose absent teacher is the
  * subject teacher of the শাখা × subject — the rule `MarkReminderService` uses for the due day (§7).
  */
-export async function isTodaySubstituteFor(userId: string, sectionId: Types.ObjectId | string, subject: string, now: Date = new Date()): Promise<boolean> {
+export async function isTodaySubstituteFor(userId: string, sectionId: Types.ObjectId | string, subject: string, now: Date = appNow()): Promise<boolean> {
   if (!Types.ObjectId.isValid(userId)) return false;
   const today = dhakaDayKey(now);
   const DAY = 86_400_000;
@@ -466,7 +467,7 @@ export async function onPaperStudents(paper: IMasteryPaper, rosterIds: string[])
  * never through `checkRecord`, so a derived WRONG does NOT spawn a resubmission (D-#43's spawn is the manual tick's).
  * A child who resolves to ABSENT / NOT_SUBMITTED / VOID has no total: their cache is cleared, the state untouched.
  */
-export async function writeBackTrackers(paper: IMasteryPaper, studentIds: string[], actorId: string, now: Date = new Date()): Promise<number> {
+export async function writeBackTrackers(paper: IMasteryPaper, studentIds: string[], actorId: string, now: Date = appNow()): Promise<number> {
   if (studentIds.length === 0) return 0;
   const policy = (await getPolicy(paper.classToken, paper.subject)).resolved;
   const results = await MasteryResult.find({ paperId: paper._id, studentId: { $in: studentIds.map(oid) } }).lean();

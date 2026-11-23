@@ -15,7 +15,6 @@
  */
 import { classToken, HW_SUBJECTS, subjectAllowedForClassLevel } from "@scd/shared";
 import { MasteryPolicy } from "../../../modules/mastery/models/MasteryPolicy";
-import { ContentArtifact } from "../../../modules/content/models/ContentArtifact";
 import { Student } from "../../../modules/foundation/models/Student";
 import { HomeworkItem } from "../../../modules/trackers/models/HomeworkItem";
 import { HomeworkStudentRecord } from "../../../modules/trackers/models/HomeworkStudentRecord";
@@ -27,6 +26,7 @@ import { isLoop2027On } from "../../../modules/assessment/services/QuestionUseSe
 import { slotsForDate } from "../../../modules/routine/services/RoutineSlotService";
 import { resolveDayType } from "../../../modules/routine/calendar";
 import { parseDateKey } from "../../../modules/attendance/dates";
+import { pickAllowedHomeworkQids } from "./helpers";
 import type { Scenario, ScenarioCtx } from "./types";
 
 const DAYS = 10;
@@ -67,6 +67,7 @@ export const scenario2: Scenario = {
       if ((await resolveDayType(day)) !== "FULL") continue;
       taught++;
       const since = new Date();
+      ctx.clock(dayKey); // every date rule in the services reads the fake day, not the real one
 
       for (const sec of ctx.sections.filter((s) => s.level >= 1)) {
         const slots = (await slotsForDate("section", sec.sectionId, day)).filter((s) => !s.isBreak && s.teacherId && hwSubjects.has(s.subject));
@@ -75,16 +76,8 @@ export const scenario2: Scenario = {
         const subjects = ctx.pick([...bySubject.keys()].filter((s) => subjectAllowedForClassLevel(s as never, sec.level)), SUBJECTS_PER_SECTION_DAY);
         for (const subject of subjects) {
           const teacherId = bySubject.get(subject)!;
-          const arts = await ContentArtifact.find({
-            docType: "question", current: true, retiredAt: null, reviewStatus: "gold", examPoolAt: null, subject, classLevel: sec.level,
-          })
-            .select("envelopeJson.payload.qid")
-            .limit(30)
-            .lean();
-          const qids = ctx.pick(
-            arts.map((a) => String(((a.envelopeJson as Record<string, unknown>).payload as Record<string, unknown> | undefined)?.qid ?? "")).filter(Boolean),
-            3,
-          );
+          // Only questions the declare's own pick guard accepts (no-repeat window, R21 share) - a blind pick refused a quarter of the sheets.
+          const qids = await pickAllowedHomeworkQids(ctx, sec, subject, dayKey, 3);
           const withLines = ctx.rng() < 0.5 || qids.length === 0;
           let item: { itemId: string } | null = null;
           try {
@@ -104,8 +97,9 @@ export const scenario2: Scenario = {
               actorId: teacherId,
             });
             c.declared++;
-          } catch {
+          } catch (e) {
             c.declareRefused++;
+            ctx.refuse("declareRefused", e);
             continue;
           }
           const doc = await HomeworkItem.findById(item.itemId);
@@ -154,8 +148,9 @@ export const scenario2: Scenario = {
             try {
               await confirmPaper(paper.paperId, { userId: teacherId, role: "TEACHER" } as unknown as Auth);
               c.confirmed++;
-            } catch {
+            } catch (e) {
               c.confirmRefused++;
+              ctx.refuse("confirmRefused", e);
             }
           }
         }

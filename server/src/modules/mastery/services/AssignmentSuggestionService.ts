@@ -13,6 +13,7 @@
  * Everything here runs only with \`academicLoop2027On\` (§3.6): the callers read the switch, so with it off a 2026 flow is
  * byte-for-byte unchanged. Nursery / KG have no weekly assignment (R25, AC-C15).
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import { HW_SUBJECTS, HW_SUBJECT_LABELS_BN, callerHasPermission } from "@scd/shared";
 import type { MasterySubject } from "@scd/shared";
@@ -197,7 +198,7 @@ export async function buildSuggestedDraft(input: BuildDraftInput): Promise<Build
   const { outcomes, labels } = await questionOutcomes(ctx, input.subject);
   if (outcomes.size === 0) throw new MasteryWorkError(NO_TREE_MESSAGE);
 
-  const now = new Date();
+  const now = appNow();
   const [marks, rows, policy, roster, bp, extraSeen, unmarked, base] = await Promise.all([
     marksTable(ctx.classToken, input.subject),
     liveRowsWithMerges(ctx.sectionId, input.subject), // a merged শাখা also reads its source শাখা (AC-U2)
@@ -380,7 +381,7 @@ export interface SubjectWeakStats extends SubjectWeak {
 /** A শাখা × subject's WEAK child × objective rows and rows with a verdict (the swap card reads these). */
 export async function subjectWeakStats(ctx: SectionCtx, subject: MasterySubject): Promise<SubjectWeak> {
   const [rows, policy] = await Promise.all([liveRowsWithMerges(ctx.sectionId, subject), getPolicy(ctx.classToken, subject)]);
-  const sec = computeSection(rows, policy.resolved, new Date());
+  const sec = computeSection(rows, policy.resolved, appNow());
   let weak = 0;
   let verdict = 0;
   for (const per of sec.states.values()) {
@@ -477,7 +478,7 @@ export async function assertWeekReader(auth: Auth, sectionId: Types.ObjectId, ce
 export async function canReadAssignment(a: IMasteryAssignment, auth: Auth): Promise<boolean> {
   if (callerHasPermission(auth, "assignment:comment") || callerHasPermission(auth, "assignment:view_all") || callerHasPermission(auth, "mastery:edit_all")) return true;
   try {
-    await assertMayWork(auth, a.sectionId, a.subject as MasterySubject, new Date());
+    await assertMayWork(auth, a.sectionId, a.subject as MasterySubject, appNow());
     return true;
   } catch {
     /* fall through to the week's readers */
@@ -565,7 +566,7 @@ export async function assignmentSuggestionWeek(sectionId: string, dueYmd: string
   const plan = planDays(planned, dayCap, seed);
   const dayPlan = { FRI: Math.round(plan.loads.FRI), SAT: Math.round(plan.loads.SAT), overBy: Math.round(plan.overBy), dayCap };
 
-  const today = dhakaDayKey(new Date());
+  const today = dhakaDayKey(appNow());
   const card = await swapCardFor(ctx, week, bySubject, today);
   return {
     week: isoWeek, dueDate: dueYmd, deliveryDate: week.deliveryDate ? week.deliveryDate.slice(0, 10) : null, weekNumber: week.weekNumber, hasWeek: true, suspended: false,
@@ -623,7 +624,7 @@ export async function suggestAssignment(input: { sectionId: string; dueYmd: stri
       if (week && !cells.some((c) => c.subject === subject) && !swappedIn.includes(subject)) throw new MasteryWorkError("এই বিষয় এই সপ্তাহের রোটেশনে নেই।");
     }
     try {
-      await assertMayWork(auth, ctx.sectionId, subject as MasterySubject, new Date());
+      await assertMayWork(auth, ctx.sectionId, subject as MasterySubject, appNow());
     } catch (err) {
       if (input.subject) throw err; // asked for this subject by name
       continue; // the Office / class teacher asking for the whole week: only the subjects they may work
@@ -659,7 +660,7 @@ export async function acceptAssignmentSwap(
   const week = await weekForDue(ctx.academicYearId, input.dueYmd);
   if (!week || !week.deliveryDate) throw new MasteryWorkError("এই সপ্তাহের রোটেশন পাওয়া যায়নি।");
   const iso = isoWeekKey(dayOf(input.dueYmd));
-  const today = dhakaDayKey(new Date());
+  const today = dhakaDayKey(appNow());
   if (today > week.deliveryDate.slice(0, 10)) throw new MasteryWorkError("বিষয় বদলের প্রস্তাবের সময় শেষ — অ্যাসাইনমেন্ট দেওয়ার দিন পেরিয়ে গেছে।");
   const cells = cellsOf(week, String(ctx.sectionId));
   const dropCell = cells.find((c) => c.subject === input.dropSubject);
@@ -859,9 +860,11 @@ export type TailoredDelivery = "DELIVERED" | "EXISTS" | "NOT_YET" | "SKIPPED";
  * ITS OWN subject, and the routine slot holder as teacher. The existing `onAssignmentItemDelivered` hook then links the paper
  * and carries the counted minutes and the Friday / Saturday split onto the item.
  */
-export async function deliverTailoredFor(a: IMasteryAssignment, now: Date = new Date()): Promise<TailoredDelivery> {
+export async function deliverTailoredFor(a: IMasteryAssignment, now: Date = appNow()): Promise<TailoredDelivery> {
   if (a.status !== "SENT" || !hasAssignmentBudget(a.classToken)) return "SKIPPED";
   if (!(await isLoop2027On())) return "SKIPPED";
+  // Already linked to a tracker item (a teacher delivered it, or an earlier run did): never make a second one.
+  if (a.asItemId && (await AssignmentItem.exists({ _id: a.asItemId }))) return "EXISTS";
   const dueYmd = a.dueDate.toISOString().slice(0, 10);
   const week = await weekForDue(a.academicYearId, dueYmd);
   if (!week || !week.deliveryDate) return "SKIPPED";
@@ -902,7 +905,7 @@ export async function deliverTailoredFor(a: IMasteryAssignment, now: Date = new 
 }
 
 /** The tick's pass, BEFORE the D-#839 sweep: every SENT tailored assignment of the last fortnight whose item is due for delivery. */
-export async function deliverTailoredItems(now: Date = new Date()): Promise<number> {
+export async function deliverTailoredItems(now: Date = appNow()): Promise<number> {
   if (!(await isLoop2027On())) return 0;
   const since = new Date(now.getTime() - 14 * 86_400_000);
   const sent = await MasteryAssignment.find({ status: "SENT", sentAt: { $gte: since }, asItemId: { $exists: false } }); // bounded: a fortnight of sent weeks
@@ -922,7 +925,7 @@ export async function deliverTailoredItems(now: Date = new Date()): Promise<numb
 // ---------------------------------------------------------------------------
 
 /** Cheap gate the tick calls first: the switch is on and today's \`asDraftHour\` has been reached (Dhaka). */
-export async function asDraftReady(now: Date = new Date()): Promise<boolean> {
+export async function asDraftReady(now: Date = appNow()): Promise<boolean> {
   const p = (await getPolicy(null, null)).resolved;
   if (p.academicLoop2027On !== true) return false;
   return now.getHours() * 60 + now.getMinutes() >= Math.round(Number(p.asDraftHour) * 60);
@@ -952,7 +955,7 @@ const notifyDraft = async (a: IMasteryAssignment, teacherId: string, where: stri
  * on, no "no assignment" declaration and no assignment yet: one DRAFT, then the notice to the cell's teacher (the cover on the
  * delivery day). Idempotent (AC-C1): a second run finds the drafts and creates nothing.
  */
-export async function runAsDraft(now: Date = new Date()): Promise<AsDraftSummary> {
+export async function runAsDraft(now: Date = appNow()): Promise<AsDraftSummary> {
   const sum: AsDraftSummary = { created: 0, existing: 0, manual: 0, failed: 0 };
   const policy = (await getPolicy(null, null)).resolved;
   if (policy.academicLoop2027On !== true) return sum;

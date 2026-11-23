@@ -32,6 +32,17 @@ export interface ScenarioCtx {
    * collections. Call it after each day / batch of service calls.
    */
   tagSince: (since: Date) => Promise<number>;
+  /**
+   * Set the dev clock to 11:00 Dhaka of this fake day (`null` clears it). The services read `appNow()` for every "date <= today",
+   * "today's routine teacher", "delivery day reached" and evidence-window rule, so work dated in 2027 passes them. Call it
+   * at the start of each fake day; the frame clears it after each scenario. Dev only (refused unless the DB ends in `_dev`).
+   */
+  clock: (dayKey: string | null) => void;
+  /**
+   * Record one refusal by reason. `tag` is the scenario's own counter name ("declareRefused"); the frame logs each distinct
+   * (tag, message) once with its count and puts the map in the report (`reasons`). A scenario still bumps its own counter.
+   */
+  refuse: (tag: string, err: unknown) => void;
   /** Pick `k` distinct items at random (seeded). */
   pick: <T>(items: T[], k: number) => T[];
 }

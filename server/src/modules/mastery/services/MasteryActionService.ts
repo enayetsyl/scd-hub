@@ -15,6 +15,7 @@
  * D-#786) sees and decides every action; the routine holder (or `mastery:edit_all`) works their
  * own section's (held, re-test, close) — the M-2 row rule, never a role check (D-#799).
  */
+import { appNow } from "../../../lib/devClock";
 import { Types } from "mongoose";
 import { callerHasPermission } from "@scd/shared";
 import type { MasteryActionOutcome, MasteryAttendeeSet, MasterySubject } from "@scd/shared";
@@ -49,7 +50,7 @@ const canApprove = (auth: Auth) => callerHasPermission(auth, "mastery:approve");
 
 async function mayWork(auth: Auth, a: IMasteryAction): Promise<boolean> {
   try {
-    await assertMayWork(auth, a.sectionId, a.subject, new Date());
+    await assertMayWork(auth, a.sectionId, a.subject, appNow());
     return true;
   } catch {
     return false;
@@ -66,13 +67,13 @@ async function loadAction(id: string): Promise<IMasteryAction> {
 /** Approver, or the routine holder of the section × subject. */
 async function assertCanSee(auth: Auth, a: IMasteryAction): Promise<void> {
   if (canApprove(auth)) return;
-  await assertMayWork(auth, a.sectionId, a.subject, new Date());
+  await assertMayWork(auth, a.sectionId, a.subject, appNow());
 }
 
 /** The section's states for one outcome right now, plus its summary. */
 async function outcomeNow(a: Pick<IMasteryAction, "sectionId" | "subject" | "classToken" | "loCode">) {
   const [rows, policy] = await Promise.all([liveSectionRows(a.sectionId, a.subject, a.loCode), getPolicy(a.classToken, a.subject)]);
-  const sec = computeSection(rows, policy.resolved, new Date());
+  const sec = computeSection(rows, policy.resolved, appNow());
   const per = sec.states.get(a.loCode) ?? new Map();
   let summary: { weak: number; verdicts: number; weakPct: number | null; triggered: boolean } = sectionOutcomeSummary(
     [...per.values()].map((s) => s.state), sec.assessments.get(a.loCode) ?? 0, policy.resolved,
@@ -102,7 +103,7 @@ export async function evaluateSectionTriggers(sectionId: Types.ObjectId, subject
   const ctx = await sectionContext(String(sectionId));
   if (!(await isMasteryEnabled(ctx.academicYearId, ctx.classToken, subject))) return 0;
   const [rows, policy] = await Promise.all([liveSectionRows(ctx.sectionId, subject), getPolicy(ctx.classToken, subject)]);
-  const sec = computeSection(rows, policy.resolved, new Date());
+  const sec = computeSection(rows, policy.resolved, appNow());
   // §3.8 (switch on + masteredNeedsInSchool): the trigger reads in-school evidence only; the child's own state (WEAK from
   // homework) is unchanged by this. Off → the 2026 summary over every child's state, exactly as before.
   const schoolRule = requireInSchool(policy.resolved);
@@ -122,7 +123,7 @@ export async function evaluateSectionTriggers(sectionId: Types.ObjectId, subject
     }
     if (!s.triggered) continue;
     if (await MasteryAction.exists({ sectionId: ctx.sectionId, subject, loCode, status: { $in: OPEN } })) continue;
-    const now = new Date();
+    const now = appNow();
     try {
       const a = await MasteryAction.create({
         scope: "SECTION",
@@ -182,7 +183,7 @@ export async function decideAction(id: string, input: DecideInput, auth: Auth): 
   const a = await loadAction(id);
   if (a.status !== "PROPOSED") throw new MasteryWorkError("এই প্রস্তাবের সিদ্ধান্ত আগেই হয়ে গেছে।");
   const note = (input.note ?? "").trim() || undefined;
-  const now = new Date();
+  const now = appNow();
 
   if (input.decision === "REJECT") {
     if (!note) throw new MasteryWorkError("ফেরত দেওয়ার কারণ লিখুন।");
@@ -274,7 +275,7 @@ export async function recordHeld(id: string, attendance: { studentId: string; pr
   a.attendance = [...planned].map((sid) => ({ studentId: oid(sid), present: marked.get(sid) ?? false }));
   if (!a.attendance.some((x) => x.present)) throw new MasteryWorkError("অন্তত একজন উপস্থিত থাকলে ক্লাস হয়েছে ধরা হয়।");
   a.status = "IN_PROGRESS";
-  a.events.push({ at: new Date(), kind: "HELD", by: byOf(auth), note: `${a.attendance.filter((x) => x.present).length}/${a.attendance.length}` });
+  a.events.push({ at: appNow(), kind: "HELD", by: byOf(auth), note: `${a.attendance.filter((x) => x.present).length}/${a.attendance.length}` });
   await a.save();
   void writeAudit({
     eventKind: "MASTERY_EXTRA_CLASS_HELD",
@@ -342,7 +343,7 @@ export async function buildRetest(id: string, auth: Auth): Promise<ActionDetail>
     academicYearId: a.academicYearId,
     classToken: a.classToken,
     subject: a.subject,
-    date: a.plan?.retestDate ?? dayOf(ymd(new Date())!),
+    date: a.plan?.retestDate ?? dayOf(ymd(appNow())!),
     links: { actionId: a._id },
     items,
     perStudentItems,
@@ -351,10 +352,10 @@ export async function buildRetest(id: string, auth: Auth): Promise<ActionDetail>
     createdBy: byOf(auth),
   });
   // AL-3: the re-test sheet went to the sitting children — per-child ledger rows (RETEST).
-  await recordUsesSafe(usesOfPaper(paper, "RETEST", { givenOn: dhakaDayKey(new Date()) }));
+  await recordUsesSafe(usesOfPaper(paper, "RETEST", { givenOn: dhakaDayKey(appNow()) }));
   a.retestPaperId = paper._id;
   a.status = "CHECKING";
-  a.events.push({ at: new Date(), kind: "RETEST_BUILT", by: byOf(auth), note: paper.paperId });
+  a.events.push({ at: appNow(), kind: "RETEST_BUILT", by: byOf(auth), note: paper.paperId });
   await a.save();
   void writeAudit({
     eventKind: "MASTERY_RETEST_BUILT",
@@ -414,7 +415,7 @@ export async function closeAction(id: string, outcome: MasteryActionOutcome, not
   a.after = { weakPct: after.weakPct, meanPct: after.meanPct };
   a.outcome = outcome;
   a.status = "CLOSED";
-  a.closedAt = new Date();
+  a.closedAt = appNow();
   a.closedBy = byOf(auth);
   a.events.push({ at: a.closedAt, kind: "CLOSED", by: byOf(auth), note: (note ?? "").trim() || undefined });
   await a.save();
@@ -579,7 +580,7 @@ async function weakChildrenOf(
   if (kids.length === 0) return [];
   const codes = new Set(kids.map((k) => k.code));
   const rows = (await liveSectionRows(a.sectionId, a.subject)).filter((r) => codes.has(r.loCode));
-  const sec = computeSection(rows, policy, new Date());
+  const sec = computeSection(rows, policy, appNow());
   return kids
     .map((k) => {
       const per = sec.states.get(k.code);
@@ -630,7 +631,7 @@ export async function actionsPage(
     if (where.subject) q.subject = where.subject;
     if (!canApprove(auth)) {
       if (!where.subject) throw new MasteryWorkError("বিষয় বাছুন।");
-      await assertMayWork(auth, ctx.sectionId, where.subject, new Date());
+      await assertMayWork(auth, ctx.sectionId, where.subject, appNow());
     }
   } else if (!canApprove(auth)) {
     throw new MasteryWorkError("পুরো স্কুলের পদক্ষেপ দেখার অনুমতি আপনার নেই।");

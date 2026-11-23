@@ -11,6 +11,7 @@
  * gate `issueHomeworkItem` behind the daily 120-min reconciliation/confirm; the
  * spawn mechanism itself lives here.
  */
+import { appNow } from "../../../lib/devClock";
 import { recordAbsentAtDelivery } from "./deliveryAttendanceCheck";
 import {
   HW_SUBJECTS,
@@ -821,7 +822,7 @@ export async function issueHomeworkItem(
   // no records, invisible in every workspace (2026-09-30: four items stranded).
   if (roster.length === 0) throw new Error(EMPTY_SECTION_ISSUE_ERROR);
 
-  const now = new Date();
+  const now = appNow();
   // Owner ruling 2026-08-04: due = the subject's next TEACHING day in this
   // section (routine-aware, holiday-rolled), not merely the next school day.
   const due = await resolveHomeworkDueDate(item.sectionId, item.subject, item.dateGiven);
@@ -938,7 +939,7 @@ export async function transitionRecord(
   const to = input.toState as LifecycleState;
   assertTransition(from, to); // throws on illegal/unknown
 
-  const at = input.at ?? new Date();
+  const at = input.at ?? appNow();
 
   if (to === "CHECKED") {
     // AL-4 (§3.1 guard 3, switch on): the linked sheet owns the result.
