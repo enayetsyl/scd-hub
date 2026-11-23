@@ -86,6 +86,7 @@ import {
 } from "../../trackers/services/HomeworkAutoIssueService";
 import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAutoIssueService";
 import { asDraftReady, deliverTailoredItems, runAsDraft } from "../../mastery/services/AssignmentSuggestionService";
+import { guardianSummaryReady, runGuardianWeeklySummary } from "../../mastery/services/GuardianWeeklySummaryService";
 import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { captureReviewSnapshots } from "../../review-program/services/ReviewProgressService";
@@ -290,6 +291,8 @@ export interface TickSummary {
   asAutoIssued: number;
   /** AL-7 (ASDRAFT): weekly-assignment drafts the suggestion engine built this pass (release switch on only). */
   asDraftCreated: number;
+  /** AL-10 (GWSUM): the separate weekly message per child — guardian notifications emitted this pass (switch on only). */
+  gwSummaryEmitted: number;
   /** End-of-due-day system chases (owner ruling 2026-08-04). */
   hwAutoChased: number;
   /** Weekly guardian homework-digest notifications emitted (D-#452). */
@@ -362,6 +365,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwAutoIssued: 0,
     asAutoIssued: 0,
     asDraftCreated: 0,
+    gwSummaryEmitted: 0,
     hwAutoChased: 0,
     hwWeeklyDigestEmitted: 0,
     ctOverdueDigestEmitted: 0,
@@ -549,6 +553,20 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       const res = await runAsDraft(now);
       summary.asDraftCreated = res.created;
       if (res.created > 0) console.log(`[scheduler] ASDRAFT: ${res.created} weekly assignment draft(s) built`);
+    });
+  });
+
+  // --- GWSUM (AL-10, prd-academic-loop-2027 §5 D5, R31) — `guardianSummaryDow` from `guardianSummaryHour` (Wed 18:00; a holiday
+  // rolls it to the first open day): ONE message PER CHILD per guardian with that week's confirmed marks + level words,
+  // weak / improving topics and what to practise; a child with no confirmed marks gets nothing. The D-#452 digest (Thursday
+  // 17:00) is a different family, untouched. The cheap gate runs every tick; the pass once per process per day, idempotent by
+  // its `GWS:<week>:<student>:<guardian>` dedupe key. With the switch OFF nothing runs.
+  await family("guardian weekly summary (GWSUM)", async () => {
+    if (!(await guardianSummaryReady(now))) return;
+    await runOnce(dateKey, "GWSUM", async () => {
+      const res = await runGuardianWeeklySummary(now);
+      summary.gwSummaryEmitted = res.notified;
+      if (res.notified > 0) console.log(`[scheduler] GWSUM: ${res.students} child(ren), ${res.notified} guardian notification(s)`);
     });
   });
 

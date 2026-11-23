@@ -182,6 +182,11 @@ jest.mock("../modules/mastery/services/AssignmentSuggestionService", () => ({
   runAsDraft: (now: unknown) => mockRunAsDraft(now),
   deliverTailoredItems: () => Promise.resolve(0),
 }));
+// AL-10: the GWSUM family (covered in al10Guardian.test.ts) is DB-backed — gated off here so this suite stays DB-free.
+jest.mock("../modules/mastery/services/GuardianWeeklySummaryService", () => ({
+  guardianSummaryReady: () => Promise.resolve(false),
+  runGuardianWeeklySummary: () => Promise.resolve({ students: 0, notified: 0 }),
+}));
 jest.mock("../modules/trackers/services/MarkReminderService", () => ({
   MARK_ESCALATION_MINUTES: 9 * 60 + 30,
   runMarkEscalation: (now: unknown) => mockMarkEscalation(now),

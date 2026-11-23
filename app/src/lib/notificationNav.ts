@@ -318,6 +318,11 @@ export function notificationTarget(
       return refs?.workClaimTracker === "HOMEWORK"
         ? { tab: "GuardianHomeworkTab", screen: "ChildHomework" }
         : { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" };
+    // AL-10 (R31): the weekly message for one child lands on that child's home, where the "এই সপ্তাহ" card is.
+    case "GUARDIAN_WEEKLY_SUMMARY":
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "GuardianHome", params: refs?.studentId ? { studentId: refs.studentId } : undefined }
+        : { tab: "HomeTab", screen: "Today" };
     // LP-4 (D-#828): guardian-only — the child's missed-lessons list.
     case "LESSON_MISSED":
       // GH-4: open the notice's own child (refs.studentId), as HW_WEEKLY_DIGEST does.

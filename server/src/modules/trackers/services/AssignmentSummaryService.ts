@@ -53,6 +53,8 @@ interface RecordLean {
   resubOf?: unknown;
   dueDate?: Date;
   marks?: number;
+  /** AL-4: the child's own sheet total (switch on); set = the marks line reads "earned/available — level word". */
+  availableMarks?: number;
   result?: string;
   feedback?: string;
   asId: string;
@@ -263,6 +265,8 @@ export interface ChildAssignmentEntry {
   deliveryDate: string;
   dueDate: string | null;
   marks: number | null;
+  /** AL-10 (R32, R35): the child's own sheet total - set → the guardian sees marks + level word and no result word. */
+  availableMarks: number | null;
   totalMarks: number | null;
   result: string | null;
   feedback: string | null;
@@ -356,6 +360,7 @@ async function buildChildAssignmentEntries(records: RecordLean[], asOf: Date): P
       deliveryDate: item ? dateOnlyISO(new Date(item.deliveryDate)) : "",
       dueDate: r.dueDate ? dateOnlyISO(new Date(r.dueDate)) : null,
       marks: r.marks ?? null,
+      availableMarks: r.availableMarks ?? null,
       totalMarks: item?.totalMarks ?? null,
       result: r.result ?? null,
       feedback: r.feedback ?? null,

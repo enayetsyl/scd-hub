@@ -48,7 +48,8 @@ import { parseMasteryLoCode } from "@scd/shared";
 import { StudentSessionRef } from "../../lesson-progress/resolvers/studentLessons";
 import { chapterLessons } from "../../lesson-progress/services/StudentLessonService";
 import { StudentObjectiveLessonRef } from "../../lesson-progress/resolvers/lessonObjectives";
-import { studentObjectiveLessons } from "../../lesson-progress/services/ObjectiveLessonService";
+import { studentObjectiveLessons, type StudentObjectiveLesson } from "../../lesson-progress/services/ObjectiveLessonService";
+import { classMissedCodes } from "../classMissed";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -181,10 +182,27 @@ StudentDiagnosisRef.implement({
      *  WEAK row into "taught, not yet learnt" / "missed that class" / "not taught yet". Lazy; rides this gate. */
     objectiveLessons: t.field({
       type: [StudentObjectiveLessonRef],
-      resolve: (d) => studentObjectiveLessons(d.studentId, d.subject, d.outcomes.map((o) => o.loCode)),
+      resolve: async (d) => {
+        // Tagged rows AND the objectives of a tree (an untagged objective reads its own lesson row) - one rule everywhere.
+        const stateOf = new Map<string, string>([...d.outcomes.map((o) => [o.loCode, o.state] as const), ...d.objectives.map((o) => [o.code, o.state] as const)]);
+        const childrenOf = new Map(d.objectives.map((o) => [o.code, o.childCodes] as const));
+        const codes = [...stateOf.keys()];
+        return withClassMissed(d.studentId, await studentObjectiveLessons(d.studentId, d.subject, codes), (c) => stateOf.get(c), (c) => childrenOf.get(c) ?? []);
+      },
     }),
   }),
 });
+
+/** AL-10: stamp each lesson row with the "ক্লাস মিস" display flag (staff views; false with the release switch off). */
+async function withClassMissed(
+  studentId: string,
+  lessons: StudentObjectiveLesson[],
+  stateOf: (code: string) => string | undefined,
+  evidenceCodesOf?: (code: string) => readonly string[],
+): Promise<Array<StudentObjectiveLesson & { classMissed: boolean }>> {
+  const missed = await classMissedCodes(studentId, lessons, evidenceCodesOf, stateOf);
+  return lessons.map((l) => ({ ...l, classMissed: missed.has(l.loCode) }));
+}
 
 const TagRef = builder.objectRef<{ code: string; labelBn: string }>("MasteryTagLabel");
 TagRef.implement({ fields: (t) => ({ code: t.exposeString("code"), labelBn: t.exposeString("labelBn") }) });
@@ -251,7 +269,7 @@ TrailRef.implement({
       resolve: async (x) => {
         const subject = parseMasteryLoCode(x.outcome.loCode)?.subject;
         if (!subject) return null;
-        return (await studentObjectiveLessons(x.studentId, subject, [x.outcome.loCode]))[0] ?? null;
+        return (await withClassMissed(x.studentId, await studentObjectiveLessons(x.studentId, subject, [x.outcome.loCode]), () => x.outcome.state))[0] ?? null;
       },
     }),
   }),

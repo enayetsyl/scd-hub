@@ -17,7 +17,9 @@ import { dayMonth } from "../screens/lessonprogress/lessonProgressUi";
 type Tone = "ok" | "gold" | "danger" | "muted" | "info";
 
 /** The words + tone for a status; `weak` picks "taught, not yet learnt" over plain "taught". Pure. */
-export function objectiveLessonWords(l: Pick<ObjectiveLessonT, "status" | "onLeave">, weak: boolean): { text: string; tone: Tone } {
+export function objectiveLessonWords(l: Pick<ObjectiveLessonT, "status" | "onLeave" | "classMissed">, weak: boolean): { text: string; tone: Tone } {
+  // AL-10 (R11, AC-E1): missed that class and nothing marked since - "ক্লাস মিস", not WEAK / not assessed.
+  if (l.classMissed) return { text: l.onLeave ? `${STR.otClassMissed} (${STR.lpOnLeave})` : STR.otClassMissed, tone: "gold" };
   switch (l.status) {
     case "MISSED":
       return { text: l.onLeave ? `${STR.otMissed} (${STR.lpOnLeave})` : STR.otMissed, tone: "danger" };

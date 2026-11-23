@@ -29,6 +29,9 @@ import { sectionContext } from "./MasteryWorkService";
 import { computeSection, diagnosisPolicy, liveSectionRows, loadTree } from "./MasteryDiagnosisService";
 import { masteryLevelLabels } from "./MasteryReviewService";
 import { objectiveState } from "../rollup";
+import { CLASS_MISSED_STATES, classMissedCodes } from "../classMissed";
+import { isLoop2027On } from "../../assessment/services/QuestionUseService";
+import { studentObjectiveLessons } from "../../lesson-progress/services/ObjectiveLessonService";
 import type { MasteryState, MasterySubject } from "@scd/shared";
 
 const oid = (s: string) => new Types.ObjectId(s);
@@ -162,8 +165,10 @@ export interface ChildProgressSubject {
   /** The level the counts and lists are at — the objective word from পলিসি (D-#923 / #925). */
   levelWordBn: string;
   /** Plain buckets (D-#783): মনোযোগ দরকার / উন্নতি হচ্ছে / ভালো পারে / এখনো জানা যায়নি. */
-  counts: { attention: number; improving: number; good: number; unknown: number };
+  counts: { attention: number; improving: number; good: number; unknown: number; classMissed: number };
   attention: { labelBn: string; homeTipBn: string | null }[];
+  /** AL-10 (R11, AC-E1): objectives the child missed in class with nothing marked since — "ক্লাস মিস", never WEAK. */
+  classMissed: { labelBn: string; homeTipBn: string | null }[];
   improving: { labelBn: string }[];
   /** Extra classes / re-teaches the child was part of, newest first. */
   schoolDid: { date: string; kind: string; labelBn: string; status: string; present: boolean | null; retestPct: number | null }[];
@@ -179,6 +184,7 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
   const sid = oid(studentId);
   const out: ChildProgressSubject[] = [];
   const words = await masteryLevelLabels();
+  const loopOn = await isLoop2027On();
   for (const subject of subjects) {
     if (!(await isMasteryEnabled(ctx.academicYearId, ctx.classToken, subject))) continue;
     const [t, rows, policy, actions, sheets] = await Promise.all([
@@ -191,15 +197,28 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
       MasteryAssignmentSheet.find({ studentId: sid }).select("assignmentId").lean(),
     ]);
     const sec = computeSection(rows, policy, new Date());
-    const counts = { attention: 0, improving: 0, good: 0, unknown: 0 };
+    const counts = { attention: 0, improving: 0, good: 0, unknown: 0, classMissed: 0 };
     const attention: ChildProgressSubject["attention"] = [];
+    const classMissed: ChildProgressSubject["classMissed"] = [];
+    // AL-10: a missed objective with no evidence since the missed day (switch on) reads "ক্লাস মিস" instead of WEAK / unknown.
+    const childCodesOf = new Map(t.tree.objectives.map((o) => [o.code, o.childCodes]));
+    const missedCodes = loopOn
+      ? await classMissedCodes(
+          studentId,
+          await studentObjectiveLessons(studentId, subject, t.tree.objectives.map((o) => o.code)),
+          (c) => childCodesOf.get(c) ?? [],
+        )
+      : new Set<string>();
     const improving: ChildProgressSubject["improving"] = [];
     // Objective grain (D-#925): a tagged objective reads its own state, an untagged one rolls up
     // from its sub-objectives. A flat catalogue: every row is a tagged objective (unchanged).
     const stateOf = (code: string): MasteryState => sec.states.get(code)?.get(studentId)?.state ?? "NOT_ASSESSED";
     for (const o of t.tree.objectives) {
       const s = objectiveState(o, stateOf);
-      if (s === "WEAK") {
+      if (missedCodes.has(o.code) && CLASS_MISSED_STATES.has(s)) {
+        counts.classMissed++;
+        classMissed.push({ labelBn: o.labelBn, homeTipBn: o.homeTipBn ?? null });
+      } else if (s === "WEAK") {
         counts.attention++;
         attention.push({ labelBn: o.labelBn, homeTipBn: o.homeTipBn ?? null });
       } else if (s === "IMPROVING") {
@@ -230,7 +249,7 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
     const assignmentsSent = sheets.length
       ? await MasteryAssignment.countDocuments({ _id: { $in: sheets.map((s) => s.assignmentId) }, subject, status: "SENT" })
       : 0;
-    out.push({ subject, levelWordBn: words.objectiveBn, counts, attention, improving, schoolDid, assignmentsSent });
+    out.push({ subject, levelWordBn: words.objectiveBn, counts, attention, classMissed, improving, schoolDid, assignmentsSent });
   }
   return out;
 }

@@ -88,6 +88,9 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
     else chapters.set(o.chapterNumber, [...(chapters.get(o.chapterNumber) ?? []), o]);
   }
   const byCode = new Map(d.outcomes.map((o) => [o.loCode, o]));
+  // AL-10 (R11): ONE rule - a missed objective with nothing marked since reads "ক্লাস মিস" wherever its state shows.
+  const missedCodes = new Set((d.objectiveLessons ?? []).filter((l) => l.classMissed === true).map((l) => l.loCode));
+  const stateWord = (code: string, state: string) => (missedCodes.has(code) ? STR.otClassMissed : masteryStateLabel(state));
   const objectiveLabel = new Map(d.objectives.map((o) => [o.code, o.labelBn]));
   const openTrail = (loCode: string) => navigation.navigate("MasteryOutcomeTrail", { studentId, loCode });
 
@@ -99,7 +102,7 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
           <Pressable
             key={o.loCode}
             accessibilityRole="button"
-            accessibilityLabel={`${o.labelBn} · ${masteryStateLabel(o.state)}`}
+            accessibilityLabel={`${o.labelBn} · ${stateWord(o.loCode, o.state)}`}
             disabled={o.state === "NOT_ASSESSED"}
             onPress={() => openTrail(o.loCode)}
             style={{
@@ -127,7 +130,7 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
         <StateDot state={o.state} />
         <Body style={{ flex: 1 }}>{o.labelBn}</Body>
         <Muted>
-          {masteryStateLabel(o.state)}
+          {stateWord(o.loCode, o.state)}
           {o.inSchoolPending ? ` · ${STR.al6InSchoolPending}` : ""}
         </Muted>
       </Pressable>
@@ -155,7 +158,7 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
               {lv.sub}: {summaryLine(o.summary)}
             </Muted>
           </View>
-          <Badge text={masteryStateLabel(o.state)} tone={stateTone(o.state)} />
+          <Badge text={stateWord(o.code, o.state)} tone={missedCodes.has(o.code) ? "gold" : stateTone(o.state)} />
         </Pressable>
         {open ? o.childCodes.map((c) => leafRow(c, space(5))) : null}
       </View>
@@ -242,7 +245,10 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
       <Card>
         <Body style={{ fontWeight: "700" }}>{STR.msNeedsAttention}</Body>
         {attention.length === 0 ? <Muted>{levelFill(STR.msNothingWeak, lv)}</Muted> : null}
-        {attention.map((o) => (
+        {attention.map((o) => {
+          const lesson = d.objectiveLessons?.find((l) => l.loCode === o.loCode);
+          const classMissed = missedCodes.has(o.loCode); // AL-10 (R11): read "ক্লাস মিস", not WEAK
+          return (
           <Pressable
             key={o.loCode}
             accessibilityRole="link"
@@ -259,11 +265,12 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
               <Muted>{whyLine(o)}</Muted>
               <EarlierSteps steps={o.earlierSteps ?? []} />
               {/* OT-5 (D-#950): a WEAK row says whether it was taught and whether the child was there. */}
-              {o.state === "WEAK" ? <ObjectiveLessonNote lesson={d.objectiveLessons?.find((l) => l.loCode === o.loCode)} state={o.state} /> : null}
+              {o.state === "WEAK" || classMissed ? <ObjectiveLessonNote lesson={lesson} state={o.state} /> : null}
             </View>
-            <Badge text={masteryStateLabel(o.state)} tone={stateTone(o.state)} />
+            <Badge text={classMissed ? STR.otClassMissed : masteryStateLabel(o.state)} tone={classMissed ? "gold" : stateTone(o.state)} />
           </Pressable>
-        ))}
+          );
+        })}
       </Card>
 
       {/* PR-K (D-#1425): earlier-class objectives this child has evidence on; hidden when none. Staff only. */}

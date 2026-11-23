@@ -783,8 +783,10 @@ export type ObjectiveLessonT = {
   taughtOn: string[];
   absentOn: string[];
   onLeave: boolean;
+  /** AL-10 (R11): missed that class with nothing marked since - read "ক্লাস মিস", not WEAK / not assessed (switch on only). */
+  classMissed?: boolean;
 };
-const OBJECTIVE_LESSON_FIELDS = `loCode status taughtOn absentOn onLeave`;
+const OBJECTIVE_LESSON_FIELDS = `loCode status taughtOn absentOn onLeave classMissed`;
 
 export const MASTERY_STUDENT_DIAGNOSIS_QUERY = gql`
   query MasteryStudentDiagnosis($studentId: String!, $subject: String!) {
@@ -1757,8 +1759,13 @@ export const CHILD_MASTERY_PROGRESS = gql`
         improving
         good
         unknown
+        classMissed
       }
       attention {
+        labelBn
+        homeTipBn
+      }
+      classMissed {
         labelBn
         homeTipBn
       }
@@ -1777,13 +1784,47 @@ export const CHILD_MASTERY_PROGRESS = gql`
   }
 `;
 
+/** AL-10: the guardian's "এই সপ্তাহ" card - this week's confirmed marks + level word and plain topic lines. */
+export const CHILD_WEEK_SUMMARY = gql`
+  query ChildWeekSummary($studentId: String!) {
+    childWeekSummary(studentId: $studentId) {
+      weekKey
+      subjects {
+        subject
+        earned
+        available
+        pct
+        levelBn
+        attentionBn
+        improvingBn
+        practiseBn
+        classMissedBn
+      }
+    }
+  }
+`;
+
+export type ChildWeekSubjectRow = {
+  subject: string;
+  earned: number;
+  available: number;
+  pct: number;
+  levelBn: string;
+  attentionBn: string[];
+  improvingBn: string[];
+  practiseBn: string[];
+  classMissedBn: string[];
+};
+
 export type ChildMasteryProgressRow = {
   subject: string;
   /** The level the counts are at (the objective word from পলিসি, D-#923 / #925). */
   levelWordBn: string;
   assignmentsSent: number;
-  counts: { attention: number; improving: number; good: number; unknown: number };
+  counts: { attention: number; improving: number; good: number; unknown: number; classMissed: number };
   attention: { labelBn: string; homeTipBn: string | null }[];
+  /** AL-10: topics the child missed in class with nothing marked since ("ক্লাস মিস"). */
+  classMissed: { labelBn: string; homeTipBn: string | null }[];
   improving: { labelBn: string }[];
   schoolDid: { date: string; kind: string; labelBn: string; status: string; present: boolean | null; retestPct: number | null }[];
 };

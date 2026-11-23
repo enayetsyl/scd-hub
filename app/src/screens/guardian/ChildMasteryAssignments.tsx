@@ -13,7 +13,8 @@ import { useQuery } from "urql";
 import { CHILD_MASTERY_ASSIGNMENTS, type ChildMasteryAssignment } from "../../graphql/mastery";
 import { Body, Muted, Card, Badge, Button, Notice } from "../../components/ui";
 import { LoadOlder } from "../../components/LoadOlder";
-import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, getActiveLang, hwSubjectLabel } from "../../lib/labels";
+import { guardianMarksLine, marksLevelTone, marksPercent } from "../../lib/marksDisplay";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 
@@ -41,7 +42,11 @@ export function ChildMasteryAssignments({ studentId, childName }: { studentId: s
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>
             <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(a.subject)}</Body>
             {a.result && !a.result.notMarked ? (
-              <Badge text={`${STR.gpMsChecked} · ${bnNum(a.result.earned)} / ${bnNum(a.result.available)}`} tone="ok" />
+              // AL-10 (R32): marks + the level word ("৮/১০ — ভালো"), never an answer or a CORRECT / WRONG word.
+              <Badge
+                text={`${STR.gpMsChecked} · ${guardianMarksLine(a.result.earned, a.result.available, bnNum, getActiveLang()) ?? `${bnNum(a.result.earned)} / ${bnNum(a.result.available)}`}`}
+                tone={marksLevelTone(marksPercent(a.result.earned, a.result.available) ?? 0)}
+              />
             ) : (
               <Badge text={`${STR.asDueBy} ${bnNum(a.dueDate)}`} tone="brand" />
             )}

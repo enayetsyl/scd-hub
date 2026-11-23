@@ -84,7 +84,10 @@ export default function MasteryOutcomeTrailScreen({ route, navigation }: Props):
 
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>
-          <Badge text={masteryStateLabel(o.state)} tone={stateTone(o.state)} />
+          <Badge
+            text={t.objectiveLesson?.classMissed === true ? STR.otClassMissed : masteryStateLabel(o.state)}
+            tone={t.objectiveLesson?.classMissed === true ? "gold" : stateTone(o.state)}
+          />
           {o.since ? <Muted>{fill(STR.msSince, { d: day(o.since) })}</Muted> : null}
         </View>
         <View style={{ flexDirection: "row", gap: space(4), flexWrap: "wrap" }}>

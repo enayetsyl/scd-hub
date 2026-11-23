@@ -44,6 +44,7 @@ export default function ChildMasteryScreen(): React.ReactElement {
               <Badge text={`${STR.gpMsImproving} ${bnNum(s.counts.improving)}`} tone="warn" />
               <Badge text={`${STR.gpMsGood} ${bnNum(s.counts.good)}`} tone="ok" />
               <Badge text={`${STR.gpMsUnknown} ${bnNum(s.counts.unknown)}`} tone="muted" />
+              {(s.counts.classMissed ?? 0) > 0 ? <Badge text={`${STR.gpMsClassMissedTitle} ${bnNum(s.counts.classMissed)}`} tone="gold" /> : null}
             </View>
             {s.levelWordBn ? <Muted>{STR.gpMsCountsAt.replace("{objective}", s.levelWordBn)}</Muted> : null}
 
@@ -64,6 +65,23 @@ export default function ChildMasteryScreen(): React.ReactElement {
             ) : (
               <Muted>{STR.gpMsNothingAttention.replace("{name}", name)}</Muted>
             )}
+
+            {(s.classMissed ?? []).length > 0 ? (
+              <View style={{ gap: space(1) }}>
+                <Body style={{ fontWeight: "600" }}>{STR.gpMsClassMissedTitle}</Body>
+                <Muted>{STR.gpMsClassMissedNote.replace("{name}", name)}</Muted>
+                {(s.classMissed ?? []).map((a) => (
+                  <View key={a.labelBn} style={{ gap: 2 }}>
+                    <Body>• {a.labelBn}</Body>
+                    {a.homeTipBn ? (
+                      <Muted>
+                        {STR.gpMsHomeTip} {a.homeTipBn}
+                      </Muted>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : null}
 
             {s.improving.length > 0 ? (
               <View style={{ gap: 2 }}>

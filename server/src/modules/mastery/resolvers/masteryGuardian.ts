@@ -14,6 +14,7 @@ import {
   type ChildAssignmentView,
   type ChildProgressSubject,
 } from "../services/MasteryGuardianService";
+import { childWeeklySummary, type ChildWeeklySummary, type WeeklySubjectSummary } from "../services/GuardianWeeklySummaryService";
 
 const QuestionRef = builder.objectRef<ChildAssignmentView["partA"][number]>("ChildMasteryQuestion");
 QuestionRef.implement({
@@ -87,11 +88,17 @@ CountsRef.implement({
     improving: t.exposeInt("improving"),
     good: t.exposeInt("good"),
     unknown: t.exposeInt("unknown"),
+    classMissed: t.exposeInt("classMissed"),
   }),
 });
 
 const AttentionRef = builder.objectRef<ChildProgressSubject["attention"][number]>("ChildMasteryAttention");
 AttentionRef.implement({
+  fields: (t) => ({ labelBn: t.exposeString("labelBn"), homeTipBn: t.string({ nullable: true, resolve: (a) => a.homeTipBn }) }),
+});
+
+const ClassMissedRef = builder.objectRef<ChildProgressSubject["classMissed"][number]>("ChildMasteryClassMissed");
+ClassMissedRef.implement({
   fields: (t) => ({ labelBn: t.exposeString("labelBn"), homeTipBn: t.string({ nullable: true, resolve: (a) => a.homeTipBn }) }),
 });
 
@@ -118,6 +125,7 @@ ProgressRef.implement({
     levelWordBn: t.exposeString("levelWordBn"),
     counts: t.field({ type: CountsRef, resolve: (p) => p.counts }),
     attention: t.field({ type: [AttentionRef], resolve: (p) => p.attention }),
+    classMissed: t.field({ type: [ClassMissedRef], resolve: (p) => p.classMissed }),
     improving: t.field({ type: [ImprovingRef], resolve: (p) => p.improving }),
     schoolDid: t.field({ type: [DidRef], resolve: (p) => p.schoolDid }),
     assignmentsSent: t.exposeInt("assignmentsSent"),
@@ -135,6 +143,51 @@ builder.queryField("childMasteryProgress", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childMasteryProgress(args.studentId);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// AL-10 (R13, R31, D-#1674) — the "এই সপ্তাহ" card: this week's confirmed marks + level words, topics, what to practise
+// ---------------------------------------------------------------------------
+
+const WeekSubjectRef = builder.objectRef<WeeklySubjectSummary>("ChildWeekSubject");
+WeekSubjectRef.implement({
+  description: "One subject of the child's week: marks + the level word, plain topic lines. No answer, rank, other child or শাখা average.",
+  fields: (t) => ({
+    subject: t.exposeString("subject"),
+    earned: t.exposeFloat("earned"),
+    available: t.exposeFloat("available"),
+    pct: t.exposeInt("pct"),
+    levelBn: t.exposeString("levelBn"),
+    attentionBn: t.exposeStringList("attentionBn"),
+    improvingBn: t.exposeStringList("improvingBn"),
+    practiseBn: t.exposeStringList("practiseBn"),
+    classMissedBn: t.exposeStringList("classMissedBn"),
+  }),
+});
+
+const WeekRef = builder.objectRef<ChildWeeklySummary>("ChildWeekSummary");
+WeekRef.implement({
+  fields: (t) => ({
+    weekKey: t.exposeString("weekKey"),
+    subjects: t.field({ type: [WeekSubjectRef], resolve: (w) => w.subjects }),
+  }),
+});
+
+builder.queryField("childWeekSummary", (t) =>
+  t.field({
+    type: WeekRef,
+    nullable: true,
+    description:
+      "AL-10: the linked child's school week so far — per subject the confirmed marks with the level word, weak / improving topics and " +
+      "what to practise (the same content as the weekly message, GWSUM). Null with nothing confirmed this week or the release switch off. " +
+      "Link-gated (assertGuardianOfStudent).",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: { studentId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childWeeklySummary(args.studentId);
     },
   }),
 );

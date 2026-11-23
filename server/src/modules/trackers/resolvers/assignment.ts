@@ -802,6 +802,7 @@ interface ChildAssignmentShape {
   deliveryDate: string;
   dueDate: string | null;
   marks: number | null;
+  availableMarks?: number | null;
   totalMarks: number | null;
   result: string | null;
   feedback: string | null;
@@ -828,7 +829,9 @@ ChildAssignmentRef.implement({
     daysLate: t.exposeInt("daysLate"),
     deliveryDate: t.exposeString("deliveryDate"),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
-    marks: t.int({ nullable: true, resolve: (r) => r.marks }),
+    // Float: a paper-written total can carry a half mark (AL-4); a whole mark still prints whole.
+    marks: t.float({ nullable: true, resolve: (r) => r.marks }),
+    availableMarks: t.float({ nullable: true, resolve: (r) => r.availableMarks ?? null }),
     totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
     result: t.string({ nullable: true, resolve: (r) => r.result }),
     feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
