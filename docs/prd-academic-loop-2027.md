@@ -874,6 +874,7 @@ app slices ride the next promotion + one OTA. Dates are "merged to dev by".
     doc is taken from it (the repo is public).
 
 ### 9.3 Fake 2027 activity (frame in AL-2, one scenario per later slice)
+> **Dev-wide clock (AL-14, owner 23 Nov 2026):** the owner chose a dev-wide clock for the DEV SITE ONLY (overrides R36 / Q17 for dev): `DEV_CLOCK_ALLOWED=1` (dev VM env only) + a `_dev` database, offset set by `server/scripts/dev-clock.ts`, banner in the app. Prod is unchanged (see `server/scripts/dev-copy-runbook.md`, "Dev clock").
 `server/scripts/dev-fake-2027.ts` — dev only (same refusals as the mask script), **Nursery to Class 5**, **8 school
 weeks**, dry run by default, `--apply`, `--remove <runId>`.
 - **Through the services, back-dated:** every write passes an explicit `at` / date to the service (the back-dated

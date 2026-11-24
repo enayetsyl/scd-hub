@@ -17,6 +17,7 @@
  */
 import "dotenv/config";
 import { disconnectDb } from "../db";
+import { installDevClock } from "../lib/devClockInstall";
 import { disconnectBookDb } from "../bookDb";
 import { aiWorkerPass, drainBookJobs, openWorkerPlanes } from "./aiWorkerPlanes";
 import { refreshAiConfig } from "../modules/platform/services/AiSettingService";
@@ -32,6 +33,8 @@ let stopping = false;
 async function main(): Promise<void> {
   // Book lifecycle (D-#1603): the book plane too — the AI edit job reads and writes book text there.
   const planes = await openWorkerPlanes();
+  // AL-14: dev-site clock (inert unless DEV_CLOCK_ALLOWED=1 and a `_dev` database).
+  await installDevClock();
   await loadRoleTemplateOverrides();
   await refreshAiConfig(true).catch((err) => console.error("[ai-worker] AI settings load failed — using .env:", err));
   // A finished job notifies its starter: this process must push too (the API registers its own).

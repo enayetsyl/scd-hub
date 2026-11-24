@@ -29,6 +29,7 @@
  */
 import "dotenv/config";
 import { connectDb, disconnectDb } from "../db";
+import { installDevClock } from "../lib/devClockInstall";
 import { connectBookDb, disconnectBookDb } from "../bookDb";
 import { workerLoop } from "../modules/support-book/services/BookBuildWorker";
 import { requeueStuckJobs } from "../modules/support-book/services/BookBuildService";
@@ -44,6 +45,8 @@ async function main(): Promise<void> {
   // StoredFile, and filing a PDF touches both.
   await connectDb();
   await connectBookDb();
+  // AL-14: dev-site clock (inert unless DEV_CLOCK_ALLOWED=1 and a `_dev` database).
+  await installDevClock();
   console.log(`[book-worker] ${WORKER_ID} up`);
 
   // A worker killed mid-render leaves a RUNNING row that blocks the queue forever,
