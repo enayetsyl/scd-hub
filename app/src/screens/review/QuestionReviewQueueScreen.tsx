@@ -87,7 +87,13 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
     return () => clearTimeout(h);
   }, [qtInput]);
   const [important, setImportantOnly] = useState(false);
-  const [undecided, setUndecided] = useState(initial?.undecided === true);
+  /**
+   * ON by default (owner 2026-11-24): a reviewer who had decided every question saw only her
+   * own decided rounds after a refresh and read them as "my approvals did not save". The
+   * queue opens as the work list; turning the chip off shows the decided history.
+   * A caller that passes `undecided: false` explicitly still gets the full list.
+   */
+  const [undecided, setUndecided] = useState(initial?.undecided !== false);
 
   const PAGE_SIZE = 50;
   const [offset, setOffset] = useState(0);
@@ -469,7 +475,8 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
 
         {rounds.length === 0 ? (
           <>
-            <EmptyState message={STR.qrNoQueue} />
+            {/* With "undecided only" on, an empty list means the work is done — say so, and how to see the history. */}
+            <EmptyState message={undecided ? STR.qrAllDone : STR.qrNoQueue} />
             {/* Opened from the ordered path and this chapter's questions are done: carry on to the next item. */}
             {initial?.fromPath && !fetching ? <ReviewNextButton mode="replace" /> : null}
           </>
@@ -488,7 +495,9 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
                   {round.qtCode ? <Badge text={round.qtCode} tone="gold" /> : null}
                   {decided && round.verdict ? (
                     <Badge
-                      text={reviewVerdictLabel(round.verdict)}
+                      // A decided round reads as DONE ("✓ অনুমোদিত"), not as the verb, so a reviewer
+                      // scrolling her history can tell at a glance it is already saved (owner 2026-11-24).
+                      text={`✓ ${round.verdict === "APPROVE" ? STR.qrDecidedApproved : reviewVerdictLabel(round.verdict)}`}
                       tone={round.verdict === "APPROVE" ? "ok" : "warn"}
                     />
                   ) : null}
