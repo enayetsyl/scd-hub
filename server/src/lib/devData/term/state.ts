@@ -73,6 +73,16 @@ export interface StockEntry {
   marks: Awaited<ReturnType<typeof marksTable>>;
 }
 
+/** One class test on its way: the teacher submits on `submitDay`, the Office / Principal approves on `publishDay`. */
+export interface CtFlowItem {
+  testId: string;
+  teacherId: string;
+  submitDay: string;
+  publishDay: string;
+  submitted: boolean;
+  tries: number;
+}
+
 export class Sim {
   readonly c: Record<string, number> = {};
   readonly childPersona = new Map<string, ChildPersona>();
@@ -108,6 +118,8 @@ export class Sim {
   readonly subjectDays = new Map<string, Set<number>>();
   /** Class-test plan: `${sectionId}|${dayKey}` -> subject. */
   readonly ctPlan = new Map<string, string>();
+  /** Class tests with entered results that still await their submit / publish day (AL-15 follow-up: the real hand-off). */
+  readonly ctFlow: CtFlowItem[] = [];
   /** Days that are test days for a section (lifts that day's absence to the class-test-day rate). */
   readonly reasons = new Map<string, number>();
 

@@ -31,6 +31,9 @@ import { Guardian } from "../modules/foundation/models/Guardian";
 import { HomeworkItem } from "../modules/trackers/models/HomeworkItem";
 import { MarkEscalation } from "../modules/trackers/models/MarkReminder";
 import { GuardianSummaryRun } from "../modules/mastery/models/GuardianSummaryRun";
+import { ClassTest } from "../modules/trackers/models/ClassTest";
+import { ClassTestResult } from "../modules/trackers/models/ClassTestResult";
+import { reportsStatus } from "../modules/trackers/services/ClassTestSummaryService";
 import { planClassTests } from "../lib/devData/term/tests";
 import { importCatalogue, setEnablement } from "../modules/mastery/services/MasteryCatalogueService";
 import { FAKE_BASE_MODELS, loadAllModels, resolveCollections } from "../lib/devData/collections";
@@ -267,6 +270,33 @@ describe("the realistic term in an in-memory world", () => {
     expect(c.hwIssued).toBe(c.hwDeclared);
     expect(c.hwSubmitted).toBeGreaterThan(0);
     expect((c.cwPapers ?? 0) + (c.ctWithSheet ?? 0) + (c.ctWithoutSheet ?? 0)).toBeGreaterThan(0);
+    // the class tests went through the real hand-off: the teacher's submit on the fake day, then the Office / Principal approval
+    // (the release to guardians), all stamped on the dev clock (2027) and tagged
+    expect(c.ctSubmitted).toBeGreaterThan(0);
+    expect(c.ctPublished).toBeGreaterThan(0);
+    const subRows = await ClassTestResult.collection.find({ submittedAt: { $ne: null } }).toArray();
+    expect(subRows.length).toBeGreaterThan(0);
+    for (const row of subRows) {
+      expect(row.devFakeRun).toBe(runId);
+      expect(new Date(row.submittedAt as Date).getFullYear()).toBe(2027);
+    }
+    const pubRows = await ClassTestResult.collection.find({ publishedAt: { $ne: null } }).toArray();
+    expect(pubRows.length).toBeGreaterThan(0);
+    for (const row of pubRows) {
+      expect(row.submittedAt).toBeTruthy(); // published only through approve, never straight
+      expect(new Date(row.publishedAt as Date).getFullYear()).toBe(2027);
+    }
+    // the teacher's Today read ("results entry pending" = !submitComplete) returns nothing for a submitted test
+    const submittedTests = new Set(subRows.map((x) => String(x.testId)));
+    let checked = 0;
+    for (const t of await ClassTest.find({ _id: { $in: [...submittedTests] } }).lean()) {
+      const mine = await reportsStatus({ teacherId: String(t.teacherId ?? t.requestedBy), asOf: new Date("2027-01-21T12:00:00+06:00") }, { withTeacherNames: false });
+      const row = mine.find((x) => x.testId === String(t._id))!;
+      expect(row.submitComplete).toBe(true);
+      expect(row.teacherOverdue).toBe(false);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
     // the weekly cycle through ASDRAFT + finalise
     expect(c.asDrafts).toBeGreaterThan(0);
     expect(c.asSent).toBeGreaterThan(0);
