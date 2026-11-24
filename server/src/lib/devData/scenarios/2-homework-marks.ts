@@ -36,6 +36,7 @@ const CHASE_RATE = 0.1;
 
 export const scenario2: Scenario = {
   id: 2,
+  legacy: true,
   name: "homework-marks",
   collections: [
     { model: "HomeworkItem" },

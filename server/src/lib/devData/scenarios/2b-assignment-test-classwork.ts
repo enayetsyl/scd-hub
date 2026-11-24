@@ -45,6 +45,7 @@ const WRONG_CHILDREN = 4;
 export const scenario2b: Scenario = {
   // "2b": sorts after scenario 2 (2a) and before scenario 3; `--scenario 2.5` selects it.
   id: 2.5,
+  legacy: true,
   name: "assignment-test-classwork",
   collections: [
     { model: "MasteryPaper" },

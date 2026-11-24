@@ -39,6 +39,7 @@ const CONTINUING_RATE = 0.15;
 
 export const scenario0: Scenario = {
   id: 0,
+  legacy: true,
   name: "lessons-attendance",
   collections: [
     { model: "ClassNote" },

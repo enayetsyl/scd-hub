@@ -28,6 +28,7 @@ const SECTIONS = 3;
 
 export const scenario5: Scenario = {
   id: 5,
+  legacy: true,
   name: "late-marking",
   collections: [
     { model: "HomeworkItem" },

@@ -30,10 +30,13 @@ import { YearChangeRun } from "../../modules/year-change/models/YearChangeRun";
 import { setDevNotificationMute } from "../../modules/notifications/services/NotificationService";
 import { setDevClock } from "../devClock";
 import { dateKeyOf } from "../../modules/attendance/dates";
+import { seedDevCalendar, type CalendarResult } from "./term/calendar";
 
 export const FAKE_CLASS_LEVELS = [-1, 0, 1, 2, 3, 4, 5];
 export const FAKE_WEEKS = 8;
 export const FAKE_2027_START_KEY = "2027-01-03"; // a Sunday
+/** The realistic term runs to here unless `--until` says otherwise. */
+export const FAKE_DEFAULT_UNTIL = "2027-06-30";
 
 export interface FakeOptions {
   apply: boolean;
@@ -46,6 +49,14 @@ export interface FakeOptions {
   seed?: number;
   /** Scenario ids to run; default = every registered scenario. */
   scenarioIds?: number[];
+  /** The last day of the run (YYYY-MM-DD, default 2027-06-30 for the default selection). `--scenario` alone keeps the 8-week window. */
+  until?: string;
+  /** Test knob: move a guaranteed event of the realistic term to another day (stage id -> YYYY-MM-DD). */
+  eventDays?: Record<string, string>;
+  /** Alias of the old fixed window: N school weeks from 3 Jan (ignored when `until` is given). */
+  weeks?: number;
+  /** `--remove` also deletes the dev calendar rows (they are kept by default). */
+  removeCalendar?: boolean;
   now?: Date;
   guard?: GuardInput;
   log?: (line: string) => void;
@@ -63,6 +74,7 @@ export interface FakeManifest {
   collections: string[];
   skippedFutureModels: string[];
   sections: number;
+  until?: string;
 }
 
 export interface FakeReport {
@@ -79,6 +91,8 @@ export interface FakeReport {
   /** `--remove`: rows deleted per collection and the residue (must be all 0). */
   removed?: Record<string, number>;
   residue?: Record<string, number>;
+  /** The dev calendar seed of the realistic term (apply). */
+  calendar?: CalendarResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +113,19 @@ const p2 = (n: number): string => String(n).padStart(2, "0");
 
 export function fakeRunId(now: Date): string {
   return `fake-${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${p2(now.getHours())}${p2(now.getMinutes())}`;
+}
+
+/** Sun..Thu keys from the Sunday `startKey` to `untilKey` (inclusive). */
+export function dayKeysUntil(startKey: string, untilKey: string): string[] {
+  const [y, m, d] = startKey.split("-").map(Number);
+  const out: string[] = [];
+  for (let i = 0; i < 366; i++) {
+    const day = new Date(y, m - 1, d + i);
+    const k = dateKeyOf(day);
+    if (k > untilKey) break;
+    if (day.getDay() <= 4) out.push(k); // Sun..Thu
+  }
+  return out;
 }
 
 /** Sun..Thu keys of `weeks` weeks starting at the Sunday `startKey`. */
@@ -153,6 +180,7 @@ export async function tagRowsSince(models: string[], runId: string, since: Date)
 export async function removeFakeRun(
   runId: string,
   scenarios: Scenario[] = SCENARIOS,
+  opts: { calendar?: boolean } = {},
 ): Promise<{ removed: Record<string, number>; residue: Record<string, number> }> {
   loadAllModels();
   const stored = (await DevFakeRun.findOne({ runId }).lean()) as unknown as IDevFakeRun | null;
@@ -163,11 +191,13 @@ export async function removeFakeRun(
   }
   const removed: Record<string, number> = {};
   const residue: Record<string, number> = {};
+  // the dev calendar (devCalendar rows) is configuration the testers rely on: kept unless `--remove-calendar`
+  const filter = { devFakeRun: runId, ...(opts.calendar ? {} : { devCalendar: { $ne: true } }) };
   for (const name of [...names].sort()) {
     const c = mongoose.model(name).collection;
-    const res = await c.deleteMany({ devFakeRun: runId });
+    const res = await c.deleteMany(filter);
     removed[c.collectionName] = res.deletedCount;
-    residue[c.collectionName] = await c.countDocuments({ devFakeRun: runId });
+    residue[c.collectionName] = await c.countDocuments(filter);
   }
   const left = Object.entries(residue).filter(([, n]) => n > 0);
   if (left.length) throw new Error(`remove ${runId}: residue left in ${left.map(([k, n]) => `${k}=${n}`).join(", ")}`);
@@ -209,7 +239,7 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
       log(`[dev-fake] dry run: would remove run ${opts.remove} (${c ? "manifest found" : "no manifest row - tagged rows only"})`);
       return report;
     }
-    const { removed, residue } = await removeFakeRun(opts.remove, scenarios);
+    const { removed, residue } = await removeFakeRun(opts.remove, scenarios, { calendar: opts.removeCalendar });
     report.removed = removed;
     report.residue = residue;
     log(`[dev-fake] removed ${opts.remove}: ${JSON.stringify(removed)}`);
@@ -217,7 +247,8 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
   }
 
   const now = opts.now ?? new Date();
-  const chosen = scenarios.filter((s) => !opts.scenarioIds || opts.scenarioIds.includes(s.id)).sort((a, b) => a.id - b.id);
+  // The default selection is the realistic term (+ the health read); the older phases (`legacy`) are chosen with `--scenario`.
+  const chosen = scenarios.filter((s) => (opts.scenarioIds ? opts.scenarioIds.includes(s.id) : !s.legacy)).sort((a, b) => a.id - b.id);
   if (chosen.length === 0) throw new DevGuardError("refused: no scenario selected");
 
   // --- year rule ----------------------------------------------------------------
@@ -260,7 +291,10 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     .map(({ code: _code, ...rest }) => rest);
 
   const startKey = dateMode === "2027" ? FAKE_2027_START_KEY : fallbackStartKey(now);
-  const dayKeys = weekDayKeys(startKey, FAKE_WEEKS);
+  // `--until` (or the default 30 June when the realistic term is in the selection); `--weeks N` / a bare `--scenario` keep the old window
+  const untilKey = dateMode === "2027" ? opts.until ?? (opts.weeks ? undefined : opts.scenarioIds ? undefined : FAKE_DEFAULT_UNTIL) : undefined;
+  if (untilKey && !/^\d{4}-\d{2}-\d{2}$/.test(untilKey)) throw new DevGuardError(`refused: --until must be YYYY-MM-DD (got ${untilKey})`);
+  const dayKeys = untilKey ? dayKeysUntil(startKey, untilKey) : weekDayKeys(startKey, opts.weeks ?? FAKE_WEEKS);
   const resolved = resolveCollections(declaredRefs(chosen));
   const seed = opts.seed ?? Number(`${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}`) ;
   const runId = fakeRunId(now);
@@ -277,6 +311,7 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     collections: resolved.found.map((f) => f.collection),
     skippedFutureModels: resolved.skipped,
     sections: sections.length,
+    ...(untilKey ? { until: untilKey } : {}),
   };
 
   const previous = (await DevFakeRun.find({}).select("runId").lean()) as unknown as Array<{ runId: string }>;
@@ -289,7 +324,7 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
   }
 
   // --- apply ---------------------------------------------------------------------
-  for (const p of previous) await removeFakeRun(p.runId, scenarios);
+  for (const p of previous) await removeFakeRun(p.runId, scenarios, { calendar: false });
   await DevFakeRun.create({
     runId,
     status: "RUNNING",
@@ -317,6 +352,11 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     sections,
     log,
     switchedOn,
+    until: dayKeys[dayKeys.length - 1] as string,
+    ...(opts.eventDays ? { eventDays: opts.eventDays } : {}),
+    saveManifest: async (patch) => {
+      await DevFakeRun.updateOne({ runId }, { $set: patch });
+    },
     tagSince: (since) => tagRowsSince(models, runId, since),
     clock: (dayKey) => setDevClock(dayKey ? new Date(`${dayKey}T11:00:00+06:00`) : null), // 11:00 Dhaka: school hours of the fake day
     refuse: (tag, err) => {
@@ -339,6 +379,12 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     // the 2027 year only). It is CONFIG, not run data: it is recorded in `switchedOn` and `--remove` leaves it. Through the
     // enablement service itself, so its own rules apply; a pair it refuses is skipped.
     if (dateMode === "2027") await switchOnLockedPairs(String(year._id), switchedOn, log);
+    // The dev calendar (section 2 of docs/dev-test-scenarios-2027.md) goes in first when a selected scenario reads it.
+    if (dateMode === "2027" && chosen.some((s) => s.needsCalendar)) {
+      report.calendar = await seedDevCalendar({ runId, academicYearId: manifest.academicYearId, classes: classes.map((c) => ({ classId: String(c._id), level: c.level })), actorId: new Types.ObjectId().toString(), log });
+      await DevFakeRun.updateOne({ runId }, { $set: { calendar: report.calendar } });
+      await tagRowsSince(models, runId, runStart); // the audit rows of the calendar writes (exam created / routine saved) belong to the run
+    }
     for (const s of chosen) {
       const since = new Date();
       log(`[dev-fake] scenario ${s.id} (${s.name})`);

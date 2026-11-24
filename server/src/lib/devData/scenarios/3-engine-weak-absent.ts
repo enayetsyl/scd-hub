@@ -27,6 +27,7 @@ const WEAK_CHILDREN = 3;
 
 export const scenario3: Scenario = {
   id: 3,
+  legacy: true,
   name: "engine-weak-absent",
   collections: [{ model: "MasteryPaper" }, { model: "MasteryResult" }, { model: "MasteryAssignment" }, { model: "MasteryAssignmentSheet" }, { model: "AssignmentItem" }, { model: "AssignmentStudentRecord" }],
   async run(ctx: ScenarioCtx): Promise<Record<string, number>> {
