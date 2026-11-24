@@ -45,6 +45,12 @@ export interface ScenarioCtx {
   refuse: (tag: string, err: unknown) => void;
   /** Pick `k` distinct items at random (seeded). */
   pick: <T>(items: T[], k: number) => T[];
+  /** Test knob: stage id (C8, C9, T7, T8, S4, C7a..C7d) -> the day it may start, instead of its calendar day of the spec. */
+  eventDays?: Record<string, string>;
+  /** The run's last day (`--until`, YYYY-MM-DD); the last entry of `dayKeys`. */
+  until: string;
+  /** Merge fields into the run's manifest row (personas, events, rates - ids only, no names). */
+  saveManifest: (patch: Record<string, unknown>) => Promise<void>;
 }
 
 export interface Scenario {
@@ -52,6 +58,10 @@ export interface Scenario {
   name: string;
   /** Model names this scenario writes into (declared in the manifest; removal covers them). */
   collections: ModelRef[];
+  /** A phase of the older generator (scenarios 0-7): selectable with `--scenario`, not in the default run (the realistic term replaces them). */
+  legacy?: boolean;
+  /** The dev calendar (section 2 of docs/dev-test-scenarios-2027.md) is seeded before this scenario runs. */
+  needsCalendar?: boolean;
   /** Returns counters for the manifest. */
   run: (ctx: ScenarioCtx) => Promise<Record<string, number>>;
 }

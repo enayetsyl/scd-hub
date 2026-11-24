@@ -22,6 +22,7 @@ const DAY = 24 * 3600 * 1000;
 
 export const scenario6: Scenario = {
   id: 6,
+  legacy: true,
   name: "behind-target",
   collections: [{ model: "SyllabusTarget" }],
   async run(ctx: ScenarioCtx): Promise<Record<string, number>> {

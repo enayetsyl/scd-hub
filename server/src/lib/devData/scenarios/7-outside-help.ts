@@ -33,6 +33,7 @@ const LOW_CHILDREN = 3;
 
 export const scenario7: Scenario = {
   id: 7,
+  legacy: true,
   name: "outside-help",
   collections: [
     { model: "MasteryPaper" },

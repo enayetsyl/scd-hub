@@ -14,6 +14,7 @@ import type { Scenario, ScenarioCtx } from "./types";
 
 export const scenario8: Scenario = {
   id: 8,
+  legacy: true, // the realistic term (scenario 9) runs this itself, after its own pass, so the read sees the generated term
   name: "loop-health",
   collections: [],
   async run(ctx: ScenarioCtx): Promise<Record<string, number>> {

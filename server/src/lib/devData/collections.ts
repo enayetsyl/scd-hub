@@ -61,6 +61,8 @@ export const FAKE_BASE_MODELS: ModelRef[] = [
   m("MasteryEvidence"), m("MasteryState", true), m("MasteryAction"), m("IntegrityCase"), m("QuestionUse", true),
   m("Notification"), m("Audit"), m("StaffMistake"), m("StaffMistakeNote"),
   m("MarkEscalation"), m("MarkReminderAck"), m("PrintRequest"),
+  // the realistic term (AL-15): the dev calendar + a generated joiner / leaver
+  m("HolidayException"), m("AcademicPause"), m("Exam"), m("ExamRoutine"), m("Student"), m("Enrolment"),
 ];
 
 /** Never copied (documentation of section 9.2 step 6; the runbook prints it). */

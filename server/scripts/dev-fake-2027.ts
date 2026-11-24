@@ -6,7 +6,11 @@
  *   npx tsx server/scripts/dev-fake-2027.ts --apply               # generate (removes the previous run first)
  *   npx tsx server/scripts/dev-fake-2027.ts --apply --allow-2026  # scenario 0 on the 2026 year (before the YC rehearsal)
  *   npx tsx server/scripts/dev-fake-2027.ts --remove fake-20261201-1030 --apply
+ *   npx tsx server/scripts/dev-fake-2027.ts --remove <runId> --remove-calendar --apply   # also drops the dev calendar rows
  *   options: --year <academicYearId>  --seed <n>  --scenario <id> (repeatable)
+ *            --until <YYYY-MM-DD>   last day of the realistic term (default 2027-06-30; the default run = calendar + scenario 9 + 8)
+ *            --weeks <n>            the old fixed window (N school weeks from 3 Jan) instead of --until
+ *   a bare `--scenario <id>` (no --until) keeps the 8-week window for the older phases 0..7.
  */
 import * as path from "path";
 import * as dotenv from "dotenv";
@@ -38,6 +42,9 @@ async function main(): Promise<void> {
       year: val("--year"),
       allow2026: argv.includes("--allow-2026"),
       seed: val("--seed") ? Number(val("--seed")) : undefined,
+      until: val("--until"),
+      weeks: val("--weeks") ? Number(val("--weeks")) : undefined,
+      removeCalendar: argv.includes("--remove-calendar"),
       scenarioIds: scenarioIds.length ? scenarioIds : undefined,
       log: console.log,
     });

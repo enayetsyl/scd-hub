@@ -28,6 +28,7 @@ import type { Scenario, ScenarioCtx } from "./types";
 
 export const scenario4: Scenario = {
   id: 4,
+  legacy: true,
   name: "reteach-from-class-work",
   collections: [{ model: "MasteryPaper" }, { model: "MasteryResult" }, { model: "MasteryAction" }],
   async run(ctx: ScenarioCtx): Promise<Record<string, number>> {

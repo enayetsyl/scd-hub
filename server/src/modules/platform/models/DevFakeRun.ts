@@ -27,6 +27,14 @@ export interface IDevFakeRun extends Document {
   counts: Record<string, unknown>;
   /** Config the run switched on (kept after remove; see the runbook). */
   switchedOn: string[];
+  /** The realistic term (scenario 9): persona map (ids only), guaranteed events, achieved rates, calendar rows. */
+  personas?: Record<string, unknown>;
+  events?: unknown;
+  rates?: unknown;
+  calendar?: unknown;
+  /** Run bookkeeping to put back (the guardian summary run log as it was before the run). */
+  bookkeeping?: { guardianRunBefore?: Array<{ key: string; lastRunAt: string }> };
+  until?: string;
   error?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +54,12 @@ const DevFakeRunSchema = new Schema<IDevFakeRun>(
     collections: { type: [String], default: [] },
     counts: { type: Schema.Types.Mixed, default: {} },
     switchedOn: { type: [String], default: [] },
+    personas: { type: Schema.Types.Mixed },
+    events: { type: Schema.Types.Mixed },
+    rates: { type: Schema.Types.Mixed },
+    calendar: { type: Schema.Types.Mixed },
+    bookkeeping: { type: Schema.Types.Mixed },
+    until: { type: String },
     error: { type: String },
   },
   { timestamps: true },

@@ -101,6 +101,11 @@ npx tsx server/scripts/dev-fake-2027.ts                       # dry run: prints 
 npx tsx server/scripts/dev-fake-2027.ts --apply --allow-2026  # scenario 0 on the 2026 year (before the rehearsal)
 npx tsx server/scripts/dev-fake-2027.ts --apply               # after the 2027 year change made by a year-change run
 npx tsx server/scripts/dev-fake-2027.ts --remove <runId> --apply
+# AL-15: the default `--apply` is the realistic term 3 Jan - 30 Jun 2027 (scenario 9 + the loop-health read): dev calendar seeded first, personas,
+# daily attendance / lessons / homework / weekly assignment / class tests / leave, the guaranteed events, then the report. Run it with the dev API STOPPED.
+npx tsx server/scripts/dev-fake-2027.ts --apply --until 2027-03-31   # a shorter term (any end day)
+npx tsx server/scripts/dev-fake-2027.ts --remove <runId> --remove-calendar --apply   # a plain --remove KEEPS the dev calendar rows (holidays, pauses, exam + routine)
+# `--scenario <id>` alone keeps the old 8-week window for the earlier phases 0..7 (legacy); `--weeks <n>` is the old fixed window.
 ```
 A re-run first removes every earlier run. Re-copying prod (steps 1-7) wipes the rehearsed year: re-run the rehearsal.
 The generator turns `classNoteQuestionOn` on if it is off (config, not run data; `--remove` leaves it on).
