@@ -109,3 +109,32 @@ Then: `sudo systemctl start scdhub-dev`.
 ## 9. Never
 Never run `server/scripts/seed.ts` on dev or prod (it deletes identity rows). Never take a help-guide picture or doc from
 the dev site (the repo is public). The dev site stays behind its basic auth.
+
+## Dev clock (AL-14, dev site only)
+
+Owner ruling 23 Nov 2026: the dev site runs as if today were a 2027 school day the lead sets, moving forward with real
+time, so testers see Today cards, deadlines, pop-ups, weekly messages and the loop-health page as in January 2027.
+
+- **Switch on (dev VM only):** put `DEV_CLOCK_ALLOWED=1` in the dev API's environment and restart it once. The variable
+  must NEVER exist on prod. Even with it set, the API refuses unless the connected database name ends in `_dev`
+  (log line `[dev-clock] ON today=<Dhaka day> offsetDays=<n>` on boot and on every change; a refusal logs a warning).
+- **Control (lead, on the VM, same `_dev` + outgoing-closed guard as dev-mask):**
+  - `npx tsx server/scripts/dev-clock.ts show`
+  - `npx tsx server/scripts/dev-clock.ts set 2027-02-28 [--time 08:30]` (NOW = that Dhaka day at the current Dhaka time of day, or the given time)
+  - `npx tsx server/scripts/dev-clock.ts advance <days>` (move forward a few days at a time)
+  - `npx tsx server/scripts/dev-clock.ts off` (offset 0)
+  The API re-reads the single doc `devclocks/clock` every 60 s; no restart needed. Suggested start: **Sun 28 Feb 2027**,
+  after the fake 8 weeks.
+- **Testers:** the app shows a thin banner "ডেভ ঘড়ি: <date> — পরীক্ষার সাইট" and shifts its own clock. A login token issued
+  before a `set` jump may be read as already expired afterwards; testers just sign in again.
+- **Prod:** unchanged. No env var -> the API never reads the doc and never patches `Date`; `/readyz` has no `devClock`
+  field and the public `devClock` query answers `active:false`.
+- **App build flag:** the client clock exists only in a web build made with `EXPO_PUBLIC_DEV_CLOCK=1` (the dev VM's
+  `app/.env` only). Without it the app makes no `devClock` query, sets no timer, patches no `Date` and shows no banner.
+- **One-way door:** a forward `set` is a one-way door for dev data (offboarding, explanation ladders, share grants,
+  DUE flips run once); the script refuses a negative `advance` and a `set` to an earlier day. Refresh the dev copy to
+  undo. `off` is allowed and also clears the `loginthrottles` collection on the `_dev` database (it prints how many).
+  Tokens issued under the clock may outlive `off` - log in again.
+- **Workers:** the API, the AI job worker and the book build worker all run `installDevClock()` after connecting (same
+  two checks). After a `set` / `advance`, the ticker heartbeat (`/internal/ticker`) may read stale for up to 60 s until
+  the next tick, because the API re-reads the offset once a minute; it is not a stall.

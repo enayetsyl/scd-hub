@@ -57,6 +57,8 @@ const appFiles = walk(APP_SRC).map((f) => ({ f: rel(f, APP_SRC), s: code(f) }));
 
 /** Fields open to any login, each with the reason it needs no catalogue action. */
 const OPEN_FIELDS: Record<string, string> = {
+  // AL-14: the dev-site clock; public (asked before sign-in), reveals only the shifted day, active=false on prod.
+  devClock: "public dev-clock status (no data)",
   // School-wide pause windows (D-#1655): dates + labels only, no PII; every routine / Today screen reads them.
   academicPauses: "school calendar", academicPausesInRange: "school calendar", academicPauseKinds: "fixed list",
   // Review voice clips (D-#1658): row-scoped in the service — own reviewer (drafts), plan author, matching manager.

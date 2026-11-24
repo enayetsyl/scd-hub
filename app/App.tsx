@@ -27,6 +27,7 @@ import { MistakeReasonProvider } from "./src/state/MistakeReasonContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
+import { DevClockBanner, checkDevClock, DEV_CLOCK_BUILD } from "./src/components/DevClockBanner";
 import { PopupNoticeHost } from "./src/components/PopupNoticeHost";
 import { MeetingRsvpPopup } from "./src/components/MeetingRsvpPopup";
 import { QuranExamGuardianPopup } from "./src/components/QuranExamGuardianPopup";
@@ -187,11 +188,21 @@ function App(): React.ReactElement | null {
     NotoSansBengali_700Bold: require("@expo-google-fonts/noto-sans-bengali/NotoSansBengali_700Bold.ttf"),
   });
 
+  // AL-14: only in a build with EXPO_PUBLIC_DEV_CLOCK=1 (dev VM): ask once whether the dev clock is on, BEFORE the
+  // navigator mounts (every screen reads the shifted Date from its first render). Any other build: clockChecked
+  // starts true, nothing is queried or patched, and this never renders null. Never rejects.
+  const [clockChecked, setClockChecked] = React.useState(!DEV_CLOCK_BUILD);
   useEffect(() => {
-    if (fontsLoaded) void SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (!DEV_CLOCK_BUILD) return;
+    void checkDevClock().finally(() => setClockChecked(true));
+  }, []);
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    if (DEV_CLOCK_BUILD && !clockChecked) return;
+    if (fontsLoaded) void SplashScreen.hideAsync();
+  }, [fontsLoaded, clockChecked]);
+
+  if (!fontsLoaded || !clockChecked) return null;
 
   return (
     // MON-3: a top-level ErrorBoundary catches white-screen render crashes (web
@@ -259,6 +270,8 @@ function App(): React.ReactElement | null {
                               {/* Staff who reached a warning step (D-#940/#941). */}
                             </WebPushGate>
                           </UpdateGate>
+                          {/* AL-14: the dev-site clock strip; renders null on prod. */}
+                          <DevClockBanner />
                         </MistakeReasonProvider>
                         </ConfirmProvider>
                       </ToastProvider>

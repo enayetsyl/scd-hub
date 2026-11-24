@@ -13,6 +13,7 @@ import { createYoga } from "graphql-yoga";
 import { clientIpFrom } from "./clientIp";
 import { graphqlDevToolsOptions } from "./graphqlDevTools";
 import { connectDb } from "./db";
+import { installDevClock, devClockState } from "./lib/devClockInstall";
 import { refreshAiConfig } from "./modules/platform/services/AiSettingService";
 import { seedAiPolicies } from "./modules/platform/services/AiPolicyService";
 import { startWorkspaceQueue } from "./modules/ai-workspace/services/workspaceQueue";
@@ -100,8 +101,11 @@ app.get("/readyz", async (_req, res) => {
   const { outgoingState, outgoingKeysPresent } = await import("./lib/outgoing");
   const outgoing = outgoingState().state;
   const keys = outgoing === "OFF" ? outgoingKeysPresent() : undefined;
-  if (state === 1) res.json({ ok: true, book, outgoing, keys });
-  else res.status(503).json({ ok: false, dbState: state, book, outgoing, keys });
+  // AL-14: only while the dev clock is active; undefined (key dropped by JSON) everywhere else, so prod's body is unchanged.
+  const clock = devClockState();
+  const devClock = clock.active ? clock : undefined;
+  if (state === 1) res.json({ ok: true, book, outgoing, keys, devClock });
+  else res.status(503).json({ ok: false, dbState: state, book, outgoing, keys, devClock });
 });
 // MON-4: notification-ticker heartbeat (no PII). MON-5's off-box monitor watches
 // `ageSeconds` and alerts when the ticker stalls (past ~2× the 60s interval).
@@ -252,6 +256,9 @@ const PORT = Number(process.env.PORT ?? 4000);
 
 async function start() {
   await connectDb();
+  // AL-14: the dev-site clock. Inert unless DEV_CLOCK_ALLOWED=1 AND the database name ends in `_dev` (never on prod).
+  // First thing after the connection, before any route, ticker or service reads the time.
+  await installDevClock();
   // PM (D-#792): publish the Principal's role-template edits before the first request.
   await loadRoleTemplateOverrides();
   startRoleTemplateRefresh();
