@@ -27,6 +27,11 @@ import { DevFakeRun } from "../modules/platform/models/DevFakeRun";
 import { AssignmentSchedule } from "../modules/trackers/models/AssignmentSchedule";
 import { ClassNote } from "../modules/routine/models/ClassNote";
 import { Notification } from "../modules/notifications/models/Notification";
+import { Guardian } from "../modules/foundation/models/Guardian";
+import { HomeworkItem } from "../modules/trackers/models/HomeworkItem";
+import { MarkEscalation } from "../modules/trackers/models/MarkReminder";
+import { GuardianSummaryRun } from "../modules/mastery/models/GuardianSummaryRun";
+import { planClassTests } from "../lib/devData/term/tests";
 import { importCatalogue, setEnablement } from "../modules/mastery/services/MasteryCatalogueService";
 import { FAKE_BASE_MODELS, loadAllModels, resolveCollections } from "../lib/devData/collections";
 import { removeFakeRun, runFake, seededRng, dayKeysUntil } from "../lib/devData/devFake2027";
@@ -76,6 +81,21 @@ const taggedTotal = async (runId: string): Promise<number> => {
 
 // ---------------------------------------------------------------------------
 describe("personas (pure)", () => {
+  it("the persona mix of a 91-child school has the 2026 top decile: homework miss p50 ~19 % / p90 ~47 %, assignment miss p50 ~8 % / p90 ~42 %", () => {
+    const sizes: Record<number, number> = { [-1]: 21, 0: 12, 1: 7, 2: 14, 3: 17, 4: 12, 5: 8 };
+    const byLevel = new Map<number, string[]>(Object.entries(sizes).map(([l, n]) => [Number(l), Array.from({ length: n }, (_, i) => `${l}-${i}`)]));
+    const m = assignChildPersonas(seededRng(21), byLevel);
+    const hw = [...m.values()].map((p) => CHILD_PERSONAS[p].hwMiss).sort((a, b) => a - b);
+    const as = [...m.values()].map((p) => CHILD_PERSONAS[p].asMiss).sort((a, b) => a - b);
+    const q = (xs: number[], p: number) => xs[Math.min(xs.length - 1, Math.floor(p * xs.length))]!;
+    expect(q(hw, 0.5)).toBeGreaterThan(0.14);
+    expect(q(hw, 0.5)).toBeLessThan(0.24);
+    expect(q(hw, 0.9)).toBeGreaterThan(0.4);
+    expect(q(hw, 0.9)).toBeLessThan(0.6);
+    expect(q(as, 0.5)).toBeLessThan(0.1);
+    expect(q(as, 0.9)).toBeGreaterThan(0.3);
+    expect(q(as, 0.9)).toBeLessThan(0.5);
+  });
   it("every special persona exists across a school and the rest are typical", () => {
     const byLevel = new Map<number, string[]>([
       [-1, Array.from({ length: 6 }, (_, i) => `n${i}`)],
@@ -214,6 +234,18 @@ describe("the realistic term in an in-memory world", () => {
 
   it("a 3-week run produces the whole term's data, the guaranteed events, the calendar and the report; --remove keeps the calendar until asked", async () => {
     const before = await countsOfAll();
+    // Rows a tester (the dev API runs on the dev clock) or anyone else wrote: dated 2027 by createdAt or by ObjectId time, never tagged.
+    const futureId = Types.ObjectId.createFromTime(Math.floor(new Date("2027-02-01T05:00:00Z").getTime() / 1000));
+    await ClassNote.collection.insertOne({ _id: futureId, createdAt: new Date("2027-02-01"), date: new Date("2027-02-01"), taughtSummaryBn: "tester", tester: true });
+    await HomeworkItem.collection.insertOne({ tester: true, createdAt: new Date("2027-01-20T05:00:00Z"), description: "tester homework" });
+    await MarkEscalation.collection.insertOne({ tester: true, dateKey: "2099-01-01", _id: Types.ObjectId.createFromTime(Math.floor(new Date("2027-03-01").getTime() / 1000)) });
+    const survivors = async () => ({
+      notes: await ClassNote.countDocuments({ tester: true, devFakeRun: { $exists: false } }),
+      hw: await HomeworkItem.countDocuments({ tester: true, devFakeRun: { $exists: false } }),
+      esc: await MarkEscalation.countDocuments({ tester: true, devFakeRun: { $exists: false } }),
+    });
+    expect(await survivors()).toEqual({ notes: 1, hw: 1, esc: 1 });
+    const baseline = await countsOfAll();
     const lines: string[] = [];
     const r = await runFake({
       apply: true, now: NOW, guard, seed: 5, until: "2027-01-21", log: (l) => lines.push(l),
@@ -221,7 +253,8 @@ describe("the realistic term in an in-memory world", () => {
       eventDays: { C8: "2027-01-10", C9: "2027-01-17", T7: "2027-01-06", T8: "2027-01-04", S4: "2027-01-12", C7a: "2027-01-05", C7b: "2027-01-11", C7c: "2027-01-13", C7d: "2027-01-18" },
     });
     const runId = r.manifest!.runId;
-    expect(r.manifest).toMatchObject({ until: "2027-01-21", scenarioIds: [8, 9] });
+    expect(r.manifest).toMatchObject({ until: "2027-01-21", scenarioIds: [9] });
+    expect(await survivors()).toEqual({ notes: 1, hw: 1, esc: 1 }); // the tester's rows were not swept into the run
     const c = r.counts["9"]!;
 
     // lessons + attendance by persona
@@ -241,8 +274,21 @@ describe("the realistic term in an in-memory world", () => {
     // the Wednesday guardian run advanced its bookkeeping, nothing was notified
     expect(c.guardianSummaryRuns).toBe(3);
     expect(await Notification.countDocuments({})).toBe(0);
-    // every run row is tagged and notes sit on the fake days
-    expect(await ClassNote.countDocuments({ devFakeRun: { $exists: false } })).toBe(0);
+    // every run row is tagged and notes sit on the fake days (published ~6 h after the period, on the same fake day)
+    expect(await ClassNote.countDocuments({ devFakeRun: { $exists: false }, tester: { $ne: true } })).toBe(0);
+    const someNotes = await ClassNote.collection.find({ devFakeRun: { $exists: true } }).limit(40).toArray();
+    expect(someNotes.length).toBeGreaterThan(0);
+    for (const n of someNotes) {
+      const d = new Date(n.date as Date);
+      const p = new Date(n.publishedAt as Date);
+      expect([p.getFullYear(), p.getMonth(), p.getDate()]).toEqual([d.getFullYear(), d.getMonth(), d.getDate()]);
+      expect(p.getHours()).toBeGreaterThanOrEqual(13);
+    }
+    // the run's bookkeeping never blocks the dev site: no 09:30 snapshot on the last day, the guardian run log back to its pre-run value (none)
+    expect(await MarkEscalation.countDocuments({ dateKey: "2027-01-21", tester: { $ne: true } })).toBe(0);
+    expect(await GuardianSummaryRun.countDocuments({})).toBe(0);
+    // the late joiner has a tagged guardian login
+    expect(await Guardian.countDocuments({ devFakeRun: runId })).toBe(1);
 
     // the manifest carries ids only (no names) + the persona map
     const man = (await DevFakeRun.findOne({ runId }).lean())!;
@@ -283,6 +329,14 @@ describe("the realistic term in an in-memory world", () => {
     const absence = Number(rates.find((x) => x.area === "Daily absence, mean")!.achieved.replace(" %", ""));
     expect(absence).toBeGreaterThan(4);
     expect(absence).toBeLessThan(22);
+    // loose bands (a 3-week window of ~26 children is noisy): homework / assignment miss, class-test mean, test-day absence
+    const num = (area: string, i = 0): number => Number(rates.find((x) => x.area.startsWith(area))!.achieved.split("/")[i]!.replace(/[^0-9.]/g, ""));
+    expect(num("Homework non-submission", 0)).toBeLessThan(40);
+    expect(num("Homework non-submission", 1)).toBeGreaterThan(15);
+    expect(num("Assignment miss")).toBeLessThan(35);
+    expect(num("Class test mean score")).toBeGreaterThan(40);
+    expect(num("Class test mean score")).toBeLessThan(95);
+    expect(num("Absent on a class-test day")).toBeLessThan(55);
 
     // the dev calendar: seeded once, tagged, kept by a plain remove
     const calCounts = async () => ({
@@ -299,16 +353,72 @@ describe("the realistic term in an in-memory world", () => {
     const gone = await removeFakeRun(runId); // plain remove: the calendar stays
     expect(Object.values(gone.residue).reduce((a, b) => a + b, 0)).toBe(0);
     expect(await calCounts()).toEqual({ holidays: 4, pauses: 2, exam: 1, routine: 1 });
-    const left = await leftovers(before);
+    const left = await leftovers(baseline);
     expect(Object.keys(left).filter((k) => !CALENDAR_COLLECTIONS.has(k))).toEqual([]);
 
     // the next run ADOPTS the calendar (no twins), and `--remove-calendar` drops it
     const r2 = await runFake({ apply: true, now: new Date(NOW.getTime() + 60_000), guard, seed: 6, scenarioIds: [9], until: "2027-01-07" });
-    expect(r2.calendar).toMatchObject({ holidaysCreated: 0, pausesCreated: 0, adopted: 4 + 2 + 1 + 1 });
+    expect(r2.calendar).toMatchObject({ holidaysCreated: 0, pausesCreated: 0 }); // adopted by the frame, no twins
     expect(await calCounts()).toEqual({ holidays: 4, pauses: 2, exam: 1, routine: 1 });
     const gone2 = await removeFakeRun(r2.manifest!.runId, SCENARIOS, { calendar: true });
     expect(Object.values(gone2.residue).reduce((a, b) => a + b, 0)).toBe(0);
     expect(await calCounts()).toEqual({ holidays: 0, pauses: 0, exam: 0, routine: 0 });
+    expect(await survivors()).toEqual({ notes: 1, hw: 1, esc: 1 }); // after a run + --remove + --remove-calendar
+    // only the tester rows remain
+    await ClassNote.collection.deleteMany({ tester: true });
+    await HomeworkItem.collection.deleteMany({ tester: true });
+    await MarkEscalation.collection.deleteMany({ tester: true });
     expect(await leftovers(before)).toEqual({});
+  });
+
+  it("the calendar never rewrites real rows: overlapping holiday, real exam dates + routine kept, empty exam dates written and cleared again, a guardian run log put back", async () => {
+    const before = await countsOfAll();
+    // a real holiday inside the Eid window, a real half-yearly exam with its own dates and its own routine
+    await HolidayException.create({ fromDate: new Date(2027, 2, 10), toDate: new Date(2027, 2, 11, 23, 59), type: "eid", nameBn: "আসল ছুটি" });
+    const exam = await Exam.create({ academicYearId: yearId, term: "HALF_YEARLY", name: "real", startDateKey: "2027-06-20", endDateKey: "2027-07-01", status: "PLANNED", failRule: "ANY_SUBJECT_F", createdBy: new Types.ObjectId() });
+    await ExamRoutine.create({ examId: exam._id, slots: [], updatedBy: new Types.ObjectId() });
+    const guardianRunBefore = new Date("2026-12-01T10:00:00Z");
+    await GuardianSummaryRun.create({ key: "GWSUM", lastRunAt: guardianRunBefore });
+    const r = await runFake({ apply: true, now: new Date(NOW.getTime() + 300_000), guard, seed: 8, scenarioIds: [9], until: "2027-01-07" });
+    expect(r.calendar).toMatchObject({ holidaysCreated: 3, holidaysExisting: 1, examDatesSet: false, examCreated: false, routineLeftAlone: true });
+    expect(await Exam.findById(exam._id).lean()).toMatchObject({ startDateKey: "2027-06-20", endDateKey: "2027-07-01" });
+    expect(await ExamRoutine.countDocuments({ examId: exam._id })).toBe(1);
+    expect(await ExamRoutine.countDocuments({ devCalendar: true })).toBe(0);
+    // the pause windows follow the REAL exam window (prep week 13-17 Jun, exam 20 Jun - 1 Jul)
+    expect(await AcademicPause.findOne({ devCalendar: true, fromKey: "2027-06-20", toKey: "2027-07-01" })).toBeTruthy();
+    expect(await AcademicPause.findOne({ devCalendar: true, fromKey: "2027-06-13", toKey: "2027-06-17" })).toBeTruthy();
+    expect((await GuardianSummaryRun.findOne({ key: "GWSUM" }).lean())!.lastRunAt.toISOString()).toBe(guardianRunBefore.toISOString());
+    await removeFakeRun(r.manifest!.runId, SCENARIOS, { calendar: true });
+    expect(await HolidayException.countDocuments({ nameBn: "আসল ছুটি" })).toBe(1);
+    expect(await Exam.findById(exam._id).lean()).toMatchObject({ startDateKey: "2027-06-20", endDateKey: "2027-07-01" });
+    expect(await ExamRoutine.countDocuments({ examId: exam._id })).toBe(1);
+
+    // an exam with BOTH dates empty gets the dev dates, marked; the calendar removal clears exactly those
+    await Exam.collection.updateOne({ _id: exam._id }, { $set: { startDateKey: null, endDateKey: null } });
+    await ExamRoutine.deleteMany({});
+    const r2 = await runFake({ apply: true, now: new Date(NOW.getTime() + 360_000), guard, seed: 9, scenarioIds: [9], until: "2027-01-07" });
+    expect(r2.calendar).toMatchObject({ examDatesSet: true, examCreated: false });
+    expect(await Exam.findById(exam._id).lean()).toMatchObject({ startDateKey: "2027-06-13", endDateKey: "2027-06-24" });
+    await removeFakeRun(r2.manifest!.runId, SCENARIOS, { calendar: true });
+    const after = await Exam.findById(exam._id).lean();
+    expect(after).toBeTruthy();
+    expect(after!.startDateKey ?? null).toBeNull();
+    expect(after!.endDateKey ?? null).toBeNull();
+    await Exam.deleteOne({ _id: exam._id });
+    await HolidayException.deleteMany({ nameBn: "আসল ছুটি" });
+    await GuardianSummaryRun.deleteMany({});
+    expect(await leftovers(before)).toEqual({});
+  });
+
+  it("class tests are never planned in the preparation week", async () => {
+    const days = dayKeysUntil("2027-01-03", "2027-06-30");
+    const sim = new Sim({ rng: seededRng(4), academicYearId: String(yearId) } as never, [{ sectionId: sections.c1!, classId: "x", level: 1, nameBn: "প্রথম" }]);
+    sim.teachDays = days;
+    sim.subjectDays.set(`${sections.c1}|MATH`, new Set([0, 1, 2, 3, 4]));
+    const weekOf = (k: string): number => Math.floor((Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)) - Date.UTC(2027, 0, 3)) / (7 * 86_400_000));
+    await planClassTests(sim, weekOf);
+    expect(sim.ctPlan.size).toBeGreaterThan(5);
+    for (const key of sim.ctPlan.keys()) expect(isPrepDay(key.split("|")[1]!)).toBe(false);
+    expect([...sim.ctPlan.keys()].some((k) => k.split("|")[1]! >= "2027-06-06" && k.split("|")[1]! <= "2027-06-10")).toBe(false);
   });
 });

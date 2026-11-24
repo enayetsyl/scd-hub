@@ -54,7 +54,7 @@ export async function weeklyDay(sim: Sim, dayKey: string, runStart: Date): Promi
     sim.bump("asDraftFailed", sum.failed);
   }
   // 2. new drafts -> a finalise day by the cell teacher's persona
-  const drafts = await MasteryAssignment.find({ status: "DRAFT", createdAt: { $gte: runStart } }).select("_id sectionId subject dueDate").lean();
+  const drafts = await MasteryAssignment.find({ status: "DRAFT", createdAt: { $gte: runStart, $lte: new Date() } }).select("_id sectionId subject dueDate").lean();
   for (const a of drafts) {
     const id = String(a._id);
     if (asTracks.has(id)) continue;

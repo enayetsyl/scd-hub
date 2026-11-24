@@ -213,7 +213,7 @@ describe("guards and year rule", () => {
     await AcademicYear.updateOne({ _id: year26 }, { $set: { current: false } });
     await YearChangeRun.create({ runId: "yc-1", fromYearId: year26, toYearId: y27._id, status: "CUT_OVER" });
     const r = await runFake({ apply: false, now: NOW, guard });
-    expect(r.manifest).toMatchObject({ dateMode: "2027", fromDateKey: "2027-01-03", toDateKey: "2027-06-30", until: "2027-06-30", scenarioIds: [8, 9] });
+    expect(r.manifest).toMatchObject({ dateMode: "2027", fromDateKey: "2027-01-03", toDateKey: "2027-06-30", until: "2027-06-30", scenarioIds: [9] });
     // a bare --scenario keeps the old 8-week window; --until / --weeks set the window
     expect((await runFake({ apply: false, now: NOW, guard, scenarioIds: [8] })).manifest).toMatchObject({ toDateKey: "2027-02-25" });
     expect((await runFake({ apply: false, now: NOW, guard, until: "2027-03-04" })).manifest).toMatchObject({ toDateKey: "2027-03-04" });

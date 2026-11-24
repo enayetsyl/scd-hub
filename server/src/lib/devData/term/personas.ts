@@ -28,8 +28,8 @@ export const CHILD_PERSONAS: Record<ChildPersona, ChildSpec> = {
   C2: { code: "C2", label: "struggling child", absence: 0.12, hwMiss: 0.25, asMiss: 0.15, ability: 0.4 },
   C3: { code: "C3", label: "improver", absence: 0.09, hwMiss: 0.12, asMiss: 0.07, ability: 0.45 },
   C4: { code: "C4", label: "long illness (one 2-3 week streak)", absence: 0.07, hwMiss: 0.12, asMiss: 0.07, ability: 0.7 },
-  C5: { code: "C5", label: "chronic absentee", absence: 0.32, hwMiss: 0.35, asMiss: 0.25, ability: 0.55 },
-  C6: { code: "C6", label: "homework skipper", absence: 0.1, hwMiss: 0.45, asMiss: 0.3, ability: 0.7 },
+  C5: { code: "C5", label: "chronic absentee", absence: 0.32, hwMiss: 0.45, asMiss: 0.4, ability: 0.55 },
+  C6: { code: "C6", label: "homework skipper", absence: 0.1, hwMiss: 0.55, asMiss: 0.45, ability: 0.7 },
   C7: { code: "C7", label: "outside help at home", absence: 0.08, hwMiss: 0.08, asMiss: 0.04, ability: 0.48 },
 };
 
@@ -99,8 +99,9 @@ export function assignChildPersonas(rng: Rng, byLevel: Map<number, string[]>): M
       ["C2", Math.round(n * (level === 3 ? 0.3 : 0.1))],
       ["C3", n >= 6 ? 1 : 0],
       ["C4", n >= 12 ? 2 : n >= 4 ? 1 : 0],
-      ["C5", n >= 8 ? 1 : 0],
-      ["C6", n >= 8 ? 1 : 0],
+      // the top decile of the school (homework miss p90 ~47 %, assignment miss p90 ~42 %): chronic absentees + skippers
+      ["C5", n >= 8 ? Math.max(1, Math.round(n * 0.06)) : 0],
+      ["C6", n >= 6 ? Math.max(1, Math.round(n * 0.08)) : 0],
       ["C7", n >= 6 ? 1 : 0],
     ];
     let i = 0;

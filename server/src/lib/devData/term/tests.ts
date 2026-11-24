@@ -16,6 +16,7 @@ import { createRequest } from "../../../modules/trackers/services/ClassTestServi
 import { enterResult } from "../../../modules/trackers/services/ClassTestResultService";
 import { appNow } from "../../devClock";
 import { itemMarks } from "./personas";
+import { isPrepDay } from "./calendar";
 import { absentBySection, personaOf, saveRowsTolerant, successChance } from "./daily";
 import type { Sim, StockEntry } from "./state";
 import type { SectionInfo } from "../scenarios/types";
@@ -212,7 +213,7 @@ export async function planClassTests(sim: Sim, weekOf: (dayKey: string) => numbe
       const offset = (j + sIdx) % 3;
       for (const [w, keys] of byWeek) {
         if (w < 1 || w % 3 !== offset) continue;
-        const cands = keys.filter((k) => days.has(weekdayOf(k)) && !sim.ctPlan.has(`${sec.sectionId}|${k}`));
+        const cands = keys.filter((k) => days.has(weekdayOf(k)) && !isPrepDay(k) && !sim.ctPlan.has(`${sec.sectionId}|${k}`));
         const pick = cands[j % Math.max(1, cands.length)];
         if (pick) sim.ctPlan.set(`${sec.sectionId}|${pick}`, subject);
       }

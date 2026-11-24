@@ -29,6 +29,8 @@ import { leavesStartingOn, planLeaves } from "../term/staff";
 import { buildStages, closeStages, resetEventState, runStages } from "../term/events";
 import { buildReport, reportLines } from "../term/report";
 import { scenario6 } from "./6-behind-target";
+import { scenario8 } from "./8-loop-health";
+import { restoreGuardianRun, snapshotGuardianRun } from "../term/bookkeeping";
 import type { Scenario, ScenarioCtx } from "./types";
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU"];
@@ -59,8 +61,23 @@ export const scenario9: Scenario = {
     // the 09:30 ladder, the guardian run bookkeeping, term targets, the dev calendar
     { model: "MarkEscalation" }, { model: "GuardianSummaryRun" }, { model: "SyllabusTarget" },
     { model: "HolidayException" }, { model: "AcademicPause" }, { model: "Exam" }, { model: "ExamRoutine" },
+    // the late joiner's guardian login + her attendance group
+    { model: "Guardian" }, { model: "GuardianLink" }, { model: "SubjectGroupMembership" },
   ],
   async run(ctx: ScenarioCtx): Promise<Record<string, number>> {
+    // The guardian run log is put back as it was, even when the run fails (and `--remove` does it again from the manifest).
+    const guardianRunBefore = await snapshotGuardianRun();
+    await ctx.saveManifest({ bookkeeping: { guardianRunBefore } });
+    try {
+      return await runTerm(ctx);
+    } finally {
+      await restoreGuardianRun(guardianRunBefore);
+    }
+  },
+};
+
+async function runTerm(ctx: ScenarioCtx): Promise<Record<string, number>> {
+  {
     // ---- the release switches (configuration, not run data: recorded, kept by --remove) -------------------------------
     if (!(await isLoop2027On())) {
       await MasteryPolicy.updateOne({ scopeKey: "SCHOOL" }, { $set: { "values.academicLoop2027On": true }, $setOnInsert: { scopeKey: "SCHOOL" } }, { upsert: true });
@@ -154,6 +171,9 @@ export const scenario9: Scenario = {
     ctx.clock(lastDay);
     await sim.safe("hwMark", () => markHomeworkDue(sim, lastDay, true)); // whatever was still waiting for its marking day
     closeStages(sim, stages, lastDay);
+    // a last sweep: the events' fire-and-forget writes (integrity cases, audits) land a moment after the call returns
+    await new Promise((r) => setTimeout(r, 400));
+    await ctx.tagSince(windowStart);
 
     // ---- the term targets + the behind-target pass (T5 / S5), once, at the end -----------------------------------------------
     const before = new Date();
@@ -162,8 +182,12 @@ export const scenario9: Scenario = {
     await ctx.tagSince(before);
     ctx.clock(null);
 
+    // ---- the loop-health read (scenario 8), AFTER the term, so it reads the generated data ----------------------------------------
+    const health = await sim.safe("health", () => scenario8.run(ctx));
+    for (const [k, v] of Object.entries(health ?? {})) sim.c[`health_${k}`] = v;
+
     // ---- the report -----------------------------------------------------------------------------------------------------------
-    const report = await buildReport(sim, { behindSections: behind?.behindSections, targetsSet: behind?.targetsSet });
+    const report = await buildReport(sim, { behindSections: behind?.behindSections, targetsSet: behind?.targetsSet, healthRows: health?.sectionRows });
     for (const line of reportLines(report)) ctx.log(line);
     const ids = (m: Map<string, string>): Record<string, string[]> => {
       const out: Record<string, string[]> = {};
@@ -180,5 +204,5 @@ export const scenario9: Scenario = {
     sim.c.pendingHw = hwQueue.length;
     sim.c.pendingAs = asTracks.size;
     return { ...sim.c };
-  },
-};
+  }
+}

@@ -54,7 +54,7 @@ export function successChance(sim: Sim, studentId: string, level: number, dayKey
 }
 
 /** Today's absentees of one section (children on a C4 streak are always out); a pure draw, no writes. */
-export function absentToday(sim: Sim, studentIds: string[], dayKey: string, weekday: number, ctDay: boolean): Set<string> {
+export function absentToday(sim: Sim, studentIds: string[], dayKey: string, weekday: number, ctDay: (studentId: string) => boolean): Set<string> {
   const out = new Set<string>();
   for (const id of studentIds) {
     const streak = sim.streaks.get(id);
@@ -62,7 +62,7 @@ export function absentToday(sim: Sim, studentIds: string[], dayKey: string, week
       out.add(id);
       continue;
     }
-    if (sim.ctx.rng() < absenceChance(CHILD_PERSONAS[personaOf(sim, id)], weekday, ctDay)) out.add(id);
+    if (sim.ctx.rng() < absenceChance(CHILD_PERSONAS[personaOf(sim, id)], weekday, ctDay(id))) out.add(id);
   }
   return out;
 }
@@ -80,6 +80,7 @@ export const absentBySection = new Map<string, Set<string>>();
 /** Attendance of every unit for the day, by persona and weekday, through `markAttendanceUnit`. */
 export async function attendanceDay(sim: Sim, dayKey: string): Promise<void> {
   absentBySection.clear();
+  const startedAt = new Date(); // REAL time: the day's rows are told apart from anyone else's by their real creation time
   const day = parseDateKey(dayKey);
   const weekday = day.getDay(); // Sun = 0 .. Thu = 4
   const units = new Map<string, { unit: AttendanceUnit; students: Set<string> }>();
@@ -108,9 +109,9 @@ export async function attendanceDay(sim: Sim, dayKey: string): Promise<void> {
     }
     const ids = [...students].sort();
     const level = (id: string) => sim.level.get(sectionOfStudent.get(id) ?? "") ?? 1;
-    // a unit of one section: that section's test day lifts its absence; a mixed unit (a Quran group) takes the ordinary rate
-    const ct = ids.length > 0 && ids.every((id) => ctSections.has(sectionOfStudent.get(id) ?? ""));
-    const absent = absentToday(sim, ids, dayKey, weekday, ct);
+    // a child's OWN section decides: a class-test day for her section lifts her absence to the test-day rate, even when the
+    // attendance unit is a Quran group of several sections
+    const absent = absentToday(sim, ids, dayKey, weekday, (id) => ctSections.has(sectionOfStudent.get(id) ?? ""));
     const fakeCtx = { auth: { userId: marker.teacherId, role: "TEACHER" } } as unknown as AppContext;
     await markAttendanceUnit(fakeCtx, unit, dayKey, [...absent], at);
     sim.bump("attendanceUnitsMarked");
@@ -128,7 +129,8 @@ export async function attendanceDay(sim: Sim, dayKey: string): Promise<void> {
       }
     }
   }
-  await StudentAttendanceDay.collection.updateMany({ devFakeRun: sim.ctx.runId, dateKey: dayKey }, { $set: { markedAt: at } });
+  // rows are tagged once a week, so the day's rows are found by their (real) creation window, not by the tag
+  await StudentAttendanceDay.collection.updateMany({ dateKey: dayKey, createdAt: { $gte: startedAt, $lte: new Date() } }, { $set: { markedAt: at } });
 }
 
 /** One class note + lesson delivery per taught period (the effective teacher's persona decides whether the note is made). */
@@ -150,6 +152,10 @@ export async function lessonsDay(sim: Sim, dayKey: string): Promise<void> {
       );
       if (!note) continue;
       sim.bump("notes");
+      // the note reads as made on the fake day: ~6 h after the period for a diligent teacher, later for the others (T2 4 pm, T3 6 pm)
+      const hour = ({ T1: 13, T2: 16, T3: 18, T4: 14 } as const)[sim.teacherPersona.get(slot.teacherId) ?? "T1"];
+      const backdate = (): Promise<unknown> => ClassNote.collection.updateOne({ _id: (note as unknown as { _id: unknown })._id as never }, { $set: { publishedAt: new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0, 0) } });
+      await backdate();
       const plan = await planFor(sec.level, slot.subject);
       const key = plan.length > 0 ? nextSessionKey(plan, await sectionSessionStates(sec.sectionId, slot.subject)) : null;
       if (!key) {
@@ -159,10 +165,9 @@ export async function lessonsDay(sim: Sim, dayKey: string): Promise<void> {
       const finished = sim.ctx.rng() >= CONTINUING_RATE;
       const delivery = await sim.safe("delivery", () => recordDelivery(note, { sessions: [{ key, finished }] }, slot.teacherId));
       if (delivery) sim.bump("deliveries");
+      await backdate(); // the delivery saves the note again
     }
   }
-  // the class note reads as made ~6 hours after the period
-  await ClassNote.collection.updateMany({ devFakeRun: sim.ctx.runId, date: day }, { $set: { publishedAt: new Date(day.getFullYear(), day.getMonth(), day.getDate(), 13, 0, 0) } });
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +318,9 @@ export async function guardianSummaryRun(sim: Sim, dayKey: string): Promise<void
 
 /** The 09:30 ladder of the day: the MarkEscalation snapshot of late marks (Principal card, 09:30 list). */
 export async function marksLadder(sim: Sim, dayKey: string): Promise<void> {
+  // The snapshot of a day is written once and the live dev scheduler skips a day that has one: never write one for the run's last day
+  // (nor after it), so the dev site's own ladder is not blocked on the first day it reaches.
+  if (dayKey >= (sim.openDays[sim.openDays.length - 1] as string)) return;
   const n = await sim.safe("markLadder", () => runMarkEscalation(new Date(`${dayKey}T09:30:00+06:00`)));
   if (typeof n === "number") sim.bump("markLadderRows", n);
 }

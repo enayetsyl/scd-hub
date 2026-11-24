@@ -8,6 +8,10 @@ import { Types } from "mongoose";
 import type { MasterySubject } from "@scd/shared";
 import { Student } from "../../../modules/foundation/models/Student";
 import { Enrolment } from "../../../modules/foundation/models/Enrolment";
+import { Guardian } from "../../../modules/foundation/models/Guardian";
+import { GuardianLink } from "../../../modules/foundation/models/GuardianLink";
+import { SubjectGroupMembership } from "../../../modules/routine/models/SubjectGroupMembership";
+import { hashPassword } from "../../../modules/foundation/services/AuthService";
 import { openEnrolment, closeEnrolment } from "../../../modules/foundation/services/EnrolmentService";
 import { MasteryEnablement } from "../../../modules/mastery/models/MasteryEnablement";
 import { MasteryAction } from "../../../modules/mastery/models/MasteryAction";
@@ -65,6 +69,18 @@ function objectiveItems(sim: Sim, st: StockEntry, minQ: number, used: Set<string
 
 const usedObjectives = new Set<string>();
 
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/** The OPEN integrity case of a child x objective, waiting up to `tries` x 200 ms for the confirm's hook to write it. */
+async function settleCase(studentId: string, loCode: string, tries = 15): Promise<InstanceType<typeof IntegrityCase> | null> {
+  for (let i = 0; i < tries; i++) {
+    const open = await IntegrityCase.findOne({ studentId, loCode, status: "OPEN" });
+    if (open) return open;
+    await sleep(200);
+  }
+  return null;
+}
+
 /** Forget the state of an earlier run in this process. */
 export function resetEventState(): void {
   usedObjectives.clear();
@@ -105,13 +121,36 @@ async function admitChild(sim: Sim, dayKey: string, level: number, tag: string, 
   return { studentId: String(student._id), sec };
 }
 
+/** The fake guardian of the late joiner logs in with the ONE shared dev tester password (`DEV_TEST_PASSWORD`, the same
+ *  one dev-mask sets; given to testers out of band, never in the repo). Without it the guardian gets no login. */
+const fakeGuardianPassword = (): string | undefined => process.env.DEV_TEST_PASSWORD || undefined;
+
 const lateJoiner: Stage = {
   id: "C8", from: "2027-02-14", phase: "pre", tries: 0, done: false,
   async run(sim, dayKey) {
     const r = await admitChild(sim, dayKey, 2, "J1", "ফেক দেরিতে ভর্তি শিক্ষার্থী");
     if (!r) return true;
     sim.bump("lateJoiners");
-    record(sim, { id: "C8", title: "Late joiner", day: dayKey, status: "placed", produced: `admitted into ${r.sec.nameBn} (level ${r.sec.level}) through an enrolment dated ${dayKey}; no history before`, names: ["ফেক দেরিতে ভর্তি শিক্ষার্থী"], lookAt: "Roster, first weeks NOT_ASSESSED, catch-up" });
+    // The guardian side: a tagged guardian with a login, linked to the child (the createGuardian + linkGuardianToStudent rows).
+    const phone = `0199${String(sim.ctx.seed).replace(/\D/g, "").padStart(7, "0").slice(-7)}`;
+    let login = "no guardian login (the phone is already in use on this DB)";
+    const pw = fakeGuardianPassword();
+    const g = await sim.safe("joinerGuardian", async () => {
+      const passwordHash = pw ? await hashPassword(pw) : undefined;
+      return Guardian.create({ name: "ফেক অভিভাবক", identifierKind: "phone", identifier: phone, phone, ...(passwordHash ? { passwordHash } : {}), loginEnabled: !!passwordHash, active: true });
+    });
+    if (g) {
+      await GuardianLink.create({ guardianId: g._id, studentId: r.studentId, relation: "mother", active: true });
+      login = pw ? `guardian login: phone ${phone} (the shared dev test password)` : `guardian ${phone} has no login (DEV_TEST_PASSWORD not set)`;
+    }
+    // The attendance group: a classmate's Quran / Arabic group memberships (attendance of C1-5 is keyed to the Quran group, not the section)
+    const mates = (await Student.find({ sectionId: r.sec.sectionId, active: true, _id: { $ne: r.studentId } }).select("_id").lean()).map((m) => m._id);
+    const mems = await SubjectGroupMembership.find({ studentId: { $in: mates } }).lean();
+    const byMate = new Map<string, typeof mems>();
+    for (const m of mems) byMate.set(String(m.studentId), [...(byMate.get(String(m.studentId)) ?? []), m]);
+    const best = [...byMate.values()].sort((a, b) => b.length - a.length)[0] ?? [];
+    for (const m of best) await sim.safe("joinerGroup", () => SubjectGroupMembership.create({ groupId: m.groupId, studentId: r.studentId, track: m.track }));
+    record(sim, { id: "C8", title: "Late joiner", day: dayKey, status: g ? "placed" : "partly", produced: `admitted into ${r.sec.nameBn} (level ${r.sec.level}) through an enrolment dated ${dayKey}; ${best.length} attendance group membership(s) copied from a classmate; ${login}`, names: ["ফেক দেরিতে ভর্তি শিক্ষার্থী"], lookAt: "Roster, first weeks NOT_ASSESSED, catch-up; guardian app" });
     return true;
   },
 };
@@ -305,13 +344,17 @@ function outsideHelpStage(id: string, from: string, outcome: "GUARDIAN_DID" | "C
       if (!paper) return false;
       await saveResults(ct.paperId, [{ studentId: childId, items: paper.items.map((it) => ({ itemNo: it.itemNo, marks: 0 })) }], auth);
       await sim.safe("ohCtConfirm", () => confirmPaper(ct.paperId, auth));
-      const r = await sim.safe("ohRecompute", () => recomputeForPaper(paper._id as Types.ObjectId, paper.academicYearId as Types.ObjectId));
-      const open = await IntegrityCase.findOne({ studentId: childId, loCode: c.loCode, status: "OPEN" });
+      // The confirm's own hook opens the case (fire-and-forget): WAIT for it instead of racing it with a second recompute; only when
+      // it never shows up is the recompute run once, as the fallback.
+      let open = await settleCase(childId, c.loCode);
+      if (!open) {
+        await sim.safe("ohRecompute", () => recomputeForPaper(paper._id as Types.ObjectId, paper.academicYearId as Types.ObjectId));
+        open = await settleCase(childId, c.loCode, 3);
+      }
       let outcomeDone = false;
       if (open) {
         outcomeDone = !!(await sim.safe("ohOutcome", () => recordOutcome(String(open._id), outcome, "ডেভ ডেটা", { userId: auth.userId, role: "TEACHER", all: true })));
       }
-      void r; // the confirm's own hook may have opened the case first: count the case itself
       if (open) sim.bump("integrityCasesOpened");
       if (outcomeDone) sim.bump("integrityOutcomes");
       sim.outsideHelpChild.set(id, childId);

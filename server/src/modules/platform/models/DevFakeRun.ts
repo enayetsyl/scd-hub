@@ -32,6 +32,8 @@ export interface IDevFakeRun extends Document {
   events?: unknown;
   rates?: unknown;
   calendar?: unknown;
+  /** Run bookkeeping to put back (the guardian summary run log as it was before the run). */
+  bookkeeping?: { guardianRunBefore?: Array<{ key: string; lastRunAt: string }> };
   until?: string;
   error?: string;
   createdAt: Date;
@@ -56,6 +58,7 @@ const DevFakeRunSchema = new Schema<IDevFakeRun>(
     events: { type: Schema.Types.Mixed },
     rates: { type: Schema.Types.Mixed },
     calendar: { type: Schema.Types.Mixed },
+    bookkeeping: { type: Schema.Types.Mixed },
     until: { type: String },
     error: { type: String },
   },

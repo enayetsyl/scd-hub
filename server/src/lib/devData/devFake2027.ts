@@ -30,7 +30,8 @@ import { YearChangeRun } from "../../modules/year-change/models/YearChangeRun";
 import { setDevNotificationMute } from "../../modules/notifications/services/NotificationService";
 import { setDevClock } from "../devClock";
 import { dateKeyOf } from "../../modules/attendance/dates";
-import { seedDevCalendar, type CalendarResult } from "./term/calendar";
+import { adoptCalendar, DEV_EXAM, removeCalendarRows, seedDevCalendar, setExamWindow, type CalendarResult } from "./term/calendar";
+import { restoreGuardianRun, type GuardianRunRow } from "./term/bookkeeping";
 
 export const FAKE_CLASS_LEVELS = [-1, 0, 1, 2, 3, 4, 5];
 export const FAKE_WEEKS = 8;
@@ -161,15 +162,20 @@ function declaredRefs(scenarios: Scenario[]): ModelRef[] {
  * the ledger) gets no `createdAt` from mongoose, so a timestamp-only filter never saw those rows and `--remove` left them behind.
  * A model with no timestamp field (StoredFile) is matched by ObjectId time alone.
  */
-export async function tagRowsSince(models: string[], runId: string, since: Date): Promise<number> {
+export async function tagRowsSince(models: string[], runId: string, since: Date, until: Date = new Date()): Promise<number> {
   let n = 0;
+  // The window is [since, until] in REAL time. The dev API runs on the dev clock (2027), so a tester's rows carry 2027 timestamps /
+  // ObjectId times; the generator process has no global clock patch (only `appNow()` is faked), so `new Date()` here is the real clock.
+  // Bounding the top keeps every row dated after real "now" - a tester's, written on the dev clock - out of the run.
   const sinceId = Types.ObjectId.createFromTime(Math.floor(since.getTime() / 1000));
+  const untilId = Types.ObjectId.createFromTime(Math.floor(until.getTime() / 1000) + 1);
   for (const name of models) {
     const model = mongoose.model(name);
     const field = model.schema.path("createdAt") ? "createdAt" : model.schema.path("eventAt") ? "eventAt" : null;
+    const idWindow = { $gte: sinceId, $lt: untilId };
     const when: Record<string, unknown> = field
-      ? { $or: [{ [field]: { $gte: since } }, { [field]: { $exists: false }, _id: { $gte: sinceId } }] }
-      : { _id: { $gte: sinceId } };
+      ? { $or: [{ [field]: { $gte: since, $lte: until } }, { [field]: { $exists: false }, _id: idWindow }] }
+      : { _id: idWindow };
     const res = await model.collection.updateMany({ ...when, devFakeRun: { $exists: false } }, { $set: { devFakeRun: runId } });
     n += res.modifiedCount;
   }
@@ -193,11 +199,18 @@ export async function removeFakeRun(
   const residue: Record<string, number> = {};
   // the dev calendar (devCalendar rows) is configuration the testers rely on: kept unless `--remove-calendar`
   const filter = { devFakeRun: runId, ...(opts.calendar ? {} : { devCalendar: { $ne: true } }) };
+  // bookkeeping the run moved (the guardian run log) goes back to its pre-run value, whether the run finished or crashed
+  const before = (stored as unknown as { bookkeeping?: { guardianRunBefore?: GuardianRunRow[] } } | null)?.bookkeeping?.guardianRunBefore;
+  if (before) await restoreGuardianRun(before);
   for (const name of [...names].sort()) {
     const c = mongoose.model(name).collection;
     const res = await c.deleteMany(filter);
     removed[c.collectionName] = res.deletedCount;
     residue[c.collectionName] = await c.countDocuments(filter);
+  }
+  if (opts.calendar) {
+    // every calendar row, whatever run id it carries, and the dates the calendar wrote onto a real exam
+    for (const [k, n] of Object.entries(await removeCalendarRows())) removed[k] = (removed[k] ?? 0) + n;
   }
   const left = Object.entries(residue).filter(([, n]) => n > 0);
   if (left.length) throw new Error(`remove ${runId}: residue left in ${left.map(([k, n]) => `${k}=${n}`).join(", ")}`);
@@ -380,6 +393,9 @@ export async function runFake(opts: FakeOptions, scenarios: Scenario[] = SCENARI
     // enablement service itself, so its own rules apply; a pair it refuses is skipped.
     if (dateMode === "2027") await switchOnLockedPairs(String(year._id), switchedOn, log);
     // The dev calendar (section 2 of docs/dev-test-scenarios-2027.md) goes in first when a selected scenario reads it.
+    // every apply (a legacy run too) puts the calendar rows an earlier run left under THIS run's id, so `--remove-calendar` finds them
+    await adoptCalendar(runId);
+    setExamWindow(DEV_EXAM.startDateKey, DEV_EXAM.endDateKey);
     if (dateMode === "2027" && chosen.some((s) => s.needsCalendar)) {
       report.calendar = await seedDevCalendar({ runId, academicYearId: manifest.academicYearId, classes: classes.map((c) => ({ classId: String(c._id), level: c.level })), actorId: new Types.ObjectId().toString(), log });
       await DevFakeRun.updateOne({ runId }, { $set: { calendar: report.calendar } });
