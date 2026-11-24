@@ -42,6 +42,7 @@ import { personName } from "../../../lib/personName";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { approvalFlagCount, assertNoSubmitBlockers, submittedFlagCount } from "./ClassTestRecheckService";
 import { bnNum } from "../../../lib/bnNum";
+import { appNow } from "../../../lib/devClock";
 import { guardianObjectiveLabels, guardianObjectiveWord } from "./ClassTestWeakObjectiveService";
 
 // ---------------------------------------------------------------------------
@@ -287,7 +288,7 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
     // Stamp + bump each row, then deliver (body rendered once per student inside deliverResult).
     const doc = (await ClassTestResult.findByIdAndUpdate(
       row._id,
-      { $set: { publishedAt: new Date(), publishedSnapshot: snapshotOf(row) }, $inc: { publishedVersion: 1 } },
+      { $set: { publishedAt: appNow(), publishedSnapshot: snapshotOf(row) }, $inc: { publishedVersion: 1 } },
       { new: true },
     )) as IClassTestResult | null;
     if (!doc) continue;
@@ -310,7 +311,7 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
     },
   });
   // D-#945: children whose shown marks changed are the entrant's correction to explain.
-  await recordMarksCorrection({ testId, rows: corrections, actorId, at: new Date() });
+  await recordMarksCorrection({ testId, rows: corrections, actorId, at: appNow() });
 
   // CS-1 (D-#715): the first release starts the script clock (no-op on a re-publish).
   if (recipients.length > 0) await startScriptClock(testId);
@@ -438,7 +439,7 @@ export async function submitExam(
   // Enforced here, not only on the screen, so an older installed app cannot skip it.
   await assertNoSubmitBlockers(testId);
 
-  const submittedAt = new Date();
+  const submittedAt = appNow();
   const res = await ClassTestResult.updateMany(
     { testId: oid, publishedAt: null },
     {

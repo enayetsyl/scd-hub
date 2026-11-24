@@ -14,11 +14,15 @@ import { classTokenForLevel, confirmPaper, createPaper, type Auth, type PaperIte
 import { ctBlockedQids } from "../../../modules/assessment/services/QuestionUseService";
 import { createRequest } from "../../../modules/trackers/services/ClassTestService";
 import { enterResult } from "../../../modules/trackers/services/ClassTestResultService";
+import { approveExam, submitExam } from "../../../modules/trackers/services/ClassTestPublishService";
+import { confirmRecheck, recheckView } from "../../../modules/trackers/services/ClassTestRecheckService";
+import { recordLateClassTestMarks } from "../../../modules/trackers/services/ClassTestSummaryService";
+import { ClassTestResult } from "../../../modules/trackers/models/ClassTestResult";
 import { appNow } from "../../devClock";
 import { itemMarks } from "./personas";
 import { isPrepDay } from "./calendar";
 import { absentBySection, personaOf, saveRowsTolerant, successChance } from "./daily";
-import type { Sim, StockEntry } from "./state";
+import type { CtFlowItem, Sim, StockEntry } from "./state";
 import type { SectionInfo } from "../scenarios/types";
 
 let ctSeq = 0;
@@ -168,6 +172,7 @@ export async function oneClassTest(sim: Sim, sec: SectionInfo, subject: string, 
       tally.ctEarned += r.earned;
       tally.ctAvailable += r.available;
     }
+    await queueFlow(sim, testId, teacherId, dayKey);
     return { testId, paperId: paper.paperId };
   }
   // no sheet: the teacher enters each child's marks on the test itself
@@ -189,7 +194,77 @@ export async function oneClassTest(sim: Sim, sec: SectionInfo, subject: string, 
     }
   }
   void personaOf;
+  await queueFlow(sim, testId, teacherId, dayKey);
   return { testId };
+}
+
+/**
+ * The teacher's real "submit the results" step comes later than the entry (T1 the same day, T2 the late marker 2-5 school days
+ * after, the others 0-2) and the Office / Principal approve 1-3 school days after the submit. A test whose days fall after the
+ * run's last day stays pending, as in real life. Only tests with entered results are queued.
+ */
+async function queueFlow(sim: Sim, testId: string, teacherId: string, dayKey: string): Promise<void> {
+  if ((await ClassTestResult.countDocuments({ testId })) === 0) return;
+  const idx = sim.openDays.indexOf(dayKey);
+  if (idx < 0) return;
+  const persona = sim.teacherPersona.get(teacherId) ?? "T1";
+  const delay = persona === "T1" ? 0 : persona === "T2" ? 2 + Math.floor(sim.ctx.rng() * 4) : Math.floor(sim.ctx.rng() * 3);
+  const submitDay = sim.openDays[idx + delay];
+  if (!submitDay) return;
+  const publishDay = sim.openDays[idx + delay + 1 + Math.floor(sim.ctx.rng() * 3)] ?? "9999-12-31";
+  sim.ctFlow.push({ testId, teacherId, submitDay, publishDay, submitted: false, tries: 0 });
+}
+
+/** The teacher's "I checked the script again" ticks for every flagged mark of the test (the real confirmRecheck), before the submit. */
+async function tickFlaggedMarks(sim: Sim, testId: string, teacherId: string): Promise<void> {
+  const view = await recheckView(testId);
+  for (const row of view.rows) {
+    if (row.kinds.length === 0 || row.confirmed || row.classCovers) continue;
+    await confirmRecheck({ testId, studentId: row.studentId, confirmed: true, actorId: teacherId });
+    sim.bump("ctRechecksTicked");
+  }
+  if (view.classFlag && !view.classFlag.confirmed) {
+    await confirmRecheck({ testId, studentId: null, confirmed: true, actorId: teacherId });
+    sim.bump("ctRechecksTicked");
+  }
+}
+
+/**
+ * One school day of the class-test hand-off, after the day's tests were taken: the 08:00 overdue digest records the late marks
+ * (the real recordLateClassTestMarks, so the CT-marks-overdue signal is the service's), then each teacher whose day it is submits
+ * (submitExam) and the Office / Principal approve what is due (approveExam: the release to guardians). Dates come from the dev clock.
+ */
+export async function ctFlowDay(sim: Sim, dayKey: string): Promise<void> {
+  if (sim.ctFlow.some((f) => !f.submitted)) {
+    const n = await sim.safe("ctLateDigest", () => recordLateClassTestMarks(new Date(`${dayKey}T08:00:00+06:00`)));
+    if (typeof n === "number") sim.bump("ctLateRecorded", n);
+  }
+  for (const f of sim.ctFlow) {
+    if (f.submitted || f.submitDay > dayKey) continue;
+    f.tries++;
+    const done = await sim.safe("ctSubmit", async () => {
+      await tickFlaggedMarks(sim, f.testId, f.teacherId);
+      return submitExam(f.testId, f.teacherId, { scriptReminderAck: true });
+    });
+    if (done) {
+      f.submitted = true;
+      sim.bump("ctSubmitted");
+      if (f.submitDay < dayKey) sim.bump("ctSubmittedLate");
+    }
+  }
+  for (const f of sim.ctFlow) {
+    if (!f.submitted || f.publishDay > dayKey) continue;
+    const ok = await sim.safe("ctApprove", () => approveExam(f.testId, sim.principal.userId, { flagsReviewed: true }));
+    if (ok) {
+      sim.bump("ctPublished");
+      f.tries = -1; // done
+    } else f.tries = Math.max(f.tries, 1) + 1;
+  }
+  // finished (published) tests and the ones that keep being refused leave the queue
+  for (let i = sim.ctFlow.length - 1; i >= 0; i--) {
+    const f = sim.ctFlow[i] as CtFlowItem;
+    if (f.tries === -1 || f.tries > 4) sim.ctFlow.splice(i, 1);
+  }
 }
 
 /**

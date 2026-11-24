@@ -24,7 +24,7 @@ import { isExamDay } from "../term/calendar";
 import { Sim } from "../term/state";
 import { absentBySection, attendanceDay, guardianSummaryRun, homeworkDay, hwQueue, lessonsDay, markHomeworkDue, marksLadder, resetDailyState } from "../term/daily";
 import { asTracks, resetWeeklyState, weeklyDay } from "../term/weekly";
-import { classTestDay, cwDay, planClassTests, weekdayOf } from "../term/tests";
+import { classTestDay, ctFlowDay, cwDay, planClassTests, weekdayOf } from "../term/tests";
 import { leavesStartingOn, planLeaves } from "../term/staff";
 import { buildStages, closeStages, resetEventState, runStages } from "../term/events";
 import { buildReport, reportLines } from "../term/report";
@@ -156,6 +156,7 @@ async function runTerm(ctx: ScenarioCtx): Promise<Record<string, number>> {
         await sim.safe("cw", () => cwDay(sim, dayKey));
         await sim.safe("classTests", () => classTestDay(sim, dayKey));
       }
+      await sim.safe("ctFlow", () => ctFlowDay(sim, dayKey)); // the teachers' submit and the Office approval of the tests entered earlier
       await sim.safe("weekly", () => weeklyDay(sim, dayKey, runStart));
       await runStages(sim, stages, dayKey, "post");
       const weekday = weekdayOf(dayKey);
