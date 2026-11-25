@@ -17,6 +17,7 @@ import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
 import { codeTail, exerciseLines, useReviewAction } from "./masteryReviewUi";
+import { ExerciseQuestionPicker, exercisesInRefs } from "./ExerciseQuestionPicker";
 
 const isOut = (r: ReviewRow) => r.reviewState === "REJECTED" || !!r.mergedInto;
 
@@ -69,6 +70,7 @@ export function AddCard({ q, onDone, fixedParent }: { q: ReviewQueue; onDone: ()
       )}
       <Field label={STR.msRvLabel} value={label} onChangeText={setLabel} />
       <Field label={STR.msRvExercises} value={exercises} onChangeText={setExercises} multiline />
+      <ExerciseQuestionPicker q={q} pool={exercisesInRefs(exerciseLines(exercises), true)} value={exerciseLines(exercises)} onChange={(refs) => setExercises(refs.join("\n"))} />
       <Field label={STR.msRvAddReasonField} value={reason} onChangeText={setReason} />
       <Button
         title={STR.msRvSave}

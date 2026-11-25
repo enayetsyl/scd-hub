@@ -44,7 +44,8 @@ structure; those stay as the history and as a source Claude reuses (question typ
     "legacyCodes": ["LO-C1-MATH-07-02"],  // flat draft codes it replaces
     "claudeNote": "why the line is drawn here / which test it barely passed"
   }],
-  "coverage": { "exercisesTotal": 164, "mapped": 164, "unmapped": [{ "ref": "…", "text": "…", "reason": "…" }] },
+  "coverage": { "exercisesTotal": 164, "mapped": 164, "unmapped": [{ "ref": "…", "text": "…", "reason": "…" }],
+                "questionCounts": [{ "ref": "3/অনুশীলনী/8", "count": 6 }] },   // optional: only exercises cited by question
   "flags": [{ "code": null, "kind": "VERSION_DIFF", "text": "…" }],  // WORDING_RULE_CONFLICT | TOO_BROAD | DUPLICATE | VERSION_DIFF | OTHER
   "reviewerNotes": "## পর্যালোচকের নোট …"   // optional (C2 onward): the review sheet's "read first" block; the importer ignores it
 }
@@ -60,6 +61,11 @@ structure; those stay as the history and as a source Claude reuses (question typ
   Class 3 never "গাণিতিক বাক্য" (use "হিসাবটি"); from Class 4 it is allowed, as the books use it (D-#974).
 - **Prerequisites** point to the earlier step — inside the class first; cross-class when the class below is drafted.
 - **Coverage:** every numbered exercise maps to ≥ 1 tagged row; every tagged row cites ≥ 1 exercise.
+- **Question-level refs (D-#1685).** When only some questions of an exercise test a row, cite them one by one:
+  `"3/অনুশীলনী/8#3"` = question 3 (book order) of exercise 8. Any single exercise, numbered or lettered (`1/L2/B#2`, `4/x/4ক#1`) — no range, no list, no `—`.
+  Such an exercise is mapped only when **every** question is cited by some tagged row, never also whole by a
+  chapter row (a skill strand may still cite it whole); give its count in `coverage.questionCounts`. One question,
+  one tagged row. `mapped` counts the exercise once, however many of its questions are cited.
 
 ## Coverage
 | Class | BAN | ENG | MATH | BGS | SCI | ISLAM | ARABIC |

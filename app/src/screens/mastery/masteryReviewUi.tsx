@@ -15,7 +15,7 @@ import {
   type ReviewQueue,
   type ReviewThread,
 } from "../../graphql/masteryReview";
-import { practisedChapters } from "@scd/shared";
+import { groupExerciseRefs, parseExerciseRef, practisedChapters } from "@scd/shared";
 import { Body, Muted, Badge, Button, Field, Notice } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { fill } from "./masteryStateUi";
@@ -79,9 +79,12 @@ export const exerciseLines = (t: string): string[] =>
 /**
  * A stored exercise ref "<chapter>/<lesson>/<no>" as the reviewer reads it (same wording as the
  * Word review copy): "7/হাতে রাখি/2" → "অ.৭ · হাতে রাখি · অনুশীলনী ২"; "1/কম – বেশি/—" (a class
- * activity, no numbered exercise) → "অ.১ · কম – বেশি (শ্রেণির কাজ)". Anything else is shown as stored.
+ * activity, no numbered exercise) → "অ.১ · কম – বেশি (শ্রেণির কাজ)". A question ref (D-#1685)
+ * "3/অনুশীলনী/8#3" → "… · অনুশীলনী ৮: প্রশ্ন ৩". Anything else is shown as stored.
  */
 export function formatExerciseRef(ref: string): string {
+  const p = parseExerciseRef(ref);
+  if (p && p.question !== null) return `${formatExerciseRef(p.exercise)}: ${fill(STR.msRvRefQuestionsTpl, { list: bnNum(p.question) })}`;
   const parts = ref.split("/");
   if (parts.length < 3) return ref;
   const ch = parts[0].trim();
@@ -90,6 +93,17 @@ export function formatExerciseRef(ref: string): string {
   const chapter = /^\d+$/.test(ch) ? fill(STR.msRvRefChapterShort, { n: bnNum(ch) }) : ch;
   const tail = !no || no === "—" ? ` (${STR.msRvRefActivity})` : ` · ${fill(STR.msRvRefExercise, { n: /^\d+$/.test(no) ? bnNum(no) : no })}`;
   return `${chapter} · ${lesson}${tail}`;
+}
+
+/**
+ * A row's refs for a card, one line per exercise (D-#1685): questions of one exercise are grouped —
+ * ["…/8#1", "…/8#3", "…/8#4"] → "… · অনুশীলনী ৮: প্রশ্ন ১, ৩, ৪".
+ */
+export function formatExerciseRefs(refs: readonly string[]): string[] {
+  return groupExerciseRefs(refs).flatMap((g) => [
+    ...(g.whole ? [formatExerciseRef(g.exercise)] : []),
+    ...(g.questions.length ? [`${formatExerciseRef(g.exercise)}: ${fill(STR.msRvRefQuestionsTpl, { list: g.questions.map((n) => bnNum(n)).join(", ") })}`] : []),
+  ]);
 }
 
 /** "অধ্যায় ২, ৫, ৭" — where a row is practised, derived from its exercise refs (null when none is numbered). */

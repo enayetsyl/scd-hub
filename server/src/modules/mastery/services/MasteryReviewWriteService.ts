@@ -12,10 +12,13 @@
  *                           Principal + assigned reviewers on COMMENT and REPLY)
  *   resolveUnmapped       — map an unmapped exercise to a row, or "not assessed this year"
  *                           with a reason (RESOLVE), or reopen it (REOPEN)
+ *   setQuestionCount      — how many questions an exercise has, so it can be cited question by
+ *                           question ("3/অনুশীলনী/8#3", D-#1685); the lock gate needs each one cited
  *   submitReview          — reviewer: OPEN → SUBMITTED
  *   reopenReview          — SUBMITTED → OPEN (REOPEN event, round-level)
  *   lockReview            — Principal, behind the gate: no open comment, no unresolved
- *                           unmapped exercise, every REVIEW-mode invariant holds
+ *                           unmapped exercise, every exercise cited by question fully cited,
+ *                           every REVIEW-mode invariant holds
  *   exportReview          — the decisions export (every event, in order, before/after)
  *
  * Rules every write follows:
@@ -36,7 +39,14 @@ import {
   HW_SUBJECT_LABELS_BN,
   MASTERY_CLASS_TOKENS,
   checkTreeInvariants,
+  collapseExerciseRefs,
+  expandExerciseRef,
+  questionRef,
   formatTreeViolation,
+  isSplittableExerciseRef,
+  normaliseExerciseRef,
+  parseExerciseRef,
+  questionCoverageGaps,
   parseMasteryLoCode,
   masteryPartnerSubject,
   type MasteryClassToken,
@@ -123,6 +133,10 @@ function assertWriter(r: IMasteryCatalogueReview, caller: ReviewCaller, states: 
 // ---------------------------------------------------------------------------
 
 type Row = IMasteryOutcome;
+type QuestionCount = { ref: string; count: number };
+
+/** A round's question counts (D-#1685): exercise ref → how many questions it has. */
+const questionCountsOf = (r: IMasteryCatalogueReview): QuestionCount[] => (r.coverage?.questionCounts ?? []).map((c) => ({ ref: c.ref, count: c.count }));
 
 const isLive = (r: Row) => r.status !== "RETIRED" && r.reviewState !== "REJECTED" && !r.mergedInto;
 const exercisesOf = (r: Row) => outcomeBookRef(r).exercises;
@@ -226,10 +240,11 @@ class WorkSet {
     this.sets.set(code, { ...(this.sets.get(code) ?? {}), ...fields });
   }
 
+  /** Every write of a row's refs goes through here: a question of an exercise the row also cites whole is folded in (D-#1685). */
   setExercises(code: string, exercises: string[]): void {
     const r = this.get(code);
     const b = outcomeBookRef(r);
-    const bookRef: MasteryBookRef = { version: b.version, chapter: b.chapter, lesson: b.lesson ?? null, exercises };
+    const bookRef: MasteryBookRef = { version: b.version, chapter: b.chapter, lesson: b.lesson ?? null, exercises: collapseExerciseRefs(exercises) };
     this.patch(code, { bookRef });
   }
 
@@ -302,6 +317,11 @@ class WorkSet {
       mode: "REVIEW",
       externalCodes: this.ctx.externalCodes,
     }).map(formatTreeViolation);
+  }
+
+  /** Exercises cited question by question that are not fully cited (D-#1685), "<ref>: <detail>". */
+  questionGaps(counts: QuestionCount[]): string[] {
+    return questionCoverageGaps(this.live().map(nodeOf), counts).map((g) => `${g.exercise}: ${g.detail}`);
   }
 
   /** Refuse the write if it would ADD a broken rule — the rule is named. */
@@ -533,6 +553,10 @@ export interface ReviewQueueView {
   rows: ReviewRowView[];
   threads: ReviewThreadView[];
   unmapped: ReviewUnmappedView[];
+  /** D-#1685: how many questions an exercise has (set once it is cited question by question). */
+  questionCounts: QuestionCount[];
+  /** D-#1685: exercises cited by question with a question not cited (or no count) — blocks the lock. */
+  questionGaps: string[];
   flags: { code: string | null; kind: string; text: string; ownerRuling: string | null }[];
   seen: number;
   total: number;
@@ -547,6 +571,8 @@ export interface ReviewQueueView {
   canReopen: boolean;
   canAssign: boolean;
   canLock: boolean;
+  /** D-#1685: the Principal may narrow a LOCKED row's exercise to some of its questions. */
+  canNarrowLocked: boolean;
   eventCount: number;
 }
 
@@ -689,6 +715,8 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
   const openComments = threads.filter((t) => t.open).length;
   const unresolvedUnmapped = unresolvedCount(r);
   const violations = ws.violations();
+  const questionCounts = questionCountsOf(r);
+  const questionGaps = ws.questionGaps(questionCounts);
   return {
     id: String(r._id),
     classToken: r.classToken,
@@ -742,6 +770,8 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
       resolution: u.resolution ?? null,
       resolvedCode: u.resolvedCode ?? null,
     })),
+    questionCounts,
+    questionGaps,
     flags: (r.flags ?? []).map((f) => ({ code: f.code ?? null, kind: f.kind, text: f.text, ownerRuling: f.ownerRuling ?? null })),
     seen: decided.filter((o) => o.status === "DRAFT" && o.reviewState !== "PROPOSED").length,
     total: decided.filter((o) => o.status === "DRAFT").length,
@@ -755,7 +785,8 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
     canSubmit: writer && r.state === "OPEN",
     canReopen: writer && r.state === "SUBMITTED",
     canAssign: caller.canSettings && (r.state === "OPEN" || r.state === "SUBMITTED"),
-    canLock: caller.canSettings && r.state === "SUBMITTED" && openComments === 0 && unresolvedUnmapped === 0 && violations.length === 0,
+    canLock: caller.canSettings && r.state === "SUBMITTED" && openComments === 0 && unresolvedUnmapped === 0 && violations.length === 0 && questionGaps.length === 0,
+    canNarrowLocked: caller.canSettings,
     eventCount: events.length,
   };
 }
@@ -872,14 +903,24 @@ const cleanList = (xs: string[] | null | undefined) => [...new Set((xs ?? []).ma
  * the box on commas too, shredding "12/জোড়া, হালি, ডজন/1" into "12/জোড়া", "হালি", "ডজন/1" — a part
  * without two non-empty slashes is refused rather than saved.
  */
-export function exerciseRefs(xs: string[] | null | undefined): string[] {
+export function exerciseRefs(xs: string[] | null | undefined, counts: QuestionCount[] = []): string[] {
   const list = cleanList(xs);
   const bad = list.filter((x) => {
     const parts = x.split("/");
     return parts.length < 3 || parts.some((p) => !p.trim());
   });
   if (bad.length > 0) fail(`অনুশীলনী লিখুন "অধ্যায়/পাঠ/নম্বর" রূপে, প্রতি লাইনে একটি। ঠিক নেই: ${bad.join(" · ")}`);
-  return list;
+  // A question of an exercise (D-#1685): "<chapter>/<lesson>/<no>#<q>", q counted in book order.
+  const badQ = list.filter((x) => !parseExerciseRef(x));
+  if (badQ.length > 0) fail(`একটি প্রশ্ন লিখুন "অধ্যায়/পাঠ/নম্বর#প্রশ্ন" রূপে (যেমন 3/অনুশীলনী/8#3), একটি অনুশীলনীতেই (পরিসর বা শ্রেণির কাজে নয়)। ঠিক নেই: ${badQ.join(" · ")}`);
+  const out = collapseExerciseRefs(cleanList(list.map(normaliseExerciseRef)));
+  const countOf = new Map(counts.map((c) => [c.ref, c.count]));
+  for (const x of out) {
+    const p = parseExerciseRef(x);
+    const n = p?.question != null ? countOf.get(p.exercise) : undefined;
+    if (p && p.question !== null && n !== undefined && p.question > n) fail(`${p.exercise}-এ প্রশ্ন ${bn(n)}টি — প্রশ্ন ${bn(p.question)} নেই।`);
+  }
+  return out;
 }
 
 function checkAssess(a: string | null | undefined): "QUESTION" | "RUBRIC" {
@@ -978,7 +1019,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       }
       let exercisesChanged = false;
       if (input.exercises) {
-        const x = exerciseRefs(input.exercises);
+        const x = exerciseRefs(input.exercises, questionCountsOf(r));
         if (JSON.stringify(x) !== JSON.stringify(exercisesOf(row))) {
           ws.setExercises(row.code, x);
           exercisesChanged = true;
@@ -1006,7 +1047,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
         const label = k.labelBn.trim();
         if (!label) fail("প্রতিটি ভাগের লেবেল লিখুন।");
         const code = ws.nextSubCode(row.code);
-        const exercises = exerciseRefs(k.exercises);
+        const exercises = exerciseRefs(k.exercises, questionCountsOf(r));
         const assess = k.assess ? checkAssess(k.assess) : row.assess;
         const qts = k.questionTypeCodes && k.questionTypeCodes.length ? checkQts(ws, cleanList(k.questionTypeCodes)) : [...(row.questionTypeCodes ?? [])];
         ws.create({
@@ -1253,7 +1294,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       const parentRow = level === "SUB" ? ws.liveDraft(input.parentCode) : null;
       const assess = input.assess ? checkAssess(input.assess) : (parentRow?.assess ?? "QUESTION");
       const qts = given.length > 0 || input.assess ? given : [...(parentRow?.questionTypeCodes ?? [])];
-      let exercises = exerciseRefs(input.exercises);
+      let exercises = exerciseRefs(input.exercises, questionCountsOf(r));
       const reason = trimOrNull(input.reason);
       if (exercises.length === 0 && !reason) fail("বইয়ের অনুশীলনী (যেমন 7/হাতে রাখি/2) বা নতুন যোগের কারণ লিখুন।");
       let code: string;
@@ -1474,6 +1515,147 @@ export async function resolveUnmapped(
 }
 
 // ---------------------------------------------------------------------------
+// Question counts (D-#1685)
+// ---------------------------------------------------------------------------
+
+/**
+ * Set (or clear, count null) how many questions an exercise has, so rows can cite it question by
+ * question. Refused below a question a row already cites, and cleared only when no row cites one.
+ * One EDIT event (code null) records the change.
+ */
+export async function setQuestionCount(reviewId: string, input: { ref: string; count?: number | null }, caller: ReviewCaller): Promise<void> {
+  const r = await loadRound(reviewId);
+  assertWriter(r, caller, ["OPEN"]);
+  const ref = normaliseExerciseRef(input.ref ?? "");
+  if (!isSplittableExerciseRef(ref)) fail(`প্রশ্ন গোনা যায় একটি অনুশীলনীতেই, পরিসর বা শ্রেণির কাজে নয় (যেমন 3/অনুশীলনী/8 বা 1/L2/B)। ঠিক নেই: ${ref || "—"}`);
+  const count = input.count ?? null;
+  if (count !== null && (!Number.isInteger(count) || count < 1 || count > 99)) fail("প্রশ্নসংখ্যা ১ থেকে ৯৯।");
+  const ws = await loadPair(r.classToken, r.subject);
+  const cited = ws
+    .live()
+    .flatMap((o) => exercisesOf(o))
+    .map((x) => parseExerciseRef(x))
+    .filter((p): p is { exercise: string; question: number } => !!p && p.exercise === ref && p.question !== null)
+    .map((p) => p.question);
+  const top = cited.length ? Math.max(...cited) : 0;
+  if (count === null && top > 0) fail(`${ref}-এর প্রশ্ন সারিতে মেলানো আছে — প্রশ্নসংখ্যা মোছা যায় না।`);
+  if (count !== null && count < top) fail(`${ref}-এর প্রশ্ন ${bn(top)} একটি সারিতে মেলানো — প্রশ্নসংখ্যা অন্তত ${bn(top)}।`);
+  const old = questionCountsOf(r);
+  const prev = old.find((c) => c.ref === ref)?.count ?? null;
+  if (prev === count) return;
+  // Guarded, element-level writes: the update only applies if the count is still what this caller
+  // read, so two reviewers never overwrite each other's counts (or the whole list).
+  const res =
+    prev === null
+      ? await MasteryCatalogueReview.updateOne(
+          { _id: r._id, state: "OPEN", "coverage.questionCounts.ref": { $ne: ref } },
+          { $push: { "coverage.questionCounts": { ref, count } } },
+        )
+      : count === null
+        ? await MasteryCatalogueReview.updateOne(
+            { _id: r._id, state: "OPEN", "coverage.questionCounts": { $elemMatch: { ref, count: prev } } },
+            { $pull: { "coverage.questionCounts": { ref } } },
+          )
+        : await MasteryCatalogueReview.updateOne(
+            { _id: r._id, state: "OPEN", "coverage.questionCounts": { $elemMatch: { ref, count: prev } } },
+            { $set: { "coverage.questionCounts.$[e].count": count } },
+            { arrayFilters: [{ "e.ref": ref }] },
+          );
+  if (res.modifiedCount !== 1) fail("এই প্রশ্নসংখ্যা এইমাত্র অন্য কেউ বদলেছেন — পাতা নতুন করে খুলে আবার দেখুন।");
+  await appendReviewEvents([{ reviewId: r._id, code: null, action: "EDIT", before: { exerciseRef: ref, questionCount: prev }, after: { exerciseRef: ref, questionCount: count } }], caller);
+}
+
+export interface NarrowResult {
+  code: string;
+  exercises: string[];
+  /** Exercises of the pair cited by question and not yet fully covered — the next round's lock needs them covered. */
+  questionGaps: string[];
+}
+
+/**
+ * D-#1685: narrow a LOCKED row's citation of ONE exercise to some of its questions — Principal only
+ * (mastery:settings). The row must cite the exercise whole today (directly or inside a range); the
+ * new questions are a proper subset of the exercise's questions. Narrowing only: never widens, never
+ * adds an exercise. Re-checks the invariants across the pair (a new QUESTION_ONE_CODE / QUESTION_REF
+ * violation refuses it). Coverage gaps it leaves (the questions it gave up) are returned, not refused:
+ * they are what the next round fills (e.g. a new objective), and that round's lock refuses them.
+ * The question count is recorded on the pair's latest round (carried into the next one by the import).
+ */
+export async function narrowLockedCitation(
+  input: { code: string; exercise: string; questions: number[]; questionCount: number },
+  caller: ReviewCaller,
+): Promise<NarrowResult> {
+  if (!caller.canSettings) fail("শুধু অধ্যক্ষ (শিখন-দক্ষতার সেটিংস) চূড়ান্ত সারির অনুশীলনী বদলাতে পারেন।");
+  const exercise = normaliseExerciseRef(input.exercise ?? "");
+  if (!isSplittableExerciseRef(exercise)) fail(`একটি অনুশীলনী লিখুন, পরিসর বা শ্রেণির কাজ নয় (যেমন 3/অনুশীলনী/8)। ঠিক নেই: ${exercise || "—"}`);
+  const count = input.questionCount;
+  if (!Number.isInteger(count) || count < 2 || count > 99) fail("প্রশ্নসংখ্যা ২ থেকে ৯৯।");
+  const questions = [...new Set(input.questions ?? [])].sort((a, b) => a - b);
+  if (questions.length === 0) fail("অন্তত একটি প্রশ্ন বাছুন।");
+  if (questions.some((n) => !Number.isInteger(n) || n < 1 || n > count)) fail(`প্রশ্ন ১ থেকে ${bn(count)} এর মধ্যে।`);
+  if (questions.length >= count) fail("সব প্রশ্ন রাখলে কিছুই সীমিত হয় না — পুরো অনুশীলনীই থাকুক।");
+
+  const row = await MasteryOutcome.findOne({ code: input.code }).lean<Row>();
+  if (!row) return fail(`সারিটি পাওয়া যায়নি: ${input.code ?? "—"}`);
+  if (row.status !== "LOCKED") fail(`${row.code} চূড়ান্ত নয় — খসড়া সারি পর্যালোচনায় বদলান।`);
+  if (treeShapeOf(row).tagged === false) fail(`${row.code} শুধু দলবদ্ধ সারি — অনুশীলনী তার ভাগে থাকে।`);
+  const latest = await MasteryCatalogueReview.findOne({ classToken: row.classToken, subject: row.subject, state: { $ne: "SUPERSEDED" } })
+    .sort({ round: -1 })
+    .lean<IMasteryCatalogueReview>();
+  if (!latest) fail("এই শ্রেণি-বিষয়ের কোনো পর্যালোচনা রাউন্ড নেই।");
+  const round = latest as IMasteryCatalogueReview;
+  const known = questionCountsOf(round).find((c) => c.ref === exercise)?.count;
+  if (known !== undefined && known !== count) fail(`${exercise}-এ আগে ${bn(known)}টি প্রশ্ন লেখা আছে — সেই সংখ্যাই দিন।`);
+
+  // The row's refs with the exercise taken out of whatever cites it whole, and the questions put in its place.
+  const old = outcomeBookRef(row).exercises;
+  let at = -1;
+  const next: string[] = [];
+  for (const ref of old) {
+    const p = parseExerciseRef(ref);
+    const parts = p && p.question === null ? expandExerciseRef(p.exercise) : [];
+    if (at < 0 && parts.includes(exercise)) {
+      at = next.length;
+      // A range keeps its other exercises as single refs.
+      for (const x of parts) if (x !== exercise) next.push(x);
+      continue;
+    }
+    next.push(ref);
+  }
+  if (at < 0) fail(`${row.code} ${exercise} পুরোটা উদ্ধৃত করে না — শুধু পুরো অনুশীলনীকেই সীমিত করা যায়।`);
+  next.splice(at, 0, ...questions.map((n) => questionRef(exercise, n)));
+
+  const ws = await loadPair(row.classToken, row.subject);
+  ws.setExercises(row.code, next);
+  const written = exercisesOf(ws.get(row.code));
+  if (!written.some((x) => parseExerciseRef(x)?.exercise === exercise && parseExerciseRef(x)?.question != null)) {
+    fail(`${row.code} ${exercise} আরেক জায়গায়ও পুরোটা উদ্ধৃত করে — সেটি আগে ঠিক করুন।`);
+  }
+  ws.assertSound();
+  const res = await MasteryOutcome.updateOne(
+    { code: row.code, status: "LOCKED", "bookRef.exercises": old },
+    { $set: { "bookRef.exercises": written } },
+  );
+  if (res.modifiedCount !== 1) fail(`${row.code} এইমাত্র বদলেছে — পাতা নতুন করে খুলে আবার চেষ্টা করুন।`);
+  if (known === undefined) {
+    await MasteryCatalogueReview.updateOne(
+      { _id: round._id, "coverage.questionCounts.ref": { $ne: exercise } },
+      { $push: { "coverage.questionCounts": { ref: exercise, count } } },
+    );
+  }
+  const counts = known === undefined ? [...questionCountsOf(round), { ref: exercise, count }] : questionCountsOf(round);
+  void writeAudit({
+    eventKind: "MASTERY_OUTCOME_CITATION_NARROWED",
+    actorId: caller.userId,
+    actorRole: caller.role,
+    targetKind: "MasteryOutcome",
+    targetId: row._id,
+    meta: { code: row.code, exercise, questionCount: count, before: old, after: written, round: round.round },
+  });
+  return { code: row.code, exercises: written, questionGaps: ws.questionGaps(counts) };
+}
+
+// ---------------------------------------------------------------------------
 // Submit / reopen / lock
 // ---------------------------------------------------------------------------
 
@@ -1512,10 +1694,12 @@ export interface LockResult {
 }
 
 /** The lock gate (§7, §10 item 4) — every reason it is refused, in Bangla. */
-export function lockGateRefusals(openComments: number, unresolvedUnmapped: number, violations: string[]): string[] {
+export function lockGateRefusals(openComments: number, unresolvedUnmapped: number, violations: string[], questionGaps: string[] = []): string[] {
   const out: string[] = [];
   if (openComments > 0) out.push(`${bn(openComments)}টি মন্তব্য এখনো খোলা — মীমাংসা করুন।`);
   if (unresolvedUnmapped > 0) out.push(`${bn(unresolvedUnmapped)}টি অনুশীলনী এখনো মেলানো বাকি।`);
+  // D-#1685: an exercise cited question by question is mapped only when every question is cited.
+  if (questionGaps.length > 0) out.push(`প্রশ্ন ধরে মেলানো অনুশীলনীর সব প্রশ্ন মেলেনি:\n${questionGaps.slice(0, 8).join("\n")}`);
   if (violations.length > 0) out.push(`বৃক্ষের নিয়ম ভেঙেছে:\n${violations.slice(0, 8).join("\n")}`);
   return out;
 }
@@ -1529,7 +1713,7 @@ export async function lockReview(reviewId: string, caller: ReviewCaller): Promis
     MasteryReviewEvent.find({ reviewId: r._id, action: { $in: ["COMMENT", "RESOLVE", "REOPEN"] } }).sort({ at: 1, _id: 1 }).lean<IMasteryReviewEvent[]>(),
   ]);
   const open = threadsOf(events, new Map()).filter((t) => t.open).length;
-  const refusals = lockGateRefusals(open, unresolvedCount(r), ws.violations());
+  const refusals = lockGateRefusals(open, unresolvedCount(r), ws.violations(), ws.questionGaps(questionCountsOf(r)));
   if (refusals.length > 0) fail(`চূড়ান্ত করা যাচ্ছে না:\n${refusals.join("\n")}`);
 
   const now = new Date();
@@ -1578,6 +1762,8 @@ export async function exportReview(classToken: MasteryClassToken, subject: Maste
     reviewers: (rr.reviewerIds ?? []).map((id) => names.get(String(id)) ?? String(id)),
     decisions: decisionCounts(roundRows(rows, rr), events),
     unmapped: (rr.coverage?.unmapped ?? []).map((u) => ({ ref: u.ref, reason: u.reason, resolution: u.resolution ?? null })),
+    // D-#1685: refs in the events may cite one question ("3/অনুশীলনী/8#3"); these are the counts.
+    questionCounts: questionCountsOf(rr),
     events: events.map((e, i) => ({
       seq: i + 1,
       id: String(e._id),

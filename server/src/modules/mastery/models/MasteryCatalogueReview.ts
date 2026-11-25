@@ -45,7 +45,9 @@ export interface IMasteryCatalogueReview extends Document {
   assignedBy?: Types.ObjectId;
   assignedAt?: Date;
   state: MasteryReviewRoundState;
-  coverage: { exercisesTotal: number; mapped: number; unmapped: ReviewUnmapped[] };
+  /** questionCounts (D-#1685): how many questions an exercise has, once it is cited question by question
+   *  ("3/অনুশীলনী/8#3") — from the tree file or set by the reviewer; the lock gate needs every one cited. */
+  coverage: { exercisesTotal: number; mapped: number; unmapped: ReviewUnmapped[]; questionCounts?: { ref: string; count: number }[] };
   flags: ReviewFlag[];
   /** The source block of the imported file (book, files, readOn) — traceability. */
   source?: { book?: string | null; files?: string[]; readOn?: string | null };
@@ -87,6 +89,7 @@ const MasteryCatalogueReviewSchema = new Schema<IMasteryCatalogueReview>(
       exercisesTotal: { type: Number, required: true, default: 0 },
       mapped: { type: Number, required: true, default: 0 },
       unmapped: { type: [UnmappedSchema], default: [] },
+      questionCounts: { type: [new Schema({ ref: { type: String, required: true }, count: { type: Number, required: true, min: 1, max: 99 } }, { _id: false })], default: [] },
     },
     flags: { type: [FlagSchema], default: [] },
     source: { type: Schema.Types.Mixed },

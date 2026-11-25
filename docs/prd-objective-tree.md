@@ -111,9 +111,29 @@ Invariants (enforced on import and on every review write): a SUB's parent exists
 `tagged:false`; an OBJECTIVE with children has `tagged:false`, without children `tagged:true`; no objective has
 exactly one non-rejected child; codes match `MASTERY_LO_CODE_RE`; every `prereqCodes`/`domainCode` resolves.
 
+**Question-level refs (D-#1685).** An exercise ref is `<chapter>/<lesson>/<n>` (n = the exercise's number under
+that lesson heading; `…/<a>–<b>` a range, `…/—` an unnumbered activity). A row may instead cite **one question**
+of a single exercise (numbered or lettered: `8`, `B`, `Q1`, `4ক`): `<chapter>/<lesson>/<n>#<q>`, q = 1..99 in book order (e.g. `3/অনুশীলনী/8#3`). Rules
+(shared `checkTreeInvariants` / `questionCoverageGaps`): `QUESTION_REF` — `#q` only on one exercise (not a range, a list or `—`);
+`QUESTION_ONE_CODE` — one question is cited by at most one tagged row (D-#776). An exercise is **mapped** when it
+is cited whole, or every one of its questions is cited by some tagged row — never both ways by chapter rows (a
+skill-strand row may still cite it whole). That needs the exercise's question count: `coverage.questionCounts
+[{ref, count}]` on the tree file and on the round (the reviewer sets it in the app). A gap does not refuse a
+review write (so a reviewer can convert rows one at a time); it refuses the lock and FILE-mode `COVERAGE`.
+A range cited whole counts as each exercise in it. Every write of a row's refs folds a question into the row's
+own whole citation of the same exercise (`collapseExerciseRefs`), so undoing a split never leaves a row mixed
+with itself. Whole-exercise refs are unchanged; no migration.
+
+**Narrowing a LOCKED row (D-#1685).** `narrowLockedMasteryCitation(code, exercise, questions, questionCount)`,
+`mastery:settings` only: replaces a LOCKED tagged row's whole citation of one exercise (directly or inside a range)
+with a proper subset of its questions. Narrowing only — never widens, never adds an exercise. Re-checks the pair's
+invariants (a new QUESTION_ONE_CODE refuses it), records the count on the pair's latest round, writes audit
+`MASTERY_OUTCOME_CITATION_NARROWED`, and returns the gaps it leaves: the next round (e.g. a new objective citing
+the given-up questions) cannot lock until they are covered. Button on the row page of a LOCKED round.
+
 **`MasteryCatalogueReview`** (new, one per class × subject × draft round) `{classToken, subject, round,
 reviewerIds[], assignedBy, assignedAt, state: OPEN|SUBMITTED|LOCKED|SUPERSEDED, coverage: {exercisesTotal,
-mapped, unmapped[{ref,text,reason, resolution?}]}, flags[], submittedAt?, lockedAt?, lockedBy?}`.
+mapped, unmapped[{ref,text,reason, resolution?}], questionCounts[{ref,count}]}, flags[], submittedAt?, lockedAt?, lockedBy?}`.
 
 **`MasteryReviewEvent`** (new, **append-only**, also `writeAudit`) `{reviewId, code|null, action: ACCEPT|EDIT|
 SPLIT|MERGE|REJECT|ADD|MOVE|COMMENT|REPLY|RESOLVE|REOPEN|BULK_ACCEPT, before?, after?, comment?, by, at}`.
@@ -166,8 +186,12 @@ new rows enter a new round as PROPOSED; nothing locked moves.
   are notified.
 - **Unmapped exercises** from the coverage list appear as rows to resolve: map to a row, or "not assessed this
   year" with a reason.
+- **Question picker (D-#1685).** In সম্পাদনা / ভাগ করুন / নতুন যোগ, each single exercise offers **প্রশ্ন বাছুন**:
+  set its question count once (`masteryReviewSetQuestionCount`, one EDIT event, code null), then tick questions;
+  the card reads "অনুশীলনী ৮: প্রশ্ন ১, ৩, ৪". A question another row holds shows that row's code.
 - **Submit → lock** (mock 4). Reviewer submits; the Principal sees decision counts and locks. **Gate:** no open
-  comments, no unresolved unmapped exercise, every invariant holds. Lock sets `status: LOCKED` on every
+  comments, no unresolved unmapped exercise, no exercise cited by question with a question left uncited
+  (`questionGaps`, D-#1685), every invariant holds. Lock sets `status: LOCKED` on every
   non-rejected row and on the subject's domains; codes become permanent (prd-mastery rule).
 - **Decisions export (feedback for Claude).** `masteryReviewExport(classToken, subject, round)` → JSON of every
   event with before/after; the owner (or a session) saves it as `docs/mastery/objective-tree/feedback/

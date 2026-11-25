@@ -264,7 +264,7 @@ export interface ImportReport {
 export interface TreeImportPreview {
   format: string;
   counts: { domains: number; objectives: number; subs: number; strands: number; tagged: number; grouping: number };
-  coverage: { exercisesTotal: number; mapped: number; unmapped: { ref: string; text: string; reason: string }[]; note: string | null };
+  coverage: { exercisesTotal: number; mapped: number; unmapped: { ref: string; text: string; reason: string }[]; note: string | null; questionCounts?: { ref: string; count: number }[] };
   flags: { code: string | null; kind: string; text: string; ownerRuling: string | null }[];
   domains: { added: string[]; changed: string[]; unchanged: number };
   round: { action: string; round: number | null };
@@ -651,7 +651,8 @@ async function importTree(raw: unknown, domainsJson: string | null, apply: boole
     JSON.stringify((latest.coverage?.unmapped ?? []).map((u) => [u.ref, u.text, u.reason])) ===
       JSON.stringify(tree.coverage.unmapped.map((u) => [u.ref, u.text, u.reason])) &&
     JSON.stringify((latest.flags ?? []).map((f) => [f.code ?? null, f.kind, f.text, f.ownerRuling ?? null])) ===
-      JSON.stringify(tree.flags.map((f) => [f.code, f.kind, f.text, f.ownerRuling]));
+      JSON.stringify(tree.flags.map((f) => [f.code, f.kind, f.text, f.ownerRuling])) &&
+    tree.coverage.questionCounts.every((c) => (latest.coverage?.questionCounts ?? []).some((l) => l.ref === c.ref && l.count === c.count));
   preview.noop =
     plan.noop &&
     preview.domains.added.length === 0 &&
@@ -687,8 +688,14 @@ async function importTree(raw: unknown, domainsJson: string | null, apply: boole
 
   // The round: redraft the open one in place, or open the next.
   let reviewId: Types.ObjectId | null = null;
+  // Question counts (D-#1685): the file's win; a count the reviewer set in the app and the file
+  // does not name is kept (a redraft or a new round must not lose it).
+  const questionCounts = [
+    ...tree.coverage.questionCounts,
+    ...(latest?.coverage?.questionCounts ?? []).filter((l) => !tree.coverage.questionCounts.some((c) => c.ref === l.ref)).map((l) => ({ ref: l.ref, count: l.count })),
+  ];
   const roundFields = {
-    coverage: tree.coverage,
+    coverage: { ...tree.coverage, questionCounts },
     flags: tree.flags.map((f) => ({ code: f.code, kind: f.kind, text: f.text, ownerRuling: f.ownerRuling, ruledOn: f.ruledOn })),
     source: tree.source,
     importedAt: now,

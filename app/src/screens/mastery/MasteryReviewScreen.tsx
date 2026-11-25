@@ -33,7 +33,7 @@ import {
   ReviewThreads,
   TapText,
   codeTail,
-  formatExerciseRef,
+  formatExerciseRefs,
   reviewStateLabel,
   reviewStateTone,
   roundStateLabel,
@@ -137,7 +137,7 @@ function RowLine({
           )}
           <Muted>
             {codeTail(r.code)}
-            {r.bookRef.exercises.length ? ` · ${r.bookRef.exercises.slice(0, 3).map(formatExerciseRef).join("; ")}${r.bookRef.exercises.length > 3 ? " …" : ""}` : ""}
+            {r.bookRef.exercises.length ? ` · ${formatExerciseRefs(r.bookRef.exercises).slice(0, 3).join("; ")}${formatExerciseRefs(r.bookRef.exercises).length > 3 ? " …" : ""}` : ""}
             {r.strand && practisedLabel(r.bookRef.exercises) ? ` · ${practisedLabel(r.bookRef.exercises)}` : ""}
           </Muted>
         </View>
@@ -331,6 +331,7 @@ export default function MasteryReviewScreen({ navigation, route }: Props): React
 
       {q.canAssign ? <AssignCard key={q.reviewers.map((r) => r.id).join(",")} q={q} /> : null}
       {q.violations.length > 0 ? <Notice message={`${STR.msTreeViolations}:\n• ${q.violations.slice(0, 12).join("\n• ")}`} tone="danger" /> : null}
+      {(q.questionGaps ?? []).length > 0 ? <Notice message={`${STR.msRvQGaps}:\n• ${(q.questionGaps ?? []).slice(0, 12).join("\n• ")}`} tone="warn" /> : null}
       {q.state === "SUBMITTED" ? <Notice message={STR.msRvSubmitted} tone="info" /> : null}
 
       <ChipRow>
