@@ -92,6 +92,7 @@ import { startVoiceTranscriptSweep } from "../../content/services/ReviewVoiceTra
 import { startTelegramNoticeSweep } from "../../telegram/services/TelegramNoticeSweep";
 import { dispatchReviewBacklog, REVIEW_BACKLOG_MINUTES } from "../../review-program/services/ReviewBacklogService";
 import { dailyStatsRecipients, statsBodyBn, REVIEW_STATS_MINUTES } from "../../review-program/services/ReviewStatsService";
+import { qualityAlertForToday, reviewQualityDedupeKey } from "../../review-program/services/ReviewQualityService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
   emitPendingDigest as emitImprovementPendingDigest,
@@ -281,6 +282,7 @@ export interface TickSummary {
   hwPendingEmitted: number;
   /** Owner 22 Nov 2026: 20:30 daily review-statistics notices emitted this pass. */
   reviewStatsEmitted: number;
+  reviewQualityEmitted: number;
   /** D-#1679: assignment-week "confirm it" reminders emitted this pass. */
   asWeekPendingEmitted: number;
   hwDueFlipped: number;
@@ -354,6 +356,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     reviewSnapshotRan: false,
     hwPendingEmitted: 0,
     reviewStatsEmitted: 0,
+    reviewQualityEmitted: 0,
     asWeekPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
@@ -847,6 +850,28 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
           dedupeKey: schedulerDedupeKeys.reviewDailyStats(dateKey, r.userId),
         });
         if (res.created) summary.reviewStatsEmitted += 1;
+      }
+    });
+  });
+
+  // --- Review speed / rubber-stamp alert (owner GO 25 Nov 2026, D-#1684) — same 20:30 window, AFTER the
+  // reviewers' own pushes. ONE message to each holder of review_program:supervise, only when someone is
+  // AMBER or RED today; nobody flagged = nothing sent. Reviewers never receive it. Recipient + day key.
+  await family("review quality alert", async () => {
+    if (!windowOpen(nowMin, REVIEW_STATS_MINUTES)) return;
+    await runOnce(dateKey, "RVQA", async () => {
+      const alert = await qualityAlertForToday(now);
+      if (!alert) return;
+      for (const recipientId of alert.recipientIds) {
+        const res = await emit({
+          recipientUserId: recipientId,
+          kind: "REVIEW_DAILY_STATS",
+          titleBn: alert.titleBn,
+          bodyBn: alert.bodyBn,
+          refs: { date: dateKey },
+          dedupeKey: reviewQualityDedupeKey(recipientId, dateKey),
+        });
+        if (res.created) summary.reviewQualityEmitted += 1;
       }
     });
   });

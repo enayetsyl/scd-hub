@@ -182,7 +182,7 @@ const KIND_KEY: Record<string, "chapterPlans" | "sessionPlans" | "questions"> = 
 };
 
 /** The round, cut down to the two fields read (pipeline $lookup: no full round documents are pulled in). */
-function roundLookup(): PipelineStage.Lookup {
+export function roundLookup(): PipelineStage.Lookup {
   return {
     $lookup: {
       from: ReviewAssignment.collection.name,
@@ -194,7 +194,7 @@ function roundLookup(): PipelineStage.Lookup {
 }
 
 /** First verdicts of plan/question rounds in an optional time range. */
-function firstVerdictMatch(from: Date | null, toExclusive: Date | null, reviewerId?: string): FilterQuery<unknown> {
+export function firstVerdictMatch(from: Date | null, toExclusive: Date | null, reviewerId?: string): FilterQuery<unknown> {
   const match: FilterQuery<unknown> = {
     eventKind: "REVIEW_SUBMITTED",
     targetKind: "ReviewAssignment",
