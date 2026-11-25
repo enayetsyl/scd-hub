@@ -19,6 +19,7 @@ import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import {
   checkTreeInvariants,
+  collapseExerciseRefs,
   exerciseOfRef,
   expandExerciseRef,
   groupExerciseRefs,
@@ -33,6 +34,7 @@ import { MasteryOutcome } from "../modules/mastery/models/MasteryOutcome";
 import { MasteryCatalogueReview } from "../modules/mastery/models/MasteryCatalogueReview";
 import { MasteryReviewEvent } from "../modules/mastery/models/MasteryReviewEvent";
 import { User } from "../modules/foundation/models/User";
+import { Audit } from "../modules/platform/models/Audit";
 import { importCatalogue } from "../modules/mastery/services/MasteryCatalogueService";
 import {
   assignReviewers,
@@ -40,6 +42,7 @@ import {
   getReviewQueue,
   lockGateRefusals,
   lockReview,
+  narrowLockedCitation,
   reviewDecide,
   setQuestionCount,
   submitReview,
@@ -86,15 +89,15 @@ describe("parsing refs", () => {
     expect(expandExerciseRef("7/হাতে রাখি/2–4")).toEqual(["7/হাতে রাখি/2", "7/হাতে রাখি/3", "7/হাতে রাখি/4"]);
   });
 
-  it("a question ref names one question of one numbered exercise; Bangla digits are read", () => {
+  it("a question ref names one question of one exercise; Bangla digits are read", () => {
     expect(parseExerciseRef("3/অনুশীলনী/8#3")).toEqual({ exercise: "3/অনুশীলনী/8", question: 3 });
     expect(normaliseExerciseRef(" 3/অনুশীলনী/8#৩ ")).toBe("3/অনুশীলনী/8#3");
     expect(exerciseOfRef("3/অনুশীলনী/8#3")).toBe("3/অনুশীলনী/8");
     expect(expandExerciseRef("3/অনুশীলনী/8#3")).toEqual(["3/অনুশীলনী/8"]);
-    for (const bad of ["3/অনুশীলনী/2–4#1", "3/অনুশীলনী/—#1", "3/অনুশীলনী/8#0", "3/অনুশীলনী/8#100", "3/অনুশীলনী/8#", "3/অনুশীলনী/B#1"]) {
+    for (const bad of ["3/অনুশীলনী/2–4#1", "3/অনুশীলনী/2-4#1", "3/অনুশীলনী/1, 2#1", "3/অনুশীলনী/—#1", "3/অনুশীলনী/8#0", "3/অনুশীলনী/8#100", "3/অনুশীলনী/8#", "8#1"]) {
       expect(parseExerciseRef(bad)).toBeNull();
     }
-    expect([isSplittableExerciseRef("3/অনুশীলনী/8"), isSplittableExerciseRef("3/অনুশীলনী/8#1"), isSplittableExerciseRef("3/L2/B"), isSplittableExerciseRef("1/x/—")]).toEqual([
+    expect([isSplittableExerciseRef("3/অনুশীলনী/8"), isSplittableExerciseRef("3/অনুশীলনী/8#1"), isSplittableExerciseRef("3/L2/2–4"), isSplittableExerciseRef("1/x/—")]).toEqual([
       true,
       false,
       false,
@@ -107,6 +110,26 @@ describe("parsing refs", () => {
   });
 });
 
+describe("every subject: lettered exercises take a question (D-#1685 fix 1)", () => {
+  it("Latin- and Bangla-lettered single exercises split; ranges / lists / activities never", () => {
+    // C1–C4 ENG "1/L2/B", C6 ENG2 "Q1" / "Act1" / "B1", C3 MATH / C4 BAN "4ক" / "12খ".
+    for (const [ref, exercise, q] of [
+      ["1/L2/B#2", "1/L2/B", 2],
+      ["6/Unit 1/Q1#3", "6/Unit 1/Q1", 3],
+      ["6/Unit 2/Act1#1", "6/Unit 2/Act1", 1],
+      ["6/Unit 2/B1#৪", "6/Unit 2/B1", 4],
+      ["3/গুণ/4ক#2", "3/গুণ/4ক", 2],
+      ["4/পাঠ/12খ#1", "4/পাঠ/12খ", 1],
+    ] as const) {
+      expect(parseExerciseRef(ref)).toEqual({ exercise, question: q });
+      expect(isSplittableExerciseRef(exercise)).toBe(true);
+    }
+    expect(rules([node("LO-C4-MATH-03-01", ["1/L2/B#1"]), node("LO-C4-MATH-03-02", ["1/L2/B#2"])])).toEqual([]);
+    expect(rules([node("LO-C4-MATH-03-01", ["1/L2/B#1"]), node("LO-C4-MATH-03-02", ["1/L2/B#1"])])).toEqual(["QUESTION_ONE_CODE LO-C4-MATH-03-02"]);
+    expect(rules([node("LO-C4-MATH-03-01", ["1/L2/A–C#1"])])).toEqual(["QUESTION_REF LO-C4-MATH-03-01"]);
+  });
+});
+
 describe("invariants + coverage gaps", () => {
   it("QUESTION_REF on a malformed question; QUESTION_ONE_CODE when two tagged rows cite one question", () => {
     expect(rules([node("LO-C4-MATH-03-01", ["3/অনুশীলনী/2–4#1"])])).toEqual(["QUESTION_REF LO-C4-MATH-03-01"]);
@@ -114,6 +137,25 @@ describe("invariants + coverage gaps", () => {
     // Different questions, an untagged parent, or whole citations by two rows (today's shape) are fine.
     expect(rules([node("LO-C4-MATH-03-01", ["3/অনুশীলনী/8#1"]), node("LO-C4-MATH-03-02", ["3/অনুশীলনী/8#2"])])).toEqual([]);
     expect(rules([node("LO-C4-MATH-03-01", ["3/অনুশীলনী/8"]), node("LO-C4-MATH-03-02", ["3/অনুশীলনী/8"])])).toEqual([]);
+    // An untagged (grouping) row repeating a tagged row's question is no conflict, and adds no gap.
+    expect(rules([node("LO-C4-MATH-03-01", ["3/অনুশীলনী/8#1"]), node("LO-C4-MATH-03-02", ["3/অনুশীলনী/8#1"], false)])).toEqual([]);
+    expect(
+      questionCoverageGaps([node("LO-C4-MATH-03-01", ["3/অনুশীলনী/8#1", "3/অনুশীলনী/8#2"]), node("LO-C4-MATH-03-02", ["3/অনুশীলনী/8"], false)], [{ ref: "3/অনুশীলনী/8", count: 2 }]),
+    ).toEqual([]);
+  });
+
+  it("a range cited whole + one of its exercises cited by question is a mixed citation (fix 2)", () => {
+    const counts = [{ ref: "7/হাতে রাখি/3", count: 2 }];
+    const nodes = [node("LO-C4-MATH-03-01", ["7/হাতে রাখি/2–4"]), node("LO-C4-MATH-03-02", ["7/হাতে রাখি/3#1", "7/হাতে রাখি/3#2"])];
+    expect(questionCoverageGaps(nodes, counts).map((g) => `${g.exercise}: ${g.detail}`)).toEqual([
+      "7/হাতে রাখি/3: cited whole by LO-C4-MATH-03-01 and by question by LO-C4-MATH-03-02 — cite it one way",
+    ]);
+  });
+
+  it("collapseExerciseRefs: a row's own whole citation absorbs its questions of that exercise (fix 4)", () => {
+    expect(collapseExerciseRefs(["3/অ/8", "3/অ/8#1", "3/অ/7#2", "3/অ/8#2"])).toEqual(["3/অ/8", "3/অ/7#2"]);
+    expect(collapseExerciseRefs(["7/হাতে রাখি/2–4", "7/হাতে রাখি/3#1", "7/হাতে রাখি/5#1"])).toEqual(["7/হাতে রাখি/2–4", "7/হাতে রাখি/5#1"]);
+    expect(collapseExerciseRefs(["3/অ/8#1", "3/অ/8#1", "3/অ/9"])).toEqual(["3/অ/8#1", "3/অ/9"]);
   });
 
   it("an exercise is mapped whole, or every question cited — never partly, never both ways", () => {
@@ -156,7 +198,7 @@ describe("invariants + coverage gaps", () => {
     expect(fileRules({ questionCounts: [{ ref: EX, count: 2 }] })).toEqual([]);
     expect(fileRules({ questionCounts: [{ ref: EX, count: 3 }] })).toEqual([`${EX}: question 3 of 3 not cited`]);
     expect(fileRules({})).toEqual([`${EX}: cited by question but its question count is not set`]);
-    expect(fileRules({ questionCounts: [{ ref: `${EX}#1`, count: 2 }] })).toEqual([`coverage.questionCounts: "${EX}#1" is not one numbered exercise`]);
+    expect(fileRules({ questionCounts: [{ ref: `${EX}#1`, count: 2 }] })).toEqual([`coverage.questionCounts: "${EX}#1" is not one exercise (a range or "—")`]);
   });
 });
 
@@ -213,7 +255,7 @@ describe("review writes with question refs", () => {
     await setQuestionCount(reviewId, { ref: EX, count: 4 }, reviewer);
     expect(await events()).toBe(before + 1);
     expect((await getReviewQueue(reviewId, reviewer)).questionCounts).toEqual([{ ref: EX, count: 4 }]);
-    await expect(setQuestionCount(reviewId, { ref: "7/হাতে রাখি/2–4", count: 3 }, reviewer)).rejects.toThrow(/একটি নম্বরের অনুশীলনী/);
+    await expect(setQuestionCount(reviewId, { ref: "7/হাতে রাখি/2–4", count: 3 }, reviewer)).rejects.toThrow(/একটি অনুশীলনীতেই/);
     await expect(setQuestionCount(reviewId, { ref: EX, count: 0 }, reviewer)).rejects.toThrow(/১ থেকে ৯৯/);
     await decide({ action: "EDIT", code: "LO-C1-MATH-07-04", exercises: ["7/যোগ ৯৯ পর্যন্ত/4", "7/হাতে রাখি/3", `${EX}#3`] });
     await expect(setQuestionCount(reviewId, { ref: EX, count: 2 }, reviewer)).rejects.toThrow(/অন্তত ৩/);
@@ -230,7 +272,7 @@ describe("review writes with question refs", () => {
     await decide({ action: "EDIT", code: "LO-C1-MATH-07-04", exercises: ["7/যোগ ৯৯ পর্যন্ত/4", "7/হাতে রাখি/3", `${EX}#৩`] });
     expect(await exercisesOf("LO-C1-MATH-07-04")).toEqual(["7/যোগ ৯৯ পর্যন্ত/4", "7/হাতে রাখি/3", `${EX}#3`]);
     await decide({ action: "EDIT", code: "LO-C1-MATH-07-01.5", exercises: [`${EX}#1`, "7/যোগ ১১ থেকে ২০/2", "7/দ্রুত-শিট ২ — যোগ ২০-এর মধ্যে/—"] });
-    // The new objective, citing the questions nobody else cites (Mahzabin's case).
+    // The new objective, citing the questions nobody else cites (the reviewer's case).
     await decide({ action: "ADD", level: "OBJECTIVE", chapterNumber: 7, domainCode: "DOM-MATH-ADD", labelBn: "যোগের সম্পর্ক ব্যবহার", exercises: [`${EX}#2`, `${EX}#4`] });
     expect((await events()) - e0).toBe(3);
     const added = await MasteryOutcome.findOne({ classToken: "C1", subject: "MATH", reviewState: "ADDED", labelBn: "যোগের সম্পর্ক ব্যবহার" }).lean();
@@ -257,6 +299,122 @@ describe("review writes with question refs", () => {
     });
     expect(await exercisesOf("LO-C1-MATH-07-02.1")).toEqual(["7/যোগ ৯৯ পর্যন্ত/1#1", "7/যোগ ৯৯ পর্যন্ত/2"]);
     expect((await getReviewQueue(reviewId, reviewer)).questionGaps).toEqual([]);
+  });
+});
+
+describe("review writes — fixes 4–6", () => {
+  it("rejected and merged-away rows are ignored by QUESTION_ONE_CODE and the gaps", async () => {
+    await setup();
+    await setQuestionCount(reviewId, { ref: EX, count: 2 }, reviewer);
+    await decide({ action: "EDIT", code: "LO-C1-MATH-07-04", exercises: ["7/যোগ ৯৯ পর্যন্ত/4", "7/হাতে রাখি/3", `${EX}#1`] });
+    await decide({ action: "REJECT", code: "LO-C1-MATH-07-04", reason: "পুনরাবৃত্তি" });
+    // 07-04 is out: the same question on another row is no conflict, and its Q1 no longer counts.
+    await decide({ action: "EDIT", code: "LO-C1-MATH-07-01.5", exercises: [`${EX}#1`, "7/যোগ ১১ থেকে ২০/2", "7/দ্রুত-শিট ২ — যোগ ২০-এর মধ্যে/—"] });
+    expect((await getReviewQueue(reviewId, reviewer)).questionGaps).toEqual([`${EX}: question 2 of 2 not cited`]);
+  });
+
+  it("merge back after a question-level split leaves the parent citing the exercise once, whole", async () => {
+    await setup();
+    const P = "LO-C1-MATH-07-02";
+    await setQuestionCount(reviewId, { ref: "7/যোগ ৯৯ পর্যন্ত/1", count: 2 }, reviewer);
+    await decide({
+      action: "SPLIT",
+      code: P,
+      children: [
+        { labelBn: "এক", exercises: ["7/যোগ ৯৯ পর্যন্ত/1#1", "7/যোগ ৯৯ পর্যন্ত/2"] },
+        { labelBn: "দুই", exercises: ["7/যোগ ৯৯ পর্যন্ত/1#2", "7/যোগ ৯৯ পর্যন্ত/3"] },
+      ],
+    });
+    await decide({ action: "MERGE", code: `${P}.2`, intoCode: P });
+    const back = await exercisesOf(P);
+    expect(back.filter((x) => x.includes("#"))).toEqual([]);
+    expect(new Set(back)).toEqual(new Set(["7/যোগ ৯৯ পর্যন্ত/1", "7/যোগ ৯৯ পর্যন্ত/2", "7/যোগ ৯৯ পর্যন্ত/3"]));
+    const q = await getReviewQueue(reviewId, reviewer);
+    expect([q.questionGaps, q.violations]).toEqual([[], []]);
+  });
+
+  it("EDIT folds a question into the row's own whole citation of the same exercise", async () => {
+    await setup();
+    await decide({ action: "EDIT", code: "LO-C1-MATH-07-04", exercises: [`${EX}#2`, "7/হাতে রাখি/3", EX, "7/যোগ ৯৯ পর্যন্ত/4"] });
+    expect(await exercisesOf("LO-C1-MATH-07-04")).toEqual(["7/হাতে রাখি/3", EX, "7/যোগ ৯৯ পর্যন্ত/4"]);
+    // Folded to exactly what it already cites → nothing changed.
+    await expect(decide({ action: "EDIT", code: "LO-C1-MATH-07-04", exercises: ["7/হাতে রাখি/3", EX, `${EX}#1`, "7/যোগ ৯৯ পর্যন্ত/4"] })).rejects.toThrow(/কিছুই বদলায়নি/);
+  });
+
+  it("question counts: two reviewers at once never leave two entries; a stale change is refused", async () => {
+    await setup();
+    const other = await makeUser("PRINCIPAL", "অধ্যক্ষ ২");
+    const results = await Promise.allSettled([setQuestionCount(reviewId, { ref: EX, count: 4 }, reviewer), setQuestionCount(reviewId, { ref: EX, count: 5 }, other)]);
+    const counts = (await MasteryCatalogueReview.findById(reviewId).lean())!.coverage.questionCounts ?? [];
+    expect(counts.filter((c) => c.ref === EX)).toHaveLength(1);
+    expect(results.some((x) => x.status === "fulfilled")).toBe(true);
+    // A change made from a stale read (the count moved underneath) is refused, not overwritten.
+    await MasteryCatalogueReview.updateOne({ _id: reviewId }, { $set: { "coverage.questionCounts.$[e].count": 9 } }, { arrayFilters: [{ "e.ref": EX }] });
+    const real = MasteryCatalogueReview.findOne.bind(MasteryCatalogueReview);
+    // The caller read the count as 7 (stale); the database holds 9.
+    const spy = jest.spyOn(MasteryCatalogueReview, "findById").mockImplementationOnce(((id: unknown) => ({
+      lean: () => real({ _id: id }).lean().then((d: any) => ({ ...d, coverage: { ...d.coverage, questionCounts: [{ ref: EX, count: 7 }] } })),
+    })) as any);
+    await expect(setQuestionCount(reviewId, { ref: EX, count: 6 }, reviewer)).rejects.toThrow(/অন্য কেউ বদলেছেন/);
+    spy.mockRestore();
+    expect((await MasteryCatalogueReview.findById(reviewId).lean())!.coverage.questionCounts).toEqual([{ ref: EX, count: 9 }]);
+  });
+
+  it("a redraft import keeps the counts set in the app; the file's own count wins", async () => {
+    await setup();
+    await setQuestionCount(reviewId, { ref: EX, count: 4 }, reviewer);
+    await setQuestionCount(reviewId, { ref: "7/যোগ ৯৯ পর্যন্ত/1", count: 3 }, reviewer);
+    const raw = JSON.parse(TREE_TEXT);
+    raw.coverage.questionCounts = [{ ref: EX, count: 6 }];
+    const rep = await importCatalogue(JSON.stringify(raw), true, principal, DOMAINS_TEXT);
+    expect([rep.applied, rep.errors]).toEqual([true, []]);
+    const counts = (await MasteryCatalogueReview.findById(reviewId).lean())!.coverage.questionCounts ?? [];
+    expect(counts.map((c) => [c.ref, c.count]).sort()).toEqual([
+      ["7/যোগ ৯৯ পর্যন্ত/1", 3],
+      [EX, 6],
+    ].sort());
+  });
+});
+
+describe("narrow a LOCKED row's citation (fix 9, mastery:settings)", () => {
+  async function lockedTree(): Promise<void> {
+    await setup();
+    await submitReview(reviewId, reviewer);
+    await lockReview(reviewId, principal);
+  }
+
+  it("narrows a whole ref to some questions, audit-logged; the gaps it leaves are returned (not refused)", async () => {
+    await lockedTree();
+    const res = await narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: EX, questions: [3, 1], questionCount: 4 }, principal);
+    expect(res.exercises).toEqual(["7/যোগ ৯৯ পর্যন্ত/4", "7/হাতে রাখি/3", `${EX}#1`, `${EX}#3`]);
+    expect(await exercisesOf("LO-C1-MATH-07-04")).toEqual(res.exercises);
+    expect((await MasteryOutcome.findOne({ code: "LO-C1-MATH-07-04" }).lean())!.status).toBe("LOCKED");
+    // 07-01.5 still cites it whole → mixed; questions 2 and 4 are not cited.
+    expect(res.questionGaps.join("\n")).toMatch(/cited whole by LO-C1-MATH-07-01\.5[\s\S]*questions 2, 4 of 4 not cited/);
+    expect((await MasteryCatalogueReview.findById(reviewId).lean())!.coverage.questionCounts).toEqual([{ ref: EX, count: 4 }]);
+    for (let i = 0; i < 50 && (await Audit.countDocuments({ eventKind: "MASTERY_OUTCOME_CITATION_NARROWED" })) === 0; i++) await new Promise((r) => setTimeout(r, 20));
+    expect(await Audit.countDocuments({ eventKind: "MASTERY_OUTCOME_CITATION_NARROWED" })).toBe(1);
+    // Narrowing 07-01.5 to the questions 07-04 gave up closes the gap.
+    const second = await narrowLockedCitation({ code: "LO-C1-MATH-07-01.5", exercise: EX, questions: [2, 4], questionCount: 4 }, principal);
+    expect(second.questionGaps).toEqual([]);
+  });
+
+  it("refuses: not the Principal, a DRAFT row, widening (exercise not cited whole), all questions, a wrong count, a repeated question", async () => {
+    await lockedTree();
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: EX, questions: [1], questionCount: 4 }, reviewer)).rejects.toThrow(/শুধু অধ্যক্ষ/);
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: "7/হাতে রাখি/1", questions: [1], questionCount: 2 }, principal)).rejects.toThrow(/পুরোটা উদ্ধৃত করে না/);
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: EX, questions: [1, 2], questionCount: 2 }, principal)).rejects.toThrow(/কিছুই সীমিত হয় না/);
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: "7/হাতে রাখি/2–4", questions: [1], questionCount: 2 }, principal)).rejects.toThrow(/পরিসর/);
+    await narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: EX, questions: [1], questionCount: 3 }, principal);
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-01.5", exercise: EX, questions: [2], questionCount: 4 }, principal)).rejects.toThrow(/৩টি প্রশ্ন/);
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-01.5", exercise: EX, questions: [1], questionCount: 3 }, principal)).rejects.toThrow(/\[QUESTION_ONE_CODE\]/);
+    // A narrowed ref cannot be narrowed again as "whole", nor widened back.
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: EX, questions: [1], questionCount: 3 }, principal)).rejects.toThrow(/পুরোটা উদ্ধৃত করে না/);
+  });
+
+  it("refuses a DRAFT row (review writes handle those)", async () => {
+    await setup();
+    await expect(narrowLockedCitation({ code: "LO-C1-MATH-07-04", exercise: EX, questions: [1], questionCount: 4 }, principal)).rejects.toThrow(/চূড়ান্ত নয়/);
   });
 });
 
@@ -306,6 +464,41 @@ describe("export", () => {
     expect([count.before, count.after]).toEqual([
       { exerciseRef: EX, questionCount: null },
       { exerciseRef: EX, questionCount: 3 },
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// App picker helpers (pure; app/src/screens/mastery/exerciseRefPicks.ts)
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const picks = require("../../../app/src/screens/mastery/exerciseRefPicks") as {
+  exercisesInRefs: (refs: readonly string[], splittableOnly?: boolean) => string[];
+  withCite: (refs: readonly string[], exercise: string, cite: { whole: boolean; questions: number[] } | null) => string[];
+  splitPartConflicts: (parts: readonly (readonly string[])[]) => { ref: string; parts: number[] }[];
+};
+
+describe("app picker helpers", () => {
+  it("exercisesInRefs folds questions into their exercise; splittableOnly drops ranges and activities", () => {
+    const refs = ["3/অ/8#1", "3/অ/7", "3/অ/8#3", "3/অ/2–4", "3/অ/—", "1/L2/B"];
+    expect(picks.exercisesInRefs(refs)).toEqual(["3/অ/8", "3/অ/7", "3/অ/2–4", "3/অ/—", "1/L2/B"]);
+    expect(picks.exercisesInRefs(refs, true)).toEqual(["3/অ/8", "3/অ/7", "1/L2/B"]);
+  });
+
+  it("withCite rewrites one exercise in place and leaves the rest", () => {
+    const refs = ["3/অ/7", "3/অ/8", "3/অ/9"];
+    expect(picks.withCite(refs, "3/অ/8", { whole: false, questions: [3, 1] })).toEqual(["3/অ/7", "3/অ/8#1", "3/অ/8#3", "3/অ/9"]);
+    expect(picks.withCite(["3/অ/7", "3/অ/8#1", "3/অ/8#3", "3/অ/9"], "3/অ/8", { whole: true, questions: [] })).toEqual(refs);
+    expect(picks.withCite(refs, "3/অ/8", null)).toEqual(["3/অ/7", "3/অ/9"]);
+    expect(picks.withCite(["3/অ/7"], "1/L2/B", { whole: false, questions: [2] })).toEqual(["3/অ/7", "1/L2/B#2"]);
+  });
+
+  it("splitPartConflicts names a question picked in two parts (whole citations are not compared)", () => {
+    expect(picks.splitPartConflicts([["3/অ/8#1", "3/অ/8#3"], ["3/অ/8#2"], ["3/অ/8"]])).toEqual([]);
+    expect(picks.splitPartConflicts([["3/অ/8#1", "3/অ/8#3"], ["3/অ/8#৩"], ["3/অ/8#1"]])).toEqual([
+      { ref: "3/অ/8#1", parts: [1, 3] },
+      { ref: "3/অ/8#3", parts: [1, 2] },
     ]);
   });
 });

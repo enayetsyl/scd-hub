@@ -12,6 +12,7 @@
  *   masteryReviewComment        — mastery:review | mastery:settings; comment / reply / resolve / reopen
  *   masteryReviewResolveUnmapped— mastery:review | mastery:settings
  *   masteryReviewSetQuestionCount — mastery:review | mastery:settings; an exercise's question count (D-#1685)
+ *   narrowLockedMasteryCitation  — mastery:settings; a LOCKED row's exercise → some of its questions (D-#1685)
  *   submitMasteryReview         — mastery:review | mastery:settings
  *   reopenMasteryReview         — mastery:review | mastery:settings
  *   lockMasteryReview           — mastery:settings (behind the gate)
@@ -32,6 +33,8 @@ import {
   reopenReview,
   resolveUnmapped,
   setQuestionCount,
+  narrowLockedCitation,
+  type NarrowResult,
   reviewComment,
   reviewDecide,
   reviewerCandidates,
@@ -169,6 +172,16 @@ QuestionCountRef.implement({
   fields: (t) => ({ ref: t.exposeString("ref"), count: t.exposeInt("count") }),
 });
 
+const NarrowResultRef = builder.objectRef<NarrowResult>("MasteryNarrowCitationResult");
+NarrowResultRef.implement({
+  description: "A LOCKED row after its exercise was narrowed to some questions, and the pair's open question gaps (D-#1685).",
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    exercises: t.exposeStringList("exercises"),
+    questionGaps: t.exposeStringList("questionGaps"),
+  }),
+});
+
 const DecisionCountsRef = builder.objectRef<ReviewDecisionCounts>("MasteryReviewDecisionCounts");
 DecisionCountsRef.implement({
   fields: (t) => ({
@@ -237,6 +250,7 @@ QueueRef.implement({
     canReopen: t.exposeBoolean("canReopen"),
     canAssign: t.exposeBoolean("canAssign"),
     canLock: t.exposeBoolean("canLock"),
+    canNarrowLocked: t.exposeBoolean("canNarrowLocked"),
     eventCount: t.exposeInt("eventCount"),
   }),
 });
@@ -406,6 +420,22 @@ builder.mutationFields((t) => ({
       await setQuestionCount(args.reviewId, { ref: args.ref, count: args.count ?? null }, c);
       return getReviewQueue(args.reviewId, c);
     },
+  }),
+
+  narrowLockedMasteryCitation: t.field({
+    type: NarrowResultRef,
+    description:
+      "Principal only: narrow a LOCKED row's whole citation of one exercise to a subset of its questions (never widen, never add). " +
+      "Audit-logged; invariants re-checked across the pair; the gaps left are returned for the next round (D-#1685).",
+    authScopes: { hasPermission: "mastery:settings" },
+    args: {
+      code: t.arg.string({ required: true }),
+      exercise: t.arg.string({ required: true }),
+      questions: t.arg.intList({ required: true }),
+      questionCount: t.arg.int({ required: true }),
+    },
+    resolve: async (_r, args, ctx) =>
+      narrowLockedCitation({ code: args.code, exercise: args.exercise, questions: args.questions, questionCount: args.questionCount }, callerOf(ctx)),
   }),
 
   submitMasteryReview: t.field({

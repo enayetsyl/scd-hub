@@ -2,47 +2,31 @@
  * ExerciseQuestionPicker (D-#1685) — cite single questions of an exercise, not only the whole one.
  *
  * Used by the review row's সম্পাদনা and ভাগ করুন forms and the নতুন যোগ card. For each exercise in
- * `pool` it shows one chip (the whole exercise, or "…: প্রশ্ন ১, ৩, ৪") and, for a numbered exercise,
- * "প্রশ্ন বাছুন". Opened, it asks once for the exercise's question count (saved on the round, so
- * every reviewer and the lock gate share it), then shows one chip per question. A question already
- * cited by another tagged row is labelled with that row's code (one code per question, D-#776).
+ * `pool` it shows one chip (the whole exercise, or "…: প্রশ্ন ১, ৩, ৪") and, for a single exercise
+ * (numbered or lettered, not a range or "—"), "প্রশ্ন বাছুন". Opened, it asks once for the
+ * exercise's question count (saved on the round, so every reviewer and the lock gate share it), then
+ * shows one chip per question. A question already cited by another tagged row is labelled with that
+ * row's code (one code per question, D-#776).
+ *
+ * In ভাগ করুন (`parentRefs`), a part may take only what the row being split cites: an exercise the
+ * row cites by question offers exactly those questions (tapping it takes them all), never the whole.
  *
  * The form keeps owning the refs: this only rewrites the refs of the exercise it touches, in place.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
-import { exerciseOfRef, groupExerciseRefs, isSplittableExerciseRef, parseExerciseRef, questionRef } from "@scd/shared";
+import { exerciseOfRef, isSplittableExerciseRef, parseExerciseRef } from "@scd/shared";
 import { MASTERY_REVIEW_SET_QUESTION_COUNT, type ReviewQueue } from "../../graphql/masteryReview";
 import { Body, Button, Chip, ChipRow, Field, Muted, Notice } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
 import { codeTail, formatExerciseRef, formatExerciseRefs, useReviewAction } from "./masteryReviewUi";
+import { citeOf, exercisesInRefs, withCite, type Cite } from "./exerciseRefPicks";
 
-type Cite = { whole: boolean; questions: number[] } | null;
+export { exercisesInRefs } from "./exerciseRefPicks";
 
 const asciiInt = (t: string): number => Number(t.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d))).replace(/\D/g, ""));
-
-/** The distinct exercises of a ref list, in order (question refs folded into their exercise). */
-export function exercisesInRefs(refs: readonly string[], splittableOnly = false): string[] {
-  const out: string[] = [];
-  for (const r of refs) {
-    const e = exerciseOfRef(r);
-    if (!e || out.includes(e) || (splittableOnly && !isSplittableExerciseRef(e))) continue;
-    out.push(e);
-  }
-  return out;
-}
-
-/** Replace the refs of one exercise, keeping its place in the list. */
-function withCite(refs: readonly string[], exercise: string, cite: Cite): string[] {
-  const next = cite ? [...(cite.whole ? [exercise] : []), ...[...cite.questions].sort((a, b) => a - b).map((q) => questionRef(exercise, q))] : [];
-  const at = refs.findIndex((r) => exerciseOfRef(r) === exercise);
-  const rest = refs.filter((r) => exerciseOfRef(r) !== exercise);
-  if (at < 0) return [...rest, ...next];
-  const before = refs.slice(0, at).filter((r) => exerciseOfRef(r) !== exercise).length;
-  return [...rest.slice(0, before), ...next, ...rest.slice(before)];
-}
 
 function OneExercise({
   q,
@@ -51,6 +35,7 @@ function OneExercise({
   onChange,
   allowRemove,
   selfCode,
+  parentRefs,
 }: {
   q: ReviewQueue;
   exercise: string;
@@ -58,16 +43,20 @@ function OneExercise({
   onChange: (refs: string[]) => void;
   allowRemove: boolean;
   selfCode?: string;
+  parentRefs?: readonly string[];
 }): React.ReactElement {
   const act = useReviewAction(MASTERY_REVIEW_SET_QUESTION_COUNT);
   const [open, setOpen] = useState(false);
   const [editCount, setEditCount] = useState(false);
-  const g = groupExerciseRefs(value).find((x) => x.exercise === exercise);
-  const cite: Cite = g ? { whole: g.whole, questions: g.questions } : null;
+  const cite = citeOf(value, exercise);
   const count = (q.questionCounts ?? []).find((c) => c.ref === exercise)?.count ?? null;
   const [countText, setCountText] = useState(count ? String(count) : "");
+  // The parent cites only some questions of this exercise → a part may take only those.
+  const parentCite = parentRefs ? citeOf(parentRefs, exercise) : null;
+  const scoped = !!parentCite && !parentCite.whole && parentCite.questions.length > 0 ? parentCite.questions : null;
   const splittable = isSplittableExerciseRef(exercise) && q.canWrite;
   const set = (c: Cite) => onChange(withCite(value, exercise, c));
+  const full: Cite = scoped ? { whole: false, questions: [...scoped] } : { whole: true, questions: [] };
 
   // Questions of this exercise cited by another live tagged row → that row's code.
   const taken = new Map<number, string>();
@@ -83,20 +72,32 @@ function OneExercise({
     const qs = cite && !cite.whole ? cite.questions : [];
     const next = qs.includes(n) ? qs.filter((x) => x !== n) : [...qs, n];
     if (next.length > 0) set({ whole: false, questions: next });
-    else set(allowRemove ? null : { whole: true, questions: [] });
+    else set(allowRemove ? null : full);
   };
 
   const label = cite ? (formatExerciseRefs(value.filter((r) => exerciseOfRef(r) === exercise))[0] ?? formatExerciseRef(exercise)) : formatExerciseRef(exercise);
+  const choices = scoped ?? (count ? Array.from({ length: count }, (_, i) => i + 1) : null);
+  const questionChip = (n: number) => {
+    const other = taken.get(n);
+    return (
+      <Chip
+        key={n}
+        label={other ? fill(STR.msRvQTakenTpl, { n: bnNum(n), code: codeTail(other) }) : fill(STR.msRvQItemTpl, { n: bnNum(n) })}
+        selected={!!cite && !cite.whole && cite.questions.includes(n)}
+        onPress={() => toggleQuestion(n)}
+      />
+    );
+  };
   return (
     <View style={{ gap: space(1) }}>
       <ChipRow>
-        <Chip label={label} selected={!!cite} onPress={() => (allowRemove ? set(cite ? null : { whole: true, questions: [] }) : splittable && setOpen(!open))} />
+        <Chip label={label} selected={!!cite} onPress={() => (allowRemove ? set(cite ? null : full) : splittable && setOpen(!open))} />
         {splittable ? <Chip label={open ? STR.msRvQPickClose : STR.msRvQPick} onPress={() => setOpen(!open)} /> : null}
       </ChipRow>
       {open && splittable ? (
         <View style={{ gap: space(1), paddingLeft: space(2) }}>
           <Muted>{STR.msRvQPickHint}</Muted>
-          {!count || editCount ? (
+          {!scoped && (!count || editCount) ? (
             <View style={{ gap: space(1) }}>
               <Field label={STR.msRvQCountField} value={countText} onChangeText={setCountText} keyboardType="number-pad" />
               <Button
@@ -109,26 +110,16 @@ function OneExercise({
                 }
               />
             </View>
-          ) : (
+          ) : choices ? (
             <>
-              <Body>{fill(STR.msRvQCountTpl, { n: bnNum(count) })}</Body>
+              {count && !scoped ? <Body>{fill(STR.msRvQCountTpl, { n: bnNum(count) })}</Body> : null}
               <ChipRow>
-                <Chip label={STR.msRvQWhole} selected={!!cite?.whole && cite.questions.length === 0} onPress={() => set({ whole: true, questions: [] })} />
-                {Array.from({ length: count }, (_, i) => i + 1).map((n) => {
-                  const other = taken.get(n);
-                  return (
-                    <Chip
-                      key={n}
-                      label={other ? fill(STR.msRvQTakenTpl, { n: bnNum(n), code: codeTail(other) }) : fill(STR.msRvQItemTpl, { n: bnNum(n) })}
-                      selected={!!cite && !cite.whole && cite.questions.includes(n)}
-                      onPress={() => toggleQuestion(n)}
-                    />
-                  );
-                })}
+                {scoped ? null : <Chip label={STR.msRvQWhole} selected={!!cite?.whole && cite.questions.length === 0} onPress={() => set({ whole: true, questions: [] })} />}
+                {choices.map(questionChip)}
               </ChipRow>
-              <Button title={STR.msRvQCountChange} variant="ghost" onPress={() => setEditCount(true)} />
+              {scoped ? null : <Button title={STR.msRvQCountChange} variant="ghost" onPress={() => setEditCount(true)} />}
             </>
-          )}
+          ) : null}
           {act.error ? <Notice message={act.error} tone="danger" /> : null}
         </View>
       ) : null}
@@ -143,6 +134,7 @@ export function ExerciseQuestionPicker({
   onChange,
   allowRemove = false,
   selfCode,
+  parentRefs,
 }: {
   q: ReviewQueue;
   /** The exercises to offer (whole refs; question refs are folded into their exercise). */
@@ -151,15 +143,17 @@ export function ExerciseQuestionPicker({
   onChange: (refs: string[]) => void;
   /** SPLIT: tapping an exercise adds / removes it. EDIT / ADD: the text box adds and removes. */
   allowRemove?: boolean;
-  /** The row being edited — its own questions are not shown as taken. */
+  /** The row being edited or split — its own questions are not shown as taken. */
   selfCode?: string;
+  /** SPLIT: the split row's refs — a part may take only these (its exact questions). */
+  parentRefs?: readonly string[];
 }): React.ReactElement | null {
   const list = exercisesInRefs(pool);
   if (list.length === 0) return null;
   return (
     <View style={{ gap: space(1) }}>
       {list.map((e) => (
-        <OneExercise key={e} q={q} exercise={e} value={value} onChange={onChange} allowRemove={allowRemove} selfCode={selfCode} />
+        <OneExercise key={e} q={q} exercise={e} value={value} onChange={onChange} allowRemove={allowRemove} selfCode={selfCode} parentRefs={parentRefs} />
       ))}
     </View>
   );

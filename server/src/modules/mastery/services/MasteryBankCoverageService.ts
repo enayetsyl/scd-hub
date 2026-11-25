@@ -11,7 +11,7 @@
  * Curriculum plane only: questions and catalogue rows, no person data.
  */
 import type { MasteryClassToken, MasterySubject } from "@scd/shared";
-import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS } from "@scd/shared";
+import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS, groupExerciseRefs } from "@scd/shared";
 import { MasteryOutcome, outcomeBookRef, treeShapeOf, type IMasteryOutcome } from "../models/MasteryOutcome";
 import { MasteryChapter } from "../models/MasteryChapter";
 import { MasteryCatalogueReview } from "../models/MasteryCatalogueReview";
@@ -26,6 +26,14 @@ import { dateKeyOf } from "../../attendance/dates";
 import { Section } from "../../foundation/models/Section";
 import { getPolicy } from "./MasteryCatalogueService";
 
+
+/** "3/অনুশীলনী/8#1", "3/অনুশীলনী/8#3" → "3/অনুশীলনী/8: প্রশ্ন ১, ৩" (D-#1685); whole refs as stored. */
+function bookRefsText(refs: readonly string[]): string {
+  const bnd = (n: number) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
+  return groupExerciseRefs(refs)
+    .flatMap((g) => [...(g.whole ? [g.exercise] : []), ...(g.questions.length ? [`${g.exercise}: প্রশ্ন ${g.questions.map(bnd).join(", ")}`] : [])])
+    .join(", ");
+}
 export interface BankCoveragePair {
   classToken: string;
   subject: string;
@@ -273,7 +281,7 @@ export async function coverageBrief(view: BankCoverageView, now: Date = new Date
     }
     const parts = [`- ${r.code} · ${levelWord(r.level)}${r.parentCode ? ` of ${r.parentCode}${r.parentLabelBn ? ` (${r.parentLabelBn})` : ""}` : ""}: ${r.labelBn}`];
     if (r.questionTypeCodes.length > 0) parts.push(`types ${r.questionTypeCodes.join(", ")}`);
-    if (r.exercises.length > 0) parts.push(`book ${r.exercises.join(", ")}`);
+    if (r.exercises.length > 0) parts.push(`book ${bookRefsText(r.exercises)}`);
     if (r.pendingCount > 0) parts.push(`${r.pendingCount} already waiting in review`);
     lines.push(parts.join(" · "));
   }

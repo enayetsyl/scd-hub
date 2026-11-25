@@ -39,6 +39,9 @@ import {
   HW_SUBJECT_LABELS_BN,
   MASTERY_CLASS_TOKENS,
   checkTreeInvariants,
+  collapseExerciseRefs,
+  expandExerciseRef,
+  questionRef,
   formatTreeViolation,
   isSplittableExerciseRef,
   normaliseExerciseRef,
@@ -237,10 +240,11 @@ class WorkSet {
     this.sets.set(code, { ...(this.sets.get(code) ?? {}), ...fields });
   }
 
+  /** Every write of a row's refs goes through here: a question of an exercise the row also cites whole is folded in (D-#1685). */
   setExercises(code: string, exercises: string[]): void {
     const r = this.get(code);
     const b = outcomeBookRef(r);
-    const bookRef: MasteryBookRef = { version: b.version, chapter: b.chapter, lesson: b.lesson ?? null, exercises };
+    const bookRef: MasteryBookRef = { version: b.version, chapter: b.chapter, lesson: b.lesson ?? null, exercises: collapseExerciseRefs(exercises) };
     this.patch(code, { bookRef });
   }
 
@@ -567,6 +571,8 @@ export interface ReviewQueueView {
   canReopen: boolean;
   canAssign: boolean;
   canLock: boolean;
+  /** D-#1685: the Principal may narrow a LOCKED row's exercise to some of its questions. */
+  canNarrowLocked: boolean;
   eventCount: number;
 }
 
@@ -780,6 +786,7 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
     canReopen: writer && r.state === "SUBMITTED",
     canAssign: caller.canSettings && (r.state === "OPEN" || r.state === "SUBMITTED"),
     canLock: caller.canSettings && r.state === "SUBMITTED" && openComments === 0 && unresolvedUnmapped === 0 && violations.length === 0 && questionGaps.length === 0,
+    canNarrowLocked: caller.canSettings,
     eventCount: events.length,
   };
 }
@@ -905,8 +912,8 @@ export function exerciseRefs(xs: string[] | null | undefined, counts: QuestionCo
   if (bad.length > 0) fail(`অনুশীলনী লিখুন "অধ্যায়/পাঠ/নম্বর" রূপে, প্রতি লাইনে একটি। ঠিক নেই: ${bad.join(" · ")}`);
   // A question of an exercise (D-#1685): "<chapter>/<lesson>/<no>#<q>", q counted in book order.
   const badQ = list.filter((x) => !parseExerciseRef(x));
-  if (badQ.length > 0) fail(`একটি প্রশ্ন লিখুন "অধ্যায়/পাঠ/নম্বর#প্রশ্ন" রূপে (যেমন 3/অনুশীলনী/8#3), শুধু একটি নম্বরের অনুশীলনীতে। ঠিক নেই: ${badQ.join(" · ")}`);
-  const out = cleanList(list.map(normaliseExerciseRef));
+  if (badQ.length > 0) fail(`একটি প্রশ্ন লিখুন "অধ্যায়/পাঠ/নম্বর#প্রশ্ন" রূপে (যেমন 3/অনুশীলনী/8#3), একটি অনুশীলনীতেই (পরিসর বা শ্রেণির কাজে নয়)। ঠিক নেই: ${badQ.join(" · ")}`);
+  const out = collapseExerciseRefs(cleanList(list.map(normaliseExerciseRef)));
   const countOf = new Map(counts.map((c) => [c.ref, c.count]));
   for (const x of out) {
     const p = parseExerciseRef(x);
@@ -1520,7 +1527,7 @@ export async function setQuestionCount(reviewId: string, input: { ref: string; c
   const r = await loadRound(reviewId);
   assertWriter(r, caller, ["OPEN"]);
   const ref = normaliseExerciseRef(input.ref ?? "");
-  if (!isSplittableExerciseRef(ref)) fail(`প্রশ্ন গোনা যায় শুধু একটি নম্বরের অনুশীলনীতে (যেমন 3/অনুশীলনী/8)। ঠিক নেই: ${ref || "—"}`);
+  if (!isSplittableExerciseRef(ref)) fail(`প্রশ্ন গোনা যায় একটি অনুশীলনীতেই, পরিসর বা শ্রেণির কাজে নয় (যেমন 3/অনুশীলনী/8 বা 1/L2/B)। ঠিক নেই: ${ref || "—"}`);
   const count = input.count ?? null;
   if (count !== null && (!Number.isInteger(count) || count < 1 || count > 99)) fail("প্রশ্নসংখ্যা ১ থেকে ৯৯।");
   const ws = await loadPair(r.classToken, r.subject);
@@ -1536,9 +1543,116 @@ export async function setQuestionCount(reviewId: string, input: { ref: string; c
   const old = questionCountsOf(r);
   const prev = old.find((c) => c.ref === ref)?.count ?? null;
   if (prev === count) return;
-  const next = [...old.filter((c) => c.ref !== ref), ...(count !== null ? [{ ref, count }] : [])];
-  await MasteryCatalogueReview.updateOne({ _id: r._id }, { $set: { "coverage.questionCounts": next } });
+  // Guarded, element-level writes: the update only applies if the count is still what this caller
+  // read, so two reviewers never overwrite each other's counts (or the whole list).
+  const res =
+    prev === null
+      ? await MasteryCatalogueReview.updateOne(
+          { _id: r._id, state: "OPEN", "coverage.questionCounts.ref": { $ne: ref } },
+          { $push: { "coverage.questionCounts": { ref, count } } },
+        )
+      : count === null
+        ? await MasteryCatalogueReview.updateOne(
+            { _id: r._id, state: "OPEN", "coverage.questionCounts": { $elemMatch: { ref, count: prev } } },
+            { $pull: { "coverage.questionCounts": { ref } } },
+          )
+        : await MasteryCatalogueReview.updateOne(
+            { _id: r._id, state: "OPEN", "coverage.questionCounts": { $elemMatch: { ref, count: prev } } },
+            { $set: { "coverage.questionCounts.$[e].count": count } },
+            { arrayFilters: [{ "e.ref": ref }] },
+          );
+  if (res.modifiedCount !== 1) fail("এই প্রশ্নসংখ্যা এইমাত্র অন্য কেউ বদলেছেন — পাতা নতুন করে খুলে আবার দেখুন।");
   await appendReviewEvents([{ reviewId: r._id, code: null, action: "EDIT", before: { exerciseRef: ref, questionCount: prev }, after: { exerciseRef: ref, questionCount: count } }], caller);
+}
+
+export interface NarrowResult {
+  code: string;
+  exercises: string[];
+  /** Exercises of the pair cited by question and not yet fully covered — the next round's lock needs them covered. */
+  questionGaps: string[];
+}
+
+/**
+ * D-#1685: narrow a LOCKED row's citation of ONE exercise to some of its questions — Principal only
+ * (mastery:settings). The row must cite the exercise whole today (directly or inside a range); the
+ * new questions are a proper subset of the exercise's questions. Narrowing only: never widens, never
+ * adds an exercise. Re-checks the invariants across the pair (a new QUESTION_ONE_CODE / QUESTION_REF
+ * violation refuses it). Coverage gaps it leaves (the questions it gave up) are returned, not refused:
+ * they are what the next round fills (e.g. a new objective), and that round's lock refuses them.
+ * The question count is recorded on the pair's latest round (carried into the next one by the import).
+ */
+export async function narrowLockedCitation(
+  input: { code: string; exercise: string; questions: number[]; questionCount: number },
+  caller: ReviewCaller,
+): Promise<NarrowResult> {
+  if (!caller.canSettings) fail("শুধু অধ্যক্ষ (শিখন-দক্ষতার সেটিংস) চূড়ান্ত সারির অনুশীলনী বদলাতে পারেন।");
+  const exercise = normaliseExerciseRef(input.exercise ?? "");
+  if (!isSplittableExerciseRef(exercise)) fail(`একটি অনুশীলনী লিখুন, পরিসর বা শ্রেণির কাজ নয় (যেমন 3/অনুশীলনী/8)। ঠিক নেই: ${exercise || "—"}`);
+  const count = input.questionCount;
+  if (!Number.isInteger(count) || count < 2 || count > 99) fail("প্রশ্নসংখ্যা ২ থেকে ৯৯।");
+  const questions = [...new Set(input.questions ?? [])].sort((a, b) => a - b);
+  if (questions.length === 0) fail("অন্তত একটি প্রশ্ন বাছুন।");
+  if (questions.some((n) => !Number.isInteger(n) || n < 1 || n > count)) fail(`প্রশ্ন ১ থেকে ${bn(count)} এর মধ্যে।`);
+  if (questions.length >= count) fail("সব প্রশ্ন রাখলে কিছুই সীমিত হয় না — পুরো অনুশীলনীই থাকুক।");
+
+  const row = await MasteryOutcome.findOne({ code: input.code }).lean<Row>();
+  if (!row) return fail(`সারিটি পাওয়া যায়নি: ${input.code ?? "—"}`);
+  if (row.status !== "LOCKED") fail(`${row.code} চূড়ান্ত নয় — খসড়া সারি পর্যালোচনায় বদলান।`);
+  if (treeShapeOf(row).tagged === false) fail(`${row.code} শুধু দলবদ্ধ সারি — অনুশীলনী তার ভাগে থাকে।`);
+  const latest = await MasteryCatalogueReview.findOne({ classToken: row.classToken, subject: row.subject, state: { $ne: "SUPERSEDED" } })
+    .sort({ round: -1 })
+    .lean<IMasteryCatalogueReview>();
+  if (!latest) fail("এই শ্রেণি-বিষয়ের কোনো পর্যালোচনা রাউন্ড নেই।");
+  const round = latest as IMasteryCatalogueReview;
+  const known = questionCountsOf(round).find((c) => c.ref === exercise)?.count;
+  if (known !== undefined && known !== count) fail(`${exercise}-এ আগে ${bn(known)}টি প্রশ্ন লেখা আছে — সেই সংখ্যাই দিন।`);
+
+  // The row's refs with the exercise taken out of whatever cites it whole, and the questions put in its place.
+  const old = outcomeBookRef(row).exercises;
+  let at = -1;
+  const next: string[] = [];
+  for (const ref of old) {
+    const p = parseExerciseRef(ref);
+    const parts = p && p.question === null ? expandExerciseRef(p.exercise) : [];
+    if (at < 0 && parts.includes(exercise)) {
+      at = next.length;
+      // A range keeps its other exercises as single refs.
+      for (const x of parts) if (x !== exercise) next.push(x);
+      continue;
+    }
+    next.push(ref);
+  }
+  if (at < 0) fail(`${row.code} ${exercise} পুরোটা উদ্ধৃত করে না — শুধু পুরো অনুশীলনীকেই সীমিত করা যায়।`);
+  next.splice(at, 0, ...questions.map((n) => questionRef(exercise, n)));
+
+  const ws = await loadPair(row.classToken, row.subject);
+  ws.setExercises(row.code, next);
+  const written = exercisesOf(ws.get(row.code));
+  if (!written.some((x) => parseExerciseRef(x)?.exercise === exercise && parseExerciseRef(x)?.question != null)) {
+    fail(`${row.code} ${exercise} আরেক জায়গায়ও পুরোটা উদ্ধৃত করে — সেটি আগে ঠিক করুন।`);
+  }
+  ws.assertSound();
+  const res = await MasteryOutcome.updateOne(
+    { code: row.code, status: "LOCKED", "bookRef.exercises": old },
+    { $set: { "bookRef.exercises": written } },
+  );
+  if (res.modifiedCount !== 1) fail(`${row.code} এইমাত্র বদলেছে — পাতা নতুন করে খুলে আবার চেষ্টা করুন।`);
+  if (known === undefined) {
+    await MasteryCatalogueReview.updateOne(
+      { _id: round._id, "coverage.questionCounts.ref": { $ne: exercise } },
+      { $push: { "coverage.questionCounts": { ref: exercise, count } } },
+    );
+  }
+  const counts = known === undefined ? [...questionCountsOf(round), { ref: exercise, count }] : questionCountsOf(round);
+  void writeAudit({
+    eventKind: "MASTERY_OUTCOME_CITATION_NARROWED",
+    actorId: caller.userId,
+    actorRole: caller.role,
+    targetKind: "MasteryOutcome",
+    targetId: row._id,
+    meta: { code: row.code, exercise, questionCount: count, before: old, after: written, round: round.round },
+  });
+  return { code: row.code, exercises: written, questionGaps: ws.questionGaps(counts) };
 }
 
 // ---------------------------------------------------------------------------

@@ -132,6 +132,8 @@ export interface ReviewQueue {
   canReopen: boolean;
   canAssign: boolean;
   canLock: boolean;
+  /** D-#1685: Principal — narrow a LOCKED row's exercise to some questions. */
+  canNarrowLocked?: boolean | null;
   eventCount: number;
 }
 
@@ -179,7 +181,7 @@ const QUEUE_FIELDS = `
   flags { code kind text ownerRuling }
   seen total openComments unresolvedUnmapped violations
   decisions { proposed accepted edited added rejected merged moved splits merges }
-  assignedToMe canWrite canComment canSubmit canReopen canAssign canLock eventCount
+  assignedToMe canWrite canComment canSubmit canReopen canAssign canLock canNarrowLocked eventCount
 `;
 
 export const MASTERY_REVIEW_ROUNDS_QUERY = gql`
@@ -254,6 +256,16 @@ export const MASTERY_REVIEW_RESOLVE_UNMAPPED = gql`
 export const MASTERY_REVIEW_SET_QUESTION_COUNT = gql`
   mutation MasteryReviewSetQuestionCount($reviewId: String!, $ref: String!, $count: Int) {
     masteryReviewSetQuestionCount(reviewId: $reviewId, ref: $ref, count: $count) { ${QUEUE_FIELDS} }
+  }
+`;
+
+export const NARROW_LOCKED_MASTERY_CITATION = gql`
+  mutation NarrowLockedMasteryCitation($code: String!, $exercise: String!, $questions: [Int!]!, $questionCount: Int!) {
+    narrowLockedMasteryCitation(code: $code, exercise: $exercise, questions: $questions, questionCount: $questionCount) {
+      code
+      exercises
+      questionGaps
+    }
   }
 `;
 

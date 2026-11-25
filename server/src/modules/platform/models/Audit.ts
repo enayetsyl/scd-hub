@@ -337,6 +337,7 @@ export type AuditEventKind =
   | "MASTERY_CATALOGUE_LOCKED"   // DRAFT → LOCKED; codes became permanent (D-#776)
   | "MASTERY_OUTCOME_SAVED"      // label / home tip / source text / question types edited
   | "MASTERY_OUTCOME_RETIRED"    // LOCKED → RETIRED, or a DRAFT removed
+  | "MASTERY_OUTCOME_CITATION_NARROWED" // a LOCKED row's whole-exercise ref narrowed to some of its questions (D-#1685)
   | "MASTERY_QT_SAVED"           // a question type's marks/label saved; marks history appended (D-#777)
   | "MASTERY_TAG_SAVED"          // a diagnosis tag added or edited (D-#778/#787)
   | "MASTERY_POLICY_SAVED"       // the school policy or a class × subject override saved

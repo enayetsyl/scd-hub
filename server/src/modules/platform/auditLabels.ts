@@ -456,6 +456,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MASTERY_CATALOGUE_LOCKED: { bn: "শিখনফল তালিকা লক করেছেন", en: "Locked an outcome catalogue", group: "MASTERY" },
   MASTERY_OUTCOME_SAVED: { bn: "শিখনফল সম্পাদনা করেছেন", en: "Edited a learning outcome", group: "MASTERY" },
   MASTERY_OUTCOME_RETIRED: { bn: "শিখনফল অবসরে দিয়েছেন", en: "Retired a learning outcome", group: "MASTERY" },
+  MASTERY_OUTCOME_CITATION_NARROWED: { bn: "চূড়ান্ত শিখনফলের অনুশীলনী কয়েকটি প্রশ্নে সীমিত করেছেন", en: "Narrowed a locked outcome's exercise to some questions", group: "MASTERY" },
   MASTERY_QT_SAVED: { bn: "প্রশ্নের ধরনের নম্বর লিখেছেন", en: "Saved question-type marks", group: "MASTERY" },
   MASTERY_TAG_SAVED: { bn: "নির্ণয়ের ট্যাগ লিখেছেন", en: "Saved a diagnosis tag", group: "MASTERY" },
   MASTERY_POLICY_SAVED: { bn: "শিখন-দক্ষতার পলিসি লিখেছেন", en: "Saved the mastery policy", group: "MASTERY" },

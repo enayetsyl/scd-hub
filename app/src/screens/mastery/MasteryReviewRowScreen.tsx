@@ -27,6 +27,8 @@ import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
 import { ReviewThreads, TapText, codeTail, exerciseLines, formatExerciseRefs, practisedLabel, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
 import { ExerciseQuestionPicker, exercisesInRefs } from "./ExerciseQuestionPicker";
+import { splitPartConflicts } from "./exerciseRefPicks";
+import { NarrowLockedCard } from "./NarrowLockedCard";
 import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
@@ -93,21 +95,37 @@ function SplitForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i:
     { label: "", ex: [] },
   ]);
   const setPart = (i: number, p: { label: string; ex: string[] }) => setParts((all) => all.map((x, j) => (j === i ? p : x)));
+  // D-#1685: one question, one part — caught here before the server refuses it (QUESTION_ONE_CODE).
+  const conflicts = splitPartConflicts(parts.map((p) => p.ex));
   return (
     <View style={{ gap: space(2) }}>
       <Muted>{STR.msRvSplitHint}</Muted>
       {parts.map((p, i) => (
         <View key={i} style={{ gap: space(1) }}>
           <Field label={fill(STR.msRvPartTpl, { n: bnNum(i + 1) })} value={p.label} onChangeText={(t) => setPart(i, { ...p, label: t })} />
-          <ExerciseQuestionPicker q={q} pool={r.bookRef.exercises} value={p.ex} onChange={(ex) => setPart(i, { ...p, ex })} allowRemove />
+          <ExerciseQuestionPicker
+            q={q}
+            pool={r.bookRef.exercises}
+            parentRefs={r.bookRef.exercises}
+            selfCode={r.code}
+            value={p.ex}
+            onChange={(ex) => setPart(i, { ...p, ex })}
+            allowRemove
+          />
         </View>
       ))}
+      {conflicts.length > 0 ? (
+        <Notice
+          tone="danger"
+          message={`${STR.msRvSplitQConflict}\n• ${conflicts.map((c) => `${formatExerciseRefs([c.ref])[0]} — ${c.parts.map((n) => fill(STR.msRvPartTpl, { n: bnNum(n) })).join(", ")}`).join("\n• ")}`}
+        />
+      ) : null}
       <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
         <Button title={STR.msRvAddPart} variant="ghost" onPress={() => setParts((all) => [...all, { label: "", ex: [] }])} />
         <Button
           title={STR.msRvSplit}
           loading={busy}
-          disabled={parts.some((p) => !p.label.trim())}
+          disabled={parts.some((p) => !p.label.trim()) || conflicts.length > 0}
           onPress={() => run({ action: "SPLIT", code: r.code, children: parts.map((p) => ({ labelBn: p.label, exercises: p.ex })) })}
         />
       </View>
@@ -118,7 +136,7 @@ function SplitForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i:
 export default function MasteryReviewRowScreen({ navigation, route }: Props): React.ReactElement {
   const { reviewId, code } = route.params;
   const levels = useMasteryLevelLabels();
-  const { queue: q, fetching, error } = useReviewQueue(reviewId);
+  const { queue: q, fetching, error, refetch } = useReviewQueue(reviewId);
   const act = useReviewAction(MASTERY_REVIEW_DECIDE);
   const [mode, setMode] = useState<Mode>(null);
   const [target, setTarget] = useState<string | null>(null);
@@ -259,6 +277,8 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
           <Button title={fill(STR.msRvAddSubHereTpl, { sub: levels.sub })} variant="secondary" onPress={() => setAdding(true)} />
         )
       ) : null}
+
+      {q.canNarrowLocked && r.status === "LOCKED" && r.tagged ? <NarrowLockedCard key={r.bookRef.exercises.join("|")} q={q} r={r} onDone={refetch} /> : null}
 
       {r.mergedInto && byCode.has(r.mergedInto) ? (
         <Button title={`${STR.msRvDetails}: ${codeTail(r.mergedInto)}`} variant="secondary" onPress={() => navigation.replace("MasteryReviewRow", { reviewId: q.id, code: r.mergedInto! })} />
