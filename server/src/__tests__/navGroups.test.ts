@@ -373,9 +373,13 @@ describe("the new names and the Admin / HR move (D-#1654)", () => {
   });
 
   test("Admin hub: the moved cards are gone, the four sub-headings are there", () => {
-    for (const route of ["Import", "AiSettings", "AiRules", "AiExchanges", "MessageTemplates", "Staff"]) {
+    for (const route of ["Import", "AiSettings", "AiRules", "AiExchanges", "MessageTemplates"]) {
       expect(adminHome).not.toContain(`navigate("${route}")`);
     }
+    // Owner 2026-11-25: the staff list is back as a second way in — but only on ① People & logins
+    // (the HR hub keeps its own card), never on the all-sections AdminHome.
+    expect(adminHome).toMatch(/canStaffList && only === "AdminPeople" \? \(\s*<Card onPress=\{\(\) => navigation\.navigate\("Staff"\)\}/);
+    expect(adminHome.split('navigate("Staff")').length - 1).toBe(1);
     for (const h of ["admGPeople", "admGClass", "admGYear", "admGWatch"]) expect(adminHome).toContain(`STR.${h}`);
     for (const route of ["UserList", "GuardianCredentials", "AccessControlUsers", "ScopeGrant", "SupervisoryGrant", "Roster", "StudentBanglaNames",
       "AssignSubjectTeacher", "AssignClassTeacher", "GroupMembers", "SectionConfig", "AcademicYear", "YearChange", "AuditLog", "PersonActivity", "SystemHealth"]) {
