@@ -36,7 +36,8 @@ export interface TreeNodeInput {
   strand: string | null;
   tagged: boolean;
   prereqCodes: string[];
-  /** bookRef.exercises — refs "<chapter>/<lesson>/<n>", "…/<a>–<b>" ranges, "…/—" unnumbered activities. */
+  /** bookRef.exercises — refs "<chapter>/<lesson>/<n>", "…/<a>–<b>" ranges, "…/—" unnumbered activities,
+   *  "…/<n>#<q>" one question of exercise n (D-#1685). */
   exercises: string[];
   labelBn: string;
   homeTipBn?: string | null;
@@ -48,6 +49,14 @@ export interface TreeCoverageInput {
   exercisesTotal: number;
   mapped: number;
   unmapped: unknown[];
+  /** How many questions an exercise has — needed once it is cited question by question (D-#1685). */
+  questionCounts?: ExerciseQuestionCount[];
+}
+
+/** "Exercise 3/অনুশীলনী/8 has 6 questions" — the exercise ref is whole (no "#"). */
+export interface ExerciseQuestionCount {
+  ref: string;
+  count: number;
 }
 
 export interface TreeCheckInput {
@@ -74,13 +83,15 @@ export const TREE_RULES = {
   TAGGED_IFF_LEAF: { text: "objective tagged iff it has no children; every SUB tagged", fileOnly: false },
   CHILD_NUMBERING: { text: "children numbered 1..N without gaps", fileOnly: true },
   TAGGED_CITES_EXERCISE: { text: "every tagged row cites >= 1 exercise", fileOnly: false },
+  QUESTION_REF: { text: "a question ref names one question (1..99) of one numbered exercise", fileOnly: false },
+  QUESTION_ONE_CODE: { text: "a question is cited by one tagged row (one code per question)", fileOnly: false },
   PREREQ_RESOLVES: { text: "prerequisites resolve (same subject or its partner paper, same or earlier class, not self)", fileOnly: false },
   PREREQ_CYCLE: { text: "prerequisite graph has no cycles", fileOnly: false },
   DOMAIN_RESOLVES: { text: "domain codes resolve", fileOnly: false },
   HOME_TIP: { text: "home tip on every objective, none on subs", fileOnly: true },
   BANNED_TERM: { text: "banned term absent from labels/tips", fileOnly: true },
   ASSESS_QT: { text: "assess valid + question types known", fileOnly: true },
-  COVERAGE: { text: "coverage: mapped + unmapped = exercisesTotal; mapped = distinct numbered refs cited", fileOnly: true },
+  COVERAGE: { text: "coverage: mapped + unmapped = exercisesTotal; mapped = distinct numbered refs cited; exercises cited by question fully cited", fileOnly: true },
 } as const;
 export type TreeRule = keyof typeof TREE_RULES;
 
@@ -90,8 +101,153 @@ export interface TreeViolation {
   detail: string;
 }
 
-/** "7/হাতে রাখি/2–4" → three refs; "…/—" (an unnumbered activity) → none. */
-export function expandExerciseRef(ref: string): string[] {
+// ---------------------------------------------------------------------------
+// Question-level refs (D-#1685): "<chapter>/<lesson>/<n>#<q>" = question q (book order) of exercise n
+// ---------------------------------------------------------------------------
+
+/** The separator between an exercise ref and its question number. Never used in a lesson name. */
+export const EXERCISE_QUESTION_SEP = "#";
+
+export interface ParsedExerciseRef {
+  /** The whole-exercise ref ("3/অনুশীলনী/8"). */
+  exercise: string;
+  /** The question number (1..99), or null for a whole-exercise ref. */
+  question: number | null;
+}
+
+/**
+ * "3/অনুশীলনী/8#3" → { exercise: "3/অনুশীলনী/8", question: 3 }; a ref without "#" in its last part →
+ * { exercise: ref, question: null }. null when the question part is malformed: only ONE numbered
+ * exercise can be cited by question (not a range "2–4", not an unnumbered "—"), and q is 1..99.
+ * Bangla digits in the question are read as ASCII.
+ */
+export function parseExerciseRef(ref: string): ParsedExerciseRef | null {
+  const r = String(ref ?? "").trim();
+  const i = r.lastIndexOf("/");
+  const last = r.slice(i + 1);
+  const h = last.indexOf(EXERCISE_QUESTION_SEP);
+  if (h < 0) return { exercise: r, question: null };
+  const no = last.slice(0, h).trim();
+  const q = asciiDigits(last.slice(h + 1).trim());
+  if (i < 0 || !/^\d+$/.test(no) || !/^[1-9]\d?$/.test(q)) return null;
+  return { exercise: `${r.slice(0, i + 1)}${no}`, question: Number(q) };
+}
+
+/** The whole-exercise part of a ref ("3/অনুশীলনী/8#3" → "3/অনুশীলনী/8"); a whole ref is returned as is. */
+export function exerciseOfRef(ref: string): string {
+  const p = parseExerciseRef(ref);
+  if (p) return p.exercise;
+  const r = String(ref ?? "").trim();
+  const i = r.lastIndexOf("/");
+  const h = r.indexOf(EXERCISE_QUESTION_SEP, i + 1);
+  return h < 0 ? r : r.slice(0, h).trim();
+}
+
+/** The stored form of a ref: trimmed, question number in ASCII ("…/8#৩" → "…/8#3"). Malformed → as typed. */
+export function normaliseExerciseRef(ref: string): string {
+  const p = parseExerciseRef(ref);
+  if (!p) return String(ref ?? "").trim();
+  return p.question === null ? p.exercise : `${p.exercise}${EXERCISE_QUESTION_SEP}${p.question}`;
+}
+
+/** A question ref from its exercise and number. */
+export const questionRef = (exercise: string, question: number): string => `${exercise}${EXERCISE_QUESTION_SEP}${question}`;
+
+export interface GroupedExerciseRef {
+  exercise: string;
+  /** True when the exercise is cited whole. */
+  whole: boolean;
+  /** The questions cited one by one, ascending (empty for a whole-only exercise). */
+  questions: number[];
+}
+
+/** Refs grouped by exercise, first-seen order: ["…/8#1", "…/8#3", "…/7"] → [{…/8, [1, 3]}, {…/7, whole}]. */
+export function groupExerciseRefs(refs: readonly string[] | null | undefined): GroupedExerciseRef[] {
+  const by = new Map<string, GroupedExerciseRef>();
+  for (const ref of refs ?? []) {
+    const p = parseExerciseRef(ref);
+    const exercise = p ? p.exercise : exerciseOfRef(ref);
+    const g = by.get(exercise) ?? { exercise, whole: false, questions: [] };
+    if (p && p.question !== null) {
+      if (!g.questions.includes(p.question)) g.questions.push(p.question);
+    } else {
+      g.whole = true;
+    }
+    by.set(exercise, g);
+  }
+  for (const g of by.values()) g.questions.sort((a, b) => a - b);
+  return [...by.values()];
+}
+
+/** True when a ref can be split into questions: one numbered exercise, no question part yet. */
+export function isSplittableExerciseRef(ref: string): boolean {
+  const p = parseExerciseRef(ref);
+  if (!p || p.question !== null) return false;
+  const last = p.exercise.slice(p.exercise.lastIndexOf("/") + 1);
+  return p.exercise.includes("/") && /^\d+$/.test(last);
+}
+
+export interface QuestionCoverageGap {
+  exercise: string;
+  detail: string;
+}
+
+/**
+ * Exercises cited question by question that are not fully covered (D-#1685): an exercise is mapped
+ * when it is cited whole, OR every one of its questions is cited by some tagged row — never both
+ * ways at once by chapter rows (a whole citation would say every question tests that row too). A
+ * skill-strand row (SK-…) citing it whole is fine: a strand names where a cross-cutting skill is
+ * practised, and never maps a question. Needs the exercise's question count. The lock gate (REVIEW)
+ * and COVERAGE (FILE) refuse any gap; a review write does not, so a reviewer can move an exercise
+ * from whole to question-by-question one row at a time.
+ */
+export function questionCoverageGaps(
+  nodes: readonly (Pick<TreeNodeInput, "code" | "tagged" | "exercises"> & { strand?: string | null })[],
+  counts: Iterable<ExerciseQuestionCount> | null | undefined,
+): QuestionCoverageGap[] {
+  const countOf = new Map<string, number>();
+  for (const c of counts ?? []) countOf.set(c.ref, c.count);
+  const whole = new Map<string, Set<string>>();
+  const byQuestion = new Map<string, Set<string>>();
+  const cited = new Map<string, Set<number>>();
+  for (const n of nodes) {
+    if (!n.tagged) continue;
+    for (const ref of n.exercises) {
+      const p = parseExerciseRef(ref);
+      if (!p) continue;
+      if (p.question === null) {
+        if (n.strand) continue;
+        whole.set(p.exercise, (whole.get(p.exercise) ?? new Set<string>()).add(n.code));
+      } else {
+        cited.set(p.exercise, (cited.get(p.exercise) ?? new Set<number>()).add(p.question));
+        byQuestion.set(p.exercise, (byQuestion.get(p.exercise) ?? new Set<string>()).add(n.code));
+      }
+    }
+  }
+  const out: QuestionCoverageGap[] = [];
+  for (const [exercise, qs] of cited) {
+    const w = whole.get(exercise);
+    if (w) {
+      const list = (x: Set<string>) => [...x].sort().join(", ");
+      out.push({ exercise, detail: `cited whole by ${list(w)} and by question by ${list(byQuestion.get(exercise) ?? new Set())} — cite it one way` });
+    }
+    const count = countOf.get(exercise);
+    if (!count) {
+      out.push({ exercise, detail: "cited by question but its question count is not set" });
+      continue;
+    }
+    const missing: number[] = [];
+    for (let q = 1; q <= count; q++) if (!qs.has(q)) missing.push(q);
+    const beyond = [...qs].filter((q) => q > count).sort((a, b) => a - b);
+    if (missing.length) out.push({ exercise, detail: `question${missing.length > 1 ? "s" : ""} ${missing.join(", ")} of ${count} not cited` });
+    if (beyond.length) out.push({ exercise, detail: `question${beyond.length > 1 ? "s" : ""} ${beyond.join(", ")} beyond its ${count}` });
+  }
+  return out;
+}
+
+/** "7/হাতে রাখি/2–4" → three refs; "…/—" (an unnumbered activity) → none; "…/8#3" → its exercise "…/8". */
+export function expandExerciseRef(input: string): string[] {
+  const ref = exerciseOfRef(input);
   const i = ref.lastIndexOf("/");
   if (i < 0) return [ref];
   const head = ref.slice(0, i);
@@ -195,6 +351,30 @@ export function checkTreeInvariants(input: TreeCheckInput): TreeViolation[] {
   // TAGGED_CITES_EXERCISE
   for (const n of nodes) if (n.tagged && n.exercises.length === 0) bad("TAGGED_CITES_EXERCISE", n.code, "cites no exercise");
 
+  // QUESTION_REF / QUESTION_ONE_CODE (D-#1685; one code per question, D-#776). An exercise cited
+  // whole by one row and by question by another is a coverage gap (questionCoverageGaps), not this.
+  const questionBy = new Map<string, Map<number, string[]>>();
+  for (const n of nodes) {
+    for (const ref of n.exercises) {
+      const p = parseExerciseRef(ref);
+      if (!p) {
+        bad("QUESTION_REF", n.code, `${ref}: a question is "<chapter>/<lesson>/<n>#<q>" (one numbered exercise, q 1..99)`);
+        continue;
+      }
+      if (!n.tagged || p.question === null) continue;
+      const qs = questionBy.get(p.exercise) ?? new Map<number, string[]>();
+      const list = qs.get(p.question) ?? [];
+      if (!list.includes(n.code)) list.push(n.code);
+      qs.set(p.question, list);
+      questionBy.set(p.exercise, qs);
+    }
+  }
+  for (const [exercise, qs] of questionBy) {
+    for (const [q, codes] of [...qs].sort((a, b) => a[0] - b[0])) {
+      if (codes.length > 1) bad("QUESTION_ONE_CODE", [...codes].sort()[1], `${questionRef(exercise, q)} is cited by ${[...codes].sort().join(", ")}`);
+    }
+  }
+
   // PREREQ_RESOLVES
   const external = new Set(input.externalCodes ?? []);
   const myClass = classIndex(classToken);
@@ -270,6 +450,7 @@ export function checkTreeInvariants(input: TreeCheckInput): TreeViolation[] {
       const cited = new Set<string>();
       for (const n of nodes) for (const r of n.exercises) for (const x of expandExerciseRef(r)) cited.add(x);
       if (cited.size !== cov.mapped) bad("COVERAGE", null, `mapped ${cov.mapped} != distinct numbered refs cited ${cited.size}`);
+      for (const g of questionCoverageGaps(nodes, cov.questionCounts)) bad("COVERAGE", null, `${g.exercise}: ${g.detail}`);
     }
   }
   return out;
@@ -299,7 +480,14 @@ export interface TreeFile {
   chapters: { number: number; titleBn: string }[];
   questionTypes: { code: string; labelBn: string; marksBn: string | null; marks: number | null; examUse: string | null }[];
   nodes: TreeFileNode[];
-  coverage: { exercisesTotal: number; mapped: number; unmapped: { ref: string; text: string; reason: string }[]; note: string | null };
+  coverage: {
+    exercisesTotal: number;
+    mapped: number;
+    unmapped: { ref: string; text: string; reason: string }[];
+    note: string | null;
+    /** Optional (D-#1685): question counts of the exercises cited question by question. */
+    questionCounts: ExerciseQuestionCount[];
+  };
   flags: { code: string | null; kind: string; text: string; ownerRuling: string | null; ruledOn: string | null }[];
 }
 
@@ -399,7 +587,21 @@ export function readTreeFile(raw: unknown): { ok: true; tree: TreeFile } | { ok:
       return { ref: s(o.ref), text: s(o.text), reason: s(o.reason) };
     }),
     note: ns(cov?.note),
+    questionCounts: [],
   };
+  const qcSeen = new Set<string>();
+  for (const x of Array.isArray(cov?.questionCounts) ? cov.questionCounts : []) {
+    const o = (x ?? {}) as Record<string, unknown>;
+    const ref = s(o.ref);
+    const count = intOrNull(o.count);
+    if (!isSplittableExerciseRef(ref)) errors.push(`coverage.questionCounts: "${ref}" is not one numbered exercise`);
+    else if (count === null || count < 1 || count > 99) errors.push(`coverage.questionCounts: ${ref} count must be 1..99`);
+    else if (qcSeen.has(ref)) errors.push(`coverage.questionCounts: ${ref} appears twice`);
+    else {
+      qcSeen.add(ref);
+      coverage.questionCounts.push({ ref, count });
+    }
+  }
   const flags: TreeFile["flags"] = (Array.isArray(r.flags) ? r.flags : []).map((f) => {
     const o = (f ?? {}) as Record<string, unknown>;
     return { code: ns(o.code), kind: s(o.kind) || "OTHER", text: s(o.text), ownerRuling: ns(o.ownerRuling), ruledOn: ns(o.ruledOn) };

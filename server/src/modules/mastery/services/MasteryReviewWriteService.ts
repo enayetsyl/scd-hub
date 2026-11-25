@@ -12,10 +12,13 @@
  *                           Principal + assigned reviewers on COMMENT and REPLY)
  *   resolveUnmapped       — map an unmapped exercise to a row, or "not assessed this year"
  *                           with a reason (RESOLVE), or reopen it (REOPEN)
+ *   setQuestionCount      — how many questions an exercise has, so it can be cited question by
+ *                           question ("3/অনুশীলনী/8#3", D-#1685); the lock gate needs each one cited
  *   submitReview          — reviewer: OPEN → SUBMITTED
  *   reopenReview          — SUBMITTED → OPEN (REOPEN event, round-level)
  *   lockReview            — Principal, behind the gate: no open comment, no unresolved
- *                           unmapped exercise, every REVIEW-mode invariant holds
+ *                           unmapped exercise, every exercise cited by question fully cited,
+ *                           every REVIEW-mode invariant holds
  *   exportReview          — the decisions export (every event, in order, before/after)
  *
  * Rules every write follows:
@@ -37,6 +40,10 @@ import {
   MASTERY_CLASS_TOKENS,
   checkTreeInvariants,
   formatTreeViolation,
+  isSplittableExerciseRef,
+  normaliseExerciseRef,
+  parseExerciseRef,
+  questionCoverageGaps,
   parseMasteryLoCode,
   masteryPartnerSubject,
   type MasteryClassToken,
@@ -123,6 +130,10 @@ function assertWriter(r: IMasteryCatalogueReview, caller: ReviewCaller, states: 
 // ---------------------------------------------------------------------------
 
 type Row = IMasteryOutcome;
+type QuestionCount = { ref: string; count: number };
+
+/** A round's question counts (D-#1685): exercise ref → how many questions it has. */
+const questionCountsOf = (r: IMasteryCatalogueReview): QuestionCount[] => (r.coverage?.questionCounts ?? []).map((c) => ({ ref: c.ref, count: c.count }));
 
 const isLive = (r: Row) => r.status !== "RETIRED" && r.reviewState !== "REJECTED" && !r.mergedInto;
 const exercisesOf = (r: Row) => outcomeBookRef(r).exercises;
@@ -302,6 +313,11 @@ class WorkSet {
       mode: "REVIEW",
       externalCodes: this.ctx.externalCodes,
     }).map(formatTreeViolation);
+  }
+
+  /** Exercises cited question by question that are not fully cited (D-#1685), "<ref>: <detail>". */
+  questionGaps(counts: QuestionCount[]): string[] {
+    return questionCoverageGaps(this.live().map(nodeOf), counts).map((g) => `${g.exercise}: ${g.detail}`);
   }
 
   /** Refuse the write if it would ADD a broken rule — the rule is named. */
@@ -533,6 +549,10 @@ export interface ReviewQueueView {
   rows: ReviewRowView[];
   threads: ReviewThreadView[];
   unmapped: ReviewUnmappedView[];
+  /** D-#1685: how many questions an exercise has (set once it is cited question by question). */
+  questionCounts: QuestionCount[];
+  /** D-#1685: exercises cited by question with a question not cited (or no count) — blocks the lock. */
+  questionGaps: string[];
   flags: { code: string | null; kind: string; text: string; ownerRuling: string | null }[];
   seen: number;
   total: number;
@@ -689,6 +709,8 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
   const openComments = threads.filter((t) => t.open).length;
   const unresolvedUnmapped = unresolvedCount(r);
   const violations = ws.violations();
+  const questionCounts = questionCountsOf(r);
+  const questionGaps = ws.questionGaps(questionCounts);
   return {
     id: String(r._id),
     classToken: r.classToken,
@@ -742,6 +764,8 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
       resolution: u.resolution ?? null,
       resolvedCode: u.resolvedCode ?? null,
     })),
+    questionCounts,
+    questionGaps,
     flags: (r.flags ?? []).map((f) => ({ code: f.code ?? null, kind: f.kind, text: f.text, ownerRuling: f.ownerRuling ?? null })),
     seen: decided.filter((o) => o.status === "DRAFT" && o.reviewState !== "PROPOSED").length,
     total: decided.filter((o) => o.status === "DRAFT").length,
@@ -755,7 +779,7 @@ export async function getReviewQueue(reviewId: string, caller: ReviewCaller): Pr
     canSubmit: writer && r.state === "OPEN",
     canReopen: writer && r.state === "SUBMITTED",
     canAssign: caller.canSettings && (r.state === "OPEN" || r.state === "SUBMITTED"),
-    canLock: caller.canSettings && r.state === "SUBMITTED" && openComments === 0 && unresolvedUnmapped === 0 && violations.length === 0,
+    canLock: caller.canSettings && r.state === "SUBMITTED" && openComments === 0 && unresolvedUnmapped === 0 && violations.length === 0 && questionGaps.length === 0,
     eventCount: events.length,
   };
 }
@@ -872,14 +896,24 @@ const cleanList = (xs: string[] | null | undefined) => [...new Set((xs ?? []).ma
  * the box on commas too, shredding "12/জোড়া, হালি, ডজন/1" into "12/জোড়া", "হালি", "ডজন/1" — a part
  * without two non-empty slashes is refused rather than saved.
  */
-export function exerciseRefs(xs: string[] | null | undefined): string[] {
+export function exerciseRefs(xs: string[] | null | undefined, counts: QuestionCount[] = []): string[] {
   const list = cleanList(xs);
   const bad = list.filter((x) => {
     const parts = x.split("/");
     return parts.length < 3 || parts.some((p) => !p.trim());
   });
   if (bad.length > 0) fail(`অনুশীলনী লিখুন "অধ্যায়/পাঠ/নম্বর" রূপে, প্রতি লাইনে একটি। ঠিক নেই: ${bad.join(" · ")}`);
-  return list;
+  // A question of an exercise (D-#1685): "<chapter>/<lesson>/<no>#<q>", q counted in book order.
+  const badQ = list.filter((x) => !parseExerciseRef(x));
+  if (badQ.length > 0) fail(`একটি প্রশ্ন লিখুন "অধ্যায়/পাঠ/নম্বর#প্রশ্ন" রূপে (যেমন 3/অনুশীলনী/8#3), শুধু একটি নম্বরের অনুশীলনীতে। ঠিক নেই: ${badQ.join(" · ")}`);
+  const out = cleanList(list.map(normaliseExerciseRef));
+  const countOf = new Map(counts.map((c) => [c.ref, c.count]));
+  for (const x of out) {
+    const p = parseExerciseRef(x);
+    const n = p?.question != null ? countOf.get(p.exercise) : undefined;
+    if (p && p.question !== null && n !== undefined && p.question > n) fail(`${p.exercise}-এ প্রশ্ন ${bn(n)}টি — প্রশ্ন ${bn(p.question)} নেই।`);
+  }
+  return out;
 }
 
 function checkAssess(a: string | null | undefined): "QUESTION" | "RUBRIC" {
@@ -978,7 +1012,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       }
       let exercisesChanged = false;
       if (input.exercises) {
-        const x = exerciseRefs(input.exercises);
+        const x = exerciseRefs(input.exercises, questionCountsOf(r));
         if (JSON.stringify(x) !== JSON.stringify(exercisesOf(row))) {
           ws.setExercises(row.code, x);
           exercisesChanged = true;
@@ -1006,7 +1040,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
         const label = k.labelBn.trim();
         if (!label) fail("প্রতিটি ভাগের লেবেল লিখুন।");
         const code = ws.nextSubCode(row.code);
-        const exercises = exerciseRefs(k.exercises);
+        const exercises = exerciseRefs(k.exercises, questionCountsOf(r));
         const assess = k.assess ? checkAssess(k.assess) : row.assess;
         const qts = k.questionTypeCodes && k.questionTypeCodes.length ? checkQts(ws, cleanList(k.questionTypeCodes)) : [...(row.questionTypeCodes ?? [])];
         ws.create({
@@ -1253,7 +1287,7 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       const parentRow = level === "SUB" ? ws.liveDraft(input.parentCode) : null;
       const assess = input.assess ? checkAssess(input.assess) : (parentRow?.assess ?? "QUESTION");
       const qts = given.length > 0 || input.assess ? given : [...(parentRow?.questionTypeCodes ?? [])];
-      let exercises = exerciseRefs(input.exercises);
+      let exercises = exerciseRefs(input.exercises, questionCountsOf(r));
       const reason = trimOrNull(input.reason);
       if (exercises.length === 0 && !reason) fail("বইয়ের অনুশীলনী (যেমন 7/হাতে রাখি/2) বা নতুন যোগের কারণ লিখুন।");
       let code: string;
@@ -1474,6 +1508,40 @@ export async function resolveUnmapped(
 }
 
 // ---------------------------------------------------------------------------
+// Question counts (D-#1685)
+// ---------------------------------------------------------------------------
+
+/**
+ * Set (or clear, count null) how many questions an exercise has, so rows can cite it question by
+ * question. Refused below a question a row already cites, and cleared only when no row cites one.
+ * One EDIT event (code null) records the change.
+ */
+export async function setQuestionCount(reviewId: string, input: { ref: string; count?: number | null }, caller: ReviewCaller): Promise<void> {
+  const r = await loadRound(reviewId);
+  assertWriter(r, caller, ["OPEN"]);
+  const ref = normaliseExerciseRef(input.ref ?? "");
+  if (!isSplittableExerciseRef(ref)) fail(`প্রশ্ন গোনা যায় শুধু একটি নম্বরের অনুশীলনীতে (যেমন 3/অনুশীলনী/8)। ঠিক নেই: ${ref || "—"}`);
+  const count = input.count ?? null;
+  if (count !== null && (!Number.isInteger(count) || count < 1 || count > 99)) fail("প্রশ্নসংখ্যা ১ থেকে ৯৯।");
+  const ws = await loadPair(r.classToken, r.subject);
+  const cited = ws
+    .live()
+    .flatMap((o) => exercisesOf(o))
+    .map((x) => parseExerciseRef(x))
+    .filter((p): p is { exercise: string; question: number } => !!p && p.exercise === ref && p.question !== null)
+    .map((p) => p.question);
+  const top = cited.length ? Math.max(...cited) : 0;
+  if (count === null && top > 0) fail(`${ref}-এর প্রশ্ন সারিতে মেলানো আছে — প্রশ্নসংখ্যা মোছা যায় না।`);
+  if (count !== null && count < top) fail(`${ref}-এর প্রশ্ন ${bn(top)} একটি সারিতে মেলানো — প্রশ্নসংখ্যা অন্তত ${bn(top)}।`);
+  const old = questionCountsOf(r);
+  const prev = old.find((c) => c.ref === ref)?.count ?? null;
+  if (prev === count) return;
+  const next = [...old.filter((c) => c.ref !== ref), ...(count !== null ? [{ ref, count }] : [])];
+  await MasteryCatalogueReview.updateOne({ _id: r._id }, { $set: { "coverage.questionCounts": next } });
+  await appendReviewEvents([{ reviewId: r._id, code: null, action: "EDIT", before: { exerciseRef: ref, questionCount: prev }, after: { exerciseRef: ref, questionCount: count } }], caller);
+}
+
+// ---------------------------------------------------------------------------
 // Submit / reopen / lock
 // ---------------------------------------------------------------------------
 
@@ -1512,10 +1580,12 @@ export interface LockResult {
 }
 
 /** The lock gate (§7, §10 item 4) — every reason it is refused, in Bangla. */
-export function lockGateRefusals(openComments: number, unresolvedUnmapped: number, violations: string[]): string[] {
+export function lockGateRefusals(openComments: number, unresolvedUnmapped: number, violations: string[], questionGaps: string[] = []): string[] {
   const out: string[] = [];
   if (openComments > 0) out.push(`${bn(openComments)}টি মন্তব্য এখনো খোলা — মীমাংসা করুন।`);
   if (unresolvedUnmapped > 0) out.push(`${bn(unresolvedUnmapped)}টি অনুশীলনী এখনো মেলানো বাকি।`);
+  // D-#1685: an exercise cited question by question is mapped only when every question is cited.
+  if (questionGaps.length > 0) out.push(`প্রশ্ন ধরে মেলানো অনুশীলনীর সব প্রশ্ন মেলেনি:\n${questionGaps.slice(0, 8).join("\n")}`);
   if (violations.length > 0) out.push(`বৃক্ষের নিয়ম ভেঙেছে:\n${violations.slice(0, 8).join("\n")}`);
   return out;
 }
@@ -1529,7 +1599,7 @@ export async function lockReview(reviewId: string, caller: ReviewCaller): Promis
     MasteryReviewEvent.find({ reviewId: r._id, action: { $in: ["COMMENT", "RESOLVE", "REOPEN"] } }).sort({ at: 1, _id: 1 }).lean<IMasteryReviewEvent[]>(),
   ]);
   const open = threadsOf(events, new Map()).filter((t) => t.open).length;
-  const refusals = lockGateRefusals(open, unresolvedCount(r), ws.violations());
+  const refusals = lockGateRefusals(open, unresolvedCount(r), ws.violations(), ws.questionGaps(questionCountsOf(r)));
   if (refusals.length > 0) fail(`চূড়ান্ত করা যাচ্ছে না:\n${refusals.join("\n")}`);
 
   const now = new Date();
@@ -1578,6 +1648,8 @@ export async function exportReview(classToken: MasteryClassToken, subject: Maste
     reviewers: (rr.reviewerIds ?? []).map((id) => names.get(String(id)) ?? String(id)),
     decisions: decisionCounts(roundRows(rows, rr), events),
     unmapped: (rr.coverage?.unmapped ?? []).map((u) => ({ ref: u.ref, reason: u.reason, resolution: u.resolution ?? null })),
+    // D-#1685: refs in the events may cite one question ("3/অনুশীলনী/8#3"); these are the counts.
+    questionCounts: questionCountsOf(rr),
     events: events.map((e, i) => ({
       seq: i + 1,
       id: String(e._id),

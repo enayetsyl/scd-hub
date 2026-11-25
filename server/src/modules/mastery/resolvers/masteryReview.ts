@@ -11,6 +11,7 @@
  *                                 merge / move / reject / add
  *   masteryReviewComment        — mastery:review | mastery:settings; comment / reply / resolve / reopen
  *   masteryReviewResolveUnmapped— mastery:review | mastery:settings
+ *   masteryReviewSetQuestionCount — mastery:review | mastery:settings; an exercise's question count (D-#1685)
  *   submitMasteryReview         — mastery:review | mastery:settings
  *   reopenMasteryReview         — mastery:review | mastery:settings
  *   lockMasteryReview           — mastery:settings (behind the gate)
@@ -30,6 +31,7 @@ import {
   lockReview,
   reopenReview,
   resolveUnmapped,
+  setQuestionCount,
   reviewComment,
   reviewDecide,
   reviewerCandidates,
@@ -161,6 +163,12 @@ UnmappedItemRef.implement({
   }),
 });
 
+const QuestionCountRef = builder.objectRef<{ ref: string; count: number }>("MasteryReviewQuestionCount");
+QuestionCountRef.implement({
+  description: "How many questions an exercise has, so rows can cite it question by question (D-#1685).",
+  fields: (t) => ({ ref: t.exposeString("ref"), count: t.exposeInt("count") }),
+});
+
 const DecisionCountsRef = builder.objectRef<ReviewDecisionCounts>("MasteryReviewDecisionCounts");
 DecisionCountsRef.implement({
   fields: (t) => ({
@@ -213,6 +221,8 @@ QueueRef.implement({
     rows: t.field({ type: [RowRef], resolve: (q) => q.rows }),
     threads: t.field({ type: [ThreadRef], resolve: (q) => q.threads }),
     unmapped: t.field({ type: [UnmappedItemRef], resolve: (q) => q.unmapped }),
+    questionCounts: t.field({ type: [QuestionCountRef], resolve: (q) => q.questionCounts }),
+    questionGaps: t.stringList({ description: "Exercises cited by question with a question left uncited (D-#1685) — block the lock.", resolve: (q) => q.questionGaps }),
     flags: t.field({ type: [FlagItemRef], resolve: (q) => q.flags }),
     seen: t.exposeInt("seen"),
     total: t.exposeInt("total"),
@@ -378,6 +388,22 @@ builder.mutationFields((t) => ({
     resolve: async (_r, args, ctx) => {
       const c = callerOf(ctx);
       await resolveUnmapped(args.reviewId, { ref: args.ref, mapToCode: args.mapToCode, notAssessedReason: args.notAssessedReason, reopen: args.reopen }, c);
+      return getReviewQueue(args.reviewId, c);
+    },
+  }),
+
+  masteryReviewSetQuestionCount: t.field({
+    type: QueueRef,
+    description: "How many questions an exercise has (count null clears it), so rows can cite single questions (D-#1685).",
+    authScopes: { hasAnyPermission: ["mastery:review", "mastery:settings"] },
+    args: {
+      reviewId: t.arg.string({ required: true }),
+      ref: t.arg.string({ required: true }),
+      count: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      const c = callerOf(ctx);
+      await setQuestionCount(args.reviewId, { ref: args.ref, count: args.count ?? null }, c);
       return getReviewQueue(args.reviewId, c);
     },
   }),

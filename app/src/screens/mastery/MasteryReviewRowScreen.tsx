@@ -20,12 +20,13 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MASTERY_REVIEW_DECIDE, type ReviewDecisionInput, type ReviewQueue, type ReviewRow } from "../../graphql/masteryReview";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
-import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Row, Select } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Button, Field, Loader, Notice, Row, Select } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
-import { ReviewThreads, TapText, codeTail, exerciseLines, formatExerciseRef, practisedLabel, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
+import { ReviewThreads, TapText, codeTail, exerciseLines, formatExerciseRefs, practisedLabel, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
+import { ExerciseQuestionPicker, exercisesInRefs } from "./ExerciseQuestionPicker";
 import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
@@ -59,6 +60,13 @@ function EditForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i: 
         </>
       ) : null}
       <Field label={STR.msRvExercises} value={exercises} onChangeText={setExercises} multiline />
+      <ExerciseQuestionPicker
+        q={q}
+        pool={exercisesInRefs(exerciseLines(exercises), true)}
+        value={exerciseLines(exercises)}
+        onChange={(refs) => setExercises(refs.join("\n"))}
+        selfCode={r.code}
+      />
       <Button
         title={STR.msRvSave}
         loading={busy}
@@ -79,7 +87,7 @@ function EditForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i: 
   );
 }
 
-function SplitForm({ r, run, busy }: { r: ReviewRow; run: (i: ReviewDecisionInput) => void; busy: boolean }): React.ReactElement {
+function SplitForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i: ReviewDecisionInput) => void; busy: boolean }): React.ReactElement {
   const [parts, setParts] = useState<{ label: string; ex: string[] }[]>([
     { label: "", ex: [] },
     { label: "", ex: [] },
@@ -91,11 +99,7 @@ function SplitForm({ r, run, busy }: { r: ReviewRow; run: (i: ReviewDecisionInpu
       {parts.map((p, i) => (
         <View key={i} style={{ gap: space(1) }}>
           <Field label={fill(STR.msRvPartTpl, { n: bnNum(i + 1) })} value={p.label} onChangeText={(t) => setPart(i, { ...p, label: t })} />
-          <ChipRow>
-            {r.bookRef.exercises.map((x) => (
-              <Chip key={x} label={formatExerciseRef(x)} selected={p.ex.includes(x)} onPress={() => setPart(i, { ...p, ex: p.ex.includes(x) ? p.ex.filter((y) => y !== x) : [...p.ex, x] })} />
-            ))}
-          </ChipRow>
+          <ExerciseQuestionPicker q={q} pool={r.bookRef.exercises} value={p.ex} onChange={(ex) => setPart(i, { ...p, ex })} allowRemove />
         </View>
       ))}
       <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
@@ -196,7 +200,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
           value={[
             r.bookRef.chapter !== null ? fill(STR.msRvChapter, { n: bnNum(r.bookRef.chapter) }) : null,
             r.bookRef.lesson,
-            r.bookRef.exercises.map(formatExerciseRef).join("; "),
+            formatExerciseRefs(r.bookRef.exercises).join("; "),
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -279,7 +283,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             {live ? <Button title={STR.msRvRejectFull} variant="ghost" onPress={() => setMode(mode === "REJECT" ? null : "REJECT")} /> : null}
           </View>
           {mode === "EDIT" ? <EditForm q={q} r={r} run={run} busy={act.busy} /> : null}
-          {mode === "SPLIT" ? <SplitForm r={r} run={run} busy={act.busy} /> : null}
+          {mode === "SPLIT" ? <SplitForm q={q} r={r} run={run} busy={act.busy} /> : null}
           {mode === "UNSPLIT" && canUnsplit ? (
             <View style={{ gap: space(2) }}>
               <Muted>{fill(STR.msRvUndoSplitHintTpl, { n: bnNum(kids.length), sub: levels.sub, objective: levels.objective })}</Muted>

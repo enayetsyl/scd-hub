@@ -16,7 +16,7 @@
  * subject switch on for the year.
  */
 import { Types } from "mongoose";
-import type { MasterySubject } from "@scd/shared";
+import { groupExerciseRefs, type MasterySubject } from "@scd/shared";
 import { MasteryPaper, type IMasteryPaperItem } from "../models/MasteryPaper";
 import { MasteryOutcome, outcomeBookRef } from "../models/MasteryOutcome";
 import { MasteryAction } from "../models/MasteryAction";
@@ -55,6 +55,14 @@ const OPEN_LAYOUT: BuilderLayout = {
   partAOn: false, partAMarks: 0, partALoCodes: [], partBMarks: 0, mixWeak: 0, mixImproving: 0, mixRevision: 0, questionTypeCodes: [],
 };
 
+
+/** "3/অনুশীলনী/8#1", "3/অনুশীলনী/8#3" → "3/অনুশীলনী/8 (প্রশ্ন ১, ৩)" — a row citing single questions (D-#1685). */
+function bookExercisesBn(refs: readonly string[]): string {
+  const bnd = (n: number) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
+  return groupExerciseRefs(refs)
+    .flatMap((g) => [...(g.whole ? [g.exercise] : []), ...(g.questions.length ? [`${g.exercise} (প্রশ্ন ${g.questions.map(bnd).join(", ")})`] : [])])
+    .join("; ");
+}
 export const EXTRA_HOMEWORK_TITLE_BN = "বাড়তি বাড়ির কাজ";
 
 /** Who has seen what in this section: qid → students (all live rows, any class's codes). */
@@ -231,7 +239,7 @@ export async function homeworkDraft(sectionId: string, subject: MasterySubject, 
     if (type && exercises.length > 0) {
       out.items.push({
         origin: "TEACHER", artifactId: null, qid: null,
-        textBn: `বইয়ের অনুশীলনী: ${exercises.join("; ")}`,
+        textBn: `বইয়ের অনুশীলনী: ${bookExercisesBn(exercises)}`,
         loCode: code, questionTypeCode: type, marks: marks.get(type)!, fromBook: true, repeat: false,
       });
     } else out.gaps.push(code);

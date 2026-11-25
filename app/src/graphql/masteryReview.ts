@@ -114,6 +114,10 @@ export interface ReviewQueue {
   rows: ReviewRow[];
   threads: ReviewThread[];
   unmapped: ReviewUnmapped[];
+  /** D-#1685: how many questions an exercise has (needed to cite it question by question). */
+  questionCounts?: { ref: string; count: number }[] | null;
+  /** D-#1685: exercises cited by question with a question not cited — they block the lock. */
+  questionGaps?: string[] | null;
   flags: { code: string | null; kind: string; text: string; ownerRuling: string | null }[];
   seen: number;
   total: number;
@@ -170,6 +174,8 @@ const QUEUE_FIELDS = `
   }
   threads { id code text byName at open replies { id action text byName at } }
   unmapped { ref text reason resolution resolvedCode }
+  questionCounts { ref count }
+  questionGaps
   flags { code kind text ownerRuling }
   seen total openComments unresolvedUnmapped violations
   decisions { proposed accepted edited added rejected merged moved splits merges }
@@ -242,6 +248,12 @@ export const MASTERY_REVIEW_COMMENT = gql`
 export const MASTERY_REVIEW_RESOLVE_UNMAPPED = gql`
   mutation MasteryReviewResolveUnmapped($reviewId: String!, $ref: String!, $mapToCode: String, $notAssessedReason: String, $reopen: Boolean) {
     masteryReviewResolveUnmapped(reviewId: $reviewId, ref: $ref, mapToCode: $mapToCode, notAssessedReason: $notAssessedReason, reopen: $reopen) { ${QUEUE_FIELDS} }
+  }
+`;
+
+export const MASTERY_REVIEW_SET_QUESTION_COUNT = gql`
+  mutation MasteryReviewSetQuestionCount($reviewId: String!, $ref: String!, $count: Int) {
+    masteryReviewSetQuestionCount(reviewId: $reviewId, ref: $ref, count: $count) { ${QUEUE_FIELDS} }
   }
 `;
 
