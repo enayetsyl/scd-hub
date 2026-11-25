@@ -10,15 +10,18 @@
  * list, server-paged (D-#761): newest first, zero days included, each with the change on the day before.
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
 import { useQuery } from "urql";
 import {
   MY_REVIEW_STATS,
   MY_REVIEW_STATS_SUMMARY,
+  REVIEW_QUALITY,
   REVIEW_STATS,
   REVIEW_STATS_REVIEWERS,
   REVIEW_STATS_SUMMARY,
   type KindCountsT,
+  type ReviewQualityKindT,
+  type ReviewQualityRowT,
   type ReviewStatsDayT,
 } from "../../graphql/reviewStats";
 import { useAuth } from "../../auth/AuthContext";
@@ -68,6 +71,52 @@ function TotalsLine({ label, c }: { label: string; c: KindCountsT }): React.Reac
   );
 }
 
+const FLAG_TONE: Record<ReviewQualityRowT["flag"], "ok" | "warn" | "danger" | "muted"> = {
+  GREEN: "ok",
+  AMBER: "warn",
+  RED: "danger",
+  NONE: "muted",
+};
+const flagLabel = (f: ReviewQualityRowT["flag"]): string =>
+  f === "GREEN" ? STR.rvqGreen : f === "AMBER" ? STR.rvqAmber : f === "RED" ? STR.rvqRed : STR.rvqNone;
+
+/** "প্রশ্ন ৯৫৩ · প্রতিটিতে গড়ে ১.৫ সেকেন্ড" - null when the kind had no activity. */
+function kindLine(label: string, k: ReviewQualityKindT): string | null {
+  if (k.n === 0) return null;
+  const med = k.medianGapSec == null ? "" : ` · ${STR.rvqMedian} ${bnNum(String(k.medianGapSec))} ${STR.rvqSec}`;
+  return `${label} ${bnNum(k.n)}${med}`;
+}
+
+/** One reviewer's speed/quality row. Management only; a tap picks the reviewer in the per-person view. */
+function QualityRow({ row, onPick }: { row: ReviewQualityRowT; onPick?: () => void }): React.ReactElement {
+  const lines = [kindLine(STR.rvqQuestions, row.questions), kindLine(STR.rvqPlans, row.plans)].filter((x): x is string => !!x);
+  const body = (
+    <Card>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+        <Body style={[wrapRowText, { fontWeight: "700" }]}>{row.name}</Body>
+        <Badge text={flagLabel(row.flag)} tone={FLAG_TONE[row.flag]} />
+      </View>
+      {lines.map((l) => (
+        <Muted key={l} style={{ marginTop: space(1) }}>
+          {l}
+        </Muted>
+      ))}
+      {row.reasonsBn.map((r) => (
+        <Body key={r} style={[wrapRowText, { marginTop: space(1) }]}>
+          {r}
+        </Body>
+      ))}
+    </Card>
+  );
+  return onPick ? (
+    <Pressable onPress={onPick} accessibilityRole="button">
+      {body}
+    </Pressable>
+  ) : (
+    body
+  );
+}
+
 function DayRow({ row }: { row: ReviewStatsDayT }): React.ReactElement {
   const c = row.counts;
   return (
@@ -88,6 +137,16 @@ export default function ReviewStatsScreen(): React.ReactElement {
   const canAll = can("review_stats:view_all");
   const [who, setWho] = useState<string>(TEAM);
   const [page, setPage] = usePageState(`${canAll}|${who}`);
+
+  // D-#1684: the speed/quality section is for management only (view_all or supervise).
+  const canQuality = canAll || can("review_program:supervise");
+  const [qualityQ, refetchQuality] = useQuery({
+    query: REVIEW_QUALITY,
+    variables: { days: 7 },
+    requestPolicy: "cache-and-network",
+    pause: !canQuality,
+  });
+  const quality = (qualityQ.data?.reviewQuality ?? []).filter((r) => r.questions.n + r.plans.n > 0);
 
   const [reviewersQ] = useQuery({ query: REVIEW_STATS_REVIEWERS, pause: !canAll });
   const reviewerId = who === TEAM ? null : who;
@@ -119,6 +178,7 @@ export default function ReviewStatsScreen(): React.ReactElement {
 
   const reload = useCallback((): void => {
     const opts = { requestPolicy: "network-only" as const };
+    if (canQuality) refetchQuality(opts);
     if (canAll) {
       refetchAllSum(opts);
       refetchAllPage(opts);
@@ -126,7 +186,7 @@ export default function ReviewStatsScreen(): React.ReactElement {
       refetchOwnSum(opts);
       refetchOwnPage(opts);
     }
-  }, [canAll, refetchAllSum, refetchAllPage, refetchOwnSum, refetchOwnPage]);
+  }, [canAll, canQuality, refetchQuality, refetchAllSum, refetchAllPage, refetchOwnSum, refetchOwnPage]);
   const { refreshing, onRefresh } = usePullRefresh(sumQ.fetching || pageQ.fetching, reload);
 
   // A reviewer gone from the picker (list reloaded) must not leave the screen on a stale id.
@@ -170,6 +230,18 @@ export default function ReviewStatsScreen(): React.ReactElement {
             <TotalsLine label={STR.rvsLast7} c={summary.last7Days} />
             <TotalsLine label={STR.rvsAllTime} c={summary.allTime} />
           </Card>
+        ) : null}
+
+        {canQuality ? (
+          <View style={{ marginTop: space(3) }}>
+            <H2>{STR.rvqTitle}</H2>
+            <Muted style={{ marginBottom: space(2) }}>{STR.rvqHint}</Muted>
+            {qualityQ.error && !qualityQ.data ? <ErrorBanner message={friendlyError(qualityQ.error)} onRetry={reload} /> : null}
+            {quality.length === 0 && !qualityQ.fetching && !qualityQ.error ? <Muted>{STR.rvqEmpty}</Muted> : null}
+            {quality.map((r) => (
+              <QualityRow key={r.reviewerId} row={r} onPick={canAll ? () => setWho(r.reviewerId) : undefined} />
+            ))}
+          </View>
         ) : null}
 
         <View style={{ marginTop: space(3) }}>
