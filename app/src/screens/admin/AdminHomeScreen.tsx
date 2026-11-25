@@ -40,6 +40,9 @@ export default function AdminHomeScreen({ navigation, route }: Props): React.Rea
   const canAssignSubject = can("teaching_assignments:assign_subject_teacher");
   const canAssignSupervisor = can("teaching_assignments:assign_supervisor");
   const canStudents = can("students:view_all");
+  // D-#1686 (owner 2026-11-25): ① People & logins also lists the staff and the students — a second way to the
+  // same screens (staff list = HR hub's কর্মী তালিকা, same action; student list = ②'s card).
+  const canStaffList = can("staff_records:view");
   const canAssignClassTeacher =
     can("teaching_assignments:assign_class_teacher") || can("teaching_assignments:assign_homework_checker");
   const canSections = can("classes_sections:merge_split");
@@ -74,7 +77,9 @@ export default function AdminHomeScreen({ navigation, route }: Props): React.Rea
   // D-#861: Attendance ranking and Guardian reports — unresolved moved to the Reports hub
   // (one switch each); their Admin-stack routes remain for the digest's deep link.
 
-  const showPeople = inSection("AdminPeople") && (canStaffLogins || canGuardianCreds || canAccess || canProxy || canAssignSupervisor);
+  const showPeople =
+    inSection("AdminPeople") &&
+    (((canStaffList || canStudents) && only === "AdminPeople") || canStaffLogins || canGuardianCreds || canAccess || canProxy || canAssignSupervisor);
   const showClass =
     inSection("AdminClasses") &&
     (canStudents || canBanglaNames || canAssignSubject || canAssignClassTeacher || canRoutine || canSections);
@@ -92,6 +97,22 @@ export default function AdminHomeScreen({ navigation, route }: Props): React.Rea
       <H2>{title}</H2>
 
       {showPeople && heading ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.admGPeople}</Muted> : null}
+      {/* Owner 2026-11-25: the two lists sit first in ① (the full section view only — AdminHome keeps
+          the student list under ② and the staff list in the HR hub, so no card shows twice there). */}
+      {canStaffList && only === "AdminPeople" ? (
+        <Card onPress={() => navigation.navigate("Staff")}>
+          <Body style={{ fontWeight: "700" }}>{STR.staff}</Body>
+          <Muted>{STR.staffCount}</Muted>
+        </Card>
+      ) : null}
+
+      {canStudents && only === "AdminPeople" ? (
+        <Card onPress={() => navigation.navigate("Roster")}>
+          <Body style={{ fontWeight: "700" }}>{STR.roster}</Body>
+          <Muted>{STR.rosterCount}</Muted>
+        </Card>
+      ) : null}
+
       {canStaffLogins && inSection("AdminPeople") ? (
         <Card onPress={() => navigation.navigate("UserList")}>
           <Body style={{ fontWeight: "700" }}>{STR.users}</Body>
@@ -215,7 +236,7 @@ export default function AdminHomeScreen({ navigation, route }: Props): React.Rea
       ) : null}
 
       {![
-        canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
+        canStaffList, canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
         canAuditLog, canActivity, canHealth, canBanglaNames,
         canAssignClassTeacher, canRoutine, canSections, canYears, canYearChange, canGuardianCreds, canAccess, canPauses,
       ].some(Boolean) ? (
