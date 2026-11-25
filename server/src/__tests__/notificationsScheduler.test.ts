@@ -248,6 +248,12 @@ jest.mock("../modules/review-program/services/ReviewStatsService", () => ({
   statsBodyBn: () => "stats-body",
   REVIEW_STATS_MINUTES: 20 * 60 + 30,
 }));
+// Review speed / rubber-stamp alert (D-#1684): DB-backed, stubbed like every family (own tests: reviewQuality.test.ts).
+const mockQualityAlert = jest.fn((_now: Date) => Promise.resolve(null as unknown));
+jest.mock("../modules/review-program/services/ReviewQualityService", () => ({
+  qualityAlertForToday: (n: Date) => mockQualityAlert(n),
+  reviewQualityDedupeKey: (r: string, d: string) => `review-quality:${r}:${d}`,
+}));
 // VN-T1 — the voice-transcript retry sweep reads the DB; stubbed like every family.
 jest.mock("../modules/content/services/ReviewVoiceTranscriptService", () => ({
   startVoiceTranscriptSweep: () => false,
@@ -291,6 +297,7 @@ beforeEach(() => {
   mockSectionFind.mockResolvedValue([]);
   mockUserFind.mockResolvedValue([]);
   mockHolderIdsOf.mockResolvedValue([]);
+  mockQualityAlert.mockResolvedValue(null);
   mockDispatchAttendance.mockResolvedValue({});
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
@@ -652,6 +659,25 @@ describe("review daily statistics", () => {
     expect(calls).toHaveLength(2);
     expect(new Set(calls.map((e) => e.dedupeKey)).size).toBe(2);
     expect(calls[0]).toEqual(expect.objectContaining({ recipientUserId: "rev1", bodyBn: "stats-body" }));
+  });
+
+  it("speed alert: flagged -> one notification per supervise holder with a recipient-scoped key", async () => {
+    mockQualityAlert.mockResolvedValue({ recipientIds: ["sup1", "sup2"], titleBn: "t", bodyBn: "b" });
+    const s = await runSchedulerTick(at(20, 30));
+    expect(s.reviewQualityEmitted).toBe(2);
+    const calls = mockEmit.mock.calls.map((c) => c[0]).filter((e) => String(e.dedupeKey).startsWith("review-quality:"));
+    expect(calls).toHaveLength(2);
+    expect(calls.map((c) => c.recipientUserId)).toEqual(["sup1", "sup2"]);
+    expect(new Set(calls.map((c) => c.dedupeKey)).size).toBe(2);
+    expect(calls[0]).toEqual(expect.objectContaining({ kind: "REVIEW_DAILY_STATS", titleBn: "t", bodyBn: "b" }));
+  });
+
+  it("speed alert: nobody flagged -> nothing sent; runs once a day", async () => {
+    const s = await runSchedulerTick(at(20, 30));
+    await runSchedulerTick(at(20, 31));
+    expect(s.reviewQualityEmitted).toBe(0);
+    expect(mockEmit.mock.calls.filter((c) => String(c[0].dedupeKey).startsWith("review-quality:"))).toHaveLength(0);
+    expect(mockQualityAlert).toHaveBeenCalledTimes(1);
   });
 
   it("20:29 and 22:00 - outside the 20:30 window, not called", async () => {

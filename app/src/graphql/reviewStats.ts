@@ -77,3 +77,29 @@ export const REVIEW_STATS_REVIEWERS = gql<{ reviewStatsReviewers: ReviewStatsRev
     reviewStatsReviewers { id name }
   }
 `;
+
+// Review speed / rubber-stamp flag (D-#1684): management only (review_stats:view_all or review_program:supervise).
+export interface ReviewQualityKindT {
+  n: number;
+  medianGapSec: number | null;
+  fastPct: number;
+  approvePct: number;
+  changesPct: number;
+  silentApprovePct: number;
+}
+
+export interface ReviewQualityRowT {
+  reviewerId: string;
+  name: string;
+  flag: "NONE" | "GREEN" | "AMBER" | "RED";
+  reasonsBn: string[];
+  questions: ReviewQualityKindT;
+  plans: ReviewQualityKindT;
+}
+
+const QUALITY_KIND = "n medianGapSec fastPct approvePct changesPct silentApprovePct";
+export const REVIEW_QUALITY = gql<{ reviewQuality: ReviewQualityRowT[] }, { days: number }>`
+  query ReviewQuality($days: Int) {
+    reviewQuality(days: $days) { reviewerId name flag reasonsBn questions { ${QUALITY_KIND} } plans { ${QUALITY_KIND} } }
+  }
+`;
