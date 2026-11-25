@@ -34,6 +34,8 @@ import { dhakaDayKey } from "../lib/dhakaDay";
 import { graphql, type ExecutionResult } from "graphql";
 import { builder } from "../schema";
 import "../modules/review-program/resolvers/reviewQuality";
+// A schema needs at least one Mutation field to build; this module brings real ones (no behaviour used).
+import "../modules/review-program/resolvers/reviewProgram";
 
 let mongo: MongoMemoryServer;
 beforeAll(async () => {
@@ -188,6 +190,8 @@ describe("management-only gate", () => {
   it("resolver: a TEACHER (reviewer) is refused", async () => {
     const r = await run("TEACHER");
     expect(r.errors?.length).toBeGreaterThan(0);
+    // must be the auth refusal, not a schema-build error
+    expect(String(r.errors?.[0]?.message)).not.toMatch(/must define|Unknown type|Cannot query field/);
     expect(r.data?.reviewQuality ?? null).toBeNull();
   });
 
