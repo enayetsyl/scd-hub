@@ -83,7 +83,7 @@ export const TREE_RULES = {
   TAGGED_IFF_LEAF: { text: "objective tagged iff it has no children; every SUB tagged", fileOnly: false },
   CHILD_NUMBERING: { text: "children numbered 1..N without gaps", fileOnly: true },
   TAGGED_CITES_EXERCISE: { text: "every tagged row cites >= 1 exercise", fileOnly: false },
-  QUESTION_REF: { text: "a question ref names one question (1..99) of one numbered exercise", fileOnly: false },
+  QUESTION_REF: { text: "a question ref names one question (1..99) of one exercise (not a range or activity)", fileOnly: false },
   QUESTION_ONE_CODE: { text: "a question is cited by one tagged row (one code per question)", fileOnly: false },
   PREREQ_RESOLVES: { text: "prerequisites resolve (same subject or its partner paper, same or earlier class, not self)", fileOnly: false },
   PREREQ_CYCLE: { text: "prerequisite graph has no cycles", fileOnly: false },
@@ -116,10 +116,22 @@ export interface ParsedExerciseRef {
 }
 
 /**
- * "3/অনুশীলনী/8#3" → { exercise: "3/অনুশীলনী/8", question: 3 }; a ref without "#" in its last part →
- * { exercise: ref, question: null }. null when the question part is malformed: only ONE numbered
- * exercise can be cited by question (not a range "2–4", not an unnumbered "—"), and q is 1..99.
- * Bangla digits in the question are read as ASCII.
+ * True when the last part of a ref names ONE exercise — "8", "B", "Q1", "Act1", "4ক" — and not a
+ * range ("2–4", "2-4"), a list ("1, 2") or an unnumbered activity ("—"). Only such a part may take a
+ * question (D-#1685).
+ */
+export function isSingleExercisePart(part: string): boolean {
+  const t = String(part ?? "").trim();
+  if (!t || t === "—" || t === "-") return false;
+  if (/[–,;]/.test(t)) return false;
+  return !/^\d+\s*-\s*\d+$/.test(t);
+}
+
+/**
+ * "3/অনুশীলনী/8#3" → { exercise: "3/অনুশীলনী/8", question: 3 }; "1/L2/B#2" → { "1/L2/B", 2 }; a ref
+ * without "#" in its last part → { exercise: ref, question: null }. null when the question part is
+ * malformed: only ONE exercise can be cited by question — any single exercise, lettered or numbered —
+ * not a range "2–4", a list or an unnumbered "—"; q is 1..99. Bangla digits in q are read as ASCII.
  */
 export function parseExerciseRef(ref: string): ParsedExerciseRef | null {
   const r = String(ref ?? "").trim();
@@ -129,7 +141,7 @@ export function parseExerciseRef(ref: string): ParsedExerciseRef | null {
   if (h < 0) return { exercise: r, question: null };
   const no = last.slice(0, h).trim();
   const q = asciiDigits(last.slice(h + 1).trim());
-  if (i < 0 || !/^\d+$/.test(no) || !/^[1-9]\d?$/.test(q)) return null;
+  if (i <= 0 || !isSingleExercisePart(no) || !/^[1-9]\d?$/.test(q)) return null;
   return { exercise: `${r.slice(0, i + 1)}${no}`, question: Number(q) };
 }
 
@@ -179,12 +191,32 @@ export function groupExerciseRefs(refs: readonly string[] | null | undefined): G
   return [...by.values()];
 }
 
-/** True when a ref can be split into questions: one numbered exercise, no question part yet. */
+/**
+ * One row's refs with questions folded into a whole citation of the same exercise (D-#1685): a row
+ * citing "…/8" (or a range holding 8) and "…/8#2" keeps only the whole ref — undoing a split or a
+ * merge must not leave a row "mixed with itself". Order and every other ref are kept; duplicates go.
+ */
+export function collapseExerciseRefs(refs: readonly string[]): string[] {
+  const whole = new Set<string>();
+  for (const r of refs) {
+    const p = parseExerciseRef(r);
+    if (p && p.question === null) for (const x of expandExerciseRef(p.exercise)) whole.add(x);
+  }
+  const out: string[] = [];
+  for (const r of refs) {
+    const p = parseExerciseRef(r);
+    if (p && p.question !== null && whole.has(p.exercise)) continue;
+    if (!out.includes(r)) out.push(r);
+  }
+  return out;
+}
+
+/** True when a ref can be split into questions: one exercise (any label, not a range / "—"), no question part yet. */
 export function isSplittableExerciseRef(ref: string): boolean {
   const p = parseExerciseRef(ref);
   if (!p || p.question !== null) return false;
-  const last = p.exercise.slice(p.exercise.lastIndexOf("/") + 1);
-  return p.exercise.includes("/") && /^\d+$/.test(last);
+  const i = p.exercise.lastIndexOf("/");
+  return i > 0 && isSingleExercisePart(p.exercise.slice(i + 1));
 }
 
 export interface QuestionCoverageGap {
@@ -217,7 +249,8 @@ export function questionCoverageGaps(
       if (!p) continue;
       if (p.question === null) {
         if (n.strand) continue;
-        whole.set(p.exercise, (whole.get(p.exercise) ?? new Set<string>()).add(n.code));
+        // A range cites each exercise in it whole ("…/2–4" → …/2, …/3, …/4).
+        for (const x of expandExerciseRef(p.exercise)) whole.set(x, (whole.get(x) ?? new Set<string>()).add(n.code));
       } else {
         cited.set(p.exercise, (cited.get(p.exercise) ?? new Set<number>()).add(p.question));
         byQuestion.set(p.exercise, (byQuestion.get(p.exercise) ?? new Set<string>()).add(n.code));
@@ -358,7 +391,7 @@ export function checkTreeInvariants(input: TreeCheckInput): TreeViolation[] {
     for (const ref of n.exercises) {
       const p = parseExerciseRef(ref);
       if (!p) {
-        bad("QUESTION_REF", n.code, `${ref}: a question is "<chapter>/<lesson>/<n>#<q>" (one numbered exercise, q 1..99)`);
+        bad("QUESTION_REF", n.code, `${ref}: a question is "<chapter>/<lesson>/<n>#<q>" (one exercise, not a range or "—"; q 1..99)`);
         continue;
       }
       if (!n.tagged || p.question === null) continue;
@@ -594,7 +627,7 @@ export function readTreeFile(raw: unknown): { ok: true; tree: TreeFile } | { ok:
     const o = (x ?? {}) as Record<string, unknown>;
     const ref = s(o.ref);
     const count = intOrNull(o.count);
-    if (!isSplittableExerciseRef(ref)) errors.push(`coverage.questionCounts: "${ref}" is not one numbered exercise`);
+    if (!isSplittableExerciseRef(ref)) errors.push(`coverage.questionCounts: "${ref}" is not one exercise (a range or "—")`);
     else if (count === null || count < 1 || count > 99) errors.push(`coverage.questionCounts: ${ref} count must be 1..99`);
     else if (qcSeen.has(ref)) errors.push(`coverage.questionCounts: ${ref} appears twice`);
     else {

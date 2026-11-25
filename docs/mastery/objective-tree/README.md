@@ -62,7 +62,7 @@ structure; those stay as the history and as a source Claude reuses (question typ
 - **Prerequisites** point to the earlier step — inside the class first; cross-class when the class below is drafted.
 - **Coverage:** every numbered exercise maps to ≥ 1 tagged row; every tagged row cites ≥ 1 exercise.
 - **Question-level refs (D-#1685).** When only some questions of an exercise test a row, cite them one by one:
-  `"3/অনুশীলনী/8#3"` = question 3 (book order) of exercise 8. Only a single numbered exercise (no range, no `—`).
+  `"3/অনুশীলনী/8#3"` = question 3 (book order) of exercise 8. Any single exercise, numbered or lettered (`1/L2/B#2`, `4/x/4ক#1`) — no range, no list, no `—`.
   Such an exercise is mapped only when **every** question is cited by some tagged row, never also whole by a
   chapter row (a skill strand may still cite it whole); give its count in `coverage.questionCounts`. One question,
   one tagged row. `mapped` counts the exercise once, however many of its questions are cited.
