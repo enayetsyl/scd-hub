@@ -26,23 +26,23 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 ## Noun — বচন ও গণনা `DOM-ENG2-NOUN`
 
-### `01-02` Pick out nouns and form regular and irregular plurals
+### `01-02` Name the eight parts of speech; pick out and give nouns (people, places, foods, qualities, relations); form regular and irregular plurals and use nouns in sentences
 
 - ইউনিট ১ · Nouns, Pronouns, Adjectives · বইয়ের শিখনফল: "Name the eight parts of speech and pick out the nouns in a sentence or passage. · Form regular plurals (-s, -es, -ies) and common irregular plurals."
 - অভিভাবকের জন্য বাড়ির টিপস: ঘরের দশটি জিনিসের ইংরেজি নাম বলে তাদের plural লিখতে দিন: box → boxes, baby → babies, child → children, tooth → teeth।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-02` | Pick out nouns and form regular and irregular plurals | ✓ | 1/L1/A; 1/L1/B; 1/L1/C; 1/L1/D; 1/L1/E; 1/L1/F | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 02-01 "Common and collective nouns".  |
+| `01-02` | Name the eight parts of speech; pick out and give nouns (people, places, foods, qualities, relations); form regular and irregular plurals and use nouns in sentences | ✓ | 1/L1/A; 1/L1/B; 1/L1/C; 1/L1/D; 1/L1/E; 1/L1/F | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 02-01 "Common and collective nouns".  |
 
-### `01-03` Countable and uncountable nouns: how many / how much and measure words
+### `01-03` Countable and uncountable nouns: how many / how much, measure words, and nouns used as both countable and uncountable (paper, chicken)
 
 - ইউনিট ১ · Nouns, Pronouns, Adjectives · বইয়ের শিখনফল: "Tell countable nouns from uncountable nouns, use how many / how much, and use measure words before uncountable nouns."
 - অভিভাবকের জন্য বাড়ির টিপস: রান্নাঘরে জিজ্ঞেস করুন: "How many eggs?" "How much rice?" — কোনটি গোনা যায়, কোনটি যায় না; a glass of water, a kilo of sugar বলতে দিন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-03` | Countable and uncountable nouns: how many / how much and measure words | ✓ | 1/L2/A; 1/L2/B; 1/L2/C; 1/L2/D | প্রশ্ন | QT-GAP, QT-CLASS | 01-02 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-03 "How much and how many (class test)"; C6 ENG 03-02 "Use quantity and container phrases (a dozen eggs, a loaf of ".  |
+| `01-03` | Countable and uncountable nouns: how many / how much, measure words, and nouns used as both countable and uncountable (paper, chicken) | ✓ | 1/L2/A; 1/L2/B; 1/L2/C; 1/L2/D | প্রশ্ন | QT-GAP, QT-CLASS | 01-02 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-03 "How much and how many (class test)"; C6 ENG 03-02 "Use quantity and container phrases (a dozen eggs, a loaf of ".  |
 
 ## Pronoun ও possessive `DOM-ENG2-PRON`
 
@@ -55,34 +55,34 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 |---|---|---|---|---|---|---|---|
 | `01-04` | Use pronouns in the subject, object and possessive forms; say which noun a pronoun refers to | ✓ | 1/L3/A; 1/L3/B | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — |  |
 
-### `12-01` Possessives: possessive adjectives and pronouns; 's, s' and of
+### `12-01` Possessives: possessive adjectives and pronouns; 's, s' and of; rewrite an "of" phrase with 's
 
 - ইউনিট ১২ · Possessives · বইয়ের শিখনফল: "Students will be able to name and use the seven possessive adjectives (my, our, your, his, her, its, their) before nouns. · Students will be able to use possessive pronouns (mine, ours, yours, his, hers, theirs) in place of a possessive adjective + noun. · Students will be able to show possession with ’s, s’ and of."
 - অভিভাবকের জন্য বাড়ির টিপস: জিনিস দেখিয়ে জিজ্ঞেস করুন "Whose book is this?" — উত্তর দুইভাবে: "It is my book." / "It is mine."; "the name of my friend" → "my friend's name"।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `12-01` | Possessives: possessive adjectives and pronouns; 's, s' and of | ✓ | 12/U/A; 12/U/B; 12/U/Act1; 12/U/Act2; 12/U/Act3; 12/U/Act4 | প্রশ্ন | QT-GAP, QT-CLASS | 01-04 | Not split: only one exercise (Activity 4) practises 's / of; the rest fill my–mine forms. |
+| `12-01` | Possessives: possessive adjectives and pronouns; 's, s' and of; rewrite an "of" phrase with 's | ✓ | 12/U/A; 12/U/B; 12/U/Act1; 12/U/Act2; 12/U/Act3; 12/U/Act4 | প্রশ্ন | QT-GAP, QT-CLASS | 01-04 | Not split: only one exercise (Activity 4) practises 's / of; the rest fill my–mine forms. |
 
 ## Adjective ও adverb `DOM-ENG2-ADJ`
 
-### `01-05` Identify adjectives, their positions and their three degrees
+### `01-05` Identify adjectives and the noun each describes, their positions (before a noun, after "be", after the noun) and their three degrees
 
 - ইউনিট ১ · Nouns, Pronouns, Adjectives · বইয়ের শিখনফল: "Identify adjectives, their positions in a sentence and their three degrees (positive, comparative, superlative)."
 - অভিভাবকের জন্য বাড়ির টিপস: তিনটি জিনিস তুলনা করতে বলুন: tall – taller – the tallest; beautiful – more beautiful – the most beautiful।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-05` | Identify adjectives, their positions and their three degrees | ✓ | 1/L4/A; 1/L4/B; 1/L4/C | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-01 "Find and use adjectives and adverbs"; C5 ENG 19-01 "Compare with -er / -est and more / most (class test)".  |
+| `01-05` | Identify adjectives and the noun each describes, their positions (before a noun, after "be", after the noun) and their three degrees | ✓ | 1/L4/A; 1/L4/B; 1/L4/C | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-01 "Find and use adjectives and adverbs"; C5 ENG 19-01 "Compare with -er / -est and more / most (class test)".  |
 
-### `02-03` Adverbs of time, place, manner and frequency: identify, place correctly and use linkers
+### `02-03` Adverbs of time, place, manner and frequency, and adverbs that modify adjectives and adverbs (very, quite): identify, place correctly and use linkers
 
 - ইউনিট ২ · Verbs, Adverbs, Prepositions, Conjunctions, Interjections · বইয়ের শিখনফল: "Identify adverbs of time, place, manner and frequency, place them correctly, and use linkers (firstly, secondly …)."
 - অভিভাবকের জন্য বাড়ির টিপস: জিজ্ঞেস করুন: "He runs fast." "She came yesterday." — fast ও yesterday কোন প্রশ্নের উত্তর দেয় (how? when?); always, often, never বাক্যে কোথায় বসে?
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `02-03` | Adverbs of time, place, manner and frequency: identify, place correctly and use linkers | ✓ | 2/L3/A; 2/L3/B; 2/L3/C; 2/L3/D; 2/L3/E; 2/L3/F | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | 01-05 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-01 "Find and use adjectives and adverbs".  |
+| `02-03` | Adverbs of time, place, manner and frequency, and adverbs that modify adjectives and adverbs (very, quite): identify, place correctly and use linkers | ✓ | 2/L3/A; 2/L3/B; 2/L3/C; 2/L3/D; 2/L3/E; 2/L3/F | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | 01-05 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-01 "Find and use adjectives and adverbs".  |
 
 ## Verb, tense ও verb form `DOM-ENG2-VERB`
 
@@ -106,14 +106,14 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 | `02-02.1` | Identify auxiliary verbs (be, do, have) and main verbs | ✓ | 2/L2/A; 2/L2/B | প্রশ্ন | QT-POS, QT-CLASS | — |  |
 | `02-02.2` | Modals and the meanings they express (can, could, may, might, shall, should, will, would, must, ought to) | ✓ | 2/L2/C; 2/L2/D | প্রশ্ন | QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 12-02 "Should, shouldn't and must (class test)". A child can pick out be/do/have and still not know what a modal means; the book teaches them in two halves of the lesson. |
 
-### `02-06` Use the right form of verbs in a passage (Q4)
+### `02-06` Use the right form of verbs in a passage — the tense from clue words and agreement with the subject (Q4)
 
 - ইউনিট ২ · Verbs, Adverbs, Prepositions, Conjunctions, Interjections · বইয়ের শিখনফল: "Complete a gap-filling passage (Q2) and use the right form of verbs (Q4). [ভাগ: right form of verbs] · Use clue words (every day, now, already, since/for, yesterday, then, tomorrow) to choose the tense. · Choose the right tense from clue words in a sentence or passage."
 - অভিভাবকের জন্য বাড়ির টিপস: বাক্যে বন্ধনীর verb-এর সঠিক রূপ বসাতে দিন; আগে clue word খুঁজতে বলুন — every day, now, already, since, yesterday, tomorrow।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `02-06` | Use the right form of verbs in a passage (Q4) | ✓ | 2/EP/Q4; 5/EP/Q4; 13/EP/Q4; 16/U/D; 16/U/CW; 16/EP/Q4; 18/Rev/Q4; 19/Rev/Q4; 20/Model/Q4 | প্রশ্ন | QT-VERBFORM | 02-01, 05-02 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-02 "Right form of verbs — all nine forms, three with clue words ". The exam skill (five verbs, one mark each): choosing the tense from the clue word, then the form. Unit 16 section D (clue words) and its classwork belong here. |
+| `02-06` | Use the right form of verbs in a passage — the tense from clue words and agreement with the subject (Q4) | ✓ | 2/EP/Q4; 5/EP/Q4; 13/EP/Q4; 16/U/D; 16/U/CW; 16/EP/Q4; 18/Rev/Q4; 19/Rev/Q4; 20/Model/Q4 | প্রশ্ন | QT-VERBFORM | 02-01, 05-02, 16-02 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-02 "Right form of verbs — all nine forms, three with clue words ". The exam skill (five verbs, one mark each): choosing the tense from the clue word, then the form. Unit 16 section D (clue words) and its classwork belong here. Prerequisite added (reviewer-lessons pass): Q4 items also test agreement (Each of his friends respects; One of ... lives), taught in 16-02. |
 
 ### `05-01` Say the time (present, past, future) and the aspect of a verb
 
@@ -133,7 +133,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 |---|---|---|---|---|---|---|---|
 | `05-02` | **Form and use the seven tenses — affirmative, negative and interrogative** | — (adds up its sub-objectives) | | | | 05-01, 02-02 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 05-02 "Change the tense as directed — six forms (Q6)".  |
 | `05-02.1` | Present simple (with do / does; have / has as a main verb) | ✓ | 5/L2/A; 5/L2/B; 5/L2/C; 5/L2/D; 5/L2/E; 5/L2/F; 5/L2/G | প্রশ্ন | QT-VERBFORM, QT-CHANGE, QT-CLASS | — |  |
-| `05-02.2` | Present continuous | ✓ | 5/L3/A; 5/L3/B; 5/L3/C; 5/L3/D; 5/L3/E | প্রশ্ন | QT-VERBFORM, QT-CHANGE, QT-CLASS | — |  |
+| `05-02.2` | Present continuous (an action going on now and a definite future action) | ✓ | 5/L3/A; 5/L3/B; 5/L3/C; 5/L3/D; 5/L3/E | প্রশ্ন | QT-VERBFORM, QT-CHANGE, QT-CLASS | — |  |
 | `05-02.3` | Present perfect | ✓ | 5/L4/A; 5/L4/B; 5/L4/C; 5/L4/D | প্রশ্ন | QT-VERBFORM, QT-CHANGE, QT-CLASS | — |  |
 | `05-02.4` | Present perfect continuous (since / for) | ✓ | 5/L5/A; 5/L5/B; 5/L5/C; 5/L5/D | প্রশ্ন | QT-VERBFORM, QT-CHANGE, QT-CLASS | — |  |
 | `05-02.5` | Past simple (did; had as a main verb) | ✓ | 5/L6/A; 5/L6/B; 5/L6/C; 5/L6/D; 5/L6/E; 5/L6/F | প্রশ্ন | QT-VERBFORM, QT-CHANGE, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-01 "The simple past of regular and irregular verbs".  |
@@ -180,14 +180,14 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 ## Preposition, conjunction ও interjection `DOM-ENG2-PREP`
 
-### `02-04` Prepositions of time and place
+### `02-04` Identify prepositions and use prepositions of time, place and other relationships (at, on, in, between, with, to …)
 
 - ইউনিট ২ · Verbs, Adverbs, Prepositions, Conjunctions, Interjections · বইয়ের শিখনফল: "Use prepositions of time and place, and the conjunctions and, but, yet, so, because, with interjections for strong feelings. [ভাগ: prepositions]"
 - অভিভাবকের জন্য বাড়ির টিপস: ঘরের জিনিসের অবস্থান ইংরেজিতে বলতে দিন (on the table, under the bed, between the chairs) আর সময়ে at, on, in: at 7 o'clock, on Friday, in June।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `02-04` | Prepositions of time and place | ✓ | 2/L4/A; 2/L4/B; 2/L4/C; 2/L4/D | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 11-02 "Prepositions of place; giving directions".  |
+| `02-04` | Identify prepositions and use prepositions of time, place and other relationships (at, on, in, between, with, to …) | ✓ | 2/L4/A; 2/L4/B; 2/L4/C; 2/L4/D | প্রশ্ন | QT-POS, QT-GAP, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 11-02 "Prepositions of place; giving directions".  |
 
 ### `02-05` Conjunctions (and, but, yet, so, because) and interjections
 
@@ -200,25 +200,25 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 ## Article ও determiner `DOM-ENG2-DET`
 
-### `07-01` Use a, an, the or no article (×) correctly, and correct wrong articles
+### `07-01` Use a, an, the or no article (×) correctly, correct wrong articles, and write own statements and definitions with articles
 
 - ইউনিট ৭ · Articles · বইয়ের শিখনফল: "Use a and an before singular countable nouns mentioned for the first time or not specified. · Use the for something mentioned again, something specific and something that is the only one of its kind. · Leave out the article before plural and uncountable nouns used in a general sense, and mark it with a cross (×)."
 - অভিভাবকের জন্য বাড়ির টিপস: শূন্যস্থানে a, an, the বা × বসাতে দিন: ___ university, ___ hour, ___ sun, ___ milk is good for health; কেন, জিজ্ঞেস করুন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `07-01` | Use a, an, the or no article (×) correctly, and correct wrong articles | ✓ | 7/U/A; 7/U/B; 7/U/C; 7/U/D; 7/U/E; 7/U/F; 7/U/G; 7/U/H | প্রশ্ন | QT-GAP, QT-CLASS | 01-03 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-02 "A, an and the — the Class Five rules (Q7)". One row: the eight sections mix a/an, the and the zero article in the same passages, as the Class Five row does. |
+| `07-01` | Use a, an, the or no article (×) correctly, correct wrong articles, and write own statements and definitions with articles | ✓ | 7/U/A; 7/U/B; 7/U/C; 7/U/D; 7/U/E; 7/U/F; 7/U/G; 7/U/H | প্রশ্ন | QT-GAP, QT-CLASS | 01-03 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-02 "A, an and the — the Class Five rules (Q7)". One row: the eight sections mix a/an, the and the zero article in the same passages, as the Class Five row does. |
 
 ## শব্দ গঠন — prefix ও suffix `DOM-ENG2-WORD`
 
-### `03-01` Make new words with prefixes and suffixes, with correct spelling (class test)
+### `03-01` Say what prefixes and suffixes mean, split a word into its base and affix, and make new words with correct spelling (class test)
 
 - ইউনিট ৩ · Prefixes and Suffixes · বইয়ের শিখনফল: "Say what a prefix and a suffix are and how they change the meaning or the part of speech of a word. · Use the new affixes im-, in-, mis-, pre-, -less, -able, -ous and -y. · Spell new words correctly when y changes to i, when a final e drops, and when two suffixes join."
 - অভিভাবকের জন্য বাড়ির টিপস: মূল শব্দ দিন — happy, care, possible, use — আর জিজ্ঞেস করুন কোন prefix বা suffix যোগ করে নতুন শব্দ হয়: unhappy, careful, careless, impossible, useful।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `03-01` | Make new words with prefixes and suffixes, with correct spelling (class test) | ✓ | 3/U/A; 3/U/B; 3/U/C; 3/U/D; 3/U/E; 3/CT/1; 3/CT/2 | প্রশ্ন | QT-CLASSTEST, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 13-01 "Make new words with prefixes and suffixes (Q7)". Not on the half-yearly or annual paper — class tests only (5 × 1). One row: the Class Five affixes, the new ones and the spelling rules are practised together in section E and the two class-test passages. The unit stays, for class tests (reviewer approved, memo D-01). |
+| `03-01` | Say what prefixes and suffixes mean, split a word into its base and affix, and make new words with correct spelling (class test) | ✓ | 3/U/A; 3/U/B; 3/U/C; 3/U/D; 3/U/E; 3/CT/1; 3/CT/2 | প্রশ্ন | QT-CLASSTEST, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 13-01 "Make new words with prefixes and suffixes (Q7)". Not on the half-yearly or annual paper — class tests only (5 × 1). One row: the Class Five affixes, the new ones and the spelling rules are practised together in section E and the two class-test passages. The unit stays, for class tests (reviewer approved, memo D-01). |
 
 ## বাক্য — প্রকার, গঠন ও রূপান্তর `DOM-ENG2-SENT`
 
@@ -229,25 +229,25 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `06-01` | Make five meaningful sentences from a substitution table (Q3) | ✓ | 6/U/A; 6/U/B; 6/EP/Q3; 18/Rev/Q3; 19/Rev/Q3; 20/Model/Q3 | প্রশ্ন | QT-SUBST | 01-04 | New question type in Class Six. The unit stays as written (reviewer approved, memo D-02). |
+| `06-01` | Make five meaningful sentences from a substitution table (Q3) | ✓ | 6/U/A; 6/U/B; 6/EP/Q3; 18/Rev/Q3; 19/Rev/Q3; 20/Model/Q3 | প্রশ্ন | QT-SUBST | 01-04, 05-02.1 | New question type in Class Six. The unit stays as written (reviewer approved, memo D-02). Prerequisite added (reviewer-lessons pass): the present simple (05-02.1, -s/-es with he/she/it) is what makes a verb agree with its subject in the table. |
 
-### `09-01` Name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative)
+### `09-01` Define a sentence, name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative) and write a sentence of each type
 
 - ইউনিট ৯ · Sentences · বইয়ের শিখনফল: "Define a sentence and name its five types: affirmative, negative, interrogative, imperative and exclamatory (and the optative sentence in Lesson 7)."
 - অভিভাবকের জন্য বাড়ির টিপস: পাঁচ রকম বাক্য বলুন — সন্তান প্রতিটির ধরন বলবে: "Sit down." "What a nice day!" "May Allah bless you."
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `09-01` | Name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative) | ✓ | 9/L1/Act1; 9/L1/Act2 | প্রশ্ন | QT-CHANGE, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-02 "The five kinds of sentence (class test)".  |
+| `09-01` | Define a sentence, name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative) and write a sentence of each type | ✓ | 9/L1/Act1; 9/L1/Act2 | প্রশ্ন | QT-CHANGE, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-02 "The five kinds of sentence (class test)".  |
 
-### `09-02` Affirmative sentences: find the subject and the verb; the three basic patterns
+### `09-02` Affirmative sentences: find the subject and the verb; the three basic patterns; write affirmative sentences
 
 - ইউনিট ৯ · Sentences · বইয়ের শিখনফল: "Identify the subject and verb of an affirmative sentence and the three basic patterns (linking, intransitive, transitive verb)."
 - অভিভাবকের জন্য বাড়ির টিপস: বাক্যে subject ও verb-এর নিচে দাগ দিতে বলুন: "Birds fly." "She is a teacher." "He reads a book."
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `09-02` | Affirmative sentences: find the subject and the verb; the three basic patterns | ✓ | 9/L2/Act1; 9/L2/Act2 | প্রশ্ন | QT-CLASS | 09-01 |  |
+| `09-02` | Affirmative sentences: find the subject and the verb; the three basic patterns; write affirmative sentences | ✓ | 9/L2/Act1; 9/L2/Act2 | প্রশ্ন | QT-CLASS | 09-01 |  |
 
 ### `09-03` Make negative and interrogative sentences
 
@@ -260,14 +260,14 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 | `09-03.1` | Make negative sentences | ✓ | 9/L3/Act1; 9/L3/Act2 | প্রশ্ন | QT-CHANGE, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 05-04 "Make a sentence negative or a question (class test)".  |
 | `09-03.2` | Make yes/no questions and wh-questions | ✓ | 9/L4/Act1; 9/L4/Act2 | প্রশ্ন | QT-CHANGE, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 09-02 "Make WH questions from underlined words (Q8)".  |
 
-### `09-04` Give instructions, directions and requests with imperative sentences
+### `09-04` Give instructions, directions and requests with imperative sentences, including negative imperatives (don't + verb)
 
 - ইউনিট ৯ · Sentences · বইয়ের শিখনফল: "Give instructions, directions and requests with imperative sentences."
 - অভিভাবকের জন্য বাড়ির টিপস: খাবার স্যালাইন বা ডিম সেদ্ধ করার ধাপগুলো ইংরেজিতে বলতে দিন: "Wash your hands. Boil the water. Add …"; অনুরোধে Please যোগ করতে বলুন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `09-04` | Give instructions, directions and requests with imperative sentences | ✓ | 9/L5/Act1; 9/L5/Act2; 9/L5/Act3 | প্রশ্ন | QT-CHANGE, QT-CLASS | 09-01 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-01 "Give and follow polite commands and requests (class test)"; C6 ENG 10-01 "Write instructions with "Do not" and "cannot"; understand pu".  |
+| `09-04` | Give instructions, directions and requests with imperative sentences, including negative imperatives (don't + verb) | ✓ | 9/L5/Act1; 9/L5/Act2; 9/L5/Act3 | প্রশ্ন | QT-CHANGE, QT-CLASS | 09-01 | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-01 "Give and follow polite commands and requests (class test)"; C6 ENG 10-01 "Write instructions with "Do not" and "cannot"; understand pu".  |
 
 ### `09-05` Exclamatory and optative sentences
 
@@ -306,7 +306,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
 | `10-01` | **Punctuation and capital letters (Q6)** | — (adds up its sub-objectives) | | | | — |  |
-| `10-01.1` | Use the eight punctuation marks correctly (comma, full stop, question mark, exclamation mark, quotation marks, colon, semicolon, apostrophe) | ✓ | 10/PA/Act1; 10/PA/Act2; 10/PA/Act3 | প্রশ্ন | QT-PUNC, QT-CLASS | — |  |
+| `10-01.1` | Use the eight punctuation marks correctly (comma in clauses, lists, addresses and dates; full stop; question mark; exclamation mark; quotation marks; colon; semicolon; apostrophe for possession and contractions) | ✓ | 10/PA/Act1; 10/PA/Act2; 10/PA/Act3 | প্রশ্ন | QT-PUNC, QT-CLASS | — |  |
 | `10-01.2` | Use capital letters correctly | ✓ | 10/PB/Act4 | প্রশ্ন | QT-PUNC, QT-CLASS | — |  |
 | `10-01.3` | Correct the capital letters and punctuation of an unpunctuated passage (Q6) | ✓ | 10/EP/Q6; 18/Rev/Q6; 19/Rev/Q6; 20/Model/Q6 | প্রশ্ন | QT-PUNC | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 04-01 "Capital letters and all the punctuation marks, with quotatio". Three parts that fail apart: knowing each mark, knowing where capitals go, and doing both at once in a passage (ten corrections, half a mark each). |
 
@@ -355,7 +355,7 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 |---|---|---|---|---|---|---|---|
 | `04-01` | **Write a formal letter or an application (Q7)** | — (adds up its sub-objectives) | | | | — |  |
 | `04-01.1` | The eight parts of a formal letter in full block layout, with a suitable salutation and closing | ✓ | 4/L1/A; 4/L1/B; 15/L1/A | প্রশ্ন | QT-LETTER, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.1 "The seven parts of an application, in order".  |
-| `04-01.2` | Write a formal letter or an application of about 150 words on a given topic | ✓ | 4/L1/C; 4/L1/D; 4/EP/Q7; 15/EP/Q7; 18/Rev/Q7; 20/Model/Q7 | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.2 "Write an application on a given topic". 4/EP/Q7 and 15/EP/Q7 offer "a letter or an application"; they are cited here (the formal form). Marking of Q7 is approved: format 2 + content 4 + language 2 (memo D-07); one layout for all — full block — is approved (D-06). |
+| `04-01.2` | Write a formal letter or an application of about 150 words on a given topic, keeping to the word limit (10% above or below) | ✓ | 4/L1/C; 4/L1/D; 4/EP/Q7; 15/EP/Q7; 18/Rev/Q7; 20/Model/Q7 | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 01-04.2 "Write an application on a given topic". 4/EP/Q7 and 15/EP/Q7 offer "a letter or an application"; they are cited here (the formal form). Marking of Q7 is approved: format 2 + content 4 + language 2 (memo D-07); one layout for all — full block — is approved (D-06). |
 
 ### `04-02` Write an informal letter to a friend or a family member (Q7)
 
@@ -374,17 +374,17 @@ Exercise refs read `unit/L<lesson>/<letter>` or `unit/L<lesson>/Act<n>` (a unit 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
 | `08-01` | **Write an email (Q7)** | — (adds up its sub-objectives) | | | | 04-01 |  |
-| `08-01.1` | The parts of an email and its layout (From, To, Cc, Subject, salutation, body, closing) | ✓ | 8/L1/A; 8/L1/B; 8/L1/E; 15/L1/C | প্রশ্ন | QT-LETTER, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.1 "The parts of an email, in order".  |
+| `08-01.1` | The parts of an email, a correct email address, a short subject line and the layout (From, To, Cc, Subject, salutation, body, closing) | ✓ | 8/L1/A; 8/L1/B; 8/L1/E; 15/L1/C | প্রশ্ন | QT-LETTER, QT-CLASS | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.1 "The parts of an email, in order".  |
 | `08-01.2` | Write a formal or an informal email of about 150 words | ✓ | 8/L1/C; 8/L1/D; 8/EP/Q7; 15/EP/Q7b | প্রশ্ন | QT-LETTER | — | Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 03-04.2 "Write an email on a given topic". The NCTB emails are shown in real email layout (reviewer approved, memo D-03). |
 
-### `15-01` Choose the right layout for the task and correct common mistakes in letters, applications and emails
+### `15-01` Choose the right layout for the task, find the parts of model letters, applications and emails, and correct common mistakes
 
 - ইউনিট ১৫ · Letters, Applications and Emails 2 · বইয়ের শিখনফল: "Choose the right layout for the task: formal letter / application, informal letter or email. · Find and correct common mistakes in salutations, closings, subject lines, dates and paragraphing."
 - অভিভাবকের জন্য বাড়ির টিপস: তিনটি নমুনা দেখিয়ে জিজ্ঞেস করুন — কোনটি চিঠি, কোনটি দরখাস্ত, কোনটি ইমেইল; সম্বোধন, তারিখ ও শেষের অংশে ভুল থাকলে ধরতে বলুন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `15-01` | Choose the right layout for the task and correct common mistakes in letters, applications and emails | ✓ | 15/L3/A | প্রশ্ন | QT-LETTER, QT-CLASS | 04-01, 04-02, 08-01 | One exercise only (Lesson 3 A); Lesson 2 (the checklist of common mistakes) has no exercise of its own — see the flag. |
+| `15-01` | Choose the right layout for the task, find the parts of model letters, applications and emails, and correct common mistakes | ✓ | 15/L3/A | প্রশ্ন | QT-LETTER, QT-CLASS | 04-01, 04-02, 08-01 | One exercise only (Lesson 3 A); Lesson 2 (the checklist of common mistakes) has no exercise of its own — see the flag. |
 
 ## Skill strands (cross-chapter)
 
@@ -452,3 +452,7 @@ Checked 2026-11-12 against `C6_ENG2_Book_v2_Writer-Reviewer.md` (সংস্ক
 - **Tree changes:** `source.book` / `version` / `files` point to v2 (and the final Teacher/Student copies; the memo is marked approved); the VERSION_DIFF flag and the "open memo decisions" flag now say all ten are approved; Claude notes of rows 03-01, 04-01.2, 06-01, 08-01.2, 09-05, 09-06 and 11-02.3 changed from "open" to "approved" (with the approved marking split); `examUse` of QT-CHANGE, QT-LETTER, QT-COMPOSITION updated and QT-GAP now states the twelve-word box rule; the coverage note and the reviewer note state that the refs are unchanged. No source text in the tree used the old Islamic-phrase spellings or "Hi". **Objectives added 0, label changed 0, retired 0; exercise refs remapped 0; question types / marks changed 0.** No code was touched; `domains/ENG2.json` untouched.
 - **Coverage:** 210 / 210 before and after.
 - **Still open:** the book is not yet printed — re-match the 210 exercise letters against the printed book before the lock.
+
+## পুনর্বিবেচনা — পর্যালোচকের আগের শিক্ষা কাজে লাগানো (২৬ নভেম্বর ২০২৬)
+
+বই বদলায়নি (v2 চূড়ান্ত)। শুধু আগের গাছগুলোতে পর্যালোচকরা যা সাধারণত ঠিক করেন, তা আগেই ঠিক করা হয়েছে: ১৭টি সারির লেবেল অনুশীলনীর কাজ অনুযায়ী বিস্তৃত (P1: যেমন 01-02-এ আটটি পদ ও noun-এর ধরন, 02-04-এ অন্যান্য preposition, 05-02.2-এ ভবিষ্যৎ কাজ, 10-01.1-এ comma-এর ব্যবহার); দুটি prerequisite যোগ (P11: 06-01 ← 05-02.1, 02-06 ← 16-02)। কোনো কোড বদলায়নি, ভাগ বা মেলানো হয়নি; ভাগের প্রস্তাব (02-05, 11-01, 16-01) পরিবর্তন-তালিকায় আছে, সিদ্ধান্ত পর্যালোচকের।
