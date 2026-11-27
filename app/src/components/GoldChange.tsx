@@ -142,7 +142,7 @@ function RequestCard({ r, onDecided }: { r: GoldChangeRequestT; onDecided: (stat
       setFailure(friendlyError(res.error));
       return;
     }
-    onDecided(res.data?.decideGoldChange.status ?? "");
+    onDecided(res.data?.decideGoldChange?.status ?? "");
   }
 
   return (
