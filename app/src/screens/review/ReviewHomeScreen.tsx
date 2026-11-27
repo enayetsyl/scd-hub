@@ -12,6 +12,10 @@
  *
  * D-#761: both are open-round queues (a round leaves on sign-off / supersede), so the
  * server already bounds them; each list pages on the client, 50 cards a page.
+ *
+ * RF-1 (25 Nov 2026): "My reviews" is the "বাকি" list on top and three CLOSED folds below it
+ * (অনুমোদন দিয়েছি · পরিবর্তন চেয়েছি · চূড়ান্ত). RF-2: the Principal also sees the
+ * "চূড়ান্তের পরিবর্তন অনুরোধ" section here.
  */
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { View, Pressable } from "react-native";
@@ -21,10 +25,16 @@ import { useQuery, useMutation } from "urql";
 import { SUBJECTS, CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
 import {
   APPROVE_PLAN_BULK,
-  MY_REVIEW_ASSIGNMENTS,
   PLAN_REVIEW_INBOX,
   type ReviewAssignmentT,
 } from "../../graphql/operations";
+import {
+  MY_PLAN_REVIEW_BUCKETS,
+  MY_REVIEW_ASSIGNMENTS_BUCKET,
+  MY_GOLD_CHANGE_REQUESTS,
+  type GoldChangeRequestT,
+  type ReviewBucketKey,
+} from "../../graphql/reviewFolds";
 import type { ReviewStackParamList } from "../../navigation/types";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -41,7 +51,10 @@ import {
   ErrorBanner,
   Divider,
   Button,
+  Field,
 } from "../../components/ui";
+import { BucketFold, BucketList } from "../../components/BucketFold";
+import { GoldChangeAsk, GoldChangeSection, PlanMarkdownFold } from "../../components/GoldChange";
 import { SelectableCard } from "../../components/SelectableCard";
 import { useToast } from "../../state/ToastContext";
 import {
@@ -91,10 +104,6 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
     query: PLAN_REVIEW_INBOX,
     pause: !canAssign,
   });
-  const [{ data: mineData, fetching: mineFetching, error: mineErr }, refetchMine] = useQuery({
-    query: MY_REVIEW_ASSIGNMENTS,
-    pause: !canReview,
-  });
 
   // Refetch both queues when the tab regains focus (e.g. after submitting/resubmitting a
   // review) so verdicts update without a reload. Skip the initial mount (already fetched).
@@ -106,12 +115,11 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
         return;
       }
       if (canAssign) refetchInbox({ requestPolicy: "network-only" });
-      if (canReview) refetchMine({ requestPolicy: "network-only" });
-    }, [canAssign, canReview, refetchInbox, refetchMine]),
+      if (canReview) mineChangedRef.current();
+    }, [canAssign, canReview, refetchInbox]),
   );
 
   const inbox = inboxData?.planReviewInbox ?? [];
-  const mine = mineData?.myReviewAssignments ?? [];
 
   // Inbox, split by what the Principal has to DO (owner ask 2026-10-12): the reviewer-
   // approved plans are a sign-off pile, cleared in one go; the rest need a decision each.
@@ -195,25 +203,99 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
     );
   }
 
-  // My-reviews filters (client-side over the caller's own rounds, like the Content tab).
+  // My-reviews filters (RF-1): every axis applies to the "বাকি" list AND to every fold.
   const [subject, setSubject] = useState<string | null>(null);
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [docType, setDocType] = useState<string | null>(null);
+  const [chapter, setChapter] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
-
-  const filteredMine = useMemo(
-    () =>
-      mine.filter(
-        (r) =>
-          (!subject || r.subject === subject) &&
-          (classLevel == null || r.classLevel === classLevel) &&
-          (!docType || r.docType === docType),
-      ),
-    [mine, subject, classLevel, docType],
+  /** Title / chapter number / session number. Reaches the query after a short pause. */
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState<string | null>(null);
+  React.useEffect(() => {
+    const h = setTimeout(() => setSearch(searchInput.trim() === "" ? null : searchInput.trim()), 400);
+    return () => clearTimeout(h);
+  }, [searchInput]);
+  const chapterKey = chapter.trim() === "" ? null : chapter.trim();
+  const baseFilter = useMemo(
+    () => ({ subject, classLevel, docType, search, chapter: chapterKey }),
+    [subject, classLevel, docType, search, chapterKey],
   );
-  const { shown: mineShown, pager: minePager } = usePagedRows(filteredMine, {
-    resetKey: `${subject}|${classLevel}|${docType}`,
-  });
+  const [bucketsQ, refetchBuckets] = useQuery({ query: MY_PLAN_REVIEW_BUCKETS, variables: baseFilter, pause: !canReview });
+  const counts = bucketsQ.data?.myPlanReviewBuckets;
+  const [requestsQ, refetchRequests] = useQuery({ query: MY_GOLD_CHANGE_REQUESTS, pause: !canReview });
+  const requestByArtifact = useMemo(() => {
+    const m = new Map<string, GoldChangeRequestT>();
+    for (const r of requestsQ.data?.myGoldChangeRequests ?? []) if (!m.has(r.artifactId)) m.set(r.artifactId, r);
+    return m;
+  }, [requestsQ.data]);
+  /** Bumped on focus / after a request, so every OPEN fold reloads. */
+  const [foldTick, setFoldTick] = useState(0);
+  const mineChanged = useCallback(() => {
+    refetchBuckets({ requestPolicy: "network-only" });
+    refetchRequests({ requestPolicy: "network-only" });
+    setFoldTick((t) => t + 1);
+  }, [refetchBuckets, refetchRequests]);
+  const mineChangedRef = useRef(mineChanged);
+  mineChangedRef.current = mineChanged;
+
+
+  /** One plan round as a card. "বাকি" and the approved/changes folds open the review form (a decided round
+   *  arrives with its verdict + feedback prefilled); a FINAL round can only propose a change (RF-2). */
+  function planRow(r: ReviewAssignmentT, bucket: ReviewBucketKey): React.ReactElement {
+    const decided = r.status === "submitted";
+    if (bucket === "final") {
+      return (
+        <Card key={r.id} style={{ marginBottom: space(3) }}>
+          {/* Title gets the full width; the long "final" badge sits with the others (390 dp walk). */}
+          <Body style={{ fontWeight: "700" }}>{planTitle(r)}</Body>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: 4 }}>
+            <Badge text={STR.rfFinal} tone="ok" />
+            <Badge text={docTypeLabel(r.docType)} tone="info" />
+            {r.verdict ? <Badge text={reviewVerdictLabel(r.verdict)} tone="ok" /> : null}
+          </View>
+          {r.feedback ? <Muted style={{ marginTop: 4 }}>{r.feedback}</Muted> : null}
+          <PlanMarkdownFold artifactId={r.artifactId} />
+          <GoldChangeAsk
+            artifactId={r.artifactId}
+            isQuestion={false}
+            existing={requestByArtifact.get(r.artifactId)}
+            onSent={mineChanged}
+          />
+        </Card>
+      );
+    }
+    return (
+      <Card
+        key={r.id}
+        onPress={() =>
+          navigation.navigate("ReviewSubmit", {
+            assignmentId: r.id,
+            artifactId: r.artifactId,
+            initialVerdict: r.verdict,
+            initialFeedback: r.feedback,
+            roundStatus: r.status,
+          })
+        }
+      >
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+          <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(r)}</Body>
+          {decided && r.verdict ? (
+            <Badge text={reviewVerdictLabel(r.verdict)} tone={r.verdict === "APPROVE" ? "ok" : "warn"} />
+          ) : (
+            <Badge text={reviewRoundStatusLabel(r.status)} tone="brand" />
+          )}
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: 4 }}>
+          <Badge text={docTypeLabel(r.docType)} tone="info" />
+          <Muted>
+            {STR.reviewRound} {bnNum(r.roundNumber)}
+          </Muted>
+        </View>
+        {decided && r.feedback ? <Muted style={{ marginTop: 4 }}>{r.feedback}</Muted> : null}
+      </Card>
+    );
+  }
 
   const activeFilters = useMemo(
     () =>
@@ -221,10 +303,12 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
         subject ? subjectLabel(subject) : null,
         classLevel != null ? classLevelLabel(classLevel) : null,
         docType ? docTypeLabel(docType) : null,
+        search,
+        chapterKey,
       ]
         .filter(Boolean)
         .join(" · "),
-    [subject, classLevel, docType],
+    [subject, classLevel, docType, search, chapterKey],
   );
 
   return (
@@ -275,6 +359,9 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
       ) : null}
 
       {canAssign || canReview || canReviewQuestions || canAssignQuestions || canSeeQuestionReviews ? <Divider /> : null}
+
+      {/* RF-2: the reviewers' requests to change a finalised plan - comment on top, plan below, then decide. */}
+      {canSignOff ? <GoldChangeSection kind="plan" enabled={canSignOff} onChanged={() => refetchInbox({ requestPolicy: "network-only" })} /> : null}
 
       {canAssign ? (
         <View style={{ marginBottom: space(4) }}>
@@ -358,10 +445,9 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
 
       {canReview ? (
         <View>
-          <H2>{STR.myReviews}</H2>
+          <H2>{`${STR.rfPending}${counts ? ` (${bnNum(counts.undecided)})` : ""}`}</H2>
 
-          {mine.length > 0 ? (
-            <View style={{ marginBottom: space(2) }}>
+          <View style={{ marginBottom: space(2) }}>
               <Pressable
                 onPress={() => setFiltersOpen((o) => !o)}
                 accessibilityRole="button"
@@ -378,6 +464,8 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
 
               {filtersOpen ? (
                 <>
+                  <Field label={STR.rfSearch} value={searchInput} onChangeText={setSearchInput} />
+                  <Field label={STR.rfChapter} value={chapter} onChangeText={setChapter} />
                   <Muted>{STR.subject}</Muted>
                   <ChipRow>
                     <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
@@ -402,51 +490,39 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
                 </>
               ) : null}
             </View>
-          ) : null}
 
-          {mineErr ? (
-            <ErrorBanner message={friendlyError(mineErr)} onRetry={() => refetchMine({ requestPolicy: "network-only" })} />
-          ) : mineFetching ? (
-            <Loader label={STR.loading} />
-          ) : mine.length === 0 ? (
-            <EmptyState message={STR.noMyReviews} />
-          ) : filteredMine.length === 0 ? (
-            <EmptyState message={STR.empty} />
-          ) : (
-            mineShown.map((r) => {
-              const decided = r.status === "submitted";
-              return (
-                <Card
-                  key={r.id}
-                  onPress={() =>
-                    navigation.navigate("ReviewSubmit", {
-                      assignmentId: r.id,
-                      artifactId: r.artifactId,
-                      initialVerdict: r.verdict,
-                      initialFeedback: r.feedback,
-                      roundStatus: r.status,
-                    })
-                  }
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                    <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(r)}</Body>
-                    {decided && r.verdict ? (
-                      <Badge text={reviewVerdictLabel(r.verdict)} tone={r.verdict === "APPROVE" ? "ok" : "warn"} />
-                    ) : (
-                      <Badge text={reviewRoundStatusLabel(r.status)} tone="brand" />
-                    )}
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: 4 }}>
-                    <Badge text={docTypeLabel(r.docType)} tone="info" />
-                    <Muted>
-                      {STR.reviewRound} {bnNum(r.roundNumber)}
-                    </Muted>
-                  </View>
-                </Card>
-              );
-            })
-          )}
-          <Pager {...minePager} />
+          {/* "বাকি": the undecided fold, open, with real server paging (আরও দেখুন). */}
+          <BucketList
+            key={`pending|${JSON.stringify(baseFilter)}|${foldTick}`}
+            query={MY_REVIEW_ASSIGNMENTS_BUCKET}
+            variables={{ ...baseFilter, bucket: "undecided" }}
+            pick={(d) => d.myReviewAssignmentsBucket}
+            renderRow={(row) => planRow(row, "undecided")}
+            emptyText={STR.rfAllDone}
+          />
+
+          {/* RF-1: her decided plans, in three folds that stay CLOSED until tapped. */}
+          <View style={{ marginTop: space(4), gap: space(3) }}>
+            {(
+              [
+                ["approved", STR.rfApproved],
+                ["changes", STR.rfChanges],
+                ["final", STR.rfFinal],
+              ] as [ReviewBucketKey, string][]
+            ).map(([bucket, title]) => (
+              <BucketFold
+                key={bucket}
+                id={`rvh:${bucket}`}
+                title={title}
+                count={counts?.[bucket] ?? 0}
+                query={MY_REVIEW_ASSIGNMENTS_BUCKET}
+                variables={{ ...baseFilter, bucket }}
+                reloadKey={foldTick}
+                pick={(d) => d.myReviewAssignmentsBucket}
+                renderRow={(row) => planRow(row, bucket)}
+              />
+            ))}
+          </View>
         </View>
       ) : null}
     </Screen>

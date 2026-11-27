@@ -14,6 +14,7 @@ import { MY_REVIEW_PATH, type ReviewPathItemT } from "../../graphql/reviewHub";
 import type { ReviewStackParamList } from "../../navigation/types";
 import { Badge, Body, Button, Card, EmptyState, H2, Muted, Screen, wrapRowText } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { FoldCard } from "../../components/FoldCard";
 import { STR, bnNum, fullDateLabel } from "../../lib/labels";
 import { itemParams, openItemAction } from "../../lib/reviewPath";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -47,6 +48,18 @@ export default function ReviewChapterScreen({ navigation, route }: Props): React
     navigation.dispatch(StackActions.push(item.screen, itemParams(item)));
   };
 
+  const itemCard = (item: ReviewPathItemT): React.ReactElement => (
+    <Card key={item.key} onPress={() => open(item)}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+        <Body style={[wrapRowText, { fontWeight: "700" }]}>{item.titleBn}</Body>
+        <Badge
+          text={item.decided ? STR.rpReviewed : `${STR.rhLeft} ${bnNum(item.left)}${item.total > item.left ? ` / ${STR.rhOf} ${bnNum(item.total)}` : ""}`}
+          tone={item.decided ? "ok" : "warn"}
+        />
+      </View>
+    </Card>
+  );
+
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <QueryGate
@@ -71,17 +84,17 @@ export default function ReviewChapterScreen({ navigation, route }: Props): React
                 <Button title={STR.rpNext} onPress={() => navigation.dispatch(openItemAction(nextItem, "push"))} />
               </View>
             ) : null}
-            {chapter.items.map((item) => (
-              <Card key={item.key} onPress={() => open(item)}>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
-                  <Body style={[wrapRowText, { fontWeight: "700" }]}>{item.titleBn}</Body>
-                  <Badge
-                    text={item.decided ? STR.rpReviewed : `${STR.rhLeft} ${bnNum(item.left)}${item.total > item.left ? ` / ${STR.rhOf} ${bnNum(item.total)}` : ""}`}
-                    tone={item.decided ? "ok" : "warn"}
-                  />
-                </View>
-              </Card>
-            ))}
+            {/* RF-1: the items still to do stay open; the finished ones fold away (closed) below. */}
+            {chapter.items.filter((i) => !i.decided).map(itemCard)}
+            {chapter.items.some((i) => i.decided) ? (
+              <FoldCard
+                id={`rpch:${bookKey}:${chapterKey}`}
+                title={STR.rfDoneFold}
+                aside={<Badge text={bnNum(chapter.items.filter((i) => i.decided).length)} tone="muted" />}
+              >
+                {chapter.items.filter((i) => i.decided).map(itemCard)}
+              </FoldCard>
+            ) : null}
           </>
         ) : null}
       </QueryGate>
