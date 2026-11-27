@@ -58,6 +58,7 @@ import { space } from "../../theme/tokens";
 import { PLAN_DOC_TYPES } from "@scd/shared";
 import PlanBookTabs from "../../components/PlanBookTabs";
 import { VoiceNoteList } from "../../components/VoiceNotes";
+import { PlanMarkdownFold } from "../../components/GoldChange";
 type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewThread">;
 
 function RoundCard({ r }: { r: ReviewAssignmentT }): React.ReactElement {
@@ -220,6 +221,12 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
       <Divider />
       <H2>{STR.reviewThread}</H2>
       {thread.length === 0 ? <EmptyState message={STR.noInbox} /> : thread.map((r) => <RoundCard key={r.id} r={r} />)}
+
+      {/* Owner add 26 Nov: the reviewer's comment (above) and the plan it is about on ONE screen -
+          the plan sits right under the comment, folded, so the decision buttons below need no second screen. */}
+      {artifact && (PLAN_DOC_TYPES as readonly string[]).includes(artifact.docType) ? (
+        <PlanMarkdownFold artifactId={artifactId} />
+      ) : null}
 
       {/* Already approved: show the sign-off note (and "override" marker if it overruled a reviewer). */}
       {isGold && artifact?.approvalNote ? (

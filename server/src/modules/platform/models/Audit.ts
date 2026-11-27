@@ -28,6 +28,9 @@ export type AuditEventKind =
                           // reviewers, the chapters and what was left behind as decided.
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
   | "QUESTION_PUBLISHED"  // Principal publish: a question reaches the teachers' shelf (D-#508)
+  | "GOLD_CHANGE_REQUESTED" // RF-2: a reviewer asked to change a gold plan/question (comment + optional proposal)
+  | "GOLD_CHANGE_APPROVED"  // RF-2: the Principal approved it - the item left gold, back to draft with the comment
+  | "GOLD_CHANGE_REJECTED"  // RF-2: the Principal rejected it - the gold item is untouched
   // Question corrections (D-#548). meta carries the qid, WHICH fields moved, and their
   // before/after values — question content is curriculum, not identity, so unlike the D-#526
   // staff posture the values themselves are the point: "who changed what, when".

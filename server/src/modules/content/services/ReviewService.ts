@@ -535,6 +535,134 @@ export async function listMyReviewAssignments(reviewerId: string): Promise<Revie
   return raw.map(toDTO);
 }
 
+// ---------------------------------------------------------------------------
+// RF-1 (owner 25 Nov 2026) — the four folds of a reviewer's list
+// ---------------------------------------------------------------------------
+
+/**
+ *   undecided — no verdict yet (round `assigned`)
+ *   approved  — she approved it (APPROVE / APPROVE_WITH_CONDITION), the Principal has not finalised it
+ *   changes   — she asked for changes (CHANGES_REQUESTED), still open
+ *   final     — the Principal finalised it: her round is `superseded` with a verdict AND the artifact is gold
+ * Shared by the question queue and the plan list, so the two cannot disagree on what a fold means.
+ */
+export const REVIEW_BUCKETS = ["undecided", "approved", "changes", "final"] as const;
+export type ReviewBucket = (typeof REVIEW_BUCKETS)[number];
+
+/** The round-level status/verdict match of one fold. */
+export function bucketRoundMatch(bucket: ReviewBucket): Record<string, unknown> {
+  switch (bucket) {
+    case "undecided":
+      return { status: "assigned" };
+    case "approved":
+      return { status: "submitted", verdict: { $in: ["APPROVE", "APPROVE_WITH_CONDITION"] } };
+    case "changes":
+      return { status: "submitted", verdict: "CHANGES_REQUESTED" };
+    case "final":
+      return { status: "superseded", verdict: { $in: [...REVIEW_VERDICTS] } };
+  }
+}
+
+/** Which fold a plan round sits in (the artifact's status decides "final"); null = in none. */
+export function planBucketOf(
+  r: Pick<RawAssignment, "status" | "verdict">,
+  artifactReviewStatus: string | null | undefined,
+): ReviewBucket | null {
+  if (r.status === "assigned") return "undecided";
+  if (r.status === "submitted") return r.verdict === "CHANGES_REQUESTED" ? "changes" : r.verdict ? "approved" : null;
+  if (r.status === "superseded" && r.verdict && artifactReviewStatus === "gold") return "final";
+  return null;
+}
+
+export interface MyPlanReviewFilter {
+  subject?: string | null;
+  classLevel?: number | null;
+  /** The chapter number as the round stores it (a string). */
+  chapter?: string | null;
+  /** chapter_plan | session_plan */
+  docType?: string | null;
+  /** Title, chapter number or session number. */
+  search?: string | null;
+}
+
+interface PlanBucketRow {
+  raw: RawAssignment;
+  title: string | null;
+  artifactReviewStatus: string | null;
+  bucket: ReviewBucket;
+}
+
+/** Every plan round of the reviewer that sits in a fold, after the filter (one batched artifact read). */
+async function myPlanBucketRows(reviewerId: string, filter: MyPlanReviewFilter): Promise<PlanBucketRow[]> {
+  const docs = (await ReviewAssignment.find({
+    reviewerId,
+    docType: filter.docType && PLAN_DOC_TYPES.includes(filter.docType as never) ? filter.docType : { $in: PLAN_DOC_TYPES },
+    ...(filter.subject ? { subject: filter.subject } : {}),
+    ...(filter.classLevel != null ? { classLevel: filter.classLevel } : {}),
+    ...(filter.chapter ? { addressNumber: filter.chapter } : {}),
+    $or: [{ status: { $in: ["assigned", "submitted"] } }, { status: "superseded", verdict: { $in: [...REVIEW_VERDICTS] } }],
+  }).lean()) as unknown as RawAssignment[];
+  if (docs.length === 0) return [];
+  const arts = (await ContentArtifact.find({ _id: { $in: [...new Set(docs.map((d) => d.artifactId.toString()))] } })
+    .select("address reviewStatus current retiredAt")
+    .lean()) as unknown as { _id: Types.ObjectId; address?: { title?: string | null }; reviewStatus?: string; current?: boolean; retiredAt?: Date | null }[];
+  const artById = new Map(arts.map((a) => [a._id.toString(), a]));
+  const term = filter.search?.trim().toLowerCase() ?? "";
+  const rows: PlanBucketRow[] = [];
+  for (const raw of docs) {
+    const art = artById.get(raw.artifactId.toString());
+    // "final" needs the CURRENT, non-retired version: an older version that is still gold is not final.
+    const finalOk = art?.reviewStatus === "gold" && art.current === true && art.retiredAt == null;
+    const bucket = planBucketOf(raw, art?.reviewStatus === "gold" && !finalOk ? "gold-not-current" : art?.reviewStatus);
+    if (!bucket) continue;
+    const title = art?.address?.title ?? null;
+    if (term !== "") {
+      const hay = [title ?? "", raw.addressNumber, raw.sessionIndex != null ? String(raw.sessionIndex) : ""].join(" ").toLowerCase();
+      if (!hay.includes(term)) continue;
+    }
+    rows.push({ raw, title, artifactReviewStatus: art?.reviewStatus ?? null, bucket });
+  }
+  // "final" shows ONE row per artifact: her latest superseded round.
+  const latestFinal = new Map<string, PlanBucketRow>();
+  for (const r of rows) {
+    if (r.bucket !== "final") continue;
+    const key = r.raw.artifactId.toString();
+    const prev = latestFinal.get(key);
+    if (!prev || r.raw.roundNumber > prev.raw.roundNumber) latestFinal.set(key, r);
+  }
+  return rows.filter((r) => r.bucket !== "final" || latestFinal.get(r.raw.artifactId.toString()) === r);
+}
+
+/** RF-1: how many plan rounds sit in each fold, under the filter. */
+export async function myPlanReviewBucketCounts(
+  reviewerId: string,
+  filter: MyPlanReviewFilter = {},
+): Promise<Record<ReviewBucket, number>> {
+  const out: Record<ReviewBucket, number> = { undecided: 0, approved: 0, changes: 0, final: 0 };
+  for (const r of await myPlanBucketRows(reviewerId, filter)) out[r.bucket] += 1;
+  return out;
+}
+
+export const MY_PLAN_REVIEWS_PAGE = 50;
+
+/** RF-1: one fold of the reviewer's plan list, paged, in the same order as the plain queue. */
+export async function listMyPlanReviewsBucket(
+  reviewerId: string,
+  bucket: ReviewBucket,
+  filter: MyPlanReviewFilter = {},
+  opts: { limit?: number | null; offset?: number | null } = {},
+): Promise<ReviewAssignmentDTO[]> {
+  const limit = Math.min(Math.max(1, opts.limit ?? MY_PLAN_REVIEWS_PAGE), 200);
+  const offset = Math.max(0, opts.offset ?? 0);
+  const rows = (await myPlanBucketRows(reviewerId, filter)).filter((r) => r.bucket === bucket);
+  rows.sort((a, b) => compareReviewQueueRows(a.raw, b.raw));
+  return rows.slice(offset, offset + limit).map((r) => ({
+    ...toDTO(r.raw),
+    title: r.title,
+    artifactReviewStatus: r.artifactReviewStatus,
+  }));
+}
+
 /** Numeric chapter for ordering: "2" before "10"; anything non-numeric after every number. */
 export function chapterSortKey(addressNumber: string | null | undefined): number {
   const t = String(addressNumber ?? "").trim();

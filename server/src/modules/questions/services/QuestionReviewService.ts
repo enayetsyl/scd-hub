@@ -39,6 +39,9 @@ import {
   supersedeOpenRounds,
   reviewStatusForVerdict,
   toDTO,
+  REVIEW_BUCKETS,
+  bucketRoundMatch,
+  type ReviewBucket,
   type ReviewAssignmentDTO,
   type RawAssignment,
 } from "../../content/services/ReviewService";
@@ -739,9 +742,36 @@ export async function countMyQuestionReviews(
   const out = (await ReviewAssignment.aggregate([
     { $match: roundMatch },
     ...inboxLookupStages(artifactMatch),
+    ...finalDedupeStages(args.bucket),
     { $count: "n" },
   ])) as unknown as { n: number }[];
   return out[0]?.n ?? 0;
+}
+
+/**
+ * RF-1: the "final" fold shows ONE row per question. A thread can hold several superseded rounds
+ * on one artifact (changes, then a re-assignment, then approve); only her latest counts.
+ */
+function finalDedupeStages(bucket: ReviewBucket | null | undefined): PipelineStage[] {
+  if (bucket !== "final") return [];
+  return [
+    { $project: { art: 0 } },
+    { $sort: { roundNumber: -1, _id: -1 } },
+    { $group: { _id: "$artifactId", doc: { $first: "$$ROOT" } } },
+    { $replaceRoot: { newRoot: "$doc" } },
+  ];
+}
+
+/** RF-1: how many rounds each fold holds under the SAME filter (every axis except the fold itself). */
+export async function myReviewBucketCounts(
+  reviewerId: string,
+  args: MyReviewsFilterArgs = {},
+): Promise<Record<ReviewBucket, number>> {
+  const base: MyReviewsFilterArgs = { ...args, undecided: null, bucket: null };
+  const [undecided, approved, changes, final] = await Promise.all(
+    REVIEW_BUCKETS.map((bucket) => countMyQuestionReviews(reviewerId, { ...base, bucket })),
+  );
+  return { undecided, approved, changes, final };
 }
 
 /**
@@ -782,6 +812,7 @@ export async function listMyQuestionReviews(
     // The reviewerId/status match stays first so the (reviewerId, status) index is used.
     { $match: roundMatch },
     ...(artifactMatch ? inboxLookupStages(artifactMatch) : []),
+    ...finalDedupeStages(args.bucket),
     ...myQueueSortStages(),
     { $skip: offset },
     { $limit: limit },
@@ -879,6 +910,9 @@ function inboxArtifactMatch(args: InboxFilterArgs): Record<string, unknown> | nu
 
 /** Join only when the filter actually reaches into the payload. */
 function inboxLookupStages(artifactMatch: Record<string, unknown>): PipelineStage[] {
+  // RF-1: the "final" fold only needs the artifact's status flags - do not drag the whole payload
+  // through the join unless an envelope / important filter really reads it.
+  const needsPayload = Object.keys(artifactMatch).some((k) => k.startsWith("art.envelopeJson") || k === "art.importantAt" || k === "$or");
   return [
     {
       $lookup: {
@@ -888,7 +922,13 @@ function inboxLookupStages(artifactMatch: Record<string, unknown>): PipelineStag
         as: "art",
         // `importantAt` rides along so the D-#550 mark can be filtered from this SAME
         // join (QR-11) rather than a second lookup; it is one date field.
-        pipeline: [{ $project: { envelopeJson: 1, importantAt: 1 } }],
+        pipeline: [
+          {
+            $project: needsPayload
+              ? { envelopeJson: 1, importantAt: 1, reviewStatus: 1, current: 1, retiredAt: 1 }
+              : { reviewStatus: 1, current: 1, retiredAt: 1 },
+          },
+        ],
       },
     },
     { $unwind: "$art" },
@@ -922,6 +962,8 @@ export interface MyReviewsFilterArgs {
   important?: boolean | null;
   /** Only rounds with no verdict yet — the work, not the history. */
   undecided?: boolean | null;
+  /** RF-1: ONE fold of her list — overrides `undecided` when set (see REVIEW_BUCKETS). */
+  bucket?: ReviewBucket | null;
 }
 
 /** Round-level half — everything answerable without the artifact. */
@@ -934,6 +976,10 @@ function myReviewsRoundMatch(reviewerId: string, args: MyReviewsFilterArgs): Rec
     docType: QUESTION_DOC_TYPE,
     status: args.undecided === true ? "assigned" : { $in: ["assigned", "submitted"] },
   };
+  if (args.bucket) {
+    delete filter.status;
+    Object.assign(filter, bucketRoundMatch(args.bucket));
+  }
   if (args.subject) filter.subject = args.subject;
   if (args.classLevel != null) filter.classLevel = args.classLevel;
   if (args.anchorWord) filter.anchorWord = args.anchorWord;
@@ -948,6 +994,13 @@ function myReviewsArtifactMatch(args: MyReviewsFilterArgs): Record<string, unkno
   if (args.questionType) match["art.envelopeJson.payload.question_type"] = args.questionType;
   if (args.qtCode) match["art.envelopeJson.payload.lesson_ref"] = args.qtCode;
   if (args.important === true) match["art.importantAt"] = { $ne: null };
+  // RF-1: "final" means the artifact she reviewed is gold now.
+  if (args.bucket === "final") {
+    match["art.reviewStatus"] = "gold";
+    // An older version that is still gold, or a retired item, is not "final" any more.
+    match["art.current"] = true;
+    match["art.retiredAt"] = null;
+  }
   const term = args.search?.trim() ?? "";
   if (term !== "") {
     const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
@@ -970,7 +1023,8 @@ export function noReviewerFilter(args: MyReviewsFilterArgs): boolean {
     !args.qtCode &&
     !(args.search?.trim()) &&
     args.important !== true &&
-    args.undecided !== true
+    args.undecided !== true &&
+    !args.bucket
   );
 }
 

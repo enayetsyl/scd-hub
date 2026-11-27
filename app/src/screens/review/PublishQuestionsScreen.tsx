@@ -66,6 +66,7 @@ import {
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { GoldChangeSection } from "../../components/GoldChange";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 import { setQuestionReviewOrder } from "../../lib/questionReviewNav";
@@ -343,6 +344,10 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
         {error ? <ErrorBanner message={friendlyError(error)} onRetry={reload} /> : null}
         {failure ? <ErrorBanner message={failure} /> : null}
         {notice ? <Notice tone="ok" message={notice} /> : null}
+
+        {/* RF-2: reviewers' requests to change a finalised question - comment on top, the question
+            and its answer right under it, then অনুমোদন / বাতিল. */}
+        <GoldChangeSection kind="question" enabled={can("question_review:publish")} onChanged={reload} />
 
         <ChipRow>
           <Chip label={STR.qrAccepted} selected={tab === "APPROVE"} onPress={() => switchTab("APPROVE")} />

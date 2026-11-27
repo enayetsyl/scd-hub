@@ -899,7 +899,7 @@ export interface ReviewAssignmentT {
 /** Fields of a review voice clip (VN-1) — defined here so the thread query below can use it. */
 const REVIEW_VOICE_NOTE_FIELDS = `id assignmentId fileId mime seconds spot submitted transcript transcriptStatus createdAt`;
 
-const REVIEW_ASSIGNMENT_FIELDS = `
+export const REVIEW_ASSIGNMENT_FIELDS = `
   id docType subject classLevel anchorWord addressNumber sessionIndex
   artifactId reviewerId assignedBy assignedAt roundNumber status
   verdict feedback submittedAt
@@ -1220,7 +1220,7 @@ export interface QuestionReviewRoundT {
   voiceNotes?: ReviewVoiceNoteT[];
 }
 
-const QUESTION_ROUND_FIELDS = `
+export const QUESTION_ROUND_FIELDS = `
   id artifactId qid subject classLevel anchorWord addressNumber
   reviewerId reviewerName assignedAt roundNumber status
   verdict reason submittedAt
@@ -1250,15 +1250,17 @@ export interface MyReviewsVars {
   search?: string | null;
   important?: boolean | null;
   undecided?: boolean | null;
+  /** RF-1: one fold - undecided | approved | changes | final (overrides undecided). */
+  bucket?: string | null;
 }
 
 // The FILTER args only. Kept separate from paging because the COUNT resolver takes the
 // filter and NOT limit/offset — bolting all of them into one string is the exact shape
 // that broke the Class-test dashboard in prod on 2026-08-03 (see graphqlDocuments.test).
 const MY_REVIEWS_FILTER_DEFS = `$subject: String, $classLevel: Int, $chapter: Int, $anchorWord: String,
-  $questionType: String, $qtCode: String, $search: String, $important: Boolean, $undecided: Boolean`;
+  $questionType: String, $qtCode: String, $search: String, $important: Boolean, $undecided: Boolean, $bucket: String`;
 const MY_REVIEWS_FILTER_USE = `subject: $subject, classLevel: $classLevel, chapter: $chapter, anchorWord: $anchorWord,
-  questionType: $questionType, qtCode: $qtCode, search: $search, important: $important, undecided: $undecided`;
+  questionType: $questionType, qtCode: $qtCode, search: $search, important: $important, undecided: $undecided, bucket: $bucket`;
 
 export const MY_QUESTION_REVIEWS = gql<
   { myQuestionReviews: QuestionReviewRoundT[] },

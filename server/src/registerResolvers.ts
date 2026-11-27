@@ -21,6 +21,7 @@ import "./modules/foundation/resolvers/scopeGrants";
 import "./modules/corpus/resolvers/analytics";
 import "./modules/content/resolvers/content";
 import "./modules/content/resolvers/review";
+import "./modules/content/resolvers/goldChange";
 import "./modules/questions/resolvers/questions";
 import "./modules/questions/resolvers/questionReview";
 import "./modules/questions/resolvers/questionEdit";
