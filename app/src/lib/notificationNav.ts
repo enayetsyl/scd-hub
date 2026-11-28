@@ -215,6 +215,9 @@ export function notificationTarget(
     // Owner 22 Nov 2026: the 20:30 review statistics notice → the day-by-day statistics screen.
     case "REVIEW_DAILY_STATS":
       return { tab: "ReviewTab", screen: "ReviewStats" };
+    // RF-2: a gold-change request (Principal) / its decision (reviewer) -> the Review home, where both lists live.
+    case "REVIEW_GOLD_CHANGE":
+      return { tab: "ReviewTab", screen: "ReviewHome" };
     case "ASSIGNMENT_CHASE":
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }

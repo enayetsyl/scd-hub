@@ -44,8 +44,15 @@ it("the monthly nudge (on the 25th) skips a teacher who reported on any child th
   const month = todayKey().slice(0, 7);
   const the25th = new Date(`${month}-25T10:00:00+06:00`);
   const notThe25th = new Date(`${month}-24T10:00:00+06:00`);
+  // The fixture starts the routine teacher's period TODAY (for the new-class notice). After the 25th that would put
+  // the 25th before her period began and the suite failed from the 26th of every month — date it from the 1st here.
+  const slots = mongoose.connection.db!.collection("routineslots");
+  const own = { teacherId: fx.routineTeacher };
+  const was = await slots.findOne(own);
+  await slots.updateOne(own, { $set: { effectiveFrom: new Date(`${month}-01T00:00:00+06:00`) } });
   expect(await monthlyNudge(notThe25th)).toBe(0);
   await monthlyNudge(the25th);
+  await slots.updateOne(own, { $set: { effectiveFrom: was!.effectiveFrom } });
   expect(await notes(fx.classTeacher, /এ মাসে/)).toBe(0);
   expect(await notes(fx.routineTeacher, /এ মাসে/)).toBe(1);
 });

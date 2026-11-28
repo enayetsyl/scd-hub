@@ -673,6 +673,56 @@ export async function emitQuestionReviewAssigned(ev: QuestionReviewAssignedEvent
   });
 }
 
+/**
+ * RF-2 (owner 25 Nov 2026): a reviewer asked to change a gold plan/question -> every holder of the
+ * decide permission gets a notice (tap -> the Review home, where the request waits); the decision then
+ * goes back to the reviewer. One kind (REVIEW_GOLD_CHANGE), both directions.
+ */
+export interface GoldChangeRequestedEvent {
+  requestId: string;
+  recipientIds: string[];
+  reviewerName: string | null;
+  docType: string;
+}
+
+export async function emitGoldChangeRequested(ev: GoldChangeRequestedEvent): Promise<void> {
+  return bestEffort("gold change requested", async () => {
+    const what = ev.docType === "question" ? "প্রশ্নে" : "পরিকল্পনায়";
+    for (const recipientUserId of ev.recipientIds) {
+      await emit({
+        recipientUserId,
+        kind: "REVIEW_GOLD_CHANGE",
+        titleBn: "চূড়ান্ত আইটেমে পরিবর্তনের প্রস্তাব",
+        bodyBn: `${ev.reviewerName ?? "একজন পর্যালোচক"} চূড়ান্ত ${what} পরিবর্তনের প্রস্তাব দিয়েছেন — দেখে অনুমোদন বা বাতিল করুন।`,
+        refs: {},
+        dedupeKey: `GCR:${ev.requestId}:${recipientUserId}`,
+      });
+    }
+  });
+}
+
+export interface GoldChangeDecidedEvent {
+  requestId: string;
+  reviewerId: string;
+  approved: boolean;
+  note: string | null;
+}
+
+export async function emitGoldChangeDecided(ev: GoldChangeDecidedEvent): Promise<void> {
+  return bestEffort("gold change decided", async () => {
+    await emit({
+      recipientUserId: ev.reviewerId,
+      kind: "REVIEW_GOLD_CHANGE",
+      titleBn: ev.approved ? "পরিবর্তনের প্রস্তাব অনুমোদিত" : "পরিবর্তনের প্রস্তাব বাতিল",
+      bodyBn: ev.approved
+        ? "আপনার প্রস্তাব অনুমোদিত হয়েছে — আইটেমটি চূড়ান্ত অবস্থা থেকে সরে আবার পর্যালোচনায় গেছে।"
+        : `আপনার প্রস্তাব বাতিল হয়েছে${ev.note ? `: ${ev.note}` : "।"}`,
+      refs: {},
+      dedupeKey: `GCD:${ev.requestId}`,
+    });
+  });
+}
+
 // ---------------------------------------------------------------------------
 // AS-T4 (D-#88) — assignment chase escalation steps 1–2 → the student's
 // login-enabled guardians, riding THIS seam (the PRD pre-flight ruling: no
