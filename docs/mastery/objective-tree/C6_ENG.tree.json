@@ -187,11 +187,11 @@
    ],
    "homeTipBn": "সন্তান যে পাঠটি পড়ছে তা একবার জোরে পড়তে বলুন; তারপর ইংরেজিতে দুটি প্রশ্ন করুন (Who? Where? Why?) এবং পূর্ণ বাক্যে উত্তর দিতে বলুন।",
    "prereqCodes": [
-    "LO-C5-ENG-01-01"
+    "LO-C5-ENG-SK-RCOMP-01"
    ],
    "tagged": false,
    "legacyCodes": [],
-   "claudeNote": "The seen-passage questions of the paper (Q1–Q3) are set on any lesson text of the term, so this objective lives in Unit 1 and cites every unit — as the Class Five tree does (C5·01-01)."
+   "claudeNote": "The seen-passage questions of the paper (Q1–Q3) are set on any lesson text of the term, so this objective lives in Unit 1 and cites every unit — as the Class Five tree does (C5·SK-RCOMP-01)."
   },
   {
    "code": "LO-C6-ENG-01-01.1",
@@ -280,7 +280,7 @@
    ],
    "homeTipBn": null,
    "prereqCodes": [
-    "LO-C5-ENG-01-01.3"
+    "LO-C5-ENG-SK-RCOMP-01.3"
    ],
    "tagged": true,
    "legacyCodes": [],
@@ -293,7 +293,7 @@
    "domainCode": "DOM-ENG-READ",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Fill the gaps in a passage or dialogue with suitable words (Q3)",
+   "labelBn": "Fill the gaps in a passage, dialogue or set of instructions with suitable words (Q3)",
    "sourceText": "complete a conversation with words from a box · Q3: Gap filling (no word box), 1 × 5 = 5",
    "bookRef": {
     "chapter": 1,
@@ -335,11 +335,11 @@
    ],
    "homeTipBn": null,
    "prereqCodes": [
-    "LO-C5-ENG-01-05.1"
+    "LO-C5-ENG-SK-RCOMP-02.1"
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "In the lessons the gaps are filled from a word box; in the paper (Q3) there is no box. Kept as one row because the book treats them as one type (\"the gap-filling type\") — see the flag on this row."
+   "claudeNote": "In the lessons the gaps are filled from a word box; in the paper (Q3) there is no box. Kept as one row because the book treats them as one type (\"the gap-filling type\") — see the flag on this row. Instructions count too: 6/L3/A1, B and C complete a recipe with its order words (first, then, after that), and 4/L3/B1 completes a dialogue with facts from a text."
   },
   {
    "code": "LO-C6-ENG-01-02",
@@ -389,7 +389,7 @@
    "domainCode": "DOM-ENG-VOCAB",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Match words and phrases from a text with their meanings",
+   "labelBn": "Match words and phrases with their meanings or descriptions, including the meaning a word has in a sentence",
    "sourceText": "understand words such as generation, hit, proud and marvellous · match words with their meanings",
    "bookRef": {
     "chapter": 1,
@@ -418,11 +418,11 @@
    ],
    "homeTipBn": "পাঠের নতুন শব্দগুলোর অর্থ ইংরেজিতে সহজ কথায় বলতে বলুন; শব্দ ও অর্থ দুই কলামে লিখে মেলাতে দিন।",
    "prereqCodes": [
-    "LO-C5-ENG-01-01.2"
+    "LO-C5-ENG-SK-RCOMP-01.2"
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "A lesson exercise type, not a question of the written paper (the book calls it \"like Q8 matching\", but Q8 matches parts of sentences). It prepares the meaning test and Q4, so it carries the class-test type."
+   "claudeNote": "A lesson exercise type, not a question of the written paper (the book calls it \"like Q8 matching\", but Q8 matches parts of sentences). It prepares the meaning test and Q4, so it carries the class-test type. 3/L1/A2 asks for the meaning a word has in a sentence (trunk, ring — one word, several meanings); 5/L1/A1 and 11/L2/B2 ask for the meaning to be written, not matched; 3/L3/A, 4/L1/A and 9/L1/A match a word with a description."
   },
   {
    "code": "LO-C6-ENG-01-04",
@@ -431,7 +431,7 @@
    "domainCode": "DOM-ENG-READ",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Complete a table with information from a text — information transfer (Q5)",
+   "labelBn": "Complete or sort a table with information from a text — information transfer (Q5)",
    "sourceText": "find information in a text and put it in a table · Q5: Information transfer, 1 × 5 = 5",
    "bookRef": {
     "chapter": 1,
@@ -463,11 +463,11 @@
    ],
    "homeTipBn": "একটি ছোট লেখা (যেমন ঔষধের মোড়ক বা বিজ্ঞপ্তি) দেখিয়ে সন্তানকে একটি ছকে তথ্য সাজাতে বলুন — নাম, তারিখ, স্থান, সংখ্যা।",
    "prereqCodes": [
-    "LO-C5-ENG-01-01.4"
+    "LO-C5-ENG-SK-RCOMP-01.4"
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "In the paper Q5–Q8 are set on a new unseen passage; in the lessons the same skills are practised on seen texts."
+   "claudeNote": "In the paper Q5–Q8 are set on a new unseen passage; in the lessons the same skills are practised on seen texts. Not only fill-in tables: 3/L2/A1 ticks and counts items, 3/L2/C1 and 4/L1/B1 sort items under headings."
   },
   {
    "code": "LO-C6-ENG-01-05",
@@ -476,7 +476,7 @@
    "domainCode": "DOM-ENG-READ",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Answer questions on the poems of the book (Q10)",
+   "labelBn": "Answer questions on the poems of the book, including the poet's comparisons and the punctuation (Q10)",
    "sourceText": "answer questions on a poem in full sentences · Q10: Answering questions on the poems (all compulsory), 2 × 5 = 10",
    "bookRef": {
     "chapter": 1,
@@ -677,7 +677,7 @@
    "domainCode": "DOM-ENG-SPEAK",
    "chapterNumber": 2,
    "strand": null,
-   "labelBn": "Introduce people and ask where someone is from, in different ways",
+   "labelBn": "Ask where someone is from in different ways (\"Where do you come from?\" and \"Where are you coming from now?\")",
    "sourceText": "introduce people and ask where someone is from · understand the difference between \"Where do you come from?\" and \"Where are you coming from now?\" · ask the same question in different ways",
    "bookRef": {
     "chapter": 2,
@@ -695,7 +695,7 @@
    "prereqCodes": [],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "Class work, not on the written paper."
+   "claudeNote": "Class work, not on the written paper. The introductions themselves are written in 2/L1/A1, which sits on the dialogue row (01-08)."
   },
   {
    "code": "LO-C6-ENG-02-02",
@@ -764,7 +764,7 @@
    ],
    "homeTipBn": "একটি ছোট অনুচ্ছেদ পড়ে তিনটি বাক্য বলুন — কোনটি True, কোনটি False? False হলে সঠিক তথ্যটি বলতে বলুন।",
    "prereqCodes": [
-    "LO-C5-ENG-01-01.1"
+    "LO-C5-ENG-SK-RCOMP-01.1"
    ],
    "tagged": true,
    "legacyCodes": [],
@@ -777,7 +777,7 @@
    "domainCode": "DOM-ENG-READ",
    "chapterNumber": 2,
    "strand": null,
-   "labelBn": "Match the parts of sentences to make complete sentences (Q8)",
+   "labelBn": "Match the parts of sentences to make complete sentences, or match a word or problem with its description or advice (Q8)",
    "sourceText": "read a text and answer questions, write true/false and match sentence parts [ভাগ: match sentence parts] · Q8: Matching (parts of sentences), 1 × 5 = 5",
    "bookRef": {
     "chapter": 2,
@@ -808,7 +808,7 @@
    "prereqCodes": [],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "The lesson exercises match a word or a problem with a sentence-length description (occupations, advice, animals); only 7/L1/B3 and Q8 match true sentence halves."
+   "claudeNote": "The lesson exercises match a word or a problem with a sentence-length description (occupations, advice, animals); only 7/L1/B3 and Q8 match true sentence halves. 2/L2/A matches an occupation with what the person does, 3/L3/B a problem with advice, 5/L2/A3 an animal with its mark."
   },
   {
    "code": "LO-C6-ENG-03-01",
@@ -920,7 +920,7 @@
    "domainCode": "DOM-ENG-PHON",
    "chapterNumber": 4,
    "strand": null,
-   "labelBn": "Say short and long vowel sounds clearly (pen–pain, the sound in \"five\", hop–hope)",
+   "labelBn": "Say short and long vowel sounds clearly (pen–pain, hop–hope), the sound in \"five\", and words spelt alike but sounded differently",
    "sourceText": "hear and say the difference between the short vowel in \"pen\" and the long vowel in \"pain\" · read aloud words with the vowel sound in \"five\" correctly · hear and say the difference between the short \"o\" (hop) and the long \"o\" (hope)",
    "bookRef": {
     "chapter": 4,
@@ -946,7 +946,7 @@
    "prereqCodes": [],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "Rubric row — the reading test (class test); lessons 4.2, 6.2 and 9.3 are \"not on the written paper\". The three lessons are one row: the skill (hearing and saying a vowel contrast) is the same."
+   "claudeNote": "Rubric row — the reading test (class test); lessons 4.2, 6.2 and 9.3 are \"not on the written paper\". The three lessons are one row: the skill (hearing and saying a vowel contrast) is the same. 6/L2/A and 6/L2/A1 (The Chaos) ask the child to notice letters that are spelt alike but sounded differently."
   },
   {
    "code": "LO-C6-ENG-04-03",
@@ -1243,7 +1243,12 @@
    "code": "LO-C6-ENG-SK-READ-01",
    "kind": "OTHER",
    "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): The reading texts themselves (38 passages, dialogues and poems headed \"Read the …\") are inventoried as exercises and cited by the reading-aloud strand SK-READ-01, as in the Class Five tree. If the reviewer wants silent reading comprehension as its own row, it is the group 01-01."
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "Reviewer-lessons pass (26 Nov 2026), proposals only — no code was split, merged or renamed: (a) the question rows that cite every unit (01-01.1–.3, 01-02, 01-04, 01-05, 01-06, 01-07, 01-08, 02-03, 02-04, 03-01, 04-01) behave like skill strands; moving them to SK-* codes would rename live codes, so it is not done here; (b) 3/L1/A2 (one word, several meanings: trunk, ring) is the only exercise of its skill and sits on 01-03 — a separate row can be added later if teachers want it tracked on its own; (c) the recipe-instruction exercises 6/L3/A1, B, C (order words first, then, after that) sit on the gap-filling row 01-01.3 — a separate \"follow and complete instructions\" row can be added later."
   }
  ],
- "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·01-01.3)। সূত্র: \"3/L2/B2\" = Unit 3, Lesson 3.2, exercise B2; \"5/EP/6\" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; \"5/WK/1\" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); \"2/Guide/1\" = Unit 2-এর writing guide।\n\n**বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (১২ নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১৩টি সিদ্ধান্তই অনুমোদন করেছেন — নম্বর বণ্টন (D-01) সহ। অনুশীলনীর সূত্র v1-এর মতোই (৩৩৯টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **গাছটি দক্ষতা ধরে, পাঠ ধরে নয়** (পঞ্চম শ্রেণির মতো): প্রশ্নপত্রের ১৩টি প্রশ্নের প্রতিটি একটি সারি, যে ইউনিটে প্রথম শেখানো হয় সেখানে বসানো, আর ১১টি ইউনিটের অনুশীলনী ও Exam Practice উদ্ধৃত। তাই সারি মাত্র ২৫টি। ব্যাকরণ ও চিঠি-দরখাস্ত-রচনা ২য় পত্রের গাছে (C6_ENG2)।\n2. **Gap filling এক সারি (01-01.3)** — পাঠে শব্দ-বাক্স থাকে, প্রশ্নপত্রে (Q3) থাকে না। ভাগ করবেন কি?\n3. **শব্দের অর্থ মেলানো (01-03) আলাদা, synonym/antonym (01-02) আলাদা** — প্রথমটি শ্রেণি পরীক্ষার, দ্বিতীয়টি Q4।\n4. **কথোপকথনের ভাষার পাঁচটি ছোট সারি** (01-09, 02-01, 03-02, 10-01, 10-02) — শ্রেণির কাজ, প্রশ্নপত্রে নয়; প্রতিটিতে এক-দুটি অনুশীলনী। একটি দলে আনবেন, না এমনই রাখবেন?\n5. **উচ্চারণের তিন পাঠ (4.2, 6.2, 9.3) এক রুব্রিক-সারি (04-02)**; \"e যোগ করে নতুন শব্দ\" (04-03) আলাদা লিখিত সারি।\n6. **পড়ার অংশগুলো (passage, dialogue, poem) reading-aloud ধারায় (SK-READ-01)** উদ্ধৃত — পঞ্চম শ্রেণির মতো।\n7. **Summary (04-01), dialogue (01-08) ও MCQ (01-01.1) ষষ্ঠ শ্রেণিতে নতুন ধরন** — আগের ধাপ নেই বা দুর্বল; শুরুতে বেশি অনুশীলন লাগবে।\n\n**বই-দলের জন্য (পতাকা দেখুন):** MCQ, rearranging ও কয়েকটি ভাষা-সারির পাঠ-অনুশীলনী একটি-দুটি; gap filling-এ পাঠ ও প্রশ্নপত্রের রূপ আলাদা; তিনটি কবিতা কপিতে ছাপা নেই।\n"
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·SK-RCOMP-01.3)। সূত্র: \"3/L2/B2\" = Unit 3, Lesson 3.2, exercise B2; \"5/EP/6\" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; \"5/WK/1\" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); \"2/Guide/1\" = Unit 2-এর writing guide।\n\n**বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (১২ নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১৩টি সিদ্ধান্তই অনুমোদন করেছেন — নম্বর বণ্টন (D-01) সহ। অনুশীলনীর সূত্র v1-এর মতোই (৩৩৯টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **গাছটি দক্ষতা ধরে, পাঠ ধরে নয়** (পঞ্চম শ্রেণির মতো): প্রশ্নপত্রের ১৩টি প্রশ্নের প্রতিটি একটি সারি, যে ইউনিটে প্রথম শেখানো হয় সেখানে বসানো, আর ১১টি ইউনিটের অনুশীলনী ও Exam Practice উদ্ধৃত। তাই সারি মাত্র ২৫টি। ব্যাকরণ ও চিঠি-দরখাস্ত-রচনা ২য় পত্রের গাছে (C6_ENG2)।\n2. **Gap filling এক সারি (01-01.3)** — পাঠে শব্দ-বাক্স থাকে, প্রশ্নপত্রে (Q3) থাকে না। ভাগ করবেন কি?\n3. **শব্দের অর্থ মেলানো (01-03) আলাদা, synonym/antonym (01-02) আলাদা** — প্রথমটি শ্রেণি পরীক্ষার, দ্বিতীয়টি Q4।\n4. **কথোপকথনের ভাষার পাঁচটি ছোট সারি** (01-09, 02-01, 03-02, 10-01, 10-02) — শ্রেণির কাজ, প্রশ্নপত্রে নয়; প্রতিটিতে এক-দুটি অনুশীলনী। একটি দলে আনবেন, না এমনই রাখবেন?\n5. **উচ্চারণের তিন পাঠ (4.2, 6.2, 9.3) এক রুব্রিক-সারি (04-02)**; \"e যোগ করে নতুন শব্দ\" (04-03) আলাদা লিখিত সারি।\n6. **পড়ার অংশগুলো (passage, dialogue, poem) reading-aloud ধারায় (SK-READ-01)** উদ্ধৃত — পঞ্চম শ্রেণির মতো।\n7. **Summary (04-01), dialogue (01-08) ও MCQ (01-01.1) ষষ্ঠ শ্রেণিতে নতুন ধরন** — আগের ধাপ নেই বা দুর্বল; শুরুতে বেশি অনুশীলন লাগবে।\n\n**বই-দলের জন্য (পতাকা দেখুন):** MCQ, rearranging ও কয়েকটি ভাষা-সারির পাঠ-অনুশীলনী একটি-দুটি; gap filling-এ পাঠ ও প্রশ্নপত্রের রূপ আলাদা; তিনটি কবিতা কপিতে ছাপা নেই।\n\n\n**ষষ্ঠ শ্রেণির পূর্ব-সংশোধন (২৬ নভেম্বর ২০২৬):** বই বদলায়নি; শুধু পর্যালোচকরা সাধারণত যা ঠিক করেন তা আগেই ধরা হয়েছে। ছয়টি আগের-ধাপ সংযোগ (01-01, 01-01.2, 01-01.3, 01-03, 01-04, 02-03) পঞ্চম শ্রেণির বাতিল কোডের বদলে এখনকার SK-RCOMP কোডে সরানো হয়েছে; সাতটি লেবেল অনুশীলনীগুলো যা সত্যিই যাচাই করে সেই অনুযায়ী বড়/স্পষ্ট করা হয়েছে (01-01.3, 01-03, 01-04, 01-05, 02-01, 02-04, 04-02); ছয়টি সারির নোটে অনুশীলনীর ব্যাখ্যা যোগ হয়েছে। কোনো কোড ভাগ, জোড়া বা নাম-বদল হয়নি; প্রস্তাবগুলো পতাকায় আছে।"
 }

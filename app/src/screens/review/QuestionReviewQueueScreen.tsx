@@ -9,8 +9,10 @@
  * as optional, and Reject stays enabled while it is empty. That is the deliberate divergence
  * from the plan loop, where feedback is mandatory on CHANGES_REQUESTED.
  *
- * An already-decided round stays editable until it closes, so the card keeps its verdict
- * badge and the reviewer can change their mind.
+ * An already-decided round stays editable until it closes (RF-1, 25 Nov 2026): the screen is the
+ * "বাকি" work list on top, and her decided questions sit in three CLOSED folds below it —
+ * অনুমোদন দিয়েছি · পরিবর্তন চেয়েছি · চূড়ান্ত (the Principal finalised it, where she can only
+ * propose a change). Deciding a question moves it down into its fold instead of making it vanish.
  */
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { View, ScrollView, RefreshControl } from "react-native";
@@ -26,6 +28,7 @@ import {
   MY_REVIEW_CHAPTERS,
   type QuestionReviewRoundT,
 } from "../../graphql/operations";
+import { MY_QUESTION_REVIEW_BUCKETS, MY_GOLD_CHANGE_REQUESTS, type ReviewBucketKey } from "../../graphql/reviewFolds";
 import type { ReviewStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -49,6 +52,8 @@ import { SUBJECTS, CLASS_LEVELS, QUESTION_TYPES } from "@scd/shared";
 import { parsePayload, prettyCode } from "../../lib/question";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
 import { LoadOlder } from "../../components/LoadOlder";
+import { BucketFold } from "../../components/BucketFold";
+import { QuestionFoldRow } from "./QuestionFoldRow";
 import { ReviewNextButton } from "../../components/ReviewNextButton";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -87,13 +92,15 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
     return () => clearTimeout(h);
   }, [qtInput]);
   const [important, setImportantOnly] = useState(false);
-  /**
-   * ON by default (owner 2026-11-24): a reviewer who had decided every question saw only her
-   * own decided rounds after a refresh and read them as "my approvals did not save". The
-   * queue opens as the work list; turning the chip off shows the decided history.
-   * A caller that passes `undecided: false` explicitly still gets the full list.
-   */
-  const [undecided, setUndecided] = useState(initial?.undecided !== false);
+  /** RF-1: what is typed in the search box (question id / text); it reaches the query after a short pause. */
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState<string | null>(null);
+  useEffect(() => {
+    const h = setTimeout(() => setSearch(searchInput.trim() === "" ? null : searchInput.trim()), 400);
+    return () => clearTimeout(h);
+  }, [searchInput]);
+  /** Bumped when a decision is made, so every OPEN fold reloads (a row moved between folds). */
+  const [foldTick, setFoldTick] = useState(0);
 
   const PAGE_SIZE = 50;
   const [offset, setOffset] = useState(0);
@@ -103,7 +110,8 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
 
   /** ONE filter object, sent to BOTH the list and the count — otherwise the caption reads
    *  ৫০ / ২৯৫১ over a filtered list holding twelve rows. */
-  const filter = useMemo(
+  /** The filter every fold shares (RF-1): the list below and each closed fold take the SAME axes. */
+  const baseFilter = useMemo(
     () => ({
       subject,
       classLevel,
@@ -111,18 +119,36 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
       anchorWord,
       questionType,
       qtCode,
+      search,
       important: important ? true : null,
-      undecided: undecided ? true : null,
     }),
-    [subject, classLevel, chapter, anchorWord, questionType, qtCode, important, undecided],
+    [subject, classLevel, chapter, anchorWord, questionType, qtCode, search, important],
   );
+  /** The "বাকি" list is the undecided fold. */
+  const filter = useMemo(() => ({ ...baseFilter, bucket: "undecided" }), [baseFilter]);
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: MY_QUESTION_REVIEWS,
     variables: { ...filter, limit: PAGE_SIZE, offset },
   });
   const [countQ, refetchCount] = useQuery({ query: MY_QUESTION_REVIEW_COUNT, variables: filter });
-
+  // RF-1: the four fold counts under the same filter, so the closed folds can show their size.
+  const [bucketsQ, refetchBuckets] = useQuery({ query: MY_QUESTION_REVIEW_BUCKETS, variables: baseFilter });
+  const counts = bucketsQ.data?.myQuestionReviewBuckets;
+  // Her gold-change requests (RF-2), keyed by question, for the final fold.
+  const [requestsQ, refetchRequests] = useQuery({ query: MY_GOLD_CHANGE_REQUESTS });
+  const requestByArtifact = useMemo(() => {
+    const m = new Map<string, NonNullable<typeof requestsQ.data>["myGoldChangeRequests"][number]>();
+    // Newest first from the server: keep the first per artifact.
+    for (const r of requestsQ.data?.myGoldChangeRequests ?? []) if (!m.has(r.artifactId)) m.set(r.artifactId, r);
+    return m;
+  }, [requestsQ.data]);
+  /** A decision or a request changed: refresh counts + requests and reload the open folds. */
+  const foldsChanged = useCallback(() => {
+    refetchBuckets({ requestPolicy: "network-only" });
+    refetchRequests({ requestPolicy: "network-only" });
+    setFoldTick((t) => t + 1);
+  }, [refetchBuckets, refetchRequests]);
   // Chapters SHE HOLDS (D-#568) — not the bank’s. `questionChapters` walks the bank and is
   // publish-gated for a teacher, so it offered her only chapters whose work was already done.
   const [{ data: chapterData }] = useQuery({
@@ -197,6 +223,9 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
     if (reloadTick === 0) return;
     refetchRef.current({ requestPolicy: "network-only" });
     refetchCountRef.current({ requestPolicy: "network-only" });
+    setFoldTick((t) => t + 1);
+    refetchBuckets({ requestPolicy: "network-only" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadTick]);
 
   /**
@@ -291,6 +320,7 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
     setBulkReason("");
     dropRows(decided);
     refetchCount({ requestPolicy: "network-only" });
+    foldsChanged();
   }
 
   /**
@@ -343,7 +373,11 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
     setNotice(STR.qrDecisionSaved);
     dropRows([round.id]);
     refetchCount({ requestPolicy: "network-only" });
+    foldsChanged();
   }
+
+  /** A decided question was changed inside a fold - the "বাকি" list is unaffected, only counts move. */
+  const reloadVisible = (): void => refetchCount({ requestPolicy: "network-only" });
 
   if (fetching && rounds.length === 0) return <Loader />;
 
@@ -358,7 +392,7 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
           />
         }
       >
-        <H2>{STR.qrMyQueue}</H2>
+        <H2>{`${STR.rfPending}${counts ? ` (${bnNum(counts.undecided)})` : ""}`}</H2>
         {/* A page is not the queue. Without this, 50 rows out of 2,742 reads as
             'you are nearly done' — the opposite of the truth. */}
         {rounds.length > 0 ? (
@@ -374,6 +408,7 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
             Same axes and same chip shape as the Principal’s publish inbox, so the two
             review screens read alike. Selecting a subject or class clears the chapter,
             because a chapter number only means something inside one of them. */}
+        <Field label={STR.rfSearch} value={searchInput} onChangeText={setSearchInput} />
         <ChipRow>
           <Chip label={STR.all} selected={subject === null} onPress={() => { setSubject(null); setChapter(null); }} />
           {SUBJECTS.map((s) => (
@@ -423,9 +458,8 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
           </ChipRow>
         ) : null}
         <ChipRow>
-          {/* The two axes the publish inbox has no use for: her own marks, and the work
-              she has not yet ruled on — which is what makes 2,951 rows a work list. */}
-          <Chip label={STR.qrUndecidedOnly} selected={undecided} onPress={() => setUndecided(!undecided)} />
+          {/* The axis the publish inbox has no use for: her own marks. (The "work she has not yet
+              ruled on" is no longer a chip - it is the list itself, RF-1.) */}
           <Chip label={STR.qImportantOnly} selected={important} onPress={() => setImportantOnly(!important)} />
         </ChipRow>
 
@@ -476,7 +510,7 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
         {rounds.length === 0 ? (
           <>
             {/* With "undecided only" on, an empty list means the work is done — say so, and how to see the history. */}
-            <EmptyState message={undecided ? STR.qrAllDone : STR.qrNoQueue} />
+            <EmptyState message={STR.rfAllDone} />
             {/* Opened from the ordered path and this chapter's questions are done: carry on to the next item. */}
             {initial?.fromPath && !fetching ? <ReviewNextButton mode="replace" /> : null}
           </>
@@ -618,6 +652,43 @@ export default function QuestionReviewQueueScreen({ navigation, route }: Props):
             }
           />
         ) : null}
+
+        {/* RF-1: her decided questions, in three folds that stay CLOSED until tapped. Each pages on
+            its own and takes the same filter as the list above. */}
+        <View style={{ marginTop: space(4), gap: space(3) }}>
+          {(
+            [
+              ["approved", STR.rfApproved],
+              ["changes", STR.rfChanges],
+              ["final", STR.rfFinal],
+            ] as [ReviewBucketKey, string][]
+          ).map(([bucket, title]) => (
+            <BucketFold
+              key={bucket}
+              id={`qrq:${bucket}`}
+              title={title}
+              count={counts?.[bucket] ?? 0}
+              query={MY_QUESTION_REVIEWS}
+              variables={{ ...baseFilter, bucket }}
+              reloadKey={foldTick}
+              pick={(d) => d.myQuestionReviews}
+              renderRow={(row, reload) => (
+                <QuestionFoldRow
+                  key={row.id}
+                  round={row}
+                  bucket={bucket}
+                  request={requestByArtifact.get(row.artifactId)}
+                  onChanged={() => {
+                    reload();
+                    foldsChanged();
+                    reloadVisible();
+                  }}
+                  onOpenThread={() => navigation.navigate("QuestionReviewThread", { artifactId: row.artifactId })}
+                />
+              )}
+            />
+          ))}
+        </View>
       </ScrollView>
     </Screen>
   );

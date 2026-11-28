@@ -196,7 +196,7 @@
    "domainCode": "DOM-ENG2-NOUN",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Pick out nouns and form regular and irregular plurals",
+   "labelBn": "Name the eight parts of speech; pick out and give nouns (people, places, foods, qualities, relations); form regular and irregular plurals and use nouns in sentences",
    "sourceText": "Name the eight parts of speech and pick out the nouns in a sentence or passage. · Form regular plurals (-s, -es, -ies) and common irregular plurals.",
    "bookRef": {
     "chapter": 1,
@@ -229,7 +229,7 @@
    "domainCode": "DOM-ENG2-NOUN",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Countable and uncountable nouns: how many / how much and measure words",
+   "labelBn": "Countable and uncountable nouns: how many / how much, measure words, and nouns used as both countable and uncountable (paper, chicken)",
    "sourceText": "Tell countable nouns from uncountable nouns, use how many / how much, and use measure words before uncountable nouns.",
    "bookRef": {
     "chapter": 1,
@@ -290,7 +290,7 @@
    "domainCode": "DOM-ENG2-ADJ",
    "chapterNumber": 1,
    "strand": null,
-   "labelBn": "Identify adjectives, their positions and their three degrees",
+   "labelBn": "Identify adjectives and the noun each describes, their positions (before a noun, after \"be\", after the noun) and their three degrees",
    "sourceText": "Identify adjectives, their positions in a sentence and their three degrees (positive, comparative, superlative).",
    "bookRef": {
     "chapter": 1,
@@ -467,7 +467,7 @@
    "domainCode": "DOM-ENG2-ADJ",
    "chapterNumber": 2,
    "strand": null,
-   "labelBn": "Adverbs of time, place, manner and frequency: identify, place correctly and use linkers",
+   "labelBn": "Adverbs of time, place, manner and frequency, and adverbs that modify adjectives and adverbs (very, quite): identify, place correctly and use linkers",
    "sourceText": "Identify adverbs of time, place, manner and frequency, place them correctly, and use linkers (firstly, secondly …).",
    "bookRef": {
     "chapter": 2,
@@ -502,7 +502,7 @@
    "domainCode": "DOM-ENG2-PREP",
    "chapterNumber": 2,
    "strand": null,
-   "labelBn": "Prepositions of time and place",
+   "labelBn": "Identify prepositions and use prepositions of time, place and other relationships (at, on, in, between, with, to …)",
    "sourceText": "Use prepositions of time and place, and the conjunctions and, but, yet, so, because, with interjections for strong feelings. [ভাগ: prepositions]",
    "bookRef": {
     "chapter": 2,
@@ -564,7 +564,7 @@
    "domainCode": "DOM-ENG2-VERB",
    "chapterNumber": 2,
    "strand": null,
-   "labelBn": "Use the right form of verbs in a passage (Q4)",
+   "labelBn": "Use the right form of verbs in a passage — the tense from clue words and agreement with the subject (Q4)",
    "sourceText": "Complete a gap-filling passage (Q2) and use the right form of verbs (Q4). [ভাগ: right form of verbs] · Use clue words (every day, now, already, since/for, yesterday, then, tomorrow) to choose the tense. · Choose the right tense from clue words in a sentence or passage.",
    "bookRef": {
     "chapter": 2,
@@ -588,11 +588,12 @@
    "homeTipBn": "বাক্যে বন্ধনীর verb-এর সঠিক রূপ বসাতে দিন; আগে clue word খুঁজতে বলুন — every day, now, already, since, yesterday, tomorrow।",
    "prereqCodes": [
     "LO-C6-ENG2-02-01",
-    "LO-C6-ENG2-05-02"
+    "LO-C6-ENG2-05-02",
+    "LO-C6-ENG2-16-02"
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-02 \"Right form of verbs — all nine forms, three with clue words \". The exam skill (five verbs, one mark each): choosing the tense from the clue word, then the form. Unit 16 section D (clue words) and its classwork belong here."
+   "claudeNote": "Earlier step (1st Paper / Class Five English — another subject, so not in prereqCodes): C5 ENG 18-02 \"Right form of verbs — all nine forms, three with clue words \". The exam skill (five verbs, one mark each): choosing the tense from the clue word, then the form. Unit 16 section D (clue words) and its classwork belong here. Prerequisite added (reviewer-lessons pass): Q4 items also test agreement (Each of his friends respects; One of ... lives), taught in 16-02."
   },
   {
    "code": "LO-C6-ENG2-03-01",
@@ -601,7 +602,7 @@
    "domainCode": "DOM-ENG2-WORD",
    "chapterNumber": 3,
    "strand": null,
-   "labelBn": "Make new words with prefixes and suffixes, with correct spelling (class test)",
+   "labelBn": "Say what prefixes and suffixes mean, split a word into its base and affix, and make new words with correct spelling (class test)",
    "sourceText": "Say what a prefix and a suffix are and how they change the meaning or the part of speech of a word. · Use the new affixes im-, in-, mis-, pre-, -less, -able, -ous and -y. · Spell new words correctly when y changes to i, when a final e drops, and when two suffixes join.",
    "bookRef": {
     "chapter": 3,
@@ -688,7 +689,7 @@
    "domainCode": "DOM-ENG2-LTR",
    "chapterNumber": 4,
    "strand": null,
-   "labelBn": "Write a formal letter or an application of about 150 words on a given topic",
+   "labelBn": "Write a formal letter or an application of about 150 words on a given topic, keeping to the word limit (10% above or below)",
    "sourceText": "Write a formal letter or an application in full block layout, without mixing layouts. · Keep to a word limit (10% above or below; “not more than”; “at least”).",
    "bookRef": {
     "chapter": 4,
@@ -844,7 +845,7 @@
    "domainCode": "DOM-ENG2-VERB",
    "chapterNumber": 5,
    "strand": null,
-   "labelBn": "Present continuous",
+   "labelBn": "Present continuous (an action going on now and a definite future action)",
    "sourceText": "Form the seven tenses of this unit correctly, with the right auxiliary (do/does/did, am/is/are, was/were, have/has, have been/has been, will/shall) and the right main-verb form (base, -s/-es, -ing, past, past participle). [ভাগ: present continuous]",
    "bookRef": {
     "chapter": 5,
@@ -1082,11 +1083,12 @@
    ],
    "homeTipBn": "তিন কলামের একটি ছক দিন (Subject | Verb | Rest) — সন্তান পাঁচটি সঠিক বাক্য বানাবে; subject-এর সঙ্গে verb মিলছে কি না (He goes / They go) দেখুন।",
    "prereqCodes": [
-    "LO-C6-ENG2-01-04"
+    "LO-C6-ENG2-01-04",
+    "LO-C6-ENG2-05-02.1"
    ],
    "tagged": true,
    "legacyCodes": [],
-   "claudeNote": "New question type in Class Six. The unit stays as written (reviewer approved, memo D-02)."
+   "claudeNote": "New question type in Class Six. The unit stays as written (reviewer approved, memo D-02). Prerequisite added (reviewer-lessons pass): the present simple (05-02.1, -s/-es with he/she/it) is what makes a verb agree with its subject in the table."
   },
   {
    "code": "LO-C6-ENG2-07-01",
@@ -1095,7 +1097,7 @@
    "domainCode": "DOM-ENG2-DET",
    "chapterNumber": 7,
    "strand": null,
-   "labelBn": "Use a, an, the or no article (×) correctly, and correct wrong articles",
+   "labelBn": "Use a, an, the or no article (×) correctly, correct wrong articles, and write own statements and definitions with articles",
    "sourceText": "Use a and an before singular countable nouns mentioned for the first time or not specified. · Use the for something mentioned again, something specific and something that is the only one of its kind. · Leave out the article before plural and uncountable nouns used in a general sense, and mark it with a cross (×).",
    "bookRef": {
     "chapter": 7,
@@ -1158,7 +1160,7 @@
    "domainCode": "DOM-ENG2-LTR",
    "chapterNumber": 8,
    "strand": null,
-   "labelBn": "The parts of an email and its layout (From, To, Cc, Subject, salutation, body, closing)",
+   "labelBn": "The parts of an email, a correct email address, a short subject line and the layout (From, To, Cc, Subject, salutation, body, closing)",
    "sourceText": "Name the parts of an email: From, To, Cc, Subject, Attachment, salutation, body, closing and name. · Write a correct email address and a short, clear subject line.",
    "bookRef": {
     "chapter": 8,
@@ -1217,7 +1219,7 @@
    "domainCode": "DOM-ENG2-SENT",
    "chapterNumber": 9,
    "strand": null,
-   "labelBn": "Name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative)",
+   "labelBn": "Define a sentence, name the types of sentences (affirmative, negative, interrogative, imperative, exclamatory, optative) and write a sentence of each type",
    "sourceText": "Define a sentence and name its five types: affirmative, negative, interrogative, imperative and exclamatory (and the optative sentence in Lesson 7).",
    "bookRef": {
     "chapter": 9,
@@ -1245,7 +1247,7 @@
    "domainCode": "DOM-ENG2-SENT",
    "chapterNumber": 9,
    "strand": null,
-   "labelBn": "Affirmative sentences: find the subject and the verb; the three basic patterns",
+   "labelBn": "Affirmative sentences: find the subject and the verb; the three basic patterns; write affirmative sentences",
    "sourceText": "Identify the subject and verb of an affirmative sentence and the three basic patterns (linking, intransitive, transitive verb).",
    "bookRef": {
     "chapter": 9,
@@ -1358,7 +1360,7 @@
    "domainCode": "DOM-ENG2-SENT",
    "chapterNumber": 9,
    "strand": null,
-   "labelBn": "Give instructions, directions and requests with imperative sentences",
+   "labelBn": "Give instructions, directions and requests with imperative sentences, including negative imperatives (don't + verb)",
    "sourceText": "Give instructions, directions and requests with imperative sentences.",
    "bookRef": {
     "chapter": 9,
@@ -1478,7 +1480,7 @@
    "domainCode": "DOM-ENG2-PUNC",
    "chapterNumber": 10,
    "strand": null,
-   "labelBn": "Use the eight punctuation marks correctly (comma, full stop, question mark, exclamation mark, quotation marks, colon, semicolon, apostrophe)",
+   "labelBn": "Use the eight punctuation marks correctly (comma in clauses, lists, addresses and dates; full stop; question mark; exclamation mark; quotation marks; colon; semicolon; apostrophe for possession and contractions)",
    "sourceText": "Use the comma, full stop, question mark, exclamation mark, quotation marks, colon, semicolon and apostrophe correctly. · Join two independent clauses correctly: a comma with and, but, so, or, or a semicolon without them. · Use the apostrophe for possessives (singular and plural nouns) and for contractions.",
    "bookRef": {
     "chapter": 10,
@@ -1715,7 +1717,7 @@
    "domainCode": "DOM-ENG2-PRON",
    "chapterNumber": 12,
    "strand": null,
-   "labelBn": "Possessives: possessive adjectives and pronouns; 's, s' and of",
+   "labelBn": "Possessives: possessive adjectives and pronouns; 's, s' and of; rewrite an \"of\" phrase with 's",
    "sourceText": "Students will be able to name and use the seven possessive adjectives (my, our, your, his, her, its, their) before nouns. · Students will be able to use possessive pronouns (mine, ours, yours, his, hers, theirs) in place of a possessive adjective + noun. · Students will be able to show possession with ’s, s’ and of.",
    "bookRef": {
     "chapter": 12,
@@ -1869,7 +1871,7 @@
    "domainCode": "DOM-ENG2-LTR",
    "chapterNumber": 15,
    "strand": null,
-   "labelBn": "Choose the right layout for the task and correct common mistakes in letters, applications and emails",
+   "labelBn": "Choose the right layout for the task, find the parts of model letters, applications and emails, and correct common mistakes",
    "sourceText": "Choose the right layout for the task: formal letter / application, informal letter or email. · Find and correct common mistakes in salutations, closings, subject lines, dates and paragraphing.",
    "bookRef": {
     "chapter": 15,
@@ -2014,5 +2016,5 @@
    "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): Paragraph writing appears in both papers: 2nd Paper Unit 11 Part A (classwork, row 11-01) and 1st Paper Q12 (C6 ENG 01-07). They are kept as two rows in two subjects; a bank question for Q12 is tagged with the 1st Paper code."
   }
  ],
- "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে; বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। সূত্র: \"5/L2/C\" = Unit 5, Lesson 2, section C; \"9/L5/Act2\" = Unit 9, Lesson 5, Activity 2; \"7/U/D\" = Unit 7 (পাঠ-ভাগ নেই), section D; \"5/EP/Q4\" = Unit 5-এর Exam Practice Q4; \"3/CT/1\" = Class-Test Practice 1; \"18/Rev/Q3\" = Revision and Exam Practice 1-এর Q3 (১৯ = Revision 2, ২০ = NCTB Model Question)।\n\n**বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১০টি সিদ্ধান্তই অনুমোদন করেছেন — Unit 3 ও Unit 6 থাকছে (D-01, D-02)। অনুশীলনীর সূত্র v1-এর মতোই (২১০টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **\"আগের ধাপ\" এই গাছে নোটে লেখা, prereq-ঘরে নয়।** ২য় পত্রের ব্যাকরণ পঞ্চম শ্রেণির ইংরেজি (ENG) গাছের সারির পরের ধাপ, কিন্তু অ্যাপ অন্য বিষয়ের কোড prerequisite হিসেবে নেয় না। তাই প্রতিটি সারির Claude-নোটের শুরুতে \"Earlier step …\" লেখা আছে (পতাকা ৩) — মালিক নিয়ম বদলালে সেগুলো ঘরে তোলা যাবে।\n2. **দুই রকম সারি:** (ক) ব্যাকরণ-বিষয়ের সারি — বইয়ের পাঠ ধরে (noun, pronoun, tense …); (খ) পরীক্ষার দক্ষতার সারি — প্রশ্নপত্রের Q1–Q8 (parts of speech চেনা, gap filling, substitution table, right form of verbs, changing sentences, punctuation, letter, composition)। Exam Practice-এর প্রশ্ন (খ)-তে, পাঠের অনুশীলনী (ক)-তে।\n3. **সাত tense সাতটি উপ-সারি (05-02)** — বইয়ের আট পাঠ ধরে। তিন ভাগ (present/past/future) চাইলে বলুন।\n4. **Composition এক শিখনফল, তিন উপ-সারি (11-02)** — Unit 11 ও 17 মিলিয়ে: পরিকল্পনা, linking words, লেখা ও যাচাই।\n5. **ভাগ করা হয়নি:** articles (07-01), possessives (12-01), there/it (14-01), prefixes-suffixes (03-01) — বইয়ের অনুশীলনীগুলো মিশ্র।\n6. **Changing sentences দুই সারিতে:** tense বদল (05-03) ও বাক্যের ধরন বদল (09-06) — প্রশ্নপত্রের Q5 দুটিই মেশায়।\n7. **পাতলা সারি:** subject–verb agreement (16-02), layout বাছাই ও ভুল সংশোধন (15-01) — একটি করে অংশ।\n8. **Paragraph দুই পত্রেই** (এখানে 11-01 শ্রেণির কাজ; ১ম পত্রে Q12) — দুটি আলাদা সারি থাকল।\n\n**নতুন ডোমেইন-মই `domains/ENG2.json`** (১৩টি ক্ষেত্র): প্রতিটি ENG-এর কোন ক্ষেত্রের ধারাবাহিকতা তা note-এ লেখা; \"Grammar in use\" (gap filling ও cloze) একমাত্র নতুন ক্ষেত্র। সপ্তম–দশম শ্রেণিতে একই মই চলবে।\n"
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে; বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। সূত্র: \"5/L2/C\" = Unit 5, Lesson 2, section C; \"9/L5/Act2\" = Unit 9, Lesson 5, Activity 2; \"7/U/D\" = Unit 7 (পাঠ-ভাগ নেই), section D; \"5/EP/Q4\" = Unit 5-এর Exam Practice Q4; \"3/CT/1\" = Class-Test Practice 1; \"18/Rev/Q3\" = Revision and Exam Practice 1-এর Q3 (১৯ = Revision 2, ২০ = NCTB Model Question)।\n\n**বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১০টি সিদ্ধান্তই অনুমোদন করেছেন — Unit 3 ও Unit 6 থাকছে (D-01, D-02)। অনুশীলনীর সূত্র v1-এর মতোই (২১০টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **\"আগের ধাপ\" এই গাছে নোটে লেখা, prereq-ঘরে নয়।** ২য় পত্রের ব্যাকরণ পঞ্চম শ্রেণির ইংরেজি (ENG) গাছের সারির পরের ধাপ, কিন্তু অ্যাপ অন্য বিষয়ের কোড prerequisite হিসেবে নেয় না। তাই প্রতিটি সারির Claude-নোটের শুরুতে \"Earlier step …\" লেখা আছে (পতাকা ৩) — মালিক নিয়ম বদলালে সেগুলো ঘরে তোলা যাবে।\n2. **দুই রকম সারি:** (ক) ব্যাকরণ-বিষয়ের সারি — বইয়ের পাঠ ধরে (noun, pronoun, tense …); (খ) পরীক্ষার দক্ষতার সারি — প্রশ্নপত্রের Q1–Q8 (parts of speech চেনা, gap filling, substitution table, right form of verbs, changing sentences, punctuation, letter, composition)। Exam Practice-এর প্রশ্ন (খ)-তে, পাঠের অনুশীলনী (ক)-তে।\n3. **সাত tense সাতটি উপ-সারি (05-02)** — বইয়ের আট পাঠ ধরে। তিন ভাগ (present/past/future) চাইলে বলুন।\n4. **Composition এক শিখনফল, তিন উপ-সারি (11-02)** — Unit 11 ও 17 মিলিয়ে: পরিকল্পনা, linking words, লেখা ও যাচাই।\n5. **ভাগ করা হয়নি:** articles (07-01), possessives (12-01), there/it (14-01), prefixes-suffixes (03-01) — বইয়ের অনুশীলনীগুলো মিশ্র।\n6. **Changing sentences দুই সারিতে:** tense বদল (05-03) ও বাক্যের ধরন বদল (09-06) — প্রশ্নপত্রের Q5 দুটিই মেশায়।\n7. **পাতলা সারি:** subject–verb agreement (16-02), layout বাছাই ও ভুল সংশোধন (15-01) — একটি করে অংশ।\n8. **Paragraph দুই পত্রেই** (এখানে 11-01 শ্রেণির কাজ; ১ম পত্রে Q12) — দুটি আলাদা সারি থাকল।\n\n**নতুন ডোমেইন-মই `domains/ENG2.json`** (১৩টি ক্ষেত্র): প্রতিটি ENG-এর কোন ক্ষেত্রের ধারাবাহিকতা তা note-এ লেখা; \"Grammar in use\" (gap filling ও cloze) একমাত্র নতুন ক্ষেত্র। সপ্তম–দশম শ্রেণিতে একই মই চলবে।\n\n\n## পুনর্বিবেচনা — পর্যালোচকের আগের শিক্ষা কাজে লাগানো (২৬ নভেম্বর ২০২৬)\n\nবই বদলায়নি (v2 চূড়ান্ত)। শুধু আগের গাছগুলোতে পর্যালোচকরা যা সাধারণত ঠিক করেন, তা আগেই ঠিক করা হয়েছে: ১৭টি সারির লেবেল অনুশীলনীর কাজ অনুযায়ী বিস্তৃত (P1: যেমন 01-02-এ আটটি পদ ও noun-এর ধরন, 02-04-এ অন্যান্য preposition, 05-02.2-এ ভবিষ্যৎ কাজ, 10-01.1-এ comma-এর ব্যবহার); দুটি prerequisite যোগ (P11: 06-01 ← 05-02.1, 02-06 ← 16-02)। কোনো কোড বদলায়নি, ভাগ বা মেলানো হয়নি; ভাগের প্রস্তাব (02-05, 11-01, 16-01) পরিবর্তন-তালিকায় আছে, সিদ্ধান্ত পর্যালোচকের।"
 }
