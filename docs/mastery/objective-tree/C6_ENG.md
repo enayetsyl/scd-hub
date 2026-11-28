@@ -15,14 +15,14 @@ Exercise refs read `unit/L<lesson>/<letter>` (3/L2/B2 = Lesson 3.2, exercise B2)
 
 ## বর্ণ ও ধ্বনি `DOM-ENG-PHON`
 
-### `04-02` Say short and long vowel sounds clearly (pen–pain, the sound in "five", hop–hope)
+### `04-02` Say short and long vowel sounds clearly (pen–pain, hop–hope), the sound in "five", and words spelt alike but sounded differently
 
 - ইউনিট ৪ · Remedies and Places · বইয়ের শিখনফল: "hear and say the difference between the short vowel in "pen" and the long vowel in "pain" · read aloud words with the vowel sound in "five" correctly · hear and say the difference between the short "o" (hop) and the long "o" (hope)"
 - অভিভাবকের জন্য বাড়ির টিপস: জোড়া শব্দ জোরে পড়তে বলুন — pen/pain, hop/hope, sit/site — এবং দুই শব্দের স্বরধ্বনির পার্থক্য স্পষ্ট হচ্ছে কি না শুনুন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `04-02` | Say short and long vowel sounds clearly (pen–pain, the sound in "five", hop–hope) | ✓ | 4/L2/A; 4/L2/A1; 4/L2/A2; 4/L2/A3; 6/L2/A; 6/L2/A1; 6/L2/A2; 6/L2/A4; 9/L3/A; 9/L3/A1 | রুব্রিক | QT-READING | — | Rubric row — the reading test (class test); lessons 4.2, 6.2 and 9.3 are "not on the written paper". The three lessons are one row: the skill (hearing and saying a vowel contrast) is the same. |
+| `04-02` | Say short and long vowel sounds clearly (pen–pain, hop–hope), the sound in "five", and words spelt alike but sounded differently | ✓ | 4/L2/A; 4/L2/A1; 4/L2/A2; 4/L2/A3; 6/L2/A; 6/L2/A1; 6/L2/A2; 6/L2/A4; 9/L3/A; 9/L3/A1 | রুব্রিক | QT-READING | — | Rubric row — the reading test (class test); lessons 4.2, 6.2 and 9.3 are "not on the written paper". The three lessons are one row: the skill (hearing and saying a vowel contrast) is the same. 6/L2/A and 6/L2/A1 (The Chaos) ask the child to notice letters that are spelt alike but sounded differently. |
 
 ### `04-03` Make a new word by adding "e" (can → cane)
 
@@ -44,14 +44,14 @@ Exercise refs read `unit/L<lesson>/<letter>` (3/L2/B2 = Lesson 3.2, exercise B2)
 |---|---|---|---|---|---|---|---|
 | `01-02` | Give the synonym or antonym of a word from the passage (Q4) | ✓ | 1/L1/B2; 1/L3/A2; 7/L3/A2; 1/EP/4; 2/EP/4; 3/EP/4; 4/EP/4; 5/EP/4; 6/EP/4; 7/EP/4; 8/EP/4; 9/EP/4; 10/EP/4; 11/EP/4 | প্রশ্ন | QT-SYNANT | C5·03-03 | Synonym and antonym are one row: Q4 mixes them in one five-mark question ("as shown"), and the lessons have only three exercises (one synonym, two antonym). |
 
-### `01-03` Match words and phrases from a text with their meanings
+### `01-03` Match words and phrases with their meanings or descriptions, including the meaning a word has in a sentence
 
 - ইউনিট ১ · A New Start · বইয়ের শিখনফল: "understand words such as generation, hit, proud and marvellous · match words with their meanings"
 - অভিভাবকের জন্য বাড়ির টিপস: পাঠের নতুন শব্দগুলোর অর্থ ইংরেজিতে সহজ কথায় বলতে বলুন; শব্দ ও অর্থ দুই কলামে লিখে মেলাতে দিন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-03` | Match words and phrases from a text with their meanings | ✓ | 1/L2/A1; 3/L1/A2; 3/L3/A; 4/L1/A; 4/L3/C; 5/L1/A1; 5/L1/C; 5/L2/A1; 5/L3/A1; 6/L3/B1; 7/L3/A1; 8/L1/A1; 8/L2/A; 9/L1/A; 11/L2/B2 | প্রশ্ন | QT-MEANING | C5·01-01.2 | A lesson exercise type, not a question of the written paper (the book calls it "like Q8 matching", but Q8 matches parts of sentences). It prepares the meaning test and Q4, so it carries the class-test type. |
+| `01-03` | Match words and phrases with their meanings or descriptions, including the meaning a word has in a sentence | ✓ | 1/L2/A1; 3/L1/A2; 3/L3/A; 4/L1/A; 4/L3/C; 5/L1/A1; 5/L1/C; 5/L2/A1; 5/L3/A1; 6/L3/B1; 7/L3/A1; 8/L1/A1; 8/L2/A; 9/L1/A; 11/L2/B2 | প্রশ্ন | QT-MEANING | C5·SK-RCOMP-01.2 | A lesson exercise type, not a question of the written paper (the book calls it "like Q8 matching", but Q8 matches parts of sentences). It prepares the meaning test and Q4, so it carries the class-test type. 3/L1/A2 asks for the meaning a word has in a sentence (trunk, ring — one word, several meanings); 5/L1/A1 and 11/L2/B2 ask for the meaning to be written, not matched; 3/L3/A, 4/L1/A and 9/L1/A match a word with a description. |
 
 ### `03-02` Use quantity and container phrases (a dozen eggs, a loaf of bread, a tube of ointment)
 
@@ -73,14 +73,14 @@ Exercise refs read `unit/L<lesson>/<letter>` (3/L2/B2 = Lesson 3.2, exercise B2)
 |---|---|---|---|---|---|---|---|
 | `01-09` | Respond to good news and bad news with the right expressions | ✓ | 1/L2/B2 | প্রশ্ন | QT-CLASS | — | One written exercise; assessed in class (class performance). The expressions come back in dialogue writing (Q13). |
 
-### `02-01` Introduce people and ask where someone is from, in different ways
+### `02-01` Ask where someone is from in different ways ("Where do you come from?" and "Where are you coming from now?")
 
 - ইউনিট ২ · People and Their Work · বইয়ের শিখনফল: "introduce people and ask where someone is from · understand the difference between "Where do you come from?" and "Where are you coming from now?" · ask the same question in different ways"
 - অভিভাবকের জন্য বাড়ির টিপস: জিজ্ঞেস করুন: "Where do you come from?" আর "Where are you coming from now?" — দুটির পার্থক্য কী? একজন নতুন মানুষের সঙ্গে পরিচয় করিয়ে দেওয়ার অভিনয় করুন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `02-01` | Introduce people and ask where someone is from, in different ways | ✓ | 2/L1/A2; 2/L1/A3 | প্রশ্ন | QT-CLASS | — | Class work, not on the written paper. |
+| `02-01` | Ask where someone is from in different ways ("Where do you come from?" and "Where are you coming from now?") | ✓ | 2/L1/A2; 2/L1/A3 | প্রশ্ন | QT-CLASS | — | Class work, not on the written paper. The introductions themselves are written in 2/L1/A1, which sits on the dialogue row (01-08). |
 
 ### `02-02` Answer questions about yourself in full sentences
 
@@ -109,28 +109,28 @@ Exercise refs read `unit/L<lesson>/<letter>` (3/L2/B2 = Lesson 3.2, exercise B2)
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-01` | **Understand a seen passage (Q1–Q3)** | — (adds up its sub-objectives) | | | | C5·01-01 | The seen-passage questions of the paper (Q1–Q3) are set on any lesson text of the term, so this objective lives in Unit 1 and cites every unit — as the Class Five tree does (C5·01-01). |
+| `01-01` | **Understand a seen passage (Q1–Q3)** | — (adds up its sub-objectives) | | | | C5·SK-RCOMP-01 | The seen-passage questions of the paper (Q1–Q3) are set on any lesson text of the term, so this objective lives in Unit 1 and cites every unit — as the Class Five tree does (C5·SK-RCOMP-01). |
 | `01-01.1` | Choose the best answer — multiple choice questions on a passage (Q1) | ✓ | 1/L1/B1; 11/L2/B1; 1/EP/1; 2/EP/1; 3/EP/1; 4/EP/1; 5/EP/1; 6/EP/1; 7/EP/1; 8/EP/1; 9/EP/1; 10/EP/1; 11/EP/1 | প্রশ্ন | QT-MCQ | — | New in Class Six (the Class Five paper had no MCQ). Only two lesson exercises practise it; the eleven Exam Practice papers carry the rest. |
-| `01-01.2` | Answer questions on a passage in full sentences (Q2) | ✓ | 1/L3/A1; 2/L2/B1; 3/L2/B1; 3/L3/D1; 4/L1/B2; 4/L3/B2; 5/L1/A2; 5/L2/A2; 5/L3/B1; 7/L1/B1; 7/L2/B1; 7/L2/D1; 8/L1/A2; 9/L1/D2; 11/L1/A1; 11/L1/B1; 11/L2/A1; 1/EP/2; 2/EP/2; 3/EP/2; 4/EP/2; 5/EP/2; 6/EP/2; 7/EP/2; 8/EP/2; 9/EP/2; 10/EP/2; 11/EP/2 | প্রশ্ন | QT-ANSWER | C5·01-01.3 |  |
-| `01-01.3` | Fill the gaps in a passage or dialogue with suitable words (Q3) | ✓ | 2/L2/A1; 2/L3/A3; 3/L3/E; 4/L3/B1; 5/L1/B; 6/L2/A3; 6/L3/A1; 6/L3/B; 6/L3/C; 7/L2/A; 7/L3/B; 8/L1/B; 8/L2/D; 9/L1/C1; 9/L1/C2; 9/L1/E; 9/L3/A2; 1/EP/3; 2/EP/3; 3/EP/3; 4/EP/3; 5/EP/3; 6/EP/3; 7/EP/3; 8/EP/3; 9/EP/3; 10/EP/3; 11/EP/3 | প্রশ্ন | QT-GAP | C5·01-05.1 | In the lessons the gaps are filled from a word box; in the paper (Q3) there is no box. Kept as one row because the book treats them as one type ("the gap-filling type") — see the flag on this row. |
+| `01-01.2` | Answer questions on a passage in full sentences (Q2) | ✓ | 1/L3/A1; 2/L2/B1; 3/L2/B1; 3/L3/D1; 4/L1/B2; 4/L3/B2; 5/L1/A2; 5/L2/A2; 5/L3/B1; 7/L1/B1; 7/L2/B1; 7/L2/D1; 8/L1/A2; 9/L1/D2; 11/L1/A1; 11/L1/B1; 11/L2/A1; 1/EP/2; 2/EP/2; 3/EP/2; 4/EP/2; 5/EP/2; 6/EP/2; 7/EP/2; 8/EP/2; 9/EP/2; 10/EP/2; 11/EP/2 | প্রশ্ন | QT-ANSWER | C5·SK-RCOMP-01.3 |  |
+| `01-01.3` | Fill the gaps in a passage, dialogue or set of instructions with suitable words (Q3) | ✓ | 2/L2/A1; 2/L3/A3; 3/L3/E; 4/L3/B1; 5/L1/B; 6/L2/A3; 6/L3/A1; 6/L3/B; 6/L3/C; 7/L2/A; 7/L3/B; 8/L1/B; 8/L2/D; 9/L1/C1; 9/L1/C2; 9/L1/E; 9/L3/A2; 1/EP/3; 2/EP/3; 3/EP/3; 4/EP/3; 5/EP/3; 6/EP/3; 7/EP/3; 8/EP/3; 9/EP/3; 10/EP/3; 11/EP/3 | প্রশ্ন | QT-GAP | C5·SK-RCOMP-02.1 | In the lessons the gaps are filled from a word box; in the paper (Q3) there is no box. Kept as one row because the book treats them as one type ("the gap-filling type") — see the flag on this row. Instructions count too: 6/L3/A1, B and C complete a recipe with its order words (first, then, after that), and 4/L3/B1 completes a dialogue with facts from a text. |
 
-### `01-04` Complete a table with information from a text — information transfer (Q5)
+### `01-04` Complete or sort a table with information from a text — information transfer (Q5)
 
 - ইউনিট ১ · A New Start · বইয়ের শিখনফল: "find information in a text and put it in a table · Q5: Information transfer, 1 × 5 = 5"
 - অভিভাবকের জন্য বাড়ির টিপস: একটি ছোট লেখা (যেমন ঔষধের মোড়ক বা বিজ্ঞপ্তি) দেখিয়ে সন্তানকে একটি ছকে তথ্য সাজাতে বলুন — নাম, তারিখ, স্থান, সংখ্যা।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-04` | Complete a table with information from a text — information transfer (Q5) | ✓ | 1/L1/A1; 3/L2/A1; 3/L2/C1; 4/L1/B1; 7/L2/B2; 8/L2/B1; 10/L2/A1; 1/EP/5; 2/EP/5; 3/EP/5; 4/EP/5; 5/EP/5; 6/EP/5; 7/EP/5; 8/EP/5; 9/EP/5; 10/EP/5; 11/EP/5 | প্রশ্ন | QT-INFO | C5·01-01.4 | In the paper Q5–Q8 are set on a new unseen passage; in the lessons the same skills are practised on seen texts. |
+| `01-04` | Complete or sort a table with information from a text — information transfer (Q5) | ✓ | 1/L1/A1; 3/L2/A1; 3/L2/C1; 4/L1/B1; 7/L2/B2; 8/L2/B1; 10/L2/A1; 1/EP/5; 2/EP/5; 3/EP/5; 4/EP/5; 5/EP/5; 6/EP/5; 7/EP/5; 8/EP/5; 9/EP/5; 10/EP/5; 11/EP/5 | প্রশ্ন | QT-INFO | C5·SK-RCOMP-01.4 | In the paper Q5–Q8 are set on a new unseen passage; in the lessons the same skills are practised on seen texts. Not only fill-in tables: 3/L2/A1 ticks and counts items, 3/L2/C1 and 4/L1/B1 sort items under headings. |
 
-### `01-05` Answer questions on the poems of the book (Q10)
+### `01-05` Answer questions on the poems of the book, including the poet's comparisons and the punctuation (Q10)
 
 - ইউনিট ১ · A New Start · বইয়ের শিখনফল: "answer questions on a poem in full sentences · Q10: Answering questions on the poems (all compulsory), 2 × 5 = 10"
 - অভিভাবকের জন্য বাড়ির টিপস: বইয়ের কবিতাটি একসাথে পড়ুন; জিজ্ঞেস করুন — কবিতাটি কী নিয়ে, কবি কী বলতে চেয়েছেন; উত্তর ইংরেজিতে পূর্ণ বাক্যে বলতে বলুন।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `01-05` | Answer questions on the poems of the book (Q10) | ✓ | 1/L1/C1; 3/L1/A3; 6/L1/A1; 6/L1/A2; 7/L1/A1; 9/L2/A2; 1/EP/10; 2/EP/10; 3/EP/10; 4/EP/10; 5/EP/10; 6/EP/10; 7/EP/10; 8/EP/10; 9/EP/10; 10/EP/10; 11/EP/10 | প্রশ্ন | QT-POEM | C5·10-01 | Six poems in the year (Let's Play, Holding Hands, Boats Sail on the Rivers, The Chaos, Stop Look and Listen, Andre). The annual Q10 asks about all six poems of the year (reviewer approved, memo D-02). 1/L1/C1 asks about the punctuation marks of a poem — kept here as a poem question. |
+| `01-05` | Answer questions on the poems of the book, including the poet's comparisons and the punctuation (Q10) | ✓ | 1/L1/C1; 3/L1/A3; 6/L1/A1; 6/L1/A2; 7/L1/A1; 9/L2/A2; 1/EP/10; 2/EP/10; 3/EP/10; 4/EP/10; 5/EP/10; 6/EP/10; 7/EP/10; 8/EP/10; 9/EP/10; 10/EP/10; 11/EP/10 | প্রশ্ন | QT-POEM | C5·10-01 | Six poems in the year (Let's Play, Holding Hands, Boats Sail on the Rivers, The Chaos, Stop Look and Listen, Andre). The annual Q10 asks about all six poems of the year (reviewer approved, memo D-02). 1/L1/C1 asks about the punctuation marks of a poem — kept here as a poem question. |
 
 ### `02-03` True or false — and correct a false statement (Q6)
 
@@ -139,16 +139,16 @@ Exercise refs read `unit/L<lesson>/<letter>` (3/L2/B2 = Lesson 3.2, exercise B2)
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `02-03` | True or false — and correct a false statement (Q6) | ✓ | 2/L3/A4; 4/L1/E1; 5/L3/A2; 7/L1/B2; 7/L2/C1; 1/EP/6; 2/EP/6; 3/EP/6; 4/EP/6; 5/EP/6; 6/EP/6; 7/EP/6; 8/EP/6; 9/EP/6; 10/EP/6; 11/EP/6 | প্রশ্ন | QT-TF | C5·01-01.1 | ½ for True/False + ½ for the correction of a false statement (reviewer approved, memo D-13). |
+| `02-03` | True or false — and correct a false statement (Q6) | ✓ | 2/L3/A4; 4/L1/E1; 5/L3/A2; 7/L1/B2; 7/L2/C1; 1/EP/6; 2/EP/6; 3/EP/6; 4/EP/6; 5/EP/6; 6/EP/6; 7/EP/6; 8/EP/6; 9/EP/6; 10/EP/6; 11/EP/6 | প্রশ্ন | QT-TF | C5·SK-RCOMP-01.1 | ½ for True/False + ½ for the correction of a false statement (reviewer approved, memo D-13). |
 
-### `02-04` Match the parts of sentences to make complete sentences (Q8)
+### `02-04` Match the parts of sentences to make complete sentences, or match a word or problem with its description or advice (Q8)
 
 - ইউনিট ২ · People and Their Work · বইয়ের শিখনফল: "read a text and answer questions, write true/false and match sentence parts [ভাগ: match sentence parts] · Q8: Matching (parts of sentences), 1 × 5 = 5"
 - অভিভাবকের জন্য বাড়ির টিপস: পাঁচটি বাক্যের প্রথম অর্ধেক ও শেষ অর্ধেক আলাদা করে লিখে দিন — সন্তান মিলিয়ে পূর্ণ বাক্য বানাবে।
 
 | Code | Label | Tagged | Book ref (exercises) | Assess | QT | Prereq | Claude note |
 |---|---|---|---|---|---|---|---|
-| `02-04` | Match the parts of sentences to make complete sentences (Q8) | ✓ | 2/L2/A; 3/L3/B; 5/L2/A3; 7/L1/B3; 1/EP/8; 2/EP/8; 3/EP/8; 4/EP/8; 5/EP/8; 6/EP/8; 7/EP/8; 8/EP/8; 9/EP/8; 10/EP/8; 11/EP/8 | প্রশ্ন | QT-MATCH | — | The lesson exercises match a word or a problem with a sentence-length description (occupations, advice, animals); only 7/L1/B3 and Q8 match true sentence halves. |
+| `02-04` | Match the parts of sentences to make complete sentences, or match a word or problem with its description or advice (Q8) | ✓ | 2/L2/A; 3/L3/B; 5/L2/A3; 7/L1/B3; 1/EP/8; 2/EP/8; 3/EP/8; 4/EP/8; 5/EP/8; 6/EP/8; 7/EP/8; 8/EP/8; 9/EP/8; 10/EP/8; 11/EP/8 | প্রশ্ন | QT-MATCH | — | The lesson exercises match a word or a problem with a sentence-length description (occupations, advice, animals); only 7/L1/B3 and Q8 match true sentence halves. 2/L2/A matches an occupation with what the person does, 3/L3/B a problem with advice, 5/L2/A3 an animal with its mark. |
 
 ## বাক্য গঠন ও অনুবাদ `DOM-ENG-SENT`
 
@@ -258,10 +258,11 @@ Every one of the 339 numbered exercises maps to at least one tagged row.
 | 01-03 | OTHER | Claude দ্বিতীয় পাঠ (প্রস্তাব): Words matched with meanings (01-03) is kept apart from synonyms/antonyms (01-02): the first is a lesson exercise and the meaning test, the second is Q4 of the paper. The reviewer may prefer one vocabulary row. |
 | 01-09 | OTHER | Claude দ্বিতীয় পাঠ (প্রস্তাব): Functional-language outcomes are four small class-work rows (01-09 good/bad news, 02-01 introductions, 03-02 quantity phrases, 10-02 suggestions) plus 10-01 instructions. The alternative is one objective "Use everyday expressions" with these as sub-objectives; they were left as separate objectives because each belongs to one unit and guardians see the objective label. |
 | SK-READ-01 | OTHER | Claude দ্বিতীয় পাঠ (প্রস্তাব): The reading texts themselves (38 passages, dialogues and poems headed "Read the …") are inventoried as exercises and cited by the reading-aloud strand SK-READ-01, as in the Class Five tree. If the reviewer wants silent reading comprehension as its own row, it is the group 01-01. |
+| — | OTHER | Reviewer-lessons pass (26 Nov 2026), proposals only — no code was split, merged or renamed: (a) the question rows that cite every unit (01-01.1–.3, 01-02, 01-04, 01-05, 01-06, 01-07, 01-08, 02-03, 02-04, 03-01, 04-01) behave like skill strands; moving them to SK-* codes would rename live codes, so it is not done here; (b) 3/L1/A2 (one word, several meanings: trunk, ring) is the only exercise of its skill and sits on 01-03 — a separate row can be added later if teachers want it tracked on its own; (c) the recipe-instruction exercises 6/L3/A1, B, C (order words first, then, after that) sit on the gap-filling row 01-01.3 — a separate "follow and complete instructions" row can be added later. |
 
 ## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)
 
-**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·01-01.3)। সূত্র: "3/L2/B2" = Unit 3, Lesson 3.2, exercise B2; "5/EP/6" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; "5/WK/1" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); "2/Guide/1" = Unit 2-এর writing guide।
+**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। লেবেল ইংরেজিতে (অ্যাপে ইংরেজি বিষয়ের লেবেল ইংরেজিতেই দেখায়); বাড়ির টিপস বাংলায়, অভিভাবকের জন্য। আগের ধাপ পঞ্চম শ্রেণির ইংরেজির সারি দেখায় (যেমন C5·SK-RCOMP-01.3)। সূত্র: "3/L2/B2" = Unit 3, Lesson 3.2, exercise B2; "5/EP/6" = Unit 5-এর Exam Practice-এর ৬ নম্বর প্রশ্ন; "5/WK/1" = Unit 5-এর Words to Know-এর meaning test (WK/2 = spelling test); "2/Guide/1" = Unit 2-এর writing guide।
 
 **বইটি এখনো ছাপা হয়নি; এটি চূড়ান্ত সংস্করণ v2 (১২ নভেম্বর ২০২৬)।** পর্যালোচক স্মারক v1-এর ১৩টি সিদ্ধান্তই অনুমোদন করেছেন — নম্বর বণ্টন (D-01) সহ। অনুশীলনীর সূত্র v1-এর মতোই (৩৩৯টি, কোনো বদল নেই)। ছাপার পরে সূত্র ও ধরন মিলিয়ে তবেই লক।
 
@@ -275,6 +276,8 @@ Every one of the 339 numbered exercises maps to at least one tagged row.
 7. **Summary (04-01), dialogue (01-08) ও MCQ (01-01.1) ষষ্ঠ শ্রেণিতে নতুন ধরন** — আগের ধাপ নেই বা দুর্বল; শুরুতে বেশি অনুশীলন লাগবে।
 
 **বই-দলের জন্য (পতাকা দেখুন):** MCQ, rearranging ও কয়েকটি ভাষা-সারির পাঠ-অনুশীলনী একটি-দুটি; gap filling-এ পাঠ ও প্রশ্নপত্রের রূপ আলাদা; তিনটি কবিতা কপিতে ছাপা নেই।
+
+**ষষ্ঠ শ্রেণির পূর্ব-সংশোধন (২৬ নভেম্বর ২০২৬):** বই বদলায়নি; শুধু পর্যালোচকরা সাধারণত যা ঠিক করেন তা আগেই ধরা হয়েছে। ছয়টি আগের-ধাপ সংযোগ (01-01, 01-01.2, 01-01.3, 01-03, 01-04, 02-03) পঞ্চম শ্রেণির বাতিল কোডের বদলে এখনকার SK-RCOMP কোডে সরানো হয়েছে; সাতটি লেবেল অনুশীলনীগুলো যা সত্যিই যাচাই করে সেই অনুযায়ী বড়/স্পষ্ট করা হয়েছে (01-01.3, 01-03, 01-04, 01-05, 02-01, 02-04, 04-02); ছয়টি সারির নোটে অনুশীলনীর ব্যাখ্যা যোগ হয়েছে। কোনো কোড ভাগ, জোড়া বা নাম-বদল হয়নি; প্রস্তাবগুলো পতাকায় আছে।
 
 ## Final book v2 — changes
 

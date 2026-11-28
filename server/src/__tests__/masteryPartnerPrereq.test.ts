@@ -24,7 +24,17 @@ jest.setTimeout(120_000);
 const DOCS = path.resolve(__dirname, "../../../docs/mastery/objective-tree");
 const TREE_TEXT = fs.readFileSync(path.join(DOCS, "C6_BAN2.tree.json"), "utf8");
 const DOMAINS_TEXT = fs.readFileSync(path.join(DOCS, "domains/BAN2.json"), "utf8");
-const fresh = (): Record<string, any> => JSON.parse(TREE_TEXT);
+/**
+ * The real tree with its OWN earlier steps outside the tree dropped. Since the final-book re-sync (D-#1687) the
+ * C6 BAN2 tree names live C5 BAN codes as earlier steps; those resolve on prod, but this suite seeds only the
+ * codes each case is about, so every case starts from a tree whose prereqs stay inside it.
+ */
+const fresh = (): Record<string, any> => {
+  const t = JSON.parse(TREE_TEXT);
+  const own = new Set(t.nodes.map((n: any) => n.code));
+  for (const n of t.nodes) n.prereqCodes = (n.prereqCodes ?? []).filter((c: string) => own.has(c));
+  return t;
+};
 const actor = { userId: new Types.ObjectId().toString(), role: "PRINCIPAL" };
 
 let mongo: MongoMemoryServer;
