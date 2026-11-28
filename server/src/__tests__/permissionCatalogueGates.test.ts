@@ -63,6 +63,10 @@ const OPEN_FIELDS: Record<string, string> = {
   academicPauses: "school calendar", academicPausesInRange: "school calendar", academicPauseKinds: "fixed list",
   // Review voice clips (D-#1658): row-scoped in the service — own reviewer (drafts), plan author, matching manager.
   reviewVoiceNotes: "row-scoped in the service",
+  // Change-after-final (RF-2): the permission depends on the item's doc type (plan_review:* vs question_review:*),
+  // so the service checks it per request (GoldChangeService `can`); the reviewer also must own a closed round on the item.
+  requestGoldChange: "per-doc-type permission in the service", decideGoldChange: "per-doc-type permission in the service",
+  goldChangeRequests: "per-doc-type permission in the service", myGoldChangeRequests: "own requests; review permission checked in the resolver",
   // Telegram bot link (TB-1, D-#1666): the caller's own link state / one-time deep link / unlink (SELF; role rules in the service).
   myTelegramLink: "own Telegram link", createTelegramLink: "own Telegram link", unlinkTelegram: "own Telegram link",
   // Sign-in and the caller's own session / profile / access (SELF; a guardian uses them too).

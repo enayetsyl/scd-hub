@@ -32,8 +32,8 @@ import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
 import { callerHasPermission } from "@scd/shared";
-import { ReviewError } from "../../content/services/ReviewService";
-import { ReviewVoiceNoteRef } from "../../content/resolvers/review";
+import { ReviewError, REVIEW_BUCKETS, type ReviewBucket } from "../../content/services/ReviewService";
+import { ReviewVoiceNoteRef, ReviewBucketCountsRef } from "../../content/resolvers/review";
 import { listReviewVoiceNotes, managerPermissionFor } from "../../content/services/ReviewVoiceNoteService";
 import {
   assignQuestionReviewOne as assignSvc,
@@ -52,6 +52,7 @@ import {
   type QuestionCoverageDTO,
   listMyQuestionReviews,
   countMyQuestionReviews,
+  myReviewBucketCounts as myBucketCountsSvc,
   questionReviewInbox as inboxSvc,
   countQuestionReviewInbox as inboxCountSvc,
   publishQuestionsMatching as publishMatchingSvc,
@@ -565,6 +566,8 @@ builder.queryField("myQuestionReviews", (t) =>
       search: t.arg.string({ required: false }),
       important: t.arg.boolean({ required: false }),
       undecided: t.arg.boolean({ required: false }),
+      /** RF-1: one fold — undecided | approved | changes | final. Overrides `undecided`. */
+      bucket: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -581,6 +584,7 @@ builder.queryField("myQuestionReviews", (t) =>
         search: args.search,
         important: args.important,
         undecided: args.undecided,
+        bucket: bucketArg(args.bucket),
         },
       );
     },
@@ -607,6 +611,8 @@ builder.queryField("myQuestionReviewCount", (t) =>
       search: t.arg.string({ required: false }),
       important: t.arg.boolean({ required: false }),
       undecided: t.arg.boolean({ required: false }),
+      /** RF-1: one fold — undecided | approved | changes | final. Overrides `undecided`. */
+      bucket: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -620,10 +626,50 @@ builder.queryField("myQuestionReviewCount", (t) =>
         search: args.search,
         important: args.important,
         undecided: args.undecided,
+        bucket: bucketArg(args.bucket),
       });
     },
   }),
 );
+
+builder.queryField("myQuestionReviewBuckets", (t) =>
+  t.field({
+    type: ReviewBucketCountsRef,
+    description:
+      "RF-1: how many of the caller's question rounds sit in each fold (undecided / approved / changes / " +
+      "final) under the same filter the list takes — so the folds can show their counts closed. " +
+      "Requires question_review:review.",
+    authScopes: { hasPermission: "question_review:review" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+      anchorWord: t.arg.string({ required: false }),
+      questionType: t.arg.string({ required: false }),
+      qtCode: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      important: t.arg.boolean({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myBucketCountsSvc(ctx.auth.userId, {
+        subject: args.subject,
+        classLevel: args.classLevel,
+        chapter: args.chapter,
+        anchorWord: args.anchorWord,
+        questionType: args.questionType,
+        qtCode: args.qtCode,
+        search: args.search,
+        important: args.important,
+      });
+    },
+  }),
+);
+
+/** An unknown fold name is ignored (the full list) rather than failing an old/odd client. */
+function bucketArg(v: string | null | undefined): ReviewBucket | null {
+  return (REVIEW_BUCKETS as readonly string[]).includes(v ?? "") ? (v as ReviewBucket) : null;
+}
 
 /**
  * The inbox filter, read off the GraphQL args in ONE place.

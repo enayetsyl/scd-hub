@@ -25,6 +25,11 @@ import {
   approvePlan as approveSvc,
   approvePlanBulk as approveBulkSvc,
   listMyReviewAssignments,
+  listMyPlanReviewsBucket,
+  myPlanReviewBucketCounts,
+  REVIEW_BUCKETS,
+  type ReviewBucket,
+  type MyPlanReviewFilter,
   planReviewInbox as planReviewInboxSvc,
   planReviewThread as planReviewThreadSvc,
   reviewerAssignmentLoad as reviewerLoadSvc,
@@ -130,7 +135,7 @@ builder.objectField(ReviewAssignmentRef, "voiceNotes", (t) =>
  * (a plain thrown Error is masked to "Unexpected error"). The "round not open" case gets a
  * friendly explanation — it fires when a reviewer tries to edit a signed-off/superseded round.
  */
-function mapReviewError(err: unknown): never {
+export function mapReviewError(err: unknown): never {
   if (err instanceof ReviewError) {
     if (err.message.startsWith("FORBIDDEN")) {
       throw new ForbiddenError(err.message);
@@ -329,6 +334,86 @@ builder.queryField("myReviewAssignments", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return listMyReviewAssignments(ctx.auth.userId);
+    },
+  }),
+);
+
+// RF-1 (owner 25 Nov 2026): the same queue as four folds, each paged on its own.
+export const ReviewBucketCountsRef = builder.objectRef<Record<ReviewBucket, number>>("ReviewBucketCounts");
+ReviewBucketCountsRef.implement({
+  description:
+    "RF-1: how many of the caller's review rounds sit in each fold - undecided / approved (waiting for the " +
+    "Principal) / changes (asked for) / final (the Principal finalised it). Same shape for plans and questions.",
+  fields: (t) => ({
+    undecided: t.exposeInt("undecided"),
+    approved: t.exposeInt("approved"),
+    changes: t.exposeInt("changes"),
+    final: t.exposeInt("final"),
+  }),
+});
+
+function planFilterOf(args: {
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: string | null;
+  docType?: string | null;
+  search?: string | null;
+}): MyPlanReviewFilter {
+  return {
+    subject: args.subject,
+    classLevel: args.classLevel,
+    chapter: args.chapter,
+    docType: args.docType,
+    search: args.search,
+  };
+}
+
+builder.queryField("myReviewAssignmentsBucket", (t) =>
+  t.field({
+    type: [ReviewAssignmentRef],
+    description:
+      "RF-1: one fold of the caller's PLAN reviews (undecided / approved / changes / final), paged " +
+      "(limit default 50, max 200), narrowed by subject / class / chapter / plan type / search. " +
+      "Requires plan_review:review.",
+    authScopes: { hasPermission: "plan_review:review" },
+    args: {
+      bucket: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.string({ required: false }),
+      docType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      if (!(REVIEW_BUCKETS as readonly string[]).includes(args.bucket)) {
+        throw expectedGraphQLError("Unknown fold");
+      }
+      return listMyPlanReviewsBucket(ctx.auth.userId, args.bucket as ReviewBucket, planFilterOf(args), {
+        limit: args.limit,
+        offset: args.offset,
+      });
+    },
+  }),
+);
+
+builder.queryField("myPlanReviewBuckets", (t) =>
+  t.field({
+    type: ReviewBucketCountsRef,
+    description: "RF-1: the four fold counts of the caller's plan reviews under the same filter. Requires plan_review:review.",
+    authScopes: { hasPermission: "plan_review:review" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.string({ required: false }),
+      docType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myPlanReviewBucketCounts(ctx.auth.userId, planFilterOf(args));
     },
   }),
 );

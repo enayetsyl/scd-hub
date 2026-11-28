@@ -1706,6 +1706,9 @@ export const NOTIFICATION_KINDS = [
   // Owner 22 Nov 2026: each reviewer's own daily review statistics (chapter plans / session plans / questions
   // reviewed today vs yesterday) at 20:30 Dhaka; tap → the review statistics screen.
   "REVIEW_DAILY_STATS",
+  // RF-2 (owner 25 Nov 2026): a reviewer asks to change a gold (Principal-approved) plan/question, and the
+  // Principal's decision comes back. One kind, both directions; tap -> the Review tab.
+  "REVIEW_GOLD_CHANGE",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1814,6 +1817,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LESSON_BEHIND: "সিলেবাস লক্ষ্যের পেছনে",
   AS_WEEK_PENDING_REMINDER: "অ্যাসাইনমেন্ট সপ্তাহ নিশ্চিত করা বাকি",
   REVIEW_DAILY_STATS: "আজকের পর্যালোচনার হিসাব",
+  REVIEW_GOLD_CHANGE: "চূড়ান্তের পরিবর্তন",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1920,6 +1924,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LESSON_BEHIND: "Behind the syllabus target",
   AS_WEEK_PENDING_REMINDER: "Assignment week not confirmed",
   REVIEW_DAILY_STATS: "Today's review statistics",
+  REVIEW_GOLD_CHANGE: "Change to a finalised item",
 };
 
 /**
